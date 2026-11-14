@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+
+- Replace models that OpenAI shut down: chat `gpt-3.5-turbo` → `gpt-6-luna`, image `dall-e-2` → `gpt-image-2.6-flare`, vision `gpt-4o` → `gpt-6-luna`, transcription `whisper-1` → `gpt-transcribe`
+- Send `max_completion_tokens` and `reasoning_effort` to OpenAI, and only send penalties when set
+- Host generated images on Vercel Blob or the bot's own `/images` route, since GPT Image models return base64
+- Fix production dependency vulnerabilities (`axios`, `express`, `form-data`, `zod` override)
+- Skip the version test when GitHub can't be reached
+
+### New Features
+
+- Support Flex Messages with `createCardBubble()` and `context.pushFlex()`
+- Run chat on another OpenAI-compatible provider with `OPENAI_COMPLETION_BASE_URL` and `OPENAI_COMPLETION_API_KEY`
+- Raise the default reply limit from 64 to 500 tokens and Vercel `maxDuration` to 60 seconds
+- Use Node 22 in Docker
+
+See [docs/UPGRADE-2026.zh-TW.md](docs/UPGRADE-2026.zh-TW.md).
+
 ## 4.9.1 (2024-07-10)
 
 ### Bug Fixes

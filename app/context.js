@@ -17,7 +17,7 @@ import {
 import { Command, COMMAND_BOT_FORGET, COMMAND_BOT_RETRY } from './commands/index.js';
 import { updateHistory } from './history/index.js';
 import {
-  ImageMessage, Message, TemplateMessage, TextMessage,
+  FlexMessage, ImageMessage, Message, TemplateMessage, TextMessage,
 } from './messages/index.js';
 import { Bot, Event, Source } from './models/index.js';
 import { getSources, setSources } from './repository/index.js';
@@ -251,6 +251,23 @@ class Context {
     const message = new TemplateMessage({
       text,
       actions: buttons,
+    });
+    message.setQuickReply(actions);
+    this.messages.push(message);
+    return this;
+  }
+
+  /**
+   * @param {string} altText
+   * @param {Object} contents A Flex bubble or carousel, e.g. from createCardBubble().
+   * @param {Array<Command>} actions
+   * @returns {Context}
+   */
+  pushFlex(altText, contents, actions = []) {
+    if (!altText || !contents) return this;
+    const message = new FlexMessage({
+      altText,
+      contents,
     });
     message.setQuickReply(actions);
     this.messages.push(message);

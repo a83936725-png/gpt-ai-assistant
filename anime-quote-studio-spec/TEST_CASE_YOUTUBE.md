@@ -1,0 +1,122 @@
+# 指定實測案例：YouTube 影片實測與操作說明製作
+
+> 放在專案 `docs/TEST_CASE_YOUTUBE.md`。
+> 用途：(1) 網址解析單元測試 (2) Phase 4 YouTube 模式驗收 (3) 全部測試完成後，用這部影片跑一次完整操作並製作「操作說明」。
+
+---
+
+## 1. 指定影片
+
+| 項目 | 值 |
+|---|---|
+| 原始網址 | `https://www.youtube.com/watch?v=Ac3LTZ4GgG0&list=PL12UaAf_xzfrK8M91P-33EHR0NzakVu0n&index=19` |
+| Video ID | `Ac3LTZ4GgG0` |
+| 播放清單 ID | `PL12UaAf_xzfrK8M91P-33EHR0NzakVu0n`（只記錄，不展開） |
+| 清單位置 | 第 19 部 |
+| 標題／頻道／長度 | 由系統透過 YouTube Data API 取得後填入本表（撰寫規格時無法查詢） |
+
+---
+
+## 2. 開始前：AI 必須先問使用者的問題（不可自行假設）
+
+> 「這部影片是你自己頻道上傳的嗎？」
+
+| 回答 | 可走的測試路徑 |
+|---|---|
+| **A. 是我自己的影片** | 使用者自行到 YouTube Studio → 內容 → 該影片 → ⋮ → 下載，取得 MP4，再上傳到系統 → 可跑**完整流程**（分析＋剪輯＋輸出 MP4）。字幕可用 OAuth 經官方 API 取得。 |
+| **B. 不是我的影片** | 只能跑 **YouTube 純文字模式**：公開資訊、嵌入播放、跳轉、（若使用者有權使用的字幕檔）翻譯與金句分析。**剪輯與 MP4 輸出必須被系統擋下**——這本身就是要驗證的項目。完整剪輯流程改用使用者另外提供、有權使用的影片檔測試。 |
+
+AI 不可以為了測試方便而下載這部影片（包含 yt-dlp、瀏覽器擷取、螢幕錄影等任何方式）。
+
+---
+
+## 3. 網址解析單元測試（Phase 4 實作，`backend/tests/unit/test_youtube_url.py`）
+
+| # | 輸入 | 預期結果 |
+|---|---|---|
+| 1 | `https://www.youtube.com/watch?v=Ac3LTZ4GgG0&list=PL12UaAf_xzfrK8M91P-33EHR0NzakVu0n&index=19` | video_id=`Ac3LTZ4GgG0`、playlist_id=`PL12UaAf_xzfrK8M91P-33EHR0NzakVu0n`、index=19 |
+| 2 | `https://youtu.be/Ac3LTZ4GgG0` | video_id=`Ac3LTZ4GgG0` |
+| 3 | `https://youtu.be/Ac3LTZ4GgG0?t=90` | video_id=`Ac3LTZ4GgG0`、start_ms=90000 |
+| 4 | `https://www.youtube.com/watch?v=Ac3LTZ4GgG0&t=1m30s` | start_ms=90000 |
+| 5 | `https://m.youtube.com/watch?v=Ac3LTZ4GgG0` | video_id=`Ac3LTZ4GgG0` |
+| 6 | `https://www.youtube.com/shorts/Ac3LTZ4GgG0` | video_id=`Ac3LTZ4GgG0` |
+| 7 | `https://www.youtube.com/embed/Ac3LTZ4GgG0` | video_id=`Ac3LTZ4GgG0` |
+| 8 | `  https://www.youtube.com/watch?v=Ac3LTZ4GgG0  `（前後空白） | 去除空白後成功 |
+| 9 | `https://www.youtube.com/playlist?list=PL12UaAf_xzfrK8M91P-33EHR0NzakVu0n` | 錯誤 `PLAYLIST_NOT_SUPPORTED` |
+| 10 | `https://www.youtube.com.evil.com/watch?v=Ac3LTZ4GgG0` | 錯誤 `INVALID_YOUTUBE_URL` |
+| 11 | `https://youtube.com@evil.com/watch?v=Ac3LTZ4GgG0` | 錯誤 `INVALID_YOUTUBE_URL` |
+| 12 | `https://evil.com/?u=https://www.youtube.com/watch?v=Ac3LTZ4GgG0` | 錯誤 `INVALID_YOUTUBE_URL` |
+| 13 | `https://www.youtube.com/watch?v=Ac3LTZ4GgG` （10 碼） | 錯誤 `INVALID_YOUTUBE_URL` |
+| 14 | `https://www.youtube.com/watch?v=Ac3LTZ4GgG0<script>` | 錯誤 `INVALID_YOUTUBE_URL` |
+| 15 | `ftp://www.youtube.com/watch?v=Ac3LTZ4GgG0` | 錯誤 `INVALID_YOUTUBE_URL`（只接受 http/https） |
+| 16 | `https://www.youtube.com/watch?v=Ac3LTZ4GgG0`（同一使用者第二次提交） | 提示「此影片已在專案 X 中」，可選擇沿用既有結果 |
+
+另外要有一個測試證明：解析網址的過程**後端沒有對使用者提供的網址發出任何 HTTP 請求**（只會用解析出的 video ID 呼叫 `www.googleapis.com`）。
+
+---
+
+## 4. 實測操作流程（每一步都要記錄結果）
+
+### 路徑 B：YouTube 純文字模式（不論是否擁有影片都要測）
+
+| 步驟 | 操作 | 預期結果 |
+|---|---|---|
+| B1 | 首頁 → 建立專案「實測：YouTube 範例」→ 貼上指定網址 | 顯示標題、頻道、長度、縮圖（來自 Data API）；顯示「已偵測到播放清單，本系統只分析這一部影片」 |
+| B2 | 進入分析工作台 | 嵌入播放器可播放；權利狀態顯示「僅文字模式」；剪輯與輸出按鈕為停用並有說明文字 |
+| B3a | （路徑 A 使用者）點「連結 YouTube 帳號取得字幕」→ OAuth | 列出可用字幕軌；選日文 → 匯入為逐字稿，`source=youtube_caption` |
+| B3b | （路徑 B 使用者）上傳自己有權使用的 SRT / VTT 字幕檔 | 匯入為逐字稿，`source=uploaded_subtitle`，時間碼正確 |
+| B3c | 沒有任何字幕 | 顯示「此影片沒有可合法取得的字幕，請上傳字幕檔或有權使用的影片檔」；**系統不會嘗試下載影片或音訊** |
+| B4 | 執行翻譯與金句分析 | 逐字稿出現繁中翻譯；金句清單有分數、標籤、理由 |
+| B5 | 點任一金句的「預覽」 | 嵌入播放器 `seekTo` 跳到開始時間，到結束時間自動暫停（誤差 < 1 秒） |
+| B6 | 修改一句翻譯、收藏一句、排除一句 | 重新整理後仍保留 |
+| B7 | 匯出 JSON / CSV / SRT | 檔案內含 video ID、原始時間碼、日文原文、繁中翻譯；CSV 用 Excel 開啟不亂碼 |
+| B8 | 用 API 工具直接 `POST /api/projects/{id}/renders` | 回傳 403 `RIGHTS_REQUIRED`，**後端擋下**，不是只有前端隱藏 |
+
+### 路徑 A：完整流程（只有使用者確認是自己的影片時才做）
+
+| 步驟 | 操作 | 預期結果 |
+|---|---|---|
+| A1 | 上傳從 YouTube Studio 下載的 MP4，勾選權利聲明 | 權利狀態 `attested`；Proxy 產生完成，可播放、可拖曳 |
+| A2 | 執行完整分析 | 各 stage 依序完成，進度為真實數值 |
+| A3 | 抽查 5 句逐字稿時間碼，對照 YouTube 原片同一時間 | 誤差 < 0.5 秒 |
+| A4 | （Phase 2 完成後）說話者對應角色 | 金句卡片顯示角色名稱；未確認者顯示「未知角色」 |
+| A5 | 勾選 3 段金句 → 剪輯器 → 排序 → 9:16 模糊背景 → 日文＋繁中字幕 → 輸出 | 得到可播放的 1080×1920 MP4，中日字幕無方框、與語音同步 |
+| A6 | 下載 SRT，用播放器載入 MP4 + SRT | 字幕時間與燒錄字幕一致 |
+| A7 | 改一段切點後重新輸出 | 不重跑 ASR／翻譯／金句分析，只重新渲染 |
+
+### 實測紀錄格式（寫入 `docs/TEST_REPORT.md`）
+
+```
+| 步驟 | 結果（通過／失敗／未執行） | 截圖 | 實際觀察 | 未執行原因 |
+```
+
+「未執行」必須寫原因（例如：缺 YOUTUBE_API_KEY、開發環境封鎖 youtube.com、使用者尚未提供字幕檔）。**不可把未執行的步驟寫成通過。**
+
+---
+
+## 5. 製作操作說明（全部測試完成後）
+
+1. 寫一支 Playwright 腳本 `web/e2e/guide.spec.ts`，**實際操作**上面的流程，在每一步自動截圖到 `docs/guide/images/`（deviceScaleFactor 2、介面為繁體中文）。
+2. 產出 `docs/USER_GUIDE.md`（繁體中文），每一步包含：
+   - 這一步在做什麼（一句話）
+   - 怎麼操作（編號步驟）
+   - 截圖
+   - 常見問題與錯誤訊息的意思（例如 `RIGHTS_REQUIRED`、`ASR_EMPTY`、`DIARIZATION_NOT_CONFIGURED` 代表什麼、怎麼處理）
+3. 前端新增 `/help` 頁面顯示同一份內容，並有「用範例影片試試看」按鈕：只會把指定網址**預先填入**建立專案表單，不會自動開始分析。
+4. 截圖必須來自實際執行中的系統，**禁止用設計稿或假畫面**。某步驟無法執行時，在說明中標示「此步驟截圖待補」並在報告列出原因。
+5. 若影片不是使用者自己的，說明文件截圖中的影片畫面區域要模糊處理或以縮圖代替，避免在說明文件中散布第三方畫面。
+
+---
+
+## 6. 環境需求（執行本實測前確認）
+
+| 需求 | 用途 |
+|---|---|
+| `YOUTUBE_API_KEY`（Google Cloud Console 啟用 YouTube Data API v3 後建立，並限制只能用於該 API） | 取得影片標題、頻道、長度 |
+| OAuth 用戶端（僅路徑 A） | 取得自己影片的字幕 |
+| 後端可連線 `www.googleapis.com`、`oauth2.googleapis.com` | Data API、OAuth |
+| 瀏覽器可連線 `www.youtube.com` | 嵌入播放器 |
+| 配額 | Data API 每日預設配額有限，`captions.download` 比 `videos.list` 耗用多很多，以官方配額文件為準；測試時避免重複呼叫，結果要快取 |
+
+> 注意：雲端 AI 開發環境（例如雲端版 Claude Code、Replit 等）常常預設封鎖 YouTube 網域。
+> 若 AI 回報「無法連線 YouTube」，請在**你自己的電腦**上執行本實測，或在該環境的網路設定中允許上述網域。AI 不可因為連不到就改用假資料或宣稱測試通過。

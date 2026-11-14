@@ -1,6 +1,21 @@
 # Changelog
 
-## Unreleased
+## 4.10.0 (2026-11-14)
+
+See [docs/UPGRADE-2026.zh-TW.md](docs/UPGRADE-2026.zh-TW.md) for setup.
+
+### New Features
+
+- Add `畫介面` (`/ui`): turns a short request into a UI prompt using a glossary of 157 component, layout and motion names
+- Add `寫貼文` (`/post`): writes a Threads or Instagram post from a topic or the recent chat
+- Add `模型檢查` (`/models`): shows each configured model's announced shutdown date from OpenAI
+- Add `我的ID` (`/id`) and an allowlist (`APP_ALLOWED_USER_IDS`, `APP_ALLOWED_GROUP_IDS`)
+- Optional moderation of incoming text and images with `omni-moderation-latest` (`OPENAI_MODERATION_ENABLED`)
+- Support Flex Messages with `createCardBubble()` and `context.pushFlex()`
+- Run chat on another OpenAI-compatible provider with `OPENAI_COMPLETION_BASE_URL` and `OPENAI_COMPLETION_API_KEY`
+- Raise the default reply limit from 64 to 500 tokens and Vercel `maxDuration` to 60 seconds
+- Run lint and tests on every pull request with GitHub Actions
+- Use Node 22 in Docker
 
 ### Bug Fixes
 
@@ -8,16 +23,9 @@
 - Send `max_completion_tokens` and `reasoning_effort` to OpenAI, and only send penalties when set
 - Host generated images on Vercel Blob or the bot's own `/images` route, since GPT Image models return base64
 - Fix production dependency vulnerabilities (`axios`, `express`, `form-data`, `zod` override)
+- `回報` links to `APP_REPORT_URL` (this fork's issues by default) instead of the original project
+- `版本` checks this fork and compares version numbers, so a newer local version no longer asks to update
 - Skip the version test when GitHub can't be reached
-
-### New Features
-
-- Support Flex Messages with `createCardBubble()` and `context.pushFlex()`
-- Run chat on another OpenAI-compatible provider with `OPENAI_COMPLETION_BASE_URL` and `OPENAI_COMPLETION_API_KEY`
-- Raise the default reply limit from 64 to 500 tokens and Vercel `maxDuration` to 60 seconds
-- Use Node 22 in Docker
-
-See [docs/UPGRADE-2026.zh-TW.md](docs/UPGRADE-2026.zh-TW.md).
 
 ## 4.9.1 (2024-07-10)
 

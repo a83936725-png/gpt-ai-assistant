@@ -88,6 +88,29 @@ const ja = {
   __COMMAND_SYS_VERSION_LABEL: 'バージョン',
   __COMMAND_SYS_VERSION_TEXT: 'バージョン',
   __COMMAND_SYS_VERSION_REPLY: (version, isLatest) => `Your version is ${isLatest ? 'up-to-date' : version}.`,
+  __COMMAND_BOT_UI_LABEL: 'Draw UI',
+  __COMMAND_BOT_UI_TEXT: 'Draw UI',
+  __COMMAND_BOT_UI_PROMPT: (glossary, request) => `You are a professional web and UI designer. Write a prompt the user can paste into an AI interface tool (such as Claude, v0 or Lovable).\nRules:\n1. Start with one sentence on what the page is and who uses it.\n2. List the components to use. Only use names from the glossary below, copied exactly, in quotes.\n3. Describe the layout and interaction effects, again only with glossary names.\n4. End with: mobile-first responsive, sample data filling the screen.\nOutput only the prompt.\n\nGlossary:\n${glossary}\n\nRequest: ${request}`,
+  __COMMAND_BOT_UI_USAGE: 'Write what you need after "Draw UI", e.g. Draw UI a booking app home page for a cafe',
+  __COMMAND_BOT_POST_LABEL: 'Write post',
+  __COMMAND_BOT_POST_TEXT: 'Write post',
+  __COMMAND_BOT_POST_PROMPT: (topic) => `You are a social media editor. Write a Threads or Instagram post about the topic below:\n- First line: a catchy title, at most 1 emoji\n- 3 to 5 short lines, one point each\n- Last line: 3 to 6 hashtags\nOutput only the post.\n\nTopic: "${topic}"`,
+  __COMMAND_BOT_POST_USAGE: 'Write a topic after "Write post", e.g. Write post weekend coffee deal; or chat first, then send "Write post" to turn the chat into a post.',
+  __COMMAND_SYS_MODELS_LABEL: 'Check models',
+  __COMMAND_SYS_MODELS_TEXT: 'Check models',
+  __COMMAND_SYS_MODELS_FEATURE: (feature) => ({
+    chat: 'Chat', vision: 'Vision', image: 'Drawing', transcription: 'Transcription',
+  }[feature] || feature),
+  __COMMAND_SYS_MODELS_STATUS: (status, shutdownDate, daysLeft) => ({
+    ok: shutdownDate ? `OK, shuts down ${shutdownDate} (${daysLeft} days left)` : 'OK, no shutdown announced',
+    shutdown_soon: `Warning: shuts down ${shutdownDate}, ${daysLeft} days left`,
+    shut_down: `Shut down on ${shutdownDate}, replace it now`,
+    not_found: 'Model not found: shut down or misspelled',
+    unknown: 'Could not check (the provider may not support model lookup)',
+  }[status]),
+  __COMMAND_SYS_ID_LABEL: 'My ID',
+  __COMMAND_SYS_ID_TEXT: 'My ID',
+  __COMMAND_SYS_ID_REPLY: (userId, groupId) => `Your user ID: ${userId}${groupId ? `\nThis group's ID: ${groupId}` : ''}`,
   __COMMAND_TRANSLATE_TO_EN_LABEL: '翻成英文', // TODO
   __COMMAND_TRANSLATE_TO_EN_TEXT: '翻成英文', // TODO
   __COMMAND_TRANSLATE_TO_EN_PROMPT: '請將以下內容翻譯成英文。', // TODO
@@ -108,6 +131,8 @@ const ja = {
   __ERROR_MAX_GROUPS_REACHED: '最大ユーザー数に達しています。',
   __ERROR_MAX_USERS_REACHED: '最大グループ数に達しています。',
   __ERROR_MISSING_ENV: (v) => `「${v}」環境変数が見つかりません。`,
+  __ERROR_MODERATION_FLAGGED: 'This message may break the usage policy, so there is no reply.',
+  __ERROR_NOT_ALLOWED: 'This bot is not open to you yet. Send "My ID" and give the ID to the admin.',
   __MESSAGE_NEW_VERSION_AVAILABLE: (version) => `A new version ${version} is now available!`,
   __SOURCE_NAME_SOME_GROUP: 'あるグループ',
   __SOURCE_NAME_SOMEONE: 'あるユーザー',

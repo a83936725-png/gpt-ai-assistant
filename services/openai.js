@@ -106,7 +106,7 @@ const createChatCompletion = ({
   model = config.OPENAI_COMPLETION_MODEL,
   messages,
   temperature = config.OPENAI_COMPLETION_TEMPERATURE,
-  maxTokens = config.OPENAI_COMPLETION_MAX_TOKENS,
+  maxTokens,
   frequencyPenalty = config.OPENAI_COMPLETION_FREQUENCY_PENALTY,
   presencePenalty = config.OPENAI_COMPLETION_PRESENCE_PENALTY,
 }) => {
@@ -114,7 +114,7 @@ const createChatCompletion = ({
     model: hasImage({ messages }) ? config.OPENAI_VISION_MODEL : model,
     messages,
     temperature,
-    maxTokens,
+    maxTokens: maxTokens || config.OPENAI_COMPLETION_MAX_TOKENS,
     frequencyPenalty,
     presencePenalty,
     // Fast, non-reasoning replies by default on OpenAI; other providers only get it when set explicitly.
@@ -187,10 +187,39 @@ const createAudioTranscriptions = ({
   });
 };
 
+export const MODEL_OMNI_MODERATION = 'omni-moderation-latest';
+
+/**
+ * @param {Object} param
+ * @param {string} param.model
+ * @param {boolean} param.isCompletion Chat and vision models live on the completion provider.
+ */
+const retrieveModel = ({
+  model,
+  isCompletion = false,
+}) => (isCompletion ? completionClient : client).get(`/v1/models/${encodeURIComponent(model)}`);
+
+/**
+ * @param {Object} param
+ * @param {string} [param.text]
+ * @param {string} [param.imageUrl] An HTTPS or base64 data URL.
+ */
+const createModeration = ({
+  text,
+  imageUrl,
+}) => {
+  const input = [];
+  if (text) input.push({ type: 'text', text });
+  if (imageUrl) input.push({ type: 'image_url', image_url: { url: imageUrl } });
+  return client.post('/v1/moderations', { model: MODEL_OMNI_MODERATION, input });
+};
+
 export {
   buildChatCompletionBody,
   buildImageBody,
   createAudioTranscriptions,
   createChatCompletion,
   createImage,
+  createModeration,
+  retrieveModel,
 };

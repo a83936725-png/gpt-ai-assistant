@@ -1,3 +1,4 @@
+import config from '../../config/index.js';
 import { COMMAND_SYS_REPORT, GENERAL_COMMANDS } from '../commands/index.js';
 import Context from '../context.js';
 import { updateHistory } from '../history/index.js';
@@ -15,7 +16,7 @@ const check = (context) => context.hasCommand(COMMAND_SYS_REPORT);
 const exec = (context) => check(context) && (
   async () => {
     updateHistory(context.id, (history) => history.erase());
-    context.pushText('https://github.com/memochou1993/gpt-ai-assistant/issues', GENERAL_COMMANDS);
+    context.pushText(config.APP_REPORT_URL, GENERAL_COMMANDS);
     return context;
   }
 )();

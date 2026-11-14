@@ -98,6 +98,39 @@ OPENAI_COMPLETION_MODEL=qwen3:8b
 - 如果之後加 LIFF 網頁，請用 LIFF SDK v2.31.1 以上。網路上的整理指出 LINE 預計 2026-11-24 左右限制 v2.20.0–v2.31.0，請到 [LINE Developers News](https://developers.line.biz/en/news/) 確認。
 - 這個 Bot 只用 Reply API 回覆。台灣 LINE 官方帳號費率在 2026-11-01 調整過，請到 LINE 官方公告確認。
 
+## 4.10.0 新功能
+
+| 指令（英文別名） | 給誰用 | 做什麼 |
+| --- | --- | --- |
+| `畫介面 需求`（`/ui`） | 產品／設計 | 把一句需求變成可以貼到 Claude、v0 的介面提示詞，元件名稱只從 157 個名詞表挑（來源：Threads @nexora_macauai 的 6 份懶人包） |
+| `寫貼文 主題`（`/post`） | 行銷／內容 | 依主題寫一則 Threads／IG 貼文含 hashtag；只傳「寫貼文」就用前一段對話當主題 |
+| `模型檢查`（`/models`） | 技術開發 | 查聊天、看圖、畫圖、語音四個模型在 OpenAI 公告的關閉日期，90 天內會標「注意」 |
+| `我的ID`（`/id`） | 管理員 | 回覆使用者 ID，在群組裡也回覆群組 ID，用來設定白名單 |
+
+`畫介面` 和舊的 `請畫` 不會打架：雖然「畫」是畫圖的別名，`畫介面` 會先被認出來。
+
+### 白名單（只讓特定人或群組使用）
+
+```
+APP_ALLOWED_USER_IDS=U1234...,U5678...
+APP_ALLOWED_GROUP_IDS=C1234...
+```
+
+- 兩個都空白（預設）＝所有人都能用，和以前一樣。
+- 群組訊息看群組名單；一對一私訊看使用者名單。
+- 不在名單的人私訊 Bot 會收到「還沒開放」的提示；不在名單的群組，Bot 完全不出聲。兩種情況都可以傳 `我的ID` 拿到 ID 交給管理員。
+
+### 內容審查
+
+設定 `OPENAI_MODERATION_ENABLED=true` 後，每則文字、語音轉成的文字和圖片會先送 OpenAI 的 `omni-moderation-latest` 檢查（免費），被標記的訊息不回覆、也不寫進對話紀錄。審查服務出錯時 Bot 照常回覆，只在 log 留紀錄。每則訊息會多一次 API 呼叫，回覆會稍慢一點。
+
+### 其他設定
+
+- `APP_REPORT_URL`：`回報` 指令要給的網址，預設是這個 repo 的 Issues 頁。如果 repo 沒開 Issues，改成客服信箱頁或表單網址。
+- `APP_MODEL_WARNING_DAYS`：`模型檢查` 提前幾天標「注意」，預設 90。
+- `版本` 指令改成比對這個 repo 的 `main` 分支，版本號依數字大小比較。
+- 每個 PR 會自動跑 eslint 和測試（`.github/workflows/test.yml`）。
+
 ## 其他
 
 - Docker 映像改用 Node 22（Node 18 已在 2025-04 停止維護），`package.json` 也標示需要 Node 20 以上。

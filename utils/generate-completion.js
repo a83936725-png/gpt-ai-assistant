@@ -23,13 +23,15 @@ class Completion {
 /**
  * @param {Object} param
  * @param {Prompt} param.prompt
+ * @param {number} [param.maxTokens] Overrides OPENAI_COMPLETION_MAX_TOKENS for longer answers.
  * @returns {Promise<Completion>}
  */
 const generateCompletion = async ({
   prompt,
+  maxTokens,
 }) => {
   if (config.APP_ENV !== 'production') return new Completion({ text: MOCK_TEXT_OK });
-  const { data } = await createChatCompletion({ messages: prompt.messages });
+  const { data } = await createChatCompletion({ messages: prompt.messages, maxTokens });
   const [choice] = data.choices;
   return new Completion({
     text: choice.message.content.trim(),

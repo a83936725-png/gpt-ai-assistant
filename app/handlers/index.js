@@ -7,10 +7,14 @@ import docHandler from './doc.js';
 import drawHandler from './draw.js';
 import forgetHandler from './forget.js';
 import enquireHandler from './enquire.js';
+import idHandler from './id.js';
+import modelsHandler from './models.js';
+import postHandler from './post.js';
 import reportHandler from './report.js';
 import retryHandler from './retry.js';
 import searchHandler from './search.js';
 import talkHandler from './talk.js';
+import uiHandler from './ui.js';
 import versionHandler from './version.js';
 
 export {
@@ -23,9 +27,13 @@ export {
   drawHandler,
   forgetHandler,
   enquireHandler,
+  idHandler,
+  modelsHandler,
+  postHandler,
   reportHandler,
   retryHandler,
   searchHandler,
   talkHandler,
+  uiHandler,
   versionHandler,
 };

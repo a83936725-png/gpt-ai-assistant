@@ -13,6 +13,7 @@ export const MESSAGE_TYPE_STICKER = 'sticker';
 export const MESSAGE_TYPE_AUDIO = 'audio';
 export const MESSAGE_TYPE_IMAGE = 'image';
 export const MESSAGE_TYPE_TEMPLATE = 'template';
+export const MESSAGE_TYPE_FLEX = 'flex';
 
 export const TEMPLATE_TYPE_BUTTONS = 'buttons';
 

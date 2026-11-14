@@ -16,6 +16,14 @@ afterEach(() => {
 });
 
 test('COMMAND_SYS_VERSION', async () => {
+  let latest;
+  try {
+    latest = await fetchVersion();
+  } catch (err) {
+    // The command compares against the version on GitHub, so it can't be checked offline.
+    console.warn(`Skipped COMMAND_SYS_VERSION: cannot reach GitHub (${err.message})`);
+    return;
+  }
   const events = [
     ...createEvents([COMMAND_SYS_VERSION.text]),
   ];
@@ -26,7 +34,6 @@ test('COMMAND_SYS_VERSION', async () => {
     console.error(err);
   }
   const current = getVersion();
-  const latest = await fetchVersion();
   const isLatest = current === latest;
   expect(getPrompt(MOCK_USER_01).messages.length).toEqual(3);
   const replies = results.map(({ messages }) => messages.map(({ text }) => text));

@@ -4,8 +4,20 @@ import config from '../config/index.js';
 import { validateLineSignature } from '../middleware/index.js';
 import storage from '../storage/index.js';
 import { fetchVersion, getVersion } from '../utils/index.js';
+import { getStoredImage, setPublicOrigin } from '../utils/upload-image.js';
 
 const app = express();
+
+app.get('/images/:name', (req, res) => {
+  const image = getStoredImage(req.params.name);
+  if (!image) {
+    res.sendStatus(404);
+    return;
+  }
+  res.set('Content-Type', image.contentType);
+  res.set('Cache-Control', 'public, max-age=3600');
+  res.send(image.buffer);
+});
 
 app.use(express.json({
   verify: (req, res, buf) => {
@@ -25,6 +37,8 @@ app.get('/', async (req, res) => {
 
 app.post(config.APP_WEBHOOK_PATH, validateLineSignature, async (req, res) => {
   try {
+    const protocol = (req.get('x-forwarded-proto') || req.protocol).split(',')[0].trim();
+    setPublicOrigin(`${protocol}://${req.get('host')}`);
     await storage.initialize();
     await handleEvents(req.body.events);
     res.sendStatus(200);

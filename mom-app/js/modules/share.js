@@ -332,7 +332,7 @@
     const { emoji = '🎉', msg, kind, payload, mutedKey, force = false, queue = false } = opts;
     const sh = ensure(store.state);
     const key = mutedKey || (kind || 'misc');
-    if (sh.moments[id] || sh.muted[key]) return false;
+    if (sh.moments[id] || sh.muted[key] || window.__noShareMoments) return false; // tests can switch prompts off
     if (!force && sh.lastPromptAt && Date.now() - new Date(sh.lastPromptAt) < 20 * C.HOUR) return false;
     if (document.body.classList.contains('has-sheet')) {
       if (queue && !pending.some((x) => x.id === id)) pending.push({ id, opts }); // show after the current sheet closes
@@ -406,6 +406,14 @@
         h('div', { class: 'grid-2 mt' },
           h('button', { class: 'btn btn-line', onclick: () => { openUrl(`https://line.me/R/share?text=${enc(`${inviteText()}\n${link({ path: 'home', channel: 'line', campaign: 'invite' })}`)}`); thanks(record('invite', 'invite')); }, html: `${ui.ICONS.line}<span>LINE 邀請</span>` }),
           h('button', { class: 'btn jr-hero-btn', onclick: () => open({ title: '邀請你一起用', text: inviteText(), campaign: 'invite', spec: { emoji: '💌', kicker: '邀請你一起用', title: B().appName || '易家做媽媽', subtitle: '備孕・懷孕・育兒 一個 App 陪你', lines: ['餵奶尿布睡眠 一鍵記錄＋預測', '孕產路線圖：該做的事＋注意事項', '好孕島：邊逛邊學的衛教小島'], theme: 'purple' } }) }, '📤 其他方式'))));
+      if (App.account) App.account.refreshSoon();
+      const au = store.state.auth && store.state.auth.user;
+      el.append(ui.card({ class: 'mt' },
+        h('div', { class: 'card-title' }, '👥 一起做媽媽的人'),
+        App.livePill ? App.livePill('inv-live') : null,
+        au ? h('p', { class: 'small mt' }, `你已成功邀請 ${au.referrals || 0} 位加入（以註冊時填你的邀請碼計算）`)
+          : h('div', { class: 'row gap mt' }, h('p', { class: 'small muted grow' }, '登入後，朋友用你的邀請碼註冊就會計入「成功邀請人數」。'),
+            App.screens.login ? h('button', { class: 'btn btn-sm btn-primary', onclick: () => App.navigate('login') }, '登入') : null)));
       if (sh.invitedBy) el.append(ui.card({ class: 'soft mt' }, h('div', { class: 'small' }, `你是由${sh.inviterName ? `「${sh.inviterName}」` : '朋友'}邀請加入的（邀請碼 ${sh.invitedBy}）💜`)));
       // points + rewards
       const rewards = REWARDS();

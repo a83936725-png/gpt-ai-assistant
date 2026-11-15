@@ -81,7 +81,7 @@
   function render({ keepScroll = false } = {}) {
     const { id, params } = parseHash();
     let def = App.screens[id];
-    if (!App.store.state.onboarded && App.screens.onboarding && id !== 'onboarding') def = App.screens.onboarding;
+    if (!App.store.state.onboarded && App.screens.onboarding && id !== 'onboarding' && id !== 'login') def = App.screens.onboarding; // login is reachable before setup
     if (!def) def = App.screens.home;
     const el = view();
     const scroll = keepScroll ? window.scrollY : 0;

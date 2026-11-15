@@ -19,6 +19,7 @@ const errs = [];
   const mk = async (vp = { width: 390, height: 844 }, opts = {}) => {
     const ctx = await browser.newContext({ viewport: vp, locale: 'zh-TW', ...opts });
     const p = await ctx.newPage();
+    await p.addInitScript(() => { window.__noShareMoments = true; });
     p.on('pageerror', (e) => errs.push(`[${vp.width}] ${p.url()} :: ${e.message}`));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|ERR_INTERNET_DISCONNECTED/.test(m.text())) errs.push(`[${vp.width}] ${p.url()} :: ${m.text()}`); });
     return p;

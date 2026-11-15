@@ -16,6 +16,7 @@ const ok = (name, cond, info = '') => { results.push({ name, pass: !!cond, info 
   const newPage = async () => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-TW', acceptDownloads: true });
     const p = await ctx.newPage();
+    await p.addInitScript(() => { window.__noShareMoments = true; });
     p.on('pageerror', (e) => pageErrors.push(`${p.url()} :: ${e.message}`));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) pageErrors.push(`${p.url()} :: console ${m.text()}`); });
     return p;

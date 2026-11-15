@@ -1,10 +1,12 @@
 import express from 'express';
+import path from 'path';
 import { handleEvents, printPrompts } from '../app/index.js';
 import config from '../config/index.js';
 import { validateLineSignature } from '../middleware/index.js';
 import storage from '../storage/index.js';
 import { fetchVersion, getVersion } from '../utils/index.js';
 import { getStoredImage, setPublicOrigin } from '../utils/upload-image.js';
+import { createMomRouter } from '../mom-api/index.js';
 
 const app = express();
 
@@ -24,6 +26,10 @@ app.use(express.json({
     req.rawBody = buf.toString();
   },
 }));
+
+// 易家做媽媽：member API + the static web app (on Vercel the static files are served by the CDN first)
+app.use('/mom-app/api', createMomRouter());
+app.use('/mom-app', express.static(path.join(process.cwd(), 'mom-app')));
 
 app.get('/', async (req, res) => {
   if (config.APP_URL) {

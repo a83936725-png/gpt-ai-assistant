@@ -209,6 +209,7 @@
       el.append(h('div', { class: 'greet row between' },
         h('div', null, h('div', { class: 'greet-hi' }, `${greet}${name ? `，${name}` : ''} 💜`), h('div', { class: 'tiny muted' }, C.fmtDateLong(new Date()))),
         h('a', { class: 'stage-pill', href: '#/me', title: '到「我的」切換階段' }, `${stageLabel.icon} ${stageLabel.label}${store.state.profile.pregnantToo && stage === 'baby' ? '＋懷孕' : ''}`)));
+      if (App.livePill) el.append(App.livePill('home-live'));
 
       if (stage === 'baby') {
         const baby = store.baby();

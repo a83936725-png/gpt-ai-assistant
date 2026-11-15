@@ -21,6 +21,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-TW' });
   const p = await ctx.newPage();
+  await p.addInitScript(() => { window.__noShareMoments = true; });
   p.on('pageerror', (e) => errors.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) errors.push(m.text()); });
   const S = (f, a) => p.evaluate(f, a);

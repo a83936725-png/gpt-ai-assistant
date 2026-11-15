@@ -174,7 +174,7 @@
         if (!data || !Array.isArray(data.logs)) throw new Error('bad');
         if (mode.dataset.value === 'replace') {
           if (!(await ui.confirm('用備份檔取代這台裝置上的所有資料？'))) return;
-          store.replace({ ...data, share: store.state.share || data.share }); // keep my own invite code
+          store.replace({ ...data, share: store.state.share || data.share, auth: store.state.auth }); // keep my own invite code and login
         } else mergeState(data);
         sh.close(); ui.toast('匯入完成');
       } catch (e) { ui.toast('檔案格式不正確'); }
@@ -345,6 +345,7 @@
     for (let d = 1; d <= 9; d += 1) if (d !== 4) s.chicken.log[C.dateKey(C.addDays(now, -d))] = 1;
     s.island.stamps = {};
     if (store.state.share) s.share = store.state.share; // keep invite code + who invited me
+    if (store.state.auth) s.auth = store.state.auth; // stay logged in
     store.replace(s);
     App.navigate('home');
     App.refresh();
@@ -375,8 +376,10 @@
               h('li', null, '🍼 餵奶・尿布・睡眠，一鍵記錄＋智慧預測'),
               h('li', null, '📈 成長曲線、疫苗、里程碑、PDF 報告'),
               h('li', null, '👨‍👩‍👧 全家一起記錄')),
+            App.livePill ? App.livePill('ob-live') : null,
             h('button', { class: 'btn btn-primary btn-block', onclick: () => go({ step: 1 }) }, '開始使用'),
-            h('button', { class: 'btn btn-ghost btn-block mt', onclick: () => { ob = { step: 0, stage: null }; seedDemo(); } }, '先看看範例資料')));
+            h('button', { class: 'btn btn-ghost btn-block mt', onclick: () => { ob = { step: 0, stage: null }; seedDemo(); } }, '先看看範例資料'),
+            App.screens.login ? h('button', { class: 'link-btn ob-login', onclick: () => App.navigate('login') }, '已有帳號？登入／註冊') : null));
         } else if (ob.step === 1) {
           wrap.append(h('h2', { class: 'ob-q' }, '你現在是？'),
             h('div', { class: 'stack' }, App.STAGES.map((st) => h('button', { class: 'ob-choice', onclick: () => go({ step: 2, stage: st.value }) },
@@ -426,6 +429,7 @@
       const s = store.state;
       const p = s.profile;
       const stageLabel = App.STAGES.find((x) => x.value === p.stage) || App.STAGES[2];
+      if (App.account) el.append(App.account.card());
       el.append(h('section', { class: 'card me-card' },
         h('div', { class: 'row gap' },
           h('div', { class: 'me-avatar' }, '💜'),

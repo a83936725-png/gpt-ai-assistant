@@ -289,7 +289,10 @@
       { id: C.uid(), babyId, date: C.dateKey(C.addDays(birthday, 30)), weight: 4.25, length: 53.6, head: 36.8 },
       { id: C.uid(), babyId, date: C.dateKey(C.addDays(birthday, 61)), weight: 5.2, length: 57.2, head: 38.6 },
     ];
-    s.vaccines[babyId] = {};
+    const dayN = (n) => C.dateKey(C.addDays(birthday, n));
+    s.vaccines[babyId] = { hepb1: dayN(0), hepb2: dayN(31), dtap1: dayN(61), pcv1: dayN(61) };
+    s.checkups[babyId] = { nbs: dayN(2), hearing: dayN(2), v1: dayN(30), v2: dayN(62) };
+    s.milestones[babyId] = {};
     s.milk = [
       { id: C.uid(), ml: 120, originalMl: 120, pumpedAt: new Date(now - 20 * C.DAY).toISOString(), storage: 'freezer', thawedAt: null, usedAt: null, note: 'A1' },
       { id: C.uid(), ml: 150, originalMl: 150, pumpedAt: new Date(now - 9 * C.DAY).toISOString(), storage: 'freezer', thawedAt: null, usedAt: null, note: 'A2' },

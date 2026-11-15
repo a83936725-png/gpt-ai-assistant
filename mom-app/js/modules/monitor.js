@@ -612,7 +612,12 @@
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     if (!S.audioCtx || S.audioCtx.state === 'closed') { try { S.audioCtx = new AC(); } catch (e) { return null; } }
-    if (S.audioCtx.state === 'suspended') S.audioCtx.resume().catch(() => {});
+    if (S.audioCtx.state === 'suspended') {
+      S.audioCtx.resume().catch(() => {});
+      // iPhone Safari keeps audio suspended until a tap: resume on the next touch anywhere
+      const ctx = S.audioCtx;
+      document.addEventListener('pointerdown', () => { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); }, { once: true, capture: true });
+    }
     return S.audioCtx;
   }
 

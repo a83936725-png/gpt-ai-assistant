@@ -126,7 +126,8 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   await wait(view, 1200);
   ok('攝影機知道誰在看（data channel）', (await cam.textContent('.mon-status-text')).includes('媽媽的手機正在看'));
   ok('攝影機徽章：傳送中', await cam.isVisible('.mon-player-cam .mon-badge.is-live'));
-  const maxLevel = await S(view, () => new Promise((r) => { let m = 0; const t = setInterval(() => { m = Math.max(m, App.monitor.state.level); }, 50); setTimeout(() => { clearInterval(t); r(m); }, 3000); }));
+  // remote audio can take a few seconds to start flowing: sample up to 8 s, stop as soon as there is signal
+  const maxLevel = await S(view, () => new Promise((r) => { let m = 0; const t = setInterval(() => { m = Math.max(m, App.monitor.state.level); if (m > 3) { clearInterval(t); r(m); } }, 50); setTimeout(() => { clearInterval(t); r(m); }, 8000); }));
   ok('聲音條有動（WebAudio 分析遠端聲音）', maxLevel > 3, `max ${maxLevel.toFixed(1)}`);
   await shot(view, 'viewer-live');
   await shot(view, 'viewer-live-full', { fullPage: true });

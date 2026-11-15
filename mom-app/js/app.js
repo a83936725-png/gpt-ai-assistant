@@ -59,12 +59,18 @@
       bar.append(h('h1', { class: 'appbar-title' }, title || ''));
     }
     const actions = def.actions ? def.actions(params) : null;
-    bar.append(h('div', { class: 'appbar-actions' }, actions || null));
+    const search = isTab && App.screens.search && def.id !== 'island'
+      ? h('button', { class: 'icon-btn', 'aria-label': '問答搜尋', html: ICONS.search, onclick: () => App.navigate('search') }) : null;
+    bar.append(h('div', { class: 'appbar-actions' }, actions || null, search));
   }
 
   function renderTabbar(activeTab) {
     const nav = document.getElementById('tabbar');
     nav.innerHTML = '';
+    // shown only on tablets / desktop, where the tab bar becomes a side menu
+    nav.append(h('div', { class: 'side-brand' },
+      h('img', { src: (window.BRAND && BRAND.logo) || 'assets/logo.svg', alt: '' }),
+      h('span', null, (window.BRAND && BRAND.appName) || '易家做媽媽')));
     TABS.forEach((t) => {
       nav.append(h('a', {
         href: `#/${t.id}`, class: `tab${t.id === activeTab ? ' active' : ''}`, 'aria-current': t.id === activeTab ? 'page' : null,

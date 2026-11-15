@@ -59,6 +59,7 @@
     temp: { label: '體溫', plusHint: '量體溫' },
     food: { label: '副食品', plusHint: '記一筆' },
     med: { label: '用藥', plusHint: '記一筆' },
+    visit: { label: '看診', plusHint: '記一筆' },
     bath: { label: '洗澡', plusHint: '洗好了' },
     other: { label: '其他', plusHint: '記一筆' },
   };

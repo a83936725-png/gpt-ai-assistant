@@ -75,9 +75,17 @@
       summary: (l) => [l.data?.name, l.data?.dose].filter(Boolean).join('・') || '用藥',
     },
     bath: { label: '洗澡', icon: '🛁', color: 'var(--t-other)', group: 'care', summary: () => '洗澡' },
+    visit: {
+      label: '看診', icon: '🏥', color: 'var(--t-temp)', group: 'health',
+      summary: (l) => {
+        const d = l.data || {};
+        const fu = d.followUp ? `回診 ${Number(d.followUp.slice(5, 7))}/${Number(d.followUp.slice(8, 10))}` : '';
+        return [d.clinic, d.reason, d.diagnosis, fu].filter(Boolean).join('・') || '看診';
+      },
+    },
     other: { label: '其他', icon: '📝', color: 'var(--t-other)', group: 'care', summary: (l) => l.note || '備註' },
   };
-  App.LOG_ORDER = ['breast', 'bottle', 'pump', 'diaper', 'sleep', 'temp', 'food', 'med', 'bath', 'other'];
+  App.LOG_ORDER = ['breast', 'bottle', 'pump', 'diaper', 'sleep', 'temp', 'food', 'med', 'visit', 'bath', 'other'];
   App.POO = { AMOUNT: POO_AMOUNT, TEXTURE: POO_TEXTURE, COLOR: POO_COLOR };
   App.logSummary = (l) => {
     const t = App.LOG_TYPES[l.type];

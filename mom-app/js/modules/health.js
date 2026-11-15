@@ -909,6 +909,8 @@
     actions: () => h('button', { class: 'icon-btn', 'aria-label': '照護報告（PDF）', html: ui.ICONS.print, onclick: () => App.navigate('report') }),
     render: needBaby((el, params, b) => {
       el.append(h('button', { class: 'btn btn-soft btn-block mb', onclick: () => App.navigate('report') }, '📄 產生照護報告（列印／存成 PDF 給醫師）'));
+      const wk = weekCompare(b);
+      if (wk) el.append(wk);
       el.append(h('div', { class: 'row stats-filter' },
         ui.seg([{ value: 7, label: '近 7 天' }, { value: 14, label: '近 14 天' }], statsRange,
           (v) => { statsRange = Number(v); App.refresh(); }, { small: true })));
@@ -956,6 +958,44 @@
       el.append(h('p', { class: 'disclaimer' }, '新生兒一天約 6 片以上濕尿布通常代表喝得夠；若尿量明顯變少、精神差或發燒，請儘速就醫。'));
     }),
   });
+
+  /* 本週重點：近 7 天 vs 前 7 天（每天平均，只算有紀錄的天） */
+  function weekCompare(b) {
+    const days = dailyStats(b, 14).days;
+    const has = (d) => d.milk || d.feeds || d.sleepMs || d.wet || d.dirty;
+    const prev = days.slice(0, 7).filter(has);
+    const cur = days.slice(7).filter(has);
+    if (cur.length < 3 || prev.length < 3) return null;
+    const avg = (arr, f) => arr.reduce((x, d) => x + f(d), 0) / arr.length;
+    const rows = [
+      { label: '瓶餵奶量', unit: 'ml', f: (d) => d.milk, digits: 0 },
+      { label: '餵奶次數', unit: '次', f: (d) => d.feeds, digits: 1 },
+      { label: '睡眠', unit: '小時', f: (d) => d.sleepMs / C.HOUR, digits: 1 },
+      { label: '尿布', unit: '片', f: (d) => d.wet + d.dirty, digits: 1 },
+    ].map((r) => {
+      const a = avg(cur, r.f); const p = avg(prev, r.f);
+      const pct = p ? ((a - p) / p) * 100 : 0;
+      return { ...r, a, p, pct };
+    });
+    const insights = [];
+    const milk = rows[0]; const sleep = rows[2]; const diaper = rows[3];
+    if (milk.p && milk.pct >= 8) insights.push(`奶量比上週多 ${Math.round(milk.pct)}%，寶寶胃口變大了`);
+    if (milk.p && milk.pct <= -15) insights.push(`奶量比上週少 ${Math.round(-milk.pct)}%，若精神差或尿布變少請諮詢醫師`);
+    if (Math.abs(sleep.a - sleep.p) >= 0.5) insights.push(`每天睡眠${sleep.a > sleep.p ? '多' : '少'}了 ${Math.abs(sleep.a - sleep.p).toFixed(1)} 小時`);
+    if (diaper.p && diaper.pct <= -25) insights.push('尿布片數明顯變少，留意喝奶量與精神');
+    if (!insights.length) insights.push('各項數字和上週差不多，作息很穩定 👍');
+    return ui.card({ class: 'week-card' },
+      h('div', { class: 'card-title' }, '📊 本週重點', h('span', { class: 'tiny muted' }, '近 7 天 vs 前 7 天・每天平均')),
+      h('div', { class: 'week-rows' }, rows.map((r) => {
+        const up = r.pct > 3; const down = r.pct < -3;
+        return h('div', { class: 'week-row' },
+          h('span', { class: 'week-label' }, r.label),
+          h('span', { class: 'week-val num' }, `${fmtNum(r.a, r.digits)}`, h('small', null, ` ${r.unit}`)),
+          h('span', { class: `week-delta num${up ? ' up' : down ? ' down' : ''}` }, up ? `▲ ${Math.round(r.pct)}%` : down ? `▼ ${Math.round(-r.pct)}%` : '持平'),
+          h('span', { class: 'week-prev tiny muted num' }, `上週 ${fmtNum(r.p, r.digits)}`));
+      })),
+      h('ul', { class: 'week-insights small' }, insights.map((t) => h('li', null, t))));
+  }
 
   function statTile(label, value, unit) {
     return h('div', { class: 'card flat stat-tile' },
@@ -1106,6 +1146,6 @@
 
   // expose helpers for other modules / tests
   App.health = {
-    percentileOf, curveValue, vaccineStatus, nextVaccine, checkupStatus, dailyStats, latestGrowth, growthPoints, preventionTodo,
+    percentileOf, curveValue, vaccineStatus, nextVaccine, checkupStatus, dailyStats, latestGrowth, growthPoints, preventionTodo, weekCompare,
   };
 }());

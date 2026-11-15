@@ -759,7 +759,8 @@
   /* =========================================================
    * Screen: contraction 宮縮計時 (self-painting)
    * ======================================================= */
-  function contractionStats(list, now = Date.now()) {
+  // rule: '511' = 約每 5 分鐘、每次 1 分鐘、持續 1 小時；'411' = 約每 4 分鐘（較保守，依醫師建議選擇）
+  function contractionStats(list, now = Date.now(), rule = '511') {
     const sorted = [...list].filter((c) => c.end).sort((a, b) => new Date(a.start) - new Date(b.start));
     const hourAgo = now - 60 * 60 * 1000;
     const inHour = sorted.filter((c) => new Date(c.start).getTime() >= hourAgo);
@@ -772,7 +773,8 @@
     const avgDur = avg(durs);
     const avgInt = avg(intervals);
     const span = inHour.length ? now - new Date(inHour[0].start).getTime() : 0;
-    const regular = inHour.length >= 8 && avgInt && avgInt <= 5.5 * 60000 && avgDur >= 45000 && span >= 45 * 60000;
+    const maxInt = (rule === '411' ? 4.5 : 5.5) * 60000;
+    const regular = inHour.length >= (rule === '411' ? 10 : 8) && avgInt && avgInt <= maxInt && avgDur >= 45000 && span >= 45 * 60000;
     const frequent = !regular && inHour.length >= 4 && avgInt && avgInt <= 10 * 60000;
     return { sorted, inHour, avgDur, avgInt, regular, frequent };
   }
@@ -783,8 +785,12 @@
       el.innerHTML = '';
       const act = store.state.active.contraction;
       const list = store.state.preg.contractions;
-      const st = contractionStats(list);
+      const rule = store.state.preg.contractionRule || '511';
+      const st = contractionStats(list, Date.now(), rule);
       const last = st.sorted[st.sorted.length - 1];
+      add(el, h('div', { class: 'mb' },
+        h('div', { class: 'tiny muted mb' }, '提醒規則（依產檢醫師建議選擇）'),
+        ui.seg([{ value: '511', label: '5-1-1（常見）' }, { value: '411', label: '4-1-1（較早提醒）' }], rule, (v) => { store.update((s0) => { s0.preg.contractionRule = v; }); paint(); }, { small: true })));
       add(el, ui.card({ class: 'center pg-con-card' },
         act
           ? h('div', null, h('div', { class: 'small muted' }, '宮縮中・持續'), h('div', { class: 'pg-con-clock num', 'data-clock': act.start }, '00:00'))
@@ -808,7 +814,7 @@
       if (st.regular) {
         add(el, ui.card({ class: 'pg-alert-warn mt' },
           h('div', { class: 'bold' }, '⏰ 宮縮已經接近規律'),
-          h('p', { class: 'small' }, '過去一小時大約每 5 分鐘一次、每次約 1 分鐘（常說的「5-1-1」）。建議聯絡你的產檢醫院，依指示準備前往。經產婦或住得較遠的人可以更早出發。')));
+          h('p', { class: 'small' }, `過去一小時大約每 ${rule === '411' ? 4 : 5} 分鐘一次、每次約 1 分鐘（「${rule === '411' ? '4-1-1' : '5-1-1'}」）。建議聯絡你的產檢醫院，依指示準備前往。經產婦、剖腹產後嘗試自然產（VBAC）或住得較遠的人，請依醫師建議更早出發。`)));
       } else if (st.frequent) {
         add(el, ui.card({ class: 'soft mt' },
           h('div', { class: 'bold' }, '宮縮變頻繁了'),
@@ -1044,7 +1050,7 @@
     { id: 'pregnancy', title: '孕期週記', icon: '🤰', desc: '每週寶寶變化', stages: ['preg'], screen: 'pregnancy', order: 10, group: '孕期' },
     { id: 'prenatal', title: '產檢時程', icon: '🩺', desc: '公費 14 次產檢', stages: ['preg'], screen: 'prenatal', order: 20, group: '孕期' },
     { id: 'kick', title: '胎動計數', icon: '👣', desc: '數到 10 下', stages: ['preg'], screen: 'kick', order: 30, group: '孕期' },
-    { id: 'contraction', title: '宮縮計時', icon: '⏱️', desc: '判斷產兆 5-1-1', stages: ['preg'], screen: 'contraction', order: 40, group: '孕期' },
+    { id: 'contraction', title: '宮縮計時', icon: '⏱️', desc: '判斷產兆 5-1-1／4-1-1', stages: ['preg'], screen: 'contraction', order: 40, group: '孕期' },
     { id: 'pregweight', title: '孕期體重', icon: '⚖️', desc: '建議增重範圍', stages: ['preg'], screen: 'pregweight', order: 50, group: '孕期' },
     { id: 'hospitalbag', title: '待產包', icon: '🎒', desc: '清單一次備齊', stages: ['preg'], screen: 'hospitalbag', order: 60, group: '孕期' },
   ].forEach((t) => App.tool(t));

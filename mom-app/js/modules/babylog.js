@@ -284,6 +284,14 @@
       const reaction = h('input', { value: data.reaction || '', placeholder: '過敏反應／喜好（選填）' });
       body.append(ui.field('時間', startIn), ui.field('食物', item), ui.field('份量', amount), ui.field('反應', reaction));
       collect = () => ({ data: { item: item.value.trim(), amount: amount.value.trim(), reaction: reaction.value.trim() } });
+    } else if (type === 'visit') {
+      const clinic = h('input', { value: data.clinic || '', placeholder: '診所／醫院、醫師' });
+      const reason = h('input', { value: data.reason || '', placeholder: '例如：咳嗽三天、發燒、預防保健' });
+      const diag = h('textarea', { rows: 2, placeholder: '醫師說明、診斷' }, data.diagnosis || '');
+      const meds = h('input', { value: data.meds || '', placeholder: '藥物（依處方，選填）' });
+      const fu = h('input', { type: 'date', value: data.followUp || '' });
+      body.append(ui.field('時間', startIn), ui.field('看診地點', clinic), ui.field('原因／症狀', reason), ui.field('醫師說明', diag), ui.field('藥物', meds), ui.field('回診日期', fu, '設定後會出現在提醒中心的「預約與到期提醒」'));
+      collect = () => ({ data: { clinic: clinic.value.trim(), reason: reason.value.trim(), diagnosis: diag.value.trim(), meds: meds.value.trim(), followUp: fu.value } });
     } else if (type === 'med') {
       const name = h('input', { value: data.name || '', placeholder: '藥名（依醫師處方）' });
       const dose = h('input', { value: data.dose || '', placeholder: '劑量' });
@@ -419,7 +427,7 @@
     { value: 'feed', label: '餵食', types: ['breast', 'bottle', 'food', 'pump'] },
     { value: 'diaper', label: '尿布', types: ['diaper'] },
     { value: 'sleep', label: '睡眠', types: ['sleep'] },
-    { value: 'health', label: '健康', types: ['temp', 'med', 'bath', 'other'] },
+    { value: 'health', label: '健康', types: ['temp', 'med', 'visit', 'bath', 'other'] },
   ];
 
   function renderBabyLog(el) {
@@ -429,6 +437,10 @@
         h('button', { class: 'btn btn-primary', onclick: () => App.me && App.me.editBaby() }, '新增寶寶')));
       return;
     }
+    el.append(h('div', { class: 'row gap-sm log-top' },
+      h('div', { class: 'grow' }, ui.seg([{ value: 'day', label: '日' }, { value: 'month', label: '月曆' }], logMode, (v) => { logMode = v; App.refresh(); }, { small: true })),
+      h('button', { class: 'btn btn-sm btn-line', onclick: () => shareDay(baby, viewDay), html: `${ui.ICONS.line}<span>傳給家人</span>` })));
+    if (logMode === 'month') { renderMonth(el, baby); return; }
     const isToday = viewDay === C.dateKey();
     const age = C.babyAge(baby.birthday, C.parseKey(viewDay));
     el.append(h('div', { class: 'datenav' },
@@ -458,6 +470,90 @@
 
     el.append(h('button', { class: 'fab', 'aria-label': '新增紀錄', html: ui.ICONS.plus, onclick: typePicker }));
   }
+  /* ---------- 月曆：一眼看出每天的奶量、尿布、睡眠與大事 ---------- */
+  let logMode = 'day';
+  let viewMonth = null; // Date (first of month)
+  function renderMonth(el, baby) {
+    const ref = C.parseKey(viewDay);
+    if (!viewMonth) viewMonth = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    const y = viewMonth.getFullYear(); const m = viewMonth.getMonth();
+    const days = new Date(y, m + 1, 0).getDate();
+    const byDay = C.groupBy(store.babyLogs(baby.id), (l) => C.dateKey(new Date(l.start)));
+    const vDone = store.state.vaccines[baby.id] || {};
+    const cDone = store.state.checkups[baby.id] || {};
+    const marks = {};
+    const mark = (d, ico) => { if (d) (marks[d] = marks[d] || new Set()).add(ico); };
+    Object.values(vDone).forEach((d) => mark(d, '💉'));
+    Object.values(cDone).forEach((d) => mark(d, '🩺'));
+    store.state.growth.filter((g) => g.babyId === baby.id).forEach((g) => mark(g.date, '📏'));
+    const today = C.dateKey();
+    const atMonthStart = y === new Date().getFullYear() && m === new Date().getMonth();
+    el.append(h('div', { class: 'datenav' },
+      h('button', { class: 'icon-btn', 'aria-label': '上個月', html: ui.ICONS.left, onclick: () => { viewMonth = new Date(y, m - 1, 1); App.refresh(); } }),
+      h('div', { class: 'datenav-mid bold' }, `${y} 年 ${m + 1} 月`),
+      h('button', { class: 'icon-btn', 'aria-label': '下個月', html: ui.ICONS.right, disabled: atMonthStart, onclick: () => { viewMonth = new Date(y, m + 1, 1); App.refresh(); } })));
+    const grid = h('div', { class: 'cal-grid', role: 'group', 'aria-label': `${y} 年 ${m + 1} 月紀錄月曆` });
+    C.WEEKDAYS.forEach((w) => grid.append(h('div', { class: 'cal-wd' }, w)));
+    for (let i = 0; i < new Date(y, m, 1).getDay(); i += 1) grid.append(h('div', { class: 'cal-cell empty' }));
+    let recDays = 0; let mlSum = 0; let sleepSum = 0;
+    for (let d = 1; d <= days; d += 1) {
+      const key = C.dateKey(new Date(y, m, d));
+      const logs = byDay[key] || [];
+      const s = App.babylog.daySummary(logs);
+      if (logs.length) { recDays += 1; mlSum += s.bottleMl; sleepSum += s.sleepMs; }
+      logs.filter((l) => l.type === 'visit').forEach(() => mark(key, '🏥'));
+      if (logs.some((l) => l.type === 'temp' && Number(l.data?.c) >= 38)) mark(key, '🌡️');
+      const disabled = key > today || key < baby.birthday;
+      grid.append(h('button', {
+        class: `cal-cell${key === today ? ' today' : ''}${logs.length ? ' has' : ''}`, disabled,
+        'aria-label': `${m + 1} 月 ${d} 日${logs.length ? `：瓶餵 ${s.bottleMl} 毫升，尿布 ${s.diaperCount} 片` : ''}`,
+        onclick: () => { viewDay = key; logMode = 'day'; App.refresh(); },
+      },
+      h('span', { class: 'cal-d' }, d),
+      logs.length ? h('span', { class: 'cal-ml num' }, s.bottleMl ? `${s.bottleMl}` : `${s.feedCount}次`) : null,
+      logs.length ? h('span', { class: 'cal-sub num' }, `🧷${s.diaperCount}`) : null,
+      marks[key] ? h('span', { class: 'cal-marks' }, [...marks[key]].join('')) : null));
+    }
+    el.append(grid);
+    el.append(h('div', { class: 'tiny muted mt' }, '格子：瓶餵奶量 ml（或餵食次數）・尿布片數｜💉 疫苗 🩺 健檢 📏 量身高體重 🏥 看診 🌡️ 發燒'));
+    if (recDays) {
+      el.append(h('div', { class: 'grid-3 mt' },
+        h('div', { class: 'card flat center' }, h('div', { class: 'bold num' }, recDays), h('div', { class: 'tiny muted' }, '有紀錄的天數')),
+        h('div', { class: 'card flat center' }, h('div', { class: 'bold num' }, Math.round(mlSum / recDays)), h('div', { class: 'tiny muted' }, '平均瓶餵 ml／天')),
+        h('div', { class: 'card flat center' }, h('div', { class: 'bold num' }, (sleepSum / recDays / C.HOUR).toFixed(1)), h('div', { class: 'tiny muted' }, '平均睡眠 小時／天'))));
+    }
+    el.append(h('button', { class: 'fab', 'aria-label': '新增紀錄', html: ui.ICONS.plus, onclick: typePicker }));
+  }
+
+  /* ---------- 傳給家人：今天的照護摘要（LINE） ---------- */
+  function daySummaryText(baby, day) {
+    const logs = store.logsOn(day, baby.id).slice().sort((a, b) => new Date(a.start) - new Date(b.start));
+    const s = App.babylog.daySummary(logs);
+    const lastFeed = logs.filter((l) => ['bottle', 'breast'].includes(l.type)).pop();
+    const temps = logs.filter((l) => l.type === 'temp');
+    const visits = logs.filter((l) => l.type === 'visit');
+    const age = C.babyAge(baby.birthday, C.parseKey(day));
+    const lines = [
+      `【${baby.name} ${C.fmtDate(day)} 照護摘要】${age ? `（${age.text}）` : ''}`,
+      `🍼 瓶餵 ${s.bottleCount} 次 ${s.bottleMl} ml・親餵 ${s.breastCount} 次`,
+      `🧷 尿布 ${s.diaperCount} 片（濕 ${s.wet}・便便 ${s.dirty}）`,
+      `😴 睡眠 ${s.sleepMs ? C.fmtDuration(s.sleepMs) : '0'}`,
+      s.pumpMl ? `🥛 擠奶 ${s.pumpMl} ml` : '',
+      temps.length ? `🌡️ 體溫 ${temps.map((t) => `${C.fmtTime(t.start)} ${Number(t.data?.c).toFixed(1)}°C`).join('、')}` : '',
+      visits.length ? `🏥 看診：${visits.map((v) => App.logSummary(v)).join('；')}` : '',
+      lastFeed ? `⏰ 最後一次喝奶 ${C.fmtTime(lastFeed.start)}（${App.logSummary(lastFeed)}）` : '',
+      '— 易家做媽媽',
+    ];
+    return lines.filter(Boolean).join('\n');
+  }
+  function shareDay(baby, day) {
+    const text = daySummaryText(baby, day);
+    try { if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {}); } catch (e) { /* ignore */ }
+    window.open(`https://line.me/R/share?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    ui.toast('已開啟 LINE，摘要也已複製');
+  }
+  App.babylog.daySummaryText = daySummaryText;
+
   const sumChip = (ico, a, b) => h('div', { class: 'sum-chip' }, h('span', { class: 'sum-ico' }, ico), h('div', null, h('div', { class: 'bold num' }, a), h('div', { class: 'tiny muted' }, b)));
 
   App.screen('log', {

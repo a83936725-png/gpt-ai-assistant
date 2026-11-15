@@ -251,6 +251,11 @@
         if (st.key !== 'done' && C.dateKey(st.start) === tomorrow) out.push(`${c.name}從明天開始可以做`);
       });
     }
+    // 看診紀錄裡設定的回診日期
+    store.state.logs.filter((l) => l.type === 'visit' && l.data && l.data.followUp).forEach((l) => {
+      const b2 = store.state.babies.find((x) => x.id === l.babyId);
+      if (l.data.followUp === C.dateKey(now) || l.data.followUp === tomorrow) out.push(`${b2 ? b2.name : '寶寶'}回診（${l.data.followUp === tomorrow ? '明天' : '今天'}${l.data.clinic ? `・${l.data.clinic}` : ''}）`);
+    });
     if (store.inStage(['preg']) && App.preg && App.preg.nextPrenatal) {
       const np = App.preg.nextPrenatal();
       if (np && (np.date === tomorrow || np.date === C.dateKey(now))) out.push(`第 ${np.no} 次產檢（約${np.date === tomorrow ? '明天' : '今天'}）`);
@@ -307,12 +312,12 @@
     s.activeBabyId = babyId;
     const add = (type, start, extra = {}) => s.logs.push({ id: C.uid(), babyId, type, start: new Date(start).toISOString(), end: null, data: {}, note: '', by: Math.random() < 0.3 ? '爸爸' : '媽媽', createdAt: new Date(start).toISOString(), ...extra });
     // 3 days of logs, every ~3h a feed, diapers, naps
-    const startT = now.getTime() - 3 * C.DAY;
+    const startT = now.getTime() - 14 * C.DAY; // two weeks so 月曆 and 本週重點 have data
     let t = startT;
     let i = 0;
     while (t < now.getTime() - 25 * C.MIN) {
       if (i % 3 === 0) add('breast', t, { end: new Date(t + 22 * C.MIN).toISOString(), data: { leftMin: 12, rightMin: 10, lastSide: i % 2 ? 'L' : 'R' } });
-      else add('bottle', t, { data: { kind: i % 4 === 1 ? 'formula' : 'breastmilk', ml: 120 + (i % 3) * 10 } });
+      else add('bottle', t, { data: { kind: i % 4 === 1 ? 'formula' : 'breastmilk', ml: 100 + Math.floor((t - startT) / C.DAY) * 3 + (i % 3) * 10 } }); // 奶量隨日齡慢慢增加
       add('diaper', t + 15 * C.MIN, { data: i % 3 === 1 ? { kind: 'mixed', poo: { amount: 'm', texture: 'soft', color: 'yellow' } } : { kind: 'wet' } });
       const nap = t + 60 * C.MIN;
       const napLen = (new Date(nap).getHours() >= 21 || new Date(nap).getHours() < 5 ? 150 : 70) * C.MIN;

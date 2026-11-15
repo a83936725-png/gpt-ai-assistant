@@ -10,6 +10,8 @@ GPT AI Assistant is an application that is implemented using the OpenAI API and 
 
 ## News
 
+- 2026-11-15: `4.11.0` adds `畫圖示` (SVG), `畫動畫` (GIF) and `數據卡` (KPI Flex card).
+- 2026-11-14: `4.10.0` adds `畫介面`, `寫貼文`, `模型檢查`, `我的ID`, an allowlist and optional moderation. See the [upgrade guide (中文)](docs/UPGRADE-2026.zh-TW.md).
 - 2026-11-14: OpenAI shut down `gpt-3.5-turbo` and DALL·E. Default models are now `gpt-6-luna`, `gpt-image-2.6-flare` and `gpt-transcribe`. Read the [upgrade guide (中文)](docs/UPGRADE-2026.zh-TW.md) and check your Vercel environment variables. :warning:
 - 2024-07-10: The `4.9` version now support `gpt-4o` OpenAI model. :fire:
 - 2023-05-03: The `4.6` version now support `gpt-4` OpenAI model.

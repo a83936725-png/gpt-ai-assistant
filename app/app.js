@@ -9,10 +9,16 @@ import {
   drawHandler,
   forgetHandler,
   enquireHandler,
+  idHandler,
+  kpiHandler,
+  mediaHandler,
+  modelsHandler,
+  postHandler,
   reportHandler,
   retryHandler,
   searchHandler,
   talkHandler,
+  uiHandler,
   versionHandler,
 } from './handlers/index.js';
 import Context from './context.js';
@@ -23,7 +29,10 @@ import Event from './models/event.js';
  * @returns {Promise<Context>}
  */
 const handleContext = async (context) => (
-  activateHandler(context)
+  // 「畫介面」「畫圖示」「畫動畫」 must run before the draw handler, whose alias 「畫」 would match them too.
+  uiHandler(context)
+  || mediaHandler(context)
+  || activateHandler(context)
   || commandHandler(context)
   || continueHandler(context)
   || deactivateHandler(context)
@@ -32,6 +41,10 @@ const handleContext = async (context) => (
   || drawHandler(context)
   || forgetHandler(context)
   || enquireHandler(context)
+  || idHandler(context)
+  || kpiHandler(context)
+  || modelsHandler(context)
+  || postHandler(context)
   || reportHandler(context)
   || retryHandler(context)
   || searchHandler(context)
@@ -39,6 +52,26 @@ const handleContext = async (context) => (
   || talkHandler(context)
   || context
 );
+
+/**
+ * A source that is not on the allowlist can only ask for its ID.
+ * @param {Context} context
+ * @returns {Promise<Context>}
+ */
+const handleBlockedContext = async (context) => (
+  idHandler(context)
+  || context.pushNotAllowed()
+);
+
+/**
+ * @param {Context} context
+ * @returns {Promise<Context>}
+ */
+const routeContext = (context) => {
+  if (context.isBlocked) return handleBlockedContext(context);
+  if (context.error || context.isFlagged) return context;
+  return handleContext(context);
+};
 
 const handleEvents = async (events = []) => (
   (Promise.all(
@@ -51,7 +84,7 @@ const handleEvents = async (events = []) => (
           .map((event) => new Context(event))
           .map((context) => context.initialize()),
       ))
-        .map((context) => (context.error ? context : handleContext(context))),
+        .map(routeContext),
     ))
       .filter((context) => context.messages.length > 0)
       .map((context) => replyMessage(context)),

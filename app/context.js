@@ -14,6 +14,8 @@ import {
   fetchUser,
   generateTranscription,
 } from '../utils/index.js';
+import isAllowed from '../utils/is-allowed.js';
+import moderateContent from '../utils/moderate-content.js';
 import { Command, COMMAND_BOT_FORGET, COMMAND_BOT_RETRY } from './commands/index.js';
 import { updateHistory } from './history/index.js';
 import {
@@ -42,6 +44,18 @@ class Context {
    * @type {Array<Message>}
    */
   messages = [];
+
+  /**
+   * True when the user or group is not on APP_ALLOWED_USER_IDS / APP_ALLOWED_GROUP_IDS.
+   * @type {boolean}
+   */
+  isBlocked = false;
+
+  /**
+   * True when moderation flagged the incoming message.
+   * @type {boolean}
+   */
+  isFlagged = false;
 
   /**
    * @param {Event} event
@@ -111,6 +125,16 @@ class Context {
   }
 
   async initialize() {
+    if (!isAllowed({
+      isGroup: this.event.isGroup,
+      userId: this.userId,
+      groupId: this.groupId,
+      allowedUserIds: config.APP_ALLOWED_USER_IDS,
+      allowedGroupIds: config.APP_ALLOWED_GROUP_IDS,
+    })) {
+      this.isBlocked = true;
+      return this;
+    }
     try {
       this.validate();
       await this.register();
@@ -131,8 +155,29 @@ class Context {
         return this.pushError(err);
       }
     }
+    try {
+      const flagged = await moderateContent(this.event.isImage
+        ? { imageUrl: this.transcription }
+        : { text: this.trimmedText });
+      if (flagged) {
+        this.isFlagged = true;
+        return this.pushText(t('__ERROR_MODERATION_FLAGGED'));
+      }
+    } catch (err) {
+      // A moderation outage should not take the bot down; log it and carry on.
+      console.error(`Moderation check failed: ${err.message}`);
+    }
     updateHistory(this.id, (history) => history.write(this.source.name, this.trimmedText));
     return this;
+  }
+
+  /**
+   * In one-to-one chats, tells a blocked user how to get access; in groups, stays silent.
+   * @returns {Context}
+   */
+  pushNotAllowed() {
+    if (this.event.isGroup) return this;
+    return this.pushText(t('__ERROR_NOT_ALLOWED'));
   }
 
   /**

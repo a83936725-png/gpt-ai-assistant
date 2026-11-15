@@ -94,8 +94,69 @@ const createCardBubble = ({
   return bubble;
 };
 
+const MAX_KPI_METRICS = 6;
+
+// 升跌變化的顏色：含「-」或「↓」為紅，含「+」或「↑」為綠，其餘中性灰。
+const deltaColor = (delta) => {
+  if (/[-↓]/.test(delta)) return '#C0392B';
+  if (/[+↑]/.test(delta)) return '#2E8B57';
+  return '#8C8C8C';
+};
+
+/**
+ * Builds a KPI card (大數字彈出 + 升跌變化): a title and up to six metrics,
+ * each a big number with an optional coloured delta.
+ * @param {Object} param
+ * @param {string} [param.title]
+ * @param {Array<{ label: string, value: string, delta?: string }>} param.metrics
+ * @returns {Object}
+ */
+const createKpiBubble = ({
+  title,
+  metrics = [],
+}) => {
+  const rows = metrics.slice(0, MAX_KPI_METRICS).map((m) => ({
+    type: 'box',
+    layout: 'vertical',
+    spacing: 'none',
+    contents: [
+      {
+        type: 'text', text: String(m.label || '—'), size: 'xs', color: '#8C8C8C', wrap: true,
+      },
+      {
+        type: 'box',
+        layout: 'baseline',
+        spacing: 'sm',
+        contents: [
+          {
+            type: 'text', text: String(m.value), size: 'xxl', weight: 'bold', flex: 0,
+          },
+          ...(m.delta ? [{
+            type: 'text', text: String(m.delta), size: 'sm', color: deltaColor(m.delta), gravity: 'bottom',
+          }] : []),
+        ],
+      },
+    ],
+  }));
+  return {
+    type: 'bubble',
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'lg',
+      contents: [
+        ...(title ? [{
+          type: 'text', text: String(title), weight: 'bold', size: 'md', wrap: true,
+        }] : []),
+        ...rows,
+      ],
+    },
+  };
+};
+
 export {
   createCardBubble,
+  createKpiBubble,
 };
 
 export default FlexMessage;

@@ -9,14 +9,19 @@ import COMMAND_BOT_ACTIVATE from './bot-activate.js';
 import COMMAND_BOT_CONTINUE from './bot-continue.js';
 import COMMAND_BOT_DEACTIVATE from './bot-deactivate.js';
 import COMMAND_BOT_DRAW_DEMO from './bot-draw-demo.js';
+import COMMAND_BOT_ANIM from './bot-anim.js';
 import COMMAND_BOT_DRAW from './bot-draw.js';
 import COMMAND_BOT_FORGET from './bot-forget.js';
+import COMMAND_BOT_ICON from './bot-icon.js';
+import COMMAND_BOT_KPI from './bot-kpi.js';
+import COMMAND_BOT_POST from './bot-post.js';
 import COMMAND_BOT_RETRY from './bot-retry.js';
 import COMMAND_BOT_SEARCH from './bot-search.js';
 import COMMAND_BOT_SEARCH_DEMO from './bot-search-demo.js';
 import COMMAND_BOT_SUMMON_DEMO from './bot-summon-demo.js';
 import COMMAND_BOT_TALK_DEMO from './bot-talk-demo.js';
 import COMMAND_BOT_TALK from './bot-talk.js';
+import COMMAND_BOT_UI from './bot-ui.js';
 import Command from './command.js';
 import COMMAND_SUM_ADVISE from './sum-advise.js';
 import COMMAND_SUM_APOLOGIZE from './sum-apologize.js';
@@ -29,6 +34,8 @@ import COMMAND_SUM_SUM from './sum-sum.js';
 import COMMAND_SYS_COMMAND from './sys-command.js';
 import COMMAND_SYS_DEPLOY from './sys-deploy.js';
 import COMMAND_SYS_DOC from './sys-doc.js';
+import COMMAND_SYS_ID from './sys-id.js';
+import COMMAND_SYS_MODELS from './sys-models.js';
 import COMMAND_SYS_REPORT from './sys-report.js';
 import COMMAND_SYS_VERSION from './sys-version.js';
 import COMMAND_TRANSLATE_TO_EN from './translate-to-en.js';
@@ -45,13 +52,18 @@ export const ALL_COMMANDS = [
   COMMAND_BOT_CONTINUE,
   COMMAND_BOT_DEACTIVATE,
   COMMAND_BOT_DRAW_DEMO,
+  COMMAND_BOT_ANIM,
   COMMAND_BOT_DRAW,
   COMMAND_BOT_FORGET,
+  COMMAND_BOT_ICON,
+  COMMAND_BOT_KPI,
+  COMMAND_BOT_POST,
   COMMAND_BOT_RETRY,
   COMMAND_BOT_SEARCH,
   COMMAND_BOT_SUMMON_DEMO,
   COMMAND_BOT_TALK_DEMO,
   COMMAND_BOT_TALK,
+  COMMAND_BOT_UI,
   COMMAND_SUM_ADVISE,
   COMMAND_SUM_APOLOGIZE,
   COMMAND_SUM_BLAME,
@@ -63,6 +75,8 @@ export const ALL_COMMANDS = [
   COMMAND_SYS_COMMAND,
   COMMAND_SYS_DEPLOY,
   COMMAND_SYS_DOC,
+  COMMAND_SYS_ID,
+  COMMAND_SYS_MODELS,
   COMMAND_SYS_REPORT,
   COMMAND_SYS_VERSION,
   COMMAND_TRANSLATE_TO_EN,
@@ -105,13 +119,18 @@ export {
   COMMAND_BOT_CONTINUE,
   COMMAND_BOT_DEACTIVATE,
   COMMAND_BOT_DRAW_DEMO,
+  COMMAND_BOT_ANIM,
   COMMAND_BOT_DRAW,
   COMMAND_BOT_FORGET,
+  COMMAND_BOT_ICON,
+  COMMAND_BOT_KPI,
+  COMMAND_BOT_POST,
   COMMAND_BOT_RETRY,
   COMMAND_BOT_SEARCH,
   COMMAND_BOT_SUMMON_DEMO,
   COMMAND_BOT_TALK_DEMO,
   COMMAND_BOT_TALK,
+  COMMAND_BOT_UI,
   Command,
   COMMAND_SUM_ADVISE,
   COMMAND_SUM_APOLOGIZE,
@@ -124,6 +143,8 @@ export {
   COMMAND_SYS_COMMAND,
   COMMAND_SYS_DEPLOY,
   COMMAND_SYS_DOC,
+  COMMAND_SYS_ID,
+  COMMAND_SYS_MODELS,
   COMMAND_SYS_REPORT,
   COMMAND_SYS_VERSION,
   COMMAND_TRANSLATE_TO_EN,

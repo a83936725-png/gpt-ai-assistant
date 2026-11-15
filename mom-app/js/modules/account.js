@@ -62,8 +62,13 @@
     if (document.visibilityState !== 'visible') return;
     const cfg = await config();
     if (!cfg) return;
-    try { await call('POST', 'presence', { sid }); } catch (e) { /* ignore */ }
-    try { App.live = await call('GET', 'stats'); } catch (e) { App.live = null; }
+    let here = false;
+    try { await call('POST', 'presence', { sid }); here = true; } catch (e) { /* ignore */ }
+    try {
+      App.live = await call('GET', 'stats');
+      // the server caches counts for ~15 s; if this phone just checked in, it is online, so count at least itself
+      if (here) App.live = { ...App.live, online: Math.max(App.live.online, 1) };
+    } catch (e) { App.live = null; }
     fillPills();
   }
   // a pill that fills itself with the latest real numbers (hidden until we have them)
@@ -114,6 +119,7 @@
     denied: '你取消了 LINE 登入',
     line_error: 'LINE 登入失敗，請再試一次',
     line_disabled: '尚未開放 LINE 登入',
+    not_configured: '會員服務尚未開放',
   };
   const errText = (e) => ERR[e.code] || (e.name === 'AbortError' ? ERR.offline : '發生錯誤，請稍後再試');
 
@@ -128,7 +134,18 @@
         App.livePill('login-live')));
       const box = h('div', { class: 'login-box' });
       el.append(box);
-      // LINE callback lands here with a token or an error
+      // LINE callback lands here with a token or an error. Only accept it if it carries the nonce this
+      // browser created when it started the LINE login (otherwise someone could plant their own session).
+      const expectNonce = (() => { try { return sessionStorage.getItem('mom-line-nonce') || ''; } catch (e) { return ''; } })();
+      if (params && (params.token || params.error)) {
+        try { sessionStorage.removeItem('mom-line-nonce'); } catch (e) { /* ignore */ }
+        history.replaceState(null, '', `${location.pathname}${location.search}#/login`); // keep the token out of history
+      }
+      if (params && params.token && (!expectNonce || params.nonce !== expectNonce)) {
+        box.append(ui.card({ class: 'soft' }, h('div', { class: 'card-title' }, '這個登入連結無法使用'),
+          h('p', { class: 'small muted' }, '為了保護你的帳號，只接受從這支手機發起的 LINE 登入。請重新按「用 LINE 登入」。')));
+        params = {};
+      }
       if (params && params.token) {
         box.append(h('p', { class: 'center muted' }, '登入中…'));
         store.update((s) => { s.auth = { token: params.token, user: null }; });
@@ -159,11 +176,21 @@
               h('button', { class: 'btn btn-primary btn-block mt', onclick: () => App.navigate(store.state.onboarded ? 'home' : 'onboarding') }, '先不登入，直接使用')));
             return;
           }
+          if (!cfg.providers.password && !cfg.providers.line) {
+            holder.append(ui.card({ class: 'soft' }, h('div', { class: 'card-title' }, '會員服務即將開放'),
+              h('p', { class: 'small muted' }, '目前還不能登入，你仍然可以直接使用 App 的全部紀錄功能。'),
+              h('button', { class: 'btn btn-primary btn-block mt', onclick: () => App.navigate(store.state.onboarded ? 'home' : 'onboarding') }, '直接使用')));
+            return;
+          }
           const share = store.state.share || {};
           if (cfg.providers.line) {
             holder.append(h('button', {
               class: 'btn btn-block login-line', html: `${ui.ICONS.line}<span>用 LINE 登入</span>`,
-              onclick: () => { location.href = `${base}auth/line/start?ref=${encodeURIComponent(share.invitedBy || '')}`; },
+              onclick: () => {
+                const nonce = Array.from(crypto.getRandomValues(new Uint8Array(18)), (x) => x.toString(16).padStart(2, '0')).join('');
+                try { sessionStorage.setItem('mom-line-nonce', nonce); } catch (e) { /* ignore */ }
+                location.href = `${base}auth/line/start?nonce=${nonce}&ref=${encodeURIComponent(share.invitedBy || '')}`;
+              },
             }), h('div', { class: 'login-or' }, h('span', null, '或用 Email／手機')));
           }
           const acct = h('input', { type: 'text', inputmode: 'email', autocomplete: 'username', placeholder: 'Email 或手機（09xxxxxxxx）', class: 'input', 'aria-label': 'Email 或手機' });
@@ -186,7 +213,7 @@
             try {
               const body = mode === 'login'
                 ? { account: acct.value, password: pw.value }
-                : { account: acct.value, password: pw.value, nickname: nick.value, invitedBy: inv.value, code: share.code, stage: store.state.onboarded ? store.stage : '' };
+                : { account: acct.value, password: pw.value, nickname: nick.value, invitedBy: inv.value };
               const res = await call('POST', mode === 'login' ? 'auth/login' : 'auth/register', body);
               setAuth(res.token, res.user);
               ui.toast(mode === 'login' ? `歡迎回來，${res.user.nickname} 💜` : `註冊成功！歡迎 ${res.user.nickname} 💜`);
@@ -218,7 +245,16 @@
               h('div', { class: 'card-title' }, `👤 ${u.nickname}`, h('span', { class: 'tag primary' }, { line: 'LINE', email: 'Email', phone: '手機' }[u.provider] || '')),
               h('div', { class: 'small muted' }, `${u.accountHint}・邀請碼 ${u.code}`),
               h('div', { class: 'small' }, `已成功邀請 ${u.referrals || 0} 位加入`)),
-            h('button', { class: 'btn btn-sm btn-ghost', onclick: () => { logout(); App.refresh(); } }, '登出')));
+            h('div', { class: 'stack-sm' },
+              h('button', { class: 'btn btn-sm btn-ghost', onclick: () => { logout(); App.refresh(); } }, '登出'),
+              h('button', {
+                class: 'btn btn-sm btn-ghost acct-all',
+                onclick: async () => {
+                  if (!(await ui.confirm('登出所有登入這個帳號的裝置？（手機上的紀錄不會刪除）', { ok: '全部登出' }))) return;
+                  try { await call('POST', 'auth/logout-all'); } catch (e) { /* still log out here */ }
+                  logout(); App.refresh();
+                },
+              }, '登出所有裝置'))));
       }
       return ui.card({ class: 'acct-card soft' },
         h('div', { class: 'row gap' },

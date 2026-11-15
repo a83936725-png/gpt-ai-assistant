@@ -45,10 +45,25 @@
 
 | 變數 | 必填 | 說明 |
 |---|---|---|
-| `MOM_AUTH_SECRET` | ✅ | 隨機長字串（用來簽登入憑證），例如 `openssl rand -hex 32` |
+| `MOM_AUTH_SECRET` | ✅ | 至少 32 字的隨機字串（用來簽登入憑證），例如 `openssl rand -hex 32`；正式環境沒設定時，登入會自動關閉（人數照常顯示） |
 | `KV_REST_API_URL`、`KV_REST_API_TOKEN` | ✅ | 在 Vercel 加入 KV／Upstash Redis 整合後自動產生（沒設定時用記憶體，人數會標「測試環境」且重啟就歸零） |
 | `LINE_LOGIN_CHANNEL_ID`、`LINE_LOGIN_CHANNEL_SECRET` | 選填 | 在 LINE Developers 建立 LINE Login channel；Callback URL 填 `https://你的網域/mom-app/api/auth/line/callback`，填好後登入頁才會出現「用 LINE 登入」 |
 | `MOM_PUBLIC_URL` | 選填 | App 的正式網址（例如 `https://你的網域/mom-app/`），LINE 登入完成後導回這裡 |
 | `MOM_ALLOWED_ORIGINS` | 選填 | 如果 App 放在別的網域，填那個網域（逗號分隔）讓它能呼叫 API |
 
 也記得在 `mom-app/config.js` 填 `appUrl`（分享連結用的正式網址）、`lineOaUrl`、`shopUrl`。
+
+## 六、安全設計（已通過獨立安全審查）
+
+| 項目 | 做法 |
+|---|---|
+| 密碼 | scrypt 加鹽雜湊（非同步，不會卡住同一台伺服器上的 LINE 機器人） |
+| 登入憑證 | HMAC 簽章、30 天有效；「登出所有裝置」可一次作廢全部 |
+| LINE 登入 | 一次性碼（nonce）綁定發起登入的那支手機，別人傳來的「登入連結」會被拒絕；憑證不留在網址列 |
+| 暴力猜密碼 | 每個 IP、每個帳號各自限制次數，計數存在共用資料庫（Vercel KV），不吃可偽造的 X-Forwarded-For |
+| 帳號存在與否 | 登入不論帳號是否存在都花一樣時間 |
+| 邀請碼 | 只由伺服器產生，不能搶先註冊別人分享出去的碼；每個邀請碼每天最多計入 30 位 |
+| 在線人數 | 每個網路的心跳次數有上限，避免灌假人數；統計結果快取 15 秒省資料庫費用 |
+| 資料最少化 | 只存帳號、暱稱、邀請碼；不存孕期階段與任何健康紀錄 |
+
+**正式推出獎勵前務必補上**：Email／簡訊驗證（避免冒用別人的 Email 註冊、灌假邀請）與忘記密碼流程 —— 目前尚未實作，邀請人數先當作參考，不要直接兌換高價值獎品。

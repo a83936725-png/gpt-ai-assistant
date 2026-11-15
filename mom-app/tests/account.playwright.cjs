@@ -62,6 +62,14 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   await A.fill('input[aria-label="密碼"]', 'password-001'); await A.click('.login-form button[type=submit]'); await A.waitForTimeout(800);
   ok('login again', (await S(A, () => App.store.state.auth && App.store.state.auth.user.nickname)) === 'Amy');
   const cfg = await S(A, async () => (await fetch('api/config')).json());
+  // a 「登入連結」 planted by someone else (token without this browser's nonce) must be refused
+  await A.click('text=登出', { timeout: 3000 }).catch(() => {});
+  await A.goto(`${BASE}#/me`); await A.waitForTimeout(500);
+  if (await A.isVisible('.acct-card button:has-text("登出")')) { await A.click('.acct-card button:has-text("登出") >> nth=0'); await A.waitForTimeout(300); }
+  const planted = (await S(A, async () => (await (await fetch('api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account: '0900000000', password: 'nope-nope' }) })).json())));
+  await A.goto(`${BASE}#/login?${encodeURIComponent(JSON.stringify({ token: 'planted.token-from-attacker' }))}`); await A.waitForTimeout(900);
+  ok('planted login link is refused (no nonce from this browser)', await A.isVisible('text=這個登入連結無法使用') && !(await S(A, () => !!App.store.state.auth)), JSON.stringify(planted));
+  ok('login token is scrubbed from the address bar', !(await S(A, () => location.hash.includes('token'))));
   ok('LINE button only when the server has LINE configured', (await A.isVisible('.login-line')) === !!cfg.providers.line);
   if (process.env.STATIC_BASE) {
     const C = await mk(); await C.goto(`${process.env.STATIC_BASE}#/login`); await C.waitForTimeout(1500);

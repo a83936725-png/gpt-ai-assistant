@@ -13,6 +13,16 @@ export class MemoryStore {
     this.presence = new Map(); // sid -> ts
     this.signups = []; // [ts]
     this.referrals = new Map(); // code -> count
+    this.counters = new Map(); // key -> {n, reset}
+  }
+
+  // fixed-window counter shared by every request this process handles (Redis version is shared across instances)
+  async hit(key, windowSec, now = Date.now()) {
+    if (this.counters.size > 20000) this.counters.forEach((v, k) => { if (v.reset <= now) this.counters.delete(k); });
+    const c = this.counters.get(key);
+    if (!c || c.reset <= now) { this.counters.set(key, { n: 1, reset: now + windowSec * 1000 }); return 1; }
+    c.n += 1;
+    return c.n;
   }
 
   async getUser(id) { return this.users.get(id) || null; }
@@ -108,6 +118,12 @@ export class RedisRestStore {
   }
 
   async addReferral(code) { await this.cmd('HINCRBY', 'mom:referrals', code, 1); }
+
+  async hit(key, windowSec) {
+    const n = Number(await this.cmd('INCR', `mom:rl:${key}`));
+    if (n === 1) await this.cmd('EXPIRE', `mom:rl:${key}`, windowSec);
+    return n;
+  }
 
   async countReferrals(code) { return Number(await this.cmd('HGET', 'mom:referrals', code)) || 0; }
 }

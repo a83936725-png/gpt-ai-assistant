@@ -21,15 +21,16 @@ app.get('/images/:name', (req, res) => {
   res.send(image.buffer);
 });
 
+// 易家做媽媽：member API (mounted before the global JSON parser so its own 20 kb limit applies)
+// + the static web app (on Vercel the static files are served by the CDN first)
+app.use('/mom-app/api', createMomRouter());
+app.use('/mom-app', express.static(path.join(process.cwd(), 'mom-app')));
+
 app.use(express.json({
   verify: (req, res, buf) => {
     req.rawBody = buf.toString();
   },
 }));
-
-// 易家做媽媽：member API + the static web app (on Vercel the static files are served by the CDN first)
-app.use('/mom-app/api', createMomRouter());
-app.use('/mom-app', express.static(path.join(process.cwd(), 'mom-app')));
 
 app.get('/', async (req, res) => {
   if (config.APP_URL) {

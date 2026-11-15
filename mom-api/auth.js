@@ -1,22 +1,36 @@
 /* Password hashing, signed tokens and input checks for the mom-app member API. */
 import crypto from 'crypto';
+import { promisify } from 'util';
 
+const scrypt = promisify(crypto.scrypt);
+const SCRYPT = { N: 16384, r: 8, p: 1 };
 const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
 const fromB64url = (s) => Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
 
-export function hashPassword(password) {
+// constant-time compare that never throws (inputs may be attacker-controlled, any length / encoding)
+export function safeEqual(a, b) {
+  const x = Buffer.from(String(a), 'utf8');
+  const y = Buffer.from(String(b), 'utf8');
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
+
+// async scrypt so hashing never blocks the event loop the LINE bot shares
+export async function hashPassword(password) {
   const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(password, salt, 32, { N: 16384, r: 8, p: 1 });
+  const hash = await scrypt(password, salt, 32, SCRYPT);
   return `scrypt$${b64url(salt)}$${b64url(hash)}`;
 }
 
-export function verifyPassword(password, stored) {
+export async function verifyPassword(password, stored) {
   const [alg, salt, hash] = String(stored || '').split('$');
   if (alg !== 'scrypt' || !salt || !hash) return false;
   const expected = fromB64url(hash);
-  const actual = crypto.scryptSync(password, fromB64url(salt), expected.length, { N: 16384, r: 8, p: 1 });
+  const actual = await scrypt(String(password), fromB64url(salt), expected.length, SCRYPT);
   return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
 }
+
+// used when the account doesn't exist, so login takes the same time either way (no account enumeration)
+export const DUMMY_HASH = 'scrypt$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 // token = base64url(payload).base64url(HMAC-SHA256(payload))
 export function makeSigner(secret) {
@@ -29,8 +43,7 @@ export function makeSigner(secret) {
     verify(token) {
       const [body, sig] = String(token || '').split('.');
       if (!body || !sig) return null;
-      const expected = sign(body);
-      if (expected.length !== sig.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig))) return null;
+      if (!safeEqual(sign(body), sig)) return null;
       try {
         const data = JSON.parse(fromB64url(body).toString('utf8'));
         if (!data.exp || data.exp < Math.floor(Date.now() / 1000)) return null;
@@ -55,3 +68,4 @@ export const randomCode = () => {
   const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from(crypto.randomBytes(6), (b) => A[b % A.length]).join('');
 };
+export const hashKey = (s) => crypto.createHash('sha256').update(String(s)).digest('hex').slice(0, 24);

@@ -769,7 +769,7 @@
    * ========================================================= */
   const TOOL_LABELS = {
     vaccines: '疫苗時程', growth: '成長曲線', milestones: '發展里程碑', checkups: '兒童健檢', cycle: '經期紀錄', pregnancy: '孕期週數',
-    prenatal: '產檢時程', kick: '胎動計數', contraction: '宮縮計時', hospitalbag: '待產包清單', milk: '母乳庫存', brand: '品牌專區', log: '寶寶紀錄',
+    prenatal: '產檢時程', kick: '胎動計數', contraction: '宮縮計時', hospitalbag: '待產包清單', goods: '常見好物', milk: '母乳庫存', brand: '品牌專區', log: '寶寶紀錄',
   };
   const DISCLAIMER = '內容為一般衛教資訊，不能取代專業醫療建議。';
 

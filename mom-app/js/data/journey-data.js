@@ -51,7 +51,7 @@
         { id: 'l-kick', text: '每天固定時間數胎動', tool: 'kick' },
         { id: 'l-gbs', text: '乙型鏈球菌（GBS）篩檢（35–37 週，公費）', week: 35, tool: 'prenatal' },
         { id: 'l-bag', text: '準備待產包，證件、健保卡、孕婦健康手冊放一起', week: 32, tool: 'hospitalbag' },
-        { id: 'l-carseat', text: '安裝嬰兒汽車安全座椅', week: 34 },
+        { id: 'l-carseat', text: '安裝嬰兒汽車安全座椅', week: 34, tool: 'goods', params: { item: 'carseat' } },
         { id: 'l-route', text: '確認去醫院的路線、時間與聯絡人', week: 34 },
         { id: 'l-leave', text: '和公司安排產假交接', week: 32 },
       ],

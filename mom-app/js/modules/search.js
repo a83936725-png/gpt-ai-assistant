@@ -168,6 +168,17 @@
     byScreen.forEach(({ t, stages }, screen) => docs.push(mkDoc('tool', {
       title: t.title, tags: [t.group || '', ...(TOOL_TAGS[screen] || TOOL_TAGS[t.id] || []), ...(t.tags || [])], body: t.desc || '', stages, tool: t,
     })));
+    // 常見好物：每一項都能搜（汽座、奶瓶、學步車…）
+    const GD = App.GOODS;
+    if (GD && App.screens.goods) {
+      GD.ITEMS.forEach((it) => {
+        const cat = GD.CATS.find((c) => c.id === it.cat) || { name: '', stages: ALL_STAGES };
+        docs.push(mkDoc('goods', {
+          title: it.name, tags: ['好物', cat.name, ...(it.tags || [])], body: [...(it.tips || []), it.why || '', it.safety || ''].join(' '),
+          stages: cat.stages, item: it, catName: cat.name,
+        }));
+      });
+    }
     return docs;
   }
   const index = () => { if (!INDEX) INDEX = buildIndex(); return INDEX; };
@@ -183,7 +194,7 @@
 
   function query(q) {
     const A = analyze(q);
-    const empty = { q, terms: [], groups: { faq: [], island: [], journey: [], tool: [] }, total: 0 };
+    const empty = { q, terms: [], groups: { faq: [], island: [], journey: [], tool: [], goods: [] }, total: 0 };
     if (!A.terms.length) return empty;
     const docs = index();
     const N = docs.length;
@@ -227,7 +238,7 @@
     hits.sort((a, b) => b.score - a.score);
     const top = hits[0].score;
     const floor = Math.max(1.2, top * 0.2);
-    const groups = { faq: [], island: [], journey: [], tool: [] };
+    const groups = { faq: [], island: [], journey: [], tool: [], goods: [] };
     const perSpot = {};
     const seenText = new Set();
     hits.forEach((x) => {
@@ -579,6 +590,11 @@
         icon: x.d.kind === 'watch' ? '⚠️' : x.d.phase.icon || '🗺️', title: x.d.title, terms,
         meta: `${x.d.phase.title}・${{ todo: '該做的事', watch: '注意事項', tip: '小提醒', newborn: '每天觀察' }[x.d.kind]}`,
         onclick: openAndRemember(() => App.navigate(x.d.screen)),
+      })),
+      group('goods', '常見好物', groups.goods, 3, (x) => resultItem({
+        icon: x.d.item.emoji, title: x.d.item.name, sub: x.d.item.need === 'skip' ? x.d.item.why : bestSentence((x.d.item.tips || []).join(' '), terms), terms,
+        meta: `🛍️ ${x.d.catName}・${(App.GOODS.NEED[x.d.item.need] || {}).label || ''}`, data: { goods: x.d.item.id },
+        onclick: openAndRemember(() => App.navigate('goods', { item: x.d.item.id })),
       })),
       group('tool', '工具', groups.tool, 4, (x) => resultItem({
         icon: x.d.tool.icon || '✨', title: x.d.tool.title, sub: x.d.tool.desc, terms, data: { tool: x.d.tool.screen || x.d.tool.id },

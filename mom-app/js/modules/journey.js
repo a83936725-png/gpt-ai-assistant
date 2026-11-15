@@ -285,7 +285,7 @@
   const toggleTodo = (id) => store.update((s) => { ensure(s); if (s.journey.done[id]) delete s.journey.done[id]; else s.journey.done[id] = C.dateKey(); });
   const openTool = (t) => {
     if (t.action === 'birth') { if (store.inStage(['preg'])) openBirthSheet(); else ui.toast('已經記錄過生產囉'); return; }
-    if (t.tool && App.screens[t.tool]) App.navigate(t.tool);
+    if (t.tool && App.screens[t.tool]) App.navigate(t.tool, t.params);
   };
   let openPhase = null;
   function phaseCard(p, i, cur) {

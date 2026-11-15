@@ -1041,7 +1041,15 @@
   App.screen('hospitalbag', {
     title: '待產包清單',
     tab: 'health',
-    render: (el) => renderChecklist(el, { groups: D.HOSPITAL_BAG, stateKey: 'hospitalBag', intro: '待產包準備進度', doneText: '🎒 全部準備好了！放在門口隨時出發。' }),
+    render: (el) => {
+      renderChecklist(el, { groups: D.HOSPITAL_BAG, stateKey: 'hospitalBag', intro: '待產包準備進度', doneText: '🎒 全部準備好了！放在門口隨時出發。' });
+      if (App.screens.goods) {
+        add(el, h('button', { type: 'button', class: 'list-item card gd-link mt-lg', onclick: () => App.navigate('goods') },
+          h('span', { class: 'li-icon', 'aria-hidden': 'true' }, '🛍️'),
+          h('span', { class: 'li-body' }, h('span', { class: 'li-title', style: { display: 'block' } }, '其他寶寶用品：常見好物'), h('span', { class: 'li-sub', style: { display: 'block' } }, '汽座、嬰兒床、奶瓶怎麼挑，哪些先別買')),
+          h('span', { class: 'li-right', 'aria-hidden': 'true' }, '›')));
+      }
+    },
   });
 
   [

@@ -1,0 +1,69 @@
+/* 常見好物＋願望清單 */
+.mt-xs { margin-top: 6px; }
+
+.gd-summary .gd-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.gd-count {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; min-height: 56px;
+  border-radius: 12px; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text); font-size: 12.5px;
+}
+.gd-count b { font-size: 20px; color: var(--c-primary); }
+
+.gd-filter, .gd-cats { margin: 12px 0 4px; }
+.gd-cats { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.gd-cats::-webkit-scrollbar { display: none; }
+.gd-cats .chip, .gd-filter .chip { flex: none; min-height: 36px; }
+
+.gd-group { margin-top: 6px; }
+.gd-skip-intro { margin: -4px 0 8px; }
+.gd-item .li-title, .gd-item .li-sub { display: block; }
+.gd-item .li-sub { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.gd-item { color: var(--c-text); font: inherit; cursor: pointer; }
+.gd-item.done .li-title { color: var(--c-text-2); }
+.gd-item.done .gd-ico { opacity: .55; }
+.gd-ico { width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; font-size: 21px; }
+.gd-right { margin-left: auto; flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.gd-mini { margin-left: 6px; font-size: 11px; vertical-align: 1px; }
+.gd-state { font-size: 12px; font-weight: 700; white-space: nowrap; color: var(--c-text-2); }
+.gd-s-have { color: var(--c-ok-ink); }
+.gd-s-want { color: var(--c-accent-ink); }
+.gd-s-buy { color: var(--c-primary); }
+
+.tag.gd-must { background: var(--c-primary-soft); color: var(--c-primary); }
+.tag.gd-nice { background: var(--c-ok-soft); color: var(--c-ok-ink); }
+.tag.gd-later { background: var(--c-surface-2); color: var(--c-text-2); }
+.tag.gd-skip { background: var(--c-danger-soft); color: var(--c-danger-ink); }
+
+/* detail sheet */
+.gd-head { display: flex; gap: 12px; align-items: flex-start; }
+.gd-emoji { font-size: 40px; line-height: 1; flex: none; width: 56px; height: 56px; border-radius: 16px; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; }
+.gd-tips { margin: 6px 0 0; padding-left: 20px; }
+.gd-tips li + li { margin-top: 4px; }
+.gd-box { margin-top: 12px; padding: 10px 12px; border-radius: 12px; }
+.gd-box p { margin: 4px 0 0; }
+.gd-safety { background: var(--c-warn-soft); color: var(--c-text); border-left: 4px solid var(--c-warn-ink); }
+.gd-why { background: var(--c-danger-soft); color: var(--c-text); border-left: 4px solid var(--c-danger-ink); }
+.gd-save { background: var(--c-ok-soft); color: var(--c-text); }
+.gd-status { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.gd-status .chip { min-height: 40px; }
+.gd-status .chip.active { background: var(--c-primary); color: var(--c-primary-ink); border-color: var(--c-primary); }
+
+/* my list */
+.gd-budget { margin-top: 12px; }
+.gd-budget .big-num { color: var(--c-primary); font-size: 24px; }
+.gd-skipped summary { cursor: pointer; list-style: none; }
+.gd-skipped summary::-webkit-details-marker { display: none; }
+.gd-skipped summary::after { content: '▾'; margin-left: 6px; color: var(--c-text-3); }
+.gd-skipped[open] summary::after { content: '▴'; }
+.gd-wish-share[disabled] { opacity: .5; }
+
+/* home card */
+.gd-home .card-title { flex-wrap: wrap; }
+
+/* public wishlist page */
+.gd-wish-emoji { font-size: 48px; line-height: 1.1; }
+.gd-wish-title { font-size: 20px; margin: 6px 0 4px; }
+.gd-wish-list { margin-top: 12px; }
+.gd-wish-item { align-items: flex-start; }
+.gd-wish-item .gd-gift { flex: none; align-self: center; min-height: 40px; }
+.gd-wish-safe { margin-top: 4px; }
+.gd-cta { margin-top: 16px; }

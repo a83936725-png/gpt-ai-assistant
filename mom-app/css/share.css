@@ -1,0 +1,59 @@
+/* 分享面板、分享卡預覽、邀請好友、島上收集愛心 */
+.sh-body { display: grid; gap: 14px; }
+.sh-preview { display: flex; justify-content: center; }
+.sh-preview-ph { width: 180px; height: 320px; border-radius: 18px; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; color: var(--c-text-2); font-size: 13px; }
+.sh-img { width: 180px; height: auto; border-radius: 18px; box-shadow: var(--shadow-2); }
+.sh-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.sh-ch {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 76px; padding: 10px 4px;
+  border-radius: 16px; border: 1px solid var(--c-border); background: var(--c-surface); font-size: 13px; font-weight: 600;
+}
+.sh-ch:active { transform: scale(.97); }
+.sh-ch-ico { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--c-surface-2); color: var(--c-text); }
+.sh-ch-ico svg { width: 22px; height: 22px; }
+.sh-line .sh-ch-ico { background: #037f37; color: #fff; }
+.sh-ig .sh-ch-ico { background: linear-gradient(45deg, #b8590a, #b8205a 55%, #6a2bb0); color: #fff; }
+.sh-fb .sh-ch-ico { background: #1a56b8; color: #fff; }
+.sh-th .sh-ch-ico { background: #111; color: #fff; }
+.sh-priv { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.sh-priv .check-row { padding: 4px 0; }
+.sh-moment .btn-primary { margin-top: 4px; }
+.sh-btn .ic svg { width: 16px; height: 16px; }
+
+/* 邀請好友 */
+.inv-hero .big-num { margin: 2px 0 10px; }
+.inv-code-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 14px; background: rgba(255, 255, 255, .16); }
+.inv-code { font-size: 26px; font-weight: 900; letter-spacing: 4px; }
+.inv-qr { width: 180px; margin: 14px auto 0; background: #fff; border-radius: 16px; padding: 8px; }
+.inv-qr svg { display: block; width: 100%; height: auto; }
+.inv-pts { color: var(--c-primary); font-size: 30px; }
+.inv-rewards { display: grid; gap: 8px; margin-top: 12px; }
+.inv-reward { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--c-surface-2); }
+.inv-reward.got { background: var(--c-primary-soft); }
+.inv-r-ico { font-size: 22px; width: 30px; text-align: center; }
+.inv-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.inv-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px; min-height: 104px;
+  border-radius: 16px; border: 1px solid var(--c-border); background: var(--c-surface); text-align: left;
+}
+.inv-card-emoji { font-size: 28px; }
+.inv-home-ico { font-size: 28px; }
+
+/* 好孕島：可收集的愛心（彩蛋）＋ 諮詢鈕 */
+.isl-heart {
+  position: fixed; z-index: 40; width: 56px; height: 56px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .92);
+  font-size: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(90, 40, 115, .3);
+  animation: islHeartFloat 3.2s ease-in-out infinite;
+}
+@keyframes islHeartFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@media (prefers-reduced-motion: reduce) { .isl-heart { animation: none; } }
+.isl-heart-badge, .isl-consult { bottom: calc(var(--tabbar-h) + 74px + env(safe-area-inset-bottom)); }
+@media (min-width: 900px) { .isl-heart-badge, .isl-consult { bottom: 78px; } .isl-heart-badge { left: calc(var(--side-w) + 12px) !important; } }
+.isl-heart-badge {
+  position: fixed; z-index: 40; left: 12px; padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, .92);
+  color: #5a2873; font-weight: 800; font-size: 13px; box-shadow: var(--shadow-1); min-height: 34px; display: flex; align-items: center; gap: 4px;
+}
+.isl-consult {
+  position: fixed; z-index: 40; right: 12px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 0;
+  background: var(--c-accent-ink); color: var(--c-surface); font-weight: 800; box-shadow: 0 6px 18px rgba(0, 0, 0, .2);
+}

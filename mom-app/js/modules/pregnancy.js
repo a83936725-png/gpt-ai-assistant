@@ -1125,7 +1125,8 @@
         h('div', { class: 'row gap-sm mt' },
           h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); App.navigate('kick'); } }, '👣 胎動'),
           h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); App.navigate('contraction'); } }, '⏱️ 宮縮'),
-          h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); App.navigate('prenatal'); } }, '🩺 產檢'))));
+          h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); App.navigate('prenatal'); } }, '🩺 產檢'),
+          App.share ? h('button', { class: 'btn btn-sm pg-hero-btn', 'aria-label': '分享孕週卡', onclick: (e) => { e.stopPropagation(); App.share.open({ kind: 'preg-week', sheetTitle: '分享孕週卡' }); } }, '📤') : null)));
     },
   });
 

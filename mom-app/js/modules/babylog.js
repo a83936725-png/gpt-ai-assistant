@@ -550,7 +550,8 @@
     const text = daySummaryText(baby, day);
     try { if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {}); } catch (e) { /* ignore */ }
     window.open(`https://line.me/R/share?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-    ui.toast('已開啟 LINE，摘要也已複製');
+    const pts = App.share ? App.share.record('line', 'day-summary') : 0;
+    ui.toast(`已開啟 LINE，摘要也已複製${pts ? `・好孕點數 +${pts}` : ''}`);
   }
   App.babylog.daySummaryText = daySummaryText;
 

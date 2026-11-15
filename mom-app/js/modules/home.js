@@ -36,6 +36,7 @@
       h('div', { class: 'hero-stats' },
         h('a', { class: 'hero-stat', href: '#/growth' }, h('b', { class: 'num' }, g.length || '—'), h('span', { class: 'tiny muted' }, '公分')),
         h('a', { class: 'hero-stat', href: '#/growth' }, h('b', { class: 'num' }, g.weight || '—'), h('span', { class: 'tiny muted' }, '公斤'))),
+      App.share ? h('button', { class: 'icon-btn hero-share', 'aria-label': '分享寶寶成長卡', html: ui.ICONS.share, onclick: () => App.share.open({ kind: 'baby-age', sheetTitle: '分享寶寶成長卡' }) }) : null,
       store.state.babies.length > 1 ? h('button', { class: 'hero-switch link-btn tiny', onclick: switchBaby }, '切換') : null);
   }
 

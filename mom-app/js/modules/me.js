@@ -174,7 +174,7 @@
         if (!data || !Array.isArray(data.logs)) throw new Error('bad');
         if (mode.dataset.value === 'replace') {
           if (!(await ui.confirm('用備份檔取代這台裝置上的所有資料？'))) return;
-          store.replace(data);
+          store.replace({ ...data, share: store.state.share || data.share }); // keep my own invite code
         } else mergeState(data);
         sh.close(); ui.toast('匯入完成');
       } catch (e) { ui.toast('檔案格式不正確'); }
@@ -344,6 +344,7 @@
     ];
     for (let d = 1; d <= 9; d += 1) if (d !== 4) s.chicken.log[C.dateKey(C.addDays(now, -d))] = 1;
     s.island.stamps = {};
+    if (store.state.share) s.share = store.state.share; // keep invite code + who invited me
     store.replace(s);
     App.navigate('home');
     App.refresh();
@@ -363,7 +364,9 @@
       const finish = () => { store.update((s) => { s.onboarded = true; }); ob = { step: 0, stage: null }; App.navigate('home'); App.refresh(); };
       function draw() {
         if (ob.step === 0) {
+          const inv = store.state.share && store.state.share.invitedBy;
           wrap.append(h('div', { class: 'ob-hero center' },
+            inv ? h('div', { class: 'ob-invited' }, `💌 ${store.state.share.inviterName || '朋友'}邀請你一起使用`) : null,
             h('img', { src: B().logoFull || B().logo, alt: B().brandName || '', class: 'ob-logo' }),
             h('h1', { class: 'ob-title' }, B().appName || '易家做媽媽'),
             h('p', { class: 'muted' }, '從備孕、懷孕到育兒，一個 App 陪你記錄每一步。'),
@@ -470,6 +473,7 @@
 
       el.append(h('div', { class: 'section-title' }, '設定'));
       el.append(h('div', { class: 'list' },
+        App.screens.invite ? h('a', { class: 'list-item', href: '#/invite' }, h('span', { class: 'li-icon' }, '💌'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '邀請好友・分享卡'), h('div', { class: 'li-sub' }, `好孕點數 ${(s.share && s.share.points) || 0}・邀請碼 ${(s.share && s.share.code) || ''}`)), h('span', { class: 'li-right', html: ui.ICONS.chevron })) : null,
         h('a', { class: 'list-item', href: '#/reminders' }, h('span', { class: 'li-icon' }, '🔔'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '提醒中心'), h('div', { class: 'li-sub' }, '餵奶、疫苗／健檢／產檢、滴雞精時光')), h('span', { class: 'li-right', html: ui.ICONS.chevron })),
         h('a', { class: 'list-item', href: '#/brand' }, h('img', { class: 'li-icon li-logo', src: B().logo, alt: '' }), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, B().brandName || '品牌'), h('div', { class: 'li-sub' }, '品牌故事・滴雞精時光打卡')), h('span', { class: 'li-right', html: ui.ICONS.chevron })),
         h('div', { class: 'list-item' }, h('span', { class: 'li-icon' }, '🌓'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '外觀')),

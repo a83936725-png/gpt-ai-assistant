@@ -242,6 +242,7 @@
           sh.close();
           App.navigate('home');
           ui.toast(`🎉 歡迎 ${baby.name}！接下來是坐月子，好好休息`);
+          if (App.share) setTimeout(() => App.share.moment(`birth-${baby.id}`, { emoji: '🎉', msg: `歡迎 ${baby.name} 來到這個世界！`, kind: 'birth', force: true, queue: true }), 1500);
         },
       }, '寶寶出生了，儲存'),
     });
@@ -308,7 +309,12 @@
       h('div', { class: 'jr-sub jr-sub-warn' }, '⚠️ 注意事項：出現以下情況要就醫'),
       h('ul', { class: 'jr-watch' }, p.watch.map((x) => h('li', null, x))),
       p.tips && p.tips.length ? h('div', { class: 'jr-sub' }, '💡 小提醒') : null,
-      p.tips && p.tips.length ? h('ul', { class: 'tight small' }, p.tips.map((x) => h('li', null, x))) : null));
+      p.tips && p.tips.length ? h('ul', { class: 'tight small' }, p.tips.map((x) => h('li', null, x))) : null,
+      App.share ? h('div', { class: 'mt' }, App.share.button(() => ({
+        sheetTitle: `分享「${p.title}」清單`, title: `${p.title}：該做的事＋注意事項`, campaign: `journey-${p.id}`, path: 'journey', emoji: p.icon, kicker: `孕產路線圖・${p.range}`, theme: 'purple',
+        text: `【${p.title}・${p.range}】\n✅ 該做的事：\n${p.todo.map((t) => `・${t.text}`).join('\n')}\n⚠️ 注意：${p.watch.slice(0, 3).join('；')}`,
+        lines: p.todo.slice(0, 5).map((t) => t.text),
+      }), { label: '分享這份清單給另一半／家人', cls: 'btn btn-sm btn-ghost btn-block' })) : null));
     return card;
   }
   function hotlineCard() {
@@ -452,7 +458,9 @@
         h('div', { class: 'big-num' }, pp ? `產後第 ${pp.day} 天` : '記錄身體恢復'),
         pp ? h('div', { class: 'mt' }, ui.progress(Math.min(1, pp.day / 42))) : null,
         h('div', { class: 'small muted mt' }, pp && pp.day <= 42 ? `坐月子中・產後 6 週約在 ${C.fmtDate(C.addDays(pp.start, 41), false)}，記得回診` : '產後 6 週已過，有不舒服仍可記錄、隨時就醫'),
-        h('button', { class: 'btn btn-sm jr-hero-btn mt', onclick: () => openPPLog() }, loggedToday ? '＋ 再記一筆' : '🍲 記錄今天的身體恢復')));
+        h('div', { class: 'row gap-sm wrap mt' },
+          h('button', { class: 'btn btn-sm jr-hero-btn', onclick: () => openPPLog() }, loggedToday ? '＋ 再記一筆' : '🍲 記錄今天的身體恢復'),
+          App.share && pp && pp.day <= 45 ? h('button', { class: 'btn btn-sm jr-hero-btn', 'aria-label': '分享坐月子卡', onclick: () => App.share.open({ kind: 'pp', sheetTitle: '分享坐月子卡' }) }, '📤 分享') : null)));
       // mood support: several low days in the last 2 weeks
       const low = log.filter((x) => x.mood && x.mood <= 2 && Date.now() - new Date(x.at) < 14 * C.DAY).length;
       if (low >= 4) {

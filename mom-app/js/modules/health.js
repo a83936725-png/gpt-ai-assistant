@@ -881,6 +881,7 @@
                   S.milestones[b.id] = mm;
                 });
                 if (on) ui.toast('🎉 又長大一點了！');
+                if (on && App.share) setTimeout(() => App.share.moment(`ms-${b.id}-${key}`, { emoji: '⭐', msg: `${b.name} 新技能：${text}`, kind: 'milestone', force: true, mutedKey: 'milestone' }), 900);
               },
             });
             card.append(h('label', { class: 'check-row ms-item' }, cb,
@@ -994,7 +995,12 @@
           h('span', { class: `week-delta num${up ? ' up' : down ? ' down' : ''}` }, up ? `▲ ${Math.round(r.pct)}%` : down ? `▼ ${Math.round(-r.pct)}%` : '持平'),
           h('span', { class: 'week-prev tiny muted num' }, `上週 ${fmtNum(r.p, r.digits)}`));
       })),
-      h('ul', { class: 'week-insights small' }, insights.map((t) => h('li', null, t))));
+      h('ul', { class: 'week-insights small' }, insights.map((t) => h('li', null, t))),
+      App.share ? h('div', { class: 'mt' }, App.share.button(() => ({
+        sheetTitle: '分享本週重點', title: `${b.name} 本週重點`, campaign: 'week', emoji: '📊', kicker: '寶寶本週重點', theme: 'green',
+        text: `【${b.name} 本週重點】\n${rows.map((r) => `${r.label} ${fmtNum(r.a, r.digits)} ${r.unit}/天（上週 ${fmtNum(r.p, r.digits)}）`).join('\n')}\n${insights.join('；')}`,
+        lines: [...insights, ...rows.map((r) => `${r.label} 每天 ${fmtNum(r.a, r.digits)} ${r.unit}`)],
+      }), { label: '分享本週重點', cls: 'btn btn-sm btn-ghost btn-block' })) : null);
   }
 
   function statTile(label, value, unit) {

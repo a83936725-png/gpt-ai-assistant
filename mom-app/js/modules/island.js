@@ -804,6 +804,11 @@
       });
       result = { score, isNew };
       if (isNew) ui.toast(`🏅 蓋章成功！獲得「${spot.name}」印章`);
+      if (isNew && App.share && D.TITLES) {
+        const n = Object.keys(store.state.island.stamps || {}).length;
+        const t = D.TITLES.find((x) => x.min === n && n > 0);
+        if (t) App.share.moment(`island-title-${t.min}`, { emoji: '🏝️', msg: `你成為「${t.label}」了！`, kind: 'island', force: true, queue: true });
+      }
       onStampChange();
     };
     const render = () => {
@@ -893,6 +898,13 @@
 
     body.append(h('h3', { class: 'isl-sh-h' }, '小知識'));
     body.append(h('div', { class: 'isl-know-list' }, spot.cards.map((cd) => h('div', { class: 'isl-know' }, h('strong', null, cd.t), h('p', null, cd.d)))));
+    if (App.share) {
+      body.append(h('div', { class: 'mt' }, App.share.button(() => ({
+        sheetTitle: '分享這篇小知識', title: `${spot.name}・小知識`, campaign: `island-${spot.id}`, path: 'island', params: { spot: spot.id }, emoji: spot.emoji, kicker: '好孕島小知識', theme: 'night',
+        text: `【好孕島・${spot.name}】\n${spot.cards.slice(0, 3).map((cd) => `・${cd.t}：${cd.d}`).join('\n')}`,
+        lines: spot.cards.slice(0, 4).map((cd) => cd.t),
+      }), { label: '分享這篇給朋友', cls: 'btn btn-sm btn-ghost btn-block' })));
+    }
     body.append(h('h3', { class: 'isl-sh-h' }, '我做到了'));
     body.append(checklist(spot));
     body.append(h('h3', { class: 'isl-sh-h' }, '小測驗 ', h('span', { class: 'tiny muted' }, '完成就能蓋章')));

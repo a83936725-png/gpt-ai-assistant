@@ -10,6 +10,12 @@ window.BRAND = {
   shopUrl: '', // 官網 / 購物頁，例如 https://www.example.com
   lineOaUrl: '', // LINE 官方帳號加好友連結，例如 https://lin.ee/xxxxxx
   phone: '',
+  // 分享與邀請：正式網址（部署後填，例如 https://mom.example.com/）；留空就用目前網址
+  appUrl: '',
+  // 分享獎勵：好孕點數達到 points 時顯示的優惠（code 留空 = 先不提供）
+  shareReward: { points: 100, title: '易家滴雞精會員好禮', code: '', note: '請到官網結帳時輸入優惠碼，或出示給門市人員。' },
+  // 分享文案的 hashtag
+  hashtags: ['易家做媽媽', '易家滴雞精', '好孕島'],
   // 品牌介紹（品牌頁顯示，可自行改寫）
   story: '易家滴雞精，用一滴一滴的耐心，陪伴每一位媽媽走過備孕、懷孕、坐月子到育兒的每一天。',
 };

@@ -8,6 +8,8 @@ import drawHandler from './draw.js';
 import forgetHandler from './forget.js';
 import enquireHandler from './enquire.js';
 import idHandler from './id.js';
+import kpiHandler from './kpi.js';
+import mediaHandler from './media.js';
 import modelsHandler from './models.js';
 import postHandler from './post.js';
 import reportHandler from './report.js';
@@ -28,6 +30,8 @@ export {
   forgetHandler,
   enquireHandler,
   idHandler,
+  kpiHandler,
+  mediaHandler,
   modelsHandler,
   postHandler,
   reportHandler,

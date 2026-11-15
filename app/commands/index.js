@@ -9,8 +9,11 @@ import COMMAND_BOT_ACTIVATE from './bot-activate.js';
 import COMMAND_BOT_CONTINUE from './bot-continue.js';
 import COMMAND_BOT_DEACTIVATE from './bot-deactivate.js';
 import COMMAND_BOT_DRAW_DEMO from './bot-draw-demo.js';
+import COMMAND_BOT_ANIM from './bot-anim.js';
 import COMMAND_BOT_DRAW from './bot-draw.js';
 import COMMAND_BOT_FORGET from './bot-forget.js';
+import COMMAND_BOT_ICON from './bot-icon.js';
+import COMMAND_BOT_KPI from './bot-kpi.js';
 import COMMAND_BOT_POST from './bot-post.js';
 import COMMAND_BOT_RETRY from './bot-retry.js';
 import COMMAND_BOT_SEARCH from './bot-search.js';
@@ -49,8 +52,11 @@ export const ALL_COMMANDS = [
   COMMAND_BOT_CONTINUE,
   COMMAND_BOT_DEACTIVATE,
   COMMAND_BOT_DRAW_DEMO,
+  COMMAND_BOT_ANIM,
   COMMAND_BOT_DRAW,
   COMMAND_BOT_FORGET,
+  COMMAND_BOT_ICON,
+  COMMAND_BOT_KPI,
   COMMAND_BOT_POST,
   COMMAND_BOT_RETRY,
   COMMAND_BOT_SEARCH,
@@ -113,8 +119,11 @@ export {
   COMMAND_BOT_CONTINUE,
   COMMAND_BOT_DEACTIVATE,
   COMMAND_BOT_DRAW_DEMO,
+  COMMAND_BOT_ANIM,
   COMMAND_BOT_DRAW,
   COMMAND_BOT_FORGET,
+  COMMAND_BOT_ICON,
+  COMMAND_BOT_KPI,
   COMMAND_BOT_POST,
   COMMAND_BOT_RETRY,
   COMMAND_BOT_SEARCH,

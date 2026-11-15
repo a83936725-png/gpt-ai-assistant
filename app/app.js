@@ -10,6 +10,8 @@ import {
   forgetHandler,
   enquireHandler,
   idHandler,
+  kpiHandler,
+  mediaHandler,
   modelsHandler,
   postHandler,
   reportHandler,
@@ -27,8 +29,9 @@ import Event from './models/event.js';
  * @returns {Promise<Context>}
  */
 const handleContext = async (context) => (
-  // 「畫介面」 must run before the draw handler, whose alias 「畫」 would match it too.
+  // 「畫介面」「畫圖示」「畫動畫」 must run before the draw handler, whose alias 「畫」 would match them too.
   uiHandler(context)
+  || mediaHandler(context)
   || activateHandler(context)
   || commandHandler(context)
   || continueHandler(context)
@@ -39,6 +42,7 @@ const handleContext = async (context) => (
   || forgetHandler(context)
   || enquireHandler(context)
   || idHandler(context)
+  || kpiHandler(context)
   || modelsHandler(context)
   || postHandler(context)
   || reportHandler(context)

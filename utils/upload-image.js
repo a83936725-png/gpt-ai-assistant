@@ -17,8 +17,18 @@ const setPublicOrigin = (origin) => {
   publicOrigin = origin;
 };
 
+const EXT_BY_TYPE = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/svg+xml': 'svg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+};
+
 const detectContentType = (buffer) => {
   if (buffer[0] === 0x89 && buffer[1] === 0x50) return 'image/png';
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) return 'image/gif';
+  if (buffer.slice(0, 5).toString('utf8').trim().startsWith('<')) return 'image/svg+xml';
   return 'image/jpeg';
 };
 
@@ -45,13 +55,15 @@ const getStoredImage = (name) => {
  * Stores a generated image and returns an HTTPS URL that LINE can download.
  * @param {Object} param
  * @param {Buffer} param.buffer
+ * @param {string} [param.contentType] Overrides sniffing, e.g. for svg/gif output.
  * @returns {Promise<string>}
  */
 const uploadImage = async ({
   buffer,
+  contentType: explicitType,
 }) => {
-  const contentType = detectContentType(buffer);
-  const name = `${crypto.randomUUID()}.${contentType === 'image/png' ? 'png' : 'jpg'}`;
+  const contentType = explicitType || detectContentType(buffer);
+  const name = `${crypto.randomUUID()}.${EXT_BY_TYPE[contentType] || 'bin'}`;
   if (config.BLOB_READ_WRITE_TOKEN) {
     const { put } = await import('@vercel/blob');
     const { url } = await put(`images/${name}`, buffer, {

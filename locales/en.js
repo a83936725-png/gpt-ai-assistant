@@ -111,6 +111,17 @@ const en = {
   __COMMAND_SYS_ID_LABEL: 'My ID',
   __COMMAND_SYS_ID_TEXT: 'My ID',
   __COMMAND_SYS_ID_REPLY: (userId, groupId) => `Your user ID: ${userId}${groupId ? `\nThis group's ID: ${groupId}` : ''}`,
+  __COMMAND_BOT_ICON_LABEL: 'Draw icon',
+  __COMMAND_BOT_ICON_TEXT: 'Draw icon',
+  __COMMAND_BOT_ICON_USAGE: 'Describe the icon after "Draw icon", e.g. Draw icon shopping cart line style. Returns a downloadable SVG.',
+  __COMMAND_BOT_ICON_REPLY: (url) => `Your SVG icon:\n${url}`,
+  __COMMAND_BOT_ANIM_LABEL: 'Draw GIF',
+  __COMMAND_BOT_ANIM_TEXT: 'Draw GIF',
+  __COMMAND_BOT_ANIM_USAGE: 'Describe the animation after "Draw GIF", e.g. Draw GIF a twinkling star. Returns a downloadable GIF.',
+  __COMMAND_BOT_ANIM_REPLY: (url) => `Your GIF:\n${url}`,
+  __COMMAND_BOT_KPI_LABEL: 'KPI card',
+  __COMMAND_BOT_KPI_TEXT: 'KPI card',
+  __COMMAND_BOT_KPI_USAGE: 'Format: KPI card Title | label value delta, separated by "|". e.g.\nKPI card This month | Orders 1200 +15% | Fans 8400 +3%',
   __COMMAND_TRANSLATE_TO_EN_LABEL: '翻成英文', // TODO
   __COMMAND_TRANSLATE_TO_EN_TEXT: '翻成英文', // TODO
   __COMMAND_TRANSLATE_TO_EN_PROMPT: '請將以下內容翻譯成英文。', // TODO

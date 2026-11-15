@@ -134,6 +134,9 @@ const supportsImageComplexity = (model) => {
   return Number(major) > 2 || (Number(major) === 2 && Number(minor) >= 6);
 };
 
+// output_compression only applies to lossy raster formats; svg and gif reject it.
+const COMPRESSIBLE_FORMATS = ['jpeg', 'webp'];
+
 const buildImageBody = ({
   model,
   prompt,
@@ -141,6 +144,9 @@ const buildImageBody = ({
   quality,
   complexity,
   n,
+  outputFormat = 'jpeg',
+  frameCount,
+  frameDurationMs,
 }) => {
   if (!isGptImageModel(model)) {
     return {
@@ -153,10 +159,14 @@ const buildImageBody = ({
     n,
     size: LEGACY_IMAGE_SIZES.includes(size) ? IMAGE_SIZE_1024 : size,
     quality: LEGACY_IMAGE_QUALITIES[quality] || quality,
-    // JPEG keeps the file small enough for LINE's 1 MB preview image limit.
-    output_format: 'jpeg',
-    output_compression: 80,
+    output_format: outputFormat,
   };
+  // JPEG keeps the file small enough for LINE's 1 MB preview image limit.
+  if (COMPRESSIBLE_FORMATS.includes(outputFormat)) body.output_compression = 80;
+  if (outputFormat === 'gif') {
+    if (frameCount) body.frame_count = frameCount;
+    if (frameDurationMs) body.frame_duration_ms = frameDurationMs;
+  }
   if (complexity && supportsImageComplexity(model)) body.complexity = complexity;
   return body;
 };
@@ -168,8 +178,11 @@ const createImage = ({
   quality = config.OPENAI_IMAGE_GENERATION_QUALITY,
   complexity = config.OPENAI_IMAGE_GENERATION_COMPLEXITY,
   n = 1,
+  outputFormat,
+  frameCount,
+  frameDurationMs,
 }) => client.post('/v1/images/generations', buildImageBody({
-  model, prompt, size, quality, complexity, n,
+  model, prompt, size, quality, complexity, n, outputFormat, frameCount, frameDurationMs,
 }), {
   timeout: config.OPENAI_IMAGE_GENERATION_TIMEOUT,
 });

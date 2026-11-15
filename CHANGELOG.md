@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.11.0 (2026-11-15)
+
+### New Features
+
+- Add `畫圖示` (`/icon`): generates an SVG icon from a description and replies with a download link
+- Add `畫動畫` (`/anim`): generates a GIF animation and replies with a download link
+- Add `數據卡` (`/kpi`): turns typed numbers into a KPI Flex card (big number + coloured delta) via `createKpiBubble()`
+- Image generation now supports `svg` and `gif` output formats (`output_format`, GIF frame count/duration); hosted files keep their real content type
+
 ## 4.10.0 (2026-11-14)
 
 See [docs/UPGRADE-2026.zh-TW.md](docs/UPGRADE-2026.zh-TW.md) for setup.

@@ -271,6 +271,9 @@ LLM 輸出（JSON，必須通過 Pydantic Schema 驗證）：
 | 剪輯器 | `/projects/[id]/editor` | 3 |
 | 輸出管理 | `/projects/[id]/renders` | 3 |
 | 角色圖文工作室（選角色 → 選台詞 → 背景 → 設計 → 匯出） | `/projects/[id]/graphics` | G |
+| 文案工作室：同一組圖文產生 Threads／Instagram／Facebook 三種文案，可選開頭句、標籤組合，AI 可提供開頭（只能從台詞延伸） | `/tools/captions` | G 之後 |
+| 生圖提示詞：用場景、動作、鏡頭、時間、風格組出提示詞；固定不含角色名字、長相和官方徽章 | `/tools/prompts` | G 之後 |
+| 發文計畫：日期、角色、主題、平台、狀態（構想／製作中／已排程／已發布），只有本人能讀寫 | `/tools/plan` | G 之後 |
 | 系統狀態（FFmpeg、GPU、API Key 是否設定、磁碟空間） | `/settings/health` | 1 |
 | 操作說明（真實截圖＋範例影片導覽） | `/help` | 實測完成後 |
 

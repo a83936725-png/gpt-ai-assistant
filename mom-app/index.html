@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>易家做媽媽</title>
+  <meta name="description" content="易家滴雞精陪你做媽媽：備孕、孕期到育兒的紀錄與知識小島。">
+  <meta name="theme-color" content="#5a2873">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="易家做媽媽">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/modules.css">
+  <link rel="stylesheet" href="css/island.css">
+  <link rel="stylesheet" href="css/health.css">
+  <link rel="stylesheet" href="css/pregnancy.css">
+</head>
+<body>
+  <header id="appbar" class="appbar"></header>
+  <main id="view" aria-live="polite"></main>
+  <nav id="tabbar" class="tabbar" aria-label="主選單"></nav>
+
+  <!-- config + core -->
+  <script src="config.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/ui.js"></script>
+
+  <!-- data -->
+  <script src="js/data/log-types.js"></script>
+  <script src="js/data/island-data.js"></script>
+  <script src="js/data/health-data.js"></script>
+  <script src="js/data/pregnancy-data.js"></script>
+
+  <!-- modules (each registers screens / home cards / tools) -->
+  <script src="js/modules/home.js"></script>
+  <script src="js/modules/babylog.js"></script>
+  <script src="js/modules/milk.js"></script>
+  <script src="js/modules/island.js"></script>
+  <script src="js/modules/health.js"></script>
+  <script src="js/modules/pregnancy.js"></script>
+  <script src="js/modules/brand.js"></script>
+  <script src="js/modules/me.js"></script>
+
+  <!-- shell (must be last) -->
+  <script src="js/app.js"></script>
+</body>
+</html>

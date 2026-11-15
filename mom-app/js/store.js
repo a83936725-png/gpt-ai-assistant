@@ -1,0 +1,146 @@
+/* 易家做媽媽 — store: single state tree persisted to localStorage.
+ * Usage:
+ *   App.store.state                      // read
+ *   App.store.update(s => { s.x = 1 })   // mutate + persist + notify
+ *   App.store.subscribe(fn)              // fn(state) after each update
+ */
+(function () {
+  const App = window.App = window.App || {};
+  const KEY = 'yijia-mom-app-v1';
+  const { uid, dateKey } = window.Core;
+
+  const defaults = () => ({
+    version: 1,
+    createdAt: new Date().toISOString(),
+    onboarded: false,
+    profile: {
+      momName: '',
+      stage: 'baby', // 'prep' 備孕 | 'preg' 懷孕 | 'baby' 育兒
+      member: '媽媽', // who is recording on this device
+      lmp: '', // last menstrual period start (YYYY-MM-DD)
+      edd: '', // estimated due date
+      cycleLength: 28,
+      periodLength: 5,
+      heightCm: '',
+      prePregWeight: '',
+    },
+    babies: [], // {id, name, sex:'girl'|'boy', birthday, birthTime, birthWeight(kg), birthLength(cm), avatar}
+    activeBabyId: null,
+    logs: [], // {id, babyId, type, start, end, data:{}, note, by, createdAt}
+    growth: [], // {id, babyId, date, weight, length, head}
+    vaccines: {}, // {[babyId]: {[key]: 'YYYY-MM-DD'}}
+    checkups: {}, // {[babyId]: {[key]: 'YYYY-MM-DD'}}
+    milestones: {}, // {[babyId]: {[key]: 'YYYY-MM-DD'}}
+    milk: [], // breast-milk bags {id, ml, pumpedAt, storage:'room'|'fridge'|'freezer', thawedAt, usedAt, note}
+    periods: [], // {id, start, end}
+    preg: {
+      kicks: [], // {id, start, end, count}
+      contractions: [], // {id, start, end}
+      weights: [], // {id, date, kg}
+      prenatal: {}, // {[visitKey]: 'YYYY-MM-DD'}
+      notes: [],
+    },
+    island: { stamps: {}, quiz: {}, visited: {} },
+    chicken: { log: {}, goal: 1 }, // 滴雞精打卡 {'YYYY-MM-DD': count}
+    folic: { log: {} }, // 葉酸打卡
+    reminders: [
+      { id: 'feed', label: '餵奶提醒', type: 'feed', enabled: false, minutes: 180 },
+      { id: 'chicken', label: '滴雞精飲用提醒', type: 'chicken', enabled: false, time: '09:00' },
+    ],
+    active: {}, // running timers: { feed: {start, side}, sleep: {start}, pump: {start} }
+    settings: { theme: 'auto', notify: false },
+  });
+
+  // Merge saved state onto defaults so newly added keys always exist.
+  const merge = (base, saved) => {
+    if (Array.isArray(base) || typeof base !== 'object' || base === null) return saved === undefined ? base : saved;
+    const out = { ...base };
+    Object.keys(saved || {}).forEach((k) => {
+      out[k] = (k in base) ? merge(base[k], saved[k]) : saved[k];
+    });
+    return out;
+  };
+
+  const load = () => {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) return merge(defaults(), JSON.parse(raw));
+    } catch (e) { /* storage blocked or corrupt */ }
+    return defaults();
+  };
+
+  const listeners = new Set();
+  const store = {
+    KEY,
+    state: load(),
+    defaults,
+    save() {
+      try { localStorage.setItem(KEY, JSON.stringify(this.state)); } catch (e) { /* ignore */ }
+    },
+    update(fn) {
+      fn(this.state);
+      this.save();
+      listeners.forEach((l) => { try { l(this.state); } catch (e) { console.error(e); } });
+    },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    replace(next) { this.state = merge(defaults(), next); this.update(() => {}); },
+    reset() { this.state = defaults(); this.update(() => {}); },
+
+    /* ----- convenience selectors ----- */
+    get profile() { return this.state.profile; },
+    get stage() { return this.state.profile.stage; },
+    baby() {
+      const s = this.state;
+      return s.babies.find((b) => b.id === s.activeBabyId) || s.babies[0] || null;
+    },
+    babyLogs(babyId = this.baby()?.id) {
+      return this.state.logs.filter((l) => l.babyId === babyId);
+    },
+    logsOn(day, babyId = this.baby()?.id) {
+      const key = typeof day === 'string' ? day : dateKey(day);
+      return this.babyLogs(babyId)
+        .filter((l) => dateKey(new Date(l.start)) === key)
+        .sort((a, b) => new Date(b.start) - new Date(a.start));
+    },
+    lastLog(types, babyId = this.baby()?.id) {
+      const ts = [].concat(types);
+      return this.babyLogs(babyId)
+        .filter((l) => ts.includes(l.type))
+        .sort((a, b) => new Date(b.start) - new Date(a.start))[0] || null;
+    },
+
+    /* ----- mutations ----- */
+    addLog(log) {
+      const baby = this.baby();
+      const entry = {
+        id: uid(),
+        babyId: baby ? baby.id : null,
+        start: new Date().toISOString(),
+        end: null,
+        data: {},
+        note: '',
+        by: this.state.profile.member,
+        createdAt: new Date().toISOString(),
+        ...log,
+      };
+      this.update((s) => { s.logs.push(entry); });
+      return entry;
+    },
+    updateLog(id, patch) {
+      this.update((s) => {
+        const l = s.logs.find((x) => x.id === id);
+        if (l) Object.assign(l, patch);
+      });
+    },
+    removeLog(id) {
+      this.update((s) => { s.logs = s.logs.filter((x) => x.id !== id); });
+    },
+    addBaby(b) {
+      const baby = { id: uid(), name: '寶寶', sex: 'girl', birthday: dateKey(), avatar: '👶', ...b };
+      this.update((s) => { s.babies.push(baby); s.activeBabyId = baby.id; });
+      return baby;
+    },
+  };
+
+  App.store = store;
+}());

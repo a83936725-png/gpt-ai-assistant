@@ -1,0 +1,152 @@
+/* 易家做媽媽 — app shell: registry, hash router, tab bar, live tickers, boot.
+ * Loaded LAST (after all modules registered themselves).
+ *
+ * Module API (used by js/modules/*.js):
+ *   App.screen(id, { title, tab, render(el, params), actions?(params), liveUpdate?: true })
+ *   App.homeCard(id, { stages:['prep'|'preg'|'baby'], order, render(el) })  // el is an empty card container
+ *   App.tool({ id, title, icon, desc, stages, screen, params, order, color })  // tiles on 健康 tab
+ *   App.navigate(id, params?)   App.back()   App.refresh()
+ */
+(function () {
+  const App = window.App = window.App || {};
+  const { h, ICONS } = App.ui;
+
+  // App.screen / App.homeCard / App.tool registries are defined in ui.js (loaded before modules).
+
+  const TABS = [
+    { id: 'home', label: '首頁', icon: 'home' },
+    { id: 'island', label: '好孕島', icon: 'island' },
+    { id: 'log', label: '紀錄', icon: 'log' },
+    { id: 'health', label: '健康', icon: 'health' },
+    { id: 'me', label: '我的', icon: 'me' },
+  ];
+
+  /* ---------- routing ---------- */
+  const parseHash = () => {
+    const raw = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
+    const [id, q] = raw.split('?');
+    let params = {};
+    if (q) { try { params = JSON.parse(q); } catch (e) { params = {}; } }
+    return { id: id || 'home', params };
+  };
+  App.navigate = (id, params) => {
+    const q = params && Object.keys(params).length ? `?${encodeURIComponent(JSON.stringify(params))}` : '';
+    location.hash = `#/${id}${q}`;
+  };
+  App.back = () => {
+    if (history.length > 1 && App._navCount > 0) history.back();
+    else App.navigate('home');
+  };
+  App._navCount = 0;
+
+  let current = null;
+  const view = () => document.getElementById('view');
+
+  function renderAppbar(def, params) {
+    const bar = document.getElementById('appbar');
+    bar.innerHTML = '';
+    const isTab = TABS.some((t) => t.id === def.id);
+    const title = typeof def.title === 'function' ? def.title(params) : def.title;
+    if (isTab && def.id === 'home') {
+      bar.append(h('div', { class: 'brand' },
+        h('img', { src: (window.BRAND && BRAND.logo) || 'assets/logo.svg', alt: '', class: 'brand-logo' }),
+        h('div', { class: 'brand-text' },
+          h('strong', null, (window.BRAND && BRAND.appName) || '易家做媽媽'),
+          h('span', null, (window.BRAND && BRAND.tagline) || ''))));
+    } else {
+      if (!isTab) bar.append(h('button', { class: 'icon-btn', 'aria-label': '返回', html: ICONS.back, onclick: App.back }));
+      bar.append(h('h1', { class: 'appbar-title' }, title || ''));
+    }
+    const actions = def.actions ? def.actions(params) : null;
+    bar.append(h('div', { class: 'appbar-actions' }, actions || null));
+  }
+
+  function renderTabbar(activeTab) {
+    const nav = document.getElementById('tabbar');
+    nav.innerHTML = '';
+    TABS.forEach((t) => {
+      nav.append(h('a', {
+        href: `#/${t.id}`, class: `tab${t.id === activeTab ? ' active' : ''}`, 'aria-current': t.id === activeTab ? 'page' : null,
+      }, h('span', { class: 'tab-icon', html: ICONS[t.icon] }), h('span', { class: 'tab-label' }, t.label)));
+    });
+  }
+
+  function render({ keepScroll = false } = {}) {
+    const { id, params } = parseHash();
+    let def = App.screens[id];
+    if (!App.store.state.onboarded && App.screens.onboarding && id !== 'onboarding') def = App.screens.onboarding;
+    if (!def) def = App.screens.home;
+    const el = view();
+    const scroll = keepScroll ? window.scrollY : 0;
+    if (current && current.def.onLeave && current.def !== def) current.def.onLeave();
+    current = { def, params };
+    document.body.dataset.screen = def.id;
+    document.body.dataset.stage = App.store.stage;
+    el.innerHTML = '';
+    renderAppbar(def, params);
+    renderTabbar(def.tab || def.id);
+    document.getElementById('tabbar').hidden = def.id === 'onboarding';
+    document.getElementById('appbar').hidden = def.id === 'onboarding';
+    try {
+      def.render(el, params || {});
+    } catch (e) {
+      console.error(e);
+      el.append(h('div', { class: 'card' }, h('p', null, '這個頁面發生錯誤：'), h('pre', { class: 'small' }, String(e && e.stack || e))));
+    }
+    updateTickers();
+    if (keepScroll) window.scrollTo(0, scroll);
+    else window.scrollTo(0, 0);
+  }
+  App.refresh = () => render({ keepScroll: true });
+
+  window.addEventListener('hashchange', () => { App._navCount += 1; render(); });
+  App.store.subscribe(() => {
+    if (current && current.def.liveUpdate === false) return;
+    // Don't rebuild the screen under an open sheet's inputs; refresh once it closes.
+    if (document.body.classList.contains('has-sheet')) { App._pendingRefresh = true; return; }
+    App.refresh();
+  });
+  // flush deferred refresh after sheets close
+  new MutationObserver(() => {
+    if (App._pendingRefresh && !document.body.classList.contains('has-sheet')) {
+      App._pendingRefresh = false;
+      if (!current || current.def.liveUpdate !== false) App.refresh();
+    }
+  }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+  /* ---------- live tickers ----------
+   * <span data-ago="ISO">      -> "12 分前"
+   * <span data-clock="ISO">    -> "05:12" stopwatch since ISO
+   * <span data-countdown="ISO">-> "1 小時 5 分" until ISO */
+  function updateTickers() {
+    const now = Date.now();
+    document.querySelectorAll('[data-ago]').forEach((e) => { e.textContent = Core.ago(e.dataset.ago, now); });
+    document.querySelectorAll('[data-clock]').forEach((e) => { e.textContent = Core.fmtClock(now - new Date(e.dataset.clock).getTime()); });
+    document.querySelectorAll('[data-countdown]').forEach((e) => {
+      const ms = new Date(e.dataset.countdown).getTime() - now;
+      e.textContent = ms > 0 ? Core.fmtDuration(ms) : '現在';
+    });
+  }
+  App.updateTickers = updateTickers;
+  setInterval(updateTickers, 1000);
+
+  /* ---------- theme ---------- */
+  App.applyTheme = () => {
+    const t = App.store.state.settings.theme;
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+  };
+
+  /* ---------- boot ---------- */
+  function boot() {
+    document.title = (window.BRAND && BRAND.appName) || '易家做媽媽';
+    App.applyTheme();
+    if (App.reminders && App.reminders.start) App.reminders.start();
+    render();
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+}());

@@ -421,6 +421,8 @@
 
   /* ================= 紀錄 tab ================= */
   let viewDay = C.dateKey();
+  let followToday = true; // stays on "today" even if the app is left open past midnight
+  const setDay = (d) => { viewDay = d; followToday = d === C.dateKey(); };
   let filter = 'all';
   const FILTERS = [
     { value: 'all', label: '全部' },
@@ -438,18 +440,19 @@
       return;
     }
     el.append(h('div', { class: 'row gap-sm log-top' },
-      h('div', { class: 'grow' }, ui.seg([{ value: 'day', label: '日' }, { value: 'month', label: '月曆' }], logMode, (v) => { logMode = v; App.refresh(); }, { small: true })),
+      h('div', { class: 'grow' }, ui.seg([{ value: 'day', label: '日' }, { value: 'month', label: '月曆' }], logMode, (v) => { logMode = v; if (v === 'month') viewMonth = null; App.refresh(); }, { small: true })),
       h('button', { class: 'btn btn-sm btn-line', onclick: () => shareDay(baby, viewDay), html: `${ui.ICONS.line}<span>傳給家人</span>` })));
+    if (followToday) viewDay = C.dateKey();
     if (logMode === 'month') { renderMonth(el, baby); return; }
     const isToday = viewDay === C.dateKey();
     const age = C.babyAge(baby.birthday, C.parseKey(viewDay));
     el.append(h('div', { class: 'datenav' },
-      h('button', { class: 'icon-btn', 'aria-label': '前一天', html: ui.ICONS.left, onclick: () => { viewDay = C.dateKey(C.addDays(viewDay, -1)); App.refresh(); } }),
+      h('button', { class: 'icon-btn', 'aria-label': '前一天', html: ui.ICONS.left, onclick: () => { setDay(C.dateKey(C.addDays(viewDay, -1))); App.refresh(); } }),
       h('div', { class: 'datenav-mid' },
         h('div', { class: 'tiny muted' }, `${baby.avatar || '👶'} ${baby.name}・${age ? age.text : ''}`),
         h('div', { class: 'bold' }, C.fmtDateLong(viewDay))),
-      h('button', { class: 'icon-btn', 'aria-label': '後一天', html: ui.ICONS.right, disabled: isToday, onclick: () => { viewDay = C.dateKey(C.addDays(viewDay, 1)); App.refresh(); } })));
-    if (!isToday) el.append(h('div', { class: 'center mb' }, h('button', { class: 'link-btn small', onclick: () => { viewDay = C.dateKey(); App.refresh(); } }, '回到今天')));
+      h('button', { class: 'icon-btn', 'aria-label': '後一天', html: ui.ICONS.right, disabled: isToday, onclick: () => { setDay(C.dateKey(C.addDays(viewDay, 1))); App.refresh(); } })));
+    if (!isToday) el.append(h('div', { class: 'center mb' }, h('button', { class: 'link-btn small', onclick: () => { setDay(C.dateKey()); App.refresh(); } }, '回到今天')));
 
     if (isToday) { const b = App.babylog.activeBanner(); if (b) el.append(b); }
 
@@ -507,7 +510,7 @@
       grid.append(h('button', {
         class: `cal-cell${key === today ? ' today' : ''}${logs.length ? ' has' : ''}`, disabled,
         'aria-label': `${m + 1} 月 ${d} 日${logs.length ? `：瓶餵 ${s.bottleMl} 毫升，尿布 ${s.diaperCount} 片` : ''}`,
-        onclick: () => { viewDay = key; logMode = 'day'; App.refresh(); },
+        onclick: () => { setDay(key); logMode = 'day'; App.refresh(); },
       },
       h('span', { class: 'cal-d' }, d),
       logs.length ? h('span', { class: 'cal-ml num' }, s.bottleMl ? `${s.bottleMl}` : `${s.feedCount}次`) : null,
@@ -564,7 +567,7 @@
       if (stage === 'prep' && App.screens.cycle) { App.screens.cycle.render(el, params); return; }
       if (stage === 'preg' && App.screens.pregrecords) { App.screens.pregrecords.render(el, params); return; }
       if (stage === 'preg' && App.screens.pregnancy) { App.screens.pregnancy.render(el, params); return; }
-      if (params.day) viewDay = params.day;
+      if (params.day) setDay(params.day);
       renderBabyLog(el);
     },
     actions: () => (store.stage === 'baby' ? [h('button', { class: 'icon-btn', 'aria-label': '統計', html: ui.ICONS.chart, onclick: () => App.navigate(App.screens.stats ? 'stats' : 'health') })] : null),

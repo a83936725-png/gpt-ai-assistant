@@ -28,6 +28,14 @@ describe('baby age', () => {
     expect(a.text).toBe('2 個月 28 天');
     expect(a.days).toBe(89);
   });
+  test('month-end birthdays never skip a month', () => {
+    const at2 = (d) => Core.babyAge('2026-01-31', Core.parseKey(d)).text;
+    expect(at2('2026-02-28')).toBe('1 個月'); // Feb has no 31st → its last day is the monthly birthday
+    expect(at2('2026-03-01')).toBe('1 個月 1 天');
+    expect(at2('2026-03-31')).toBe('2 個月');
+    expect(Core.babyAge('2024-02-29', Core.parseKey('2025-02-28')).text).toBe('12 個月');
+    expect(Core.babyAge('2024-02-29', Core.parseKey('2028-02-29')).text).toBe('4 歲');
+  });
   test('newborn shows days', () => {
     expect(Core.babyAge('2026-11-01', at('2026-11-15T10:00:00')).text).toBe('14 天');
   });

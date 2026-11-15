@@ -97,9 +97,9 @@
     const b = parseKey(birthday);
     if (!b) return null;
     const days = diffDays(b, now);
-    let months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
-    if (now.getDate() < b.getDate()) months -= 1;
-    months = Math.max(0, months);
+    // whole months = the largest m whose monthly "birthday" (clamped to month end, e.g. 2/29 → 2/28) has passed
+    let months = Math.max(0, (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth()) + 1);
+    while (months > 0 && diffDays(addMonths(b, months), now) < 0) months -= 1;
     const remDays = diffDays(addMonths(b, months), now);
     let text;
     if (days < 0) text = `還有 ${-days} 天出生`;

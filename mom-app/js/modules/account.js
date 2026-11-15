@@ -44,12 +44,16 @@
   function fillPills() {
     document.querySelectorAll('.live-pill').forEach((el) => {
       const L = App.live;
-      el.hidden = !L;
-      if (!L) return;
+      const th = (B().liveStats) || {};
+      const showOn = L && L.online >= (th.showOnlineFrom || 1);
+      const showReg = L && L.registered >= (th.showRegisteredFrom || 1);
+      el.hidden = !(showOn || showReg);
+      if (el.hidden) return;
       el.innerHTML = '';
       ui.append(el, [h('span', { class: 'live-dot', 'aria-hidden': 'true' }),
-        h('span', null, `現在 ${fmtN(L.online)} 位在線上`), h('span', { class: 'live-sep', 'aria-hidden': 'true' }, '・'),
-        h('span', null, `已有 ${fmtN(L.registered)} 位媽咪註冊`),
+        showOn ? h('span', null, `現在 ${fmtN(L.online)} 位在線上`) : null,
+        showOn && showReg ? h('span', { class: 'live-sep', 'aria-hidden': 'true' }, '・') : null,
+        showReg ? h('span', null, `已有 ${fmtN(L.registered)} 位媽咪註冊`) : null,
         L.todaySignups ? h('span', { class: 'live-today' }, `今天 +${fmtN(L.todaySignups)}`) : null,
         L.storage === 'memory' ? h('span', { class: 'live-test' }, '測試環境') : null]); // ui.append skips nulls
     });

@@ -13,16 +13,29 @@
 - 🍲 **坐月子**：生產紀錄、產後恢復紀錄（惡露、傷口、心情）、新生兒前 4 週觀察
 - 💜 **品牌**：每日「滴雞精時光」打卡、提醒、官網／LINE 導流
 - 👨‍👩‍👧 **家人共享**：記錄者標示、LINE 邀請、備份合併
-- ⚡ **快速操作**：一鍵記錄＋復原、自訂首頁快速鍵、長按 App 圖示捷徑、夜間模式、二寶模式
+- ⚡ **快速操作**：一鍵記錄＋復原、自訂首頁快速鍵、長按 App 圖示捷徑、夜間模式、二寶模式、月曆、傳給家人
+- 📹 **看寶寶**：舊手機當攝影機，同一個 Wi-Fi 點對點、不經伺服器
+- 🎒 **外出好幫手**：依寶寶紀錄估算外出包、週末計畫、找活動與哺乳室
+- 🔎 **問答搜尋**：常見育兒問答＋全 App 內容搜尋
+- 📤 **分享與邀請**：LINE／IG／FB／Threads 分享卡、邀請碼、好孕點數、關鍵時刻提醒
+- 👥 **會員**：Email／手機／LINE 登入、即時在線與註冊人數、成功邀請人數
 
 完整拆解、功能對照、法規注意事項與部署方式請看 [docs/TEARDOWN.md](docs/TEARDOWN.md)；孕期到出生的逐步操作截圖請看 [docs/FLOW.md](docs/FLOW.md)。
 
 ## 快速開始
 
 ```bash
-cd mom-app
-python3 -m http.server 8080
+# 只看 App（不含登入與人數）
+cd mom-app && python3 -m http.server 8080
 # 打開 http://localhost:8080 ，選「先看看範例資料」
 ```
+
+```bash
+# 完整版（App＋會員 API），在 repo 根目錄執行
+APP_PORT=8080 node api/index.js
+# 打開 http://localhost:8080/mom-app/
+```
+
+部署與會員功能設定請看 [docs/GROWTH.md](docs/GROWTH.md) 第五節；四個參考來源的交叉比對在 [docs/COMPARE.md](docs/COMPARE.md)。
 
 品牌名稱、LOGO、官網與 LINE 連結都在 [`config.js`](config.js) 設定。

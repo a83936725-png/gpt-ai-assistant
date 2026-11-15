@@ -22,7 +22,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const A = await mk();
   await A.goto(BASE); await A.waitForTimeout(1500);
   const pill = await S(A, () => document.querySelector('.live-pill:not([hidden])')?.innerText.replace(/\n/g, '') || '');
-  ok('welcome shows real online/registered counts', /現在 \d+ 位在線上/.test(pill) && /已有 [\d,]+ 位媽咪註冊/.test(pill) && !/null|undefined/.test(pill), pill);
+  ok('welcome shows real online/registered counts', /現在 \d+ 位在線上/.test(pill) && (before.registered < 1 || /已有 [\d,]+ 位媽咪註冊/.test(pill)) && !/null|undefined/.test(pill), pill);
   await A.click('text=已有帳號？登入／註冊'); await A.waitForTimeout(800);
   ok('login page reachable before setup', (await S(A, () => document.body.dataset.screen)) === 'login');
   await A.click('.login-form .seg button:has-text("註冊")'); await A.waitForTimeout(250);

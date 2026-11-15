@@ -501,19 +501,20 @@
       els.input.value = ST.q;
       els.clear.hidden = !ST.q;
       renderResults();
+      if (window.scrollY > 0) window.scrollTo(0, 0);
       if (focus) els.input.focus({ preventScroll: true });
     }
     if (save) remember(ST.q);
   }
 
-  function resultItem({ icon, title, sub, meta, right, onclick, terms, data }) {
+  // tag (e.g. 需就醫) sits under the title so long questions keep the full width on small phones
+  function resultItem({ icon, title, sub, meta, tag, onclick, terms, data }) {
     return h('button', { type: 'button', class: 'list-item sr-item', onclick, dataset: data || null },
       h('span', { class: 'li-icon', 'aria-hidden': 'true' }, icon),
       h('span', { class: 'li-body' },
         h('span', { class: 'li-title sr-title' }, hl(title, terms)),
         sub ? h('span', { class: 'li-sub sr-snip' }, hl(sub, terms)) : null,
-        meta ? h('span', { class: 'sr-meta' }, meta) : null),
-      right || null,
+        tag || meta ? h('span', { class: 'sr-meta' }, tag || null, meta ? h('span', null, meta) : null) : null),
       h('span', { class: 'ic faint sr-chev', html: ui.ICONS.chevron, 'aria-hidden': 'true' }));
   }
 
@@ -549,7 +550,7 @@
     box.append(h('section', { class: 'sr-group', 'aria-label': '這個階段的常見問答' },
       h('h2', { class: 'section-title sr-group-title' }, h('span', null, `${stages.map((s) => STAGE_LABEL[s]).join('・')}常見問答`), h('span', { class: 'sr-count' }, `${list.length} 題`)),
       h('div', { class: 'list' }, shown.map((f) => resultItem({
-        icon: f.level === 'urgent' ? '⚠️' : '💬', title: f.q, right: levelTag(f.level), onclick: () => openFaq(f.id), data: { faq: f.id },
+        icon: f.level === 'urgent' ? '⚠️' : '💬', title: f.q, tag: levelTag(f.level), onclick: () => openFaq(f.id), data: { faq: f.id },
       }))),
       list.length > shown.length ? h('button', { type: 'button', class: 'btn btn-ghost btn-block sr-more', onclick: () => { ST.browseAll = true; renderResults(); } }, `看全部 ${list.length} 題`) : null));
   }
@@ -563,7 +564,7 @@
     const parts = [
       group('faq', '常見問答', groups.faq, 6, (x) => resultItem({
         icon: x.d.faq.level === 'urgent' ? '⚠️' : '💬', title: x.d.faq.q, sub: bestSentence(x.d.faq.a, terms), terms,
-        right: levelTag(x.d.faq.level), data: { faq: x.d.faq.id },
+        tag: levelTag(x.d.faq.level), data: { faq: x.d.faq.id },
         onclick: openAndRemember(() => openFaq(x.d.faq.id, { terms })),
       })),
       group('island', '好孕島知識', groups.island, 4, (x) => resultItem({
@@ -639,7 +640,7 @@
       ST.expanded = {};
       clear.hidden = !input.value;
       clearTimeout(timer);
-      timer = setTimeout(renderResults, 120);
+      timer = setTimeout(() => { renderResults(); if (window.scrollY > 0) window.scrollTo(0, 0); }, 120);
     });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && input.value && !document.body.classList.contains('has-sheet')) { e.preventDefault(); setQuery('', { focus: true }); }

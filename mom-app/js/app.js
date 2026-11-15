@@ -14,10 +14,11 @@
   // App.screen / App.homeCard / App.tool registries are defined in ui.js (loaded before modules).
 
   const TABS = [
+    // ordered by how often a mom needs them: logging many times a day, the island now and then
     { id: 'home', label: '首頁', icon: 'home' },
-    { id: 'island', label: '好孕島', icon: 'island' },
     { id: 'log', label: '紀錄', icon: 'log' },
     { id: 'health', label: '健康', icon: 'health' },
+    { id: 'island', label: '好孕島', icon: 'island' },
     { id: 'me', label: '我的', icon: 'me' },
   ];
 
@@ -131,11 +132,17 @@
   setInterval(updateTickers, 1000);
 
   /* ---------- theme ---------- */
+  // 夜間模式：22:00–06:00 自動深色＋按鈕放大（給半夜單手餵奶用）。手動選「淺色」時不強制變暗。
+  App.isNight = (d = new Date()) => d.getHours() >= 22 || d.getHours() < 6;
   App.applyTheme = () => {
-    const t = App.store.state.settings.theme;
+    const { theme, nightMode } = App.store.state.settings;
+    const night = nightMode !== false && App.isNight();
+    document.body.classList.toggle('night', night);
+    const t = night && theme !== 'light' ? 'dark' : theme;
     if (t === 'auto') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', t);
   };
+  setInterval(() => App.applyTheme(), 60 * 1000);
 
   /* ---------- boot ---------- */
   function boot() {

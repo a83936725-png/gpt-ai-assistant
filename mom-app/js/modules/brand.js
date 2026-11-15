@@ -53,7 +53,51 @@
       compact ? h('button', { class: 'link-btn small', onclick: () => App.navigate('brand') }, `認識${B().brandName || '品牌'} ›`) : null);
   }
 
-  App.homeCard('chicken', { stages: ['prep', 'preg', 'baby'], order: 20, render(el) { el.append(checkinCard({ compact: true })); } });
+  /* ---------- 今日小任務：葉酸／維他命＋滴雞精＋喝水，一張卡完成每天的自我照顧 ---------- */
+  const WATER_GOAL = 8;
+  const dayLog = () => store.state.daily.log[C.dateKey()] || {};
+  const setWater = (n) => store.update((s) => {
+    const k = C.dateKey();
+    s.daily.log[k] = { ...(s.daily.log[k] || {}), water: Math.max(0, Math.min(16, n)) };
+  });
+  function dailyCard() {
+    const stages = store.stages();
+    const tasks = [];
+    if (stages.includes('prep') || stages.includes('preg')) {
+      const done = !!store.state.folic.log[C.dateKey()];
+      tasks.push({
+        id: 'folic', icon: '💊', label: stages.includes('preg') ? '葉酸／孕婦維他命' : '葉酸', done,
+        sub: done ? '今天吃過了' : '每天一顆',
+        tap: () => {
+          if (App.preg && App.preg.toggleFolic) App.preg.toggleFolic();
+          else store.update((s) => { const k = C.dateKey(); if (s.folic.log[k]) delete s.folic.log[k]; else s.folic.log[k] = true; });
+        },
+      });
+    }
+    const n = todayCount();
+    tasks.push({
+      id: 'chicken', icon: '💜', label: '滴雞精時光', done: n >= (store.state.chicken.goal || 1),
+      sub: n ? `今天 ${n} 次・連續 ${streak()} 天` : STAGE_COPY[store.stage].slice(0, 12),
+      tap: () => checkIn(1),
+    });
+    const w = dayLog().water || 0;
+    tasks.push({
+      id: 'water', icon: '💧', label: '喝水', done: w >= WATER_GOAL, sub: `${w} / ${WATER_GOAL} 杯`, tap: () => setWater(w + 1), minus: w > 0 ? () => setWater(w - 1) : null,
+    });
+    const doneCount = tasks.filter((t) => t.done).length;
+    return h('section', { class: 'card daily-card' },
+      h('div', { class: 'row between' },
+        h('div', { class: 'card-title' }, '今日小任務', h('span', { class: `tag ${doneCount === tasks.length ? 'ok' : 'primary'}` }, `${doneCount}/${tasks.length}`)),
+        h('button', { class: 'link-btn tiny daily-brand', onclick: () => App.navigate('brand') },
+          h('img', { src: B().logo || 'assets/logo.svg', alt: '' }), `${B().brandName || ''}陪你`)),
+      h('div', { class: 'daily-list' }, tasks.map((t) => h('div', { class: `daily-item${t.done ? ' done' : ''}` },
+        h('button', { class: 'daily-main', onclick: t.tap, 'aria-label': `${t.label}：${t.sub}，點一下記錄` },
+          h('span', { class: 'daily-ico' }, t.done ? '✓' : t.icon),
+          h('span', { class: 'daily-text' }, h('b', null, t.label), h('span', { class: 'tiny muted' }, t.sub))),
+        t.minus ? h('button', { class: 'daily-minus', 'aria-label': `${t.label}減一`, onclick: t.minus }, '−') : null))));
+  }
+  App.dailyCard = dailyCard;
+  App.homeCard('daily', { stages: ['prep', 'preg', 'baby'], order: 20, render(el) { el.append(dailyCard()); } });
 
   function monthGrid() {
     const now = new Date();
@@ -101,6 +145,5 @@
       el.append(h('p', { class: 'disclaimer' }, '本頁為生活習慣紀錄功能。食品不具醫療效能，身體狀況請諮詢醫師。'));
     },
   });
-
-  App.tool({ id: 'brand', title: '滴雞精時光', icon: '💜', desc: '每日打卡、連續天數', stages: ['prep', 'preg', 'baby'], screen: 'brand', order: 90, group: '易家' });
+  // 品牌入口：首頁「今日小任務」、我的、好孕島小舖（不放在「健康」醫療工具裡）
 }());

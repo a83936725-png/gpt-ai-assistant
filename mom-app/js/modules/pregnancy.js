@@ -371,17 +371,7 @@
         info.last ? h('button', { class: 'btn btn-soft grow', onclick: () => openPeriodSheet(todayKey()) }, '🌸 記錄今天') : null,
         h('button', { class: 'btn btn-ghost grow', onclick: openCycleSettings }, '週期設定')),
       historyCard(info),
-      h('div', { class: 'section-title' }, '備孕工具'),
-      h('div', { class: 'grid-2' },
-        tile('📋', '孕前準備清單', '檢查、疫苗、生活習慣', 'prepcheck')),
       disclaimer('排卵預測以「下次月經前 14 天」推估，週期不規律時誤差較大；若規律性行為一年仍未懷孕（35 歲以上為半年），建議尋求生殖醫學專科協助。'));
-  }
-
-  function tile(icon, title, desc, screen) {
-    return h('button', { class: 'tile', onclick: () => App.navigate(screen) },
-      h('span', { class: 'tile-icon' }, icon),
-      h('span', { class: 'tile-title' }, title),
-      h('span', { class: 'tile-desc' }, desc));
   }
 
   /* =========================================================
@@ -554,19 +544,17 @@
           h('span', { class: 'faint', html: ui.ICONS.chevron }))) : null,
       h('div', { class: 'section-title' }, '每週寶寶變化'),
       weekCard(cw),
-      h('div', { class: 'section-title' }, '孕期工具'),
-      h('div', { class: 'grid-2' },
-        tile('🩺', '產檢時程', '公費 14 次產檢', 'prenatal'),
-        tile('👣', '胎動計數', '數到 10 下', 'kick'),
-        tile('⏱️', '宮縮計時', '判斷產兆', 'contraction'),
-        tile('⚖️', '孕期體重', '建議增重範圍', 'pregweight'),
-        tile('🎒', '待產包', '清單一次備齊', 'hospitalbag')),
+      h('div', { class: 'row gap-sm wrap mt pg-shortcuts' },
+        h('button', { class: 'chip', onclick: () => App.navigate('kick') }, '👣 胎動'),
+        h('button', { class: 'chip', onclick: () => App.navigate('pregweight') }, '⚖️ 體重'),
+        h('button', { class: 'chip', onclick: () => App.navigate('health') }, '🧰 全部孕期工具')),
       h('button', {
         class: 'btn btn-accent btn-block mt-lg',
         onclick: async () => {
           if (!(await ui.confirm('恭喜！要切換到「育兒」模式，開始記錄寶寶的生活嗎？', { ok: '寶寶出生了' }))) return;
-          store.update((st) => { st.profile.stage = 'baby'; });
-          if (!store.state.babies.length) store.addBaby({ name: '寶寶', birthday: todayKey() });
+          const secondBaby = store.state.profile.pregnantToo && store.state.babies.length > 0;
+          store.update((st) => { st.profile.stage = 'baby'; st.profile.pregnantToo = false; });
+          if (secondBaby || !store.state.babies.length) store.addBaby({ name: secondBaby ? '二寶' : '寶寶', birthday: todayKey() });
           ui.toast('恭喜你！可以到「我的」修改寶寶資料');
           App.navigate('home');
         },
@@ -1040,9 +1028,7 @@
         add(el, ui.card({ class: 'soft' },
           h('div', { class: 'card-title' }, '🌸 經期・排卵'),
           h('p', { class: 'small muted' }, '記錄最近一次月經，幫你預測排卵日與易孕期。'),
-          h('button', { class: 'btn btn-primary btn-sm mt', onclick: openLastPeriodSheet }, '記錄最近一次月經'),
-          h('div', { class: 'divider' }),
-          folicRow()));
+          h('button', { class: 'btn btn-primary btn-sm mt', onclick: openLastPeriodSheet }, '記錄最近一次月經')));
         return;
       }
       const ph = PHASE[info.phase];
@@ -1058,9 +1044,7 @@
           h('div', { class: 'right small' },
             h('div', { class: 'muted' }, '易孕期'),
             h('div', { class: 'bold' }, `${C.fmtDate(info.fertileStart, false)}–${C.fmtDate(info.fertileEnd, false)}`))),
-        info.inFertile ? h('div', { class: 'pg-fertile-banner' }, info.phase === 'ovulation' ? '✨ 今天是預測排卵日' : '🌿 今天在易孕期') : null,
-        h('div', { class: 'divider' }),
-        folicRow()));
+        info.inFertile ? h('div', { class: 'pg-fertile-banner' }, info.phase === 'ovulation' ? '✨ 今天是預測排卵日' : '🌿 今天在易孕期') : null));
     },
   });
 

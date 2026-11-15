@@ -258,7 +258,7 @@
         { q: '打完疫苗後輕微發燒、注射處紅腫？', options: ['多為常見反應，觀察即可；高燒或精神差要就醫', '一定是嚴重過敏'], answer: 0, explain: '大多數反應輕微且短暫，但要留意警訊。' },
         { q: '帶寶寶去打疫苗要帶什麼？', options: ['兒童健康手冊', '存摺'], answer: 0, explain: '手冊會記錄每一次接種，別忘了帶。' },
       ],
-      tool: 'vaccines',
+      tool: 'prevention',
     },
     {
       id: 'sleepforest',

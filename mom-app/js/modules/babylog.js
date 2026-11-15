@@ -83,8 +83,66 @@
       return null;
     },
     cancel(type) { store.update((s) => { delete s.active[type === 'breast' ? 'feed' : type]; }); },
+    // stop + toast with 復原 (restores the running timer and removes the saved log)
+    stopWithUndo(type) {
+      const key = type === 'breast' ? 'feed' : type;
+      const snap = store.state.active[key] ? JSON.parse(JSON.stringify(store.state.active[key])) : null;
+      const entry = timers.stop(type);
+      if (!entry) return null;
+      ui.toast(`已記錄${T()[type].label}・${App.logSummary(entry)}`, {
+        action: '復原',
+        onAction: () => store.update((s) => { s.logs = s.logs.filter((l) => l.id !== entry.id); if (snap) s.active[key] = snap; }),
+      });
+      return entry;
+    },
   };
   App.timers = timers;
+
+  /* ================= undo helper ================= */
+  // Run `fn` (which saves something), then offer 復原 that restores logs + milk inventory exactly as before.
+  function withUndo(label, fn) {
+    const before = { logs: store.state.logs.map((l) => l.id), milk: JSON.parse(JSON.stringify(store.state.milk)) };
+    const result = fn();
+    ui.toast(label, {
+      action: '復原',
+      onAction: () => store.update((s) => {
+        s.logs = s.logs.filter((l) => before.logs.includes(l.id));
+        s.milk = before.milk;
+      }),
+    });
+    return result;
+  }
+
+  /* ================= one-tap quick log (the ＋ on home tiles) =================
+   * 親餵／睡眠／擠奶：開始計時；瓶餵：照上一次的種類與奶量；尿布：濕尿布；體溫：打開表單 */
+  function quickLog(type) {
+    const def = T()[type];
+    if (type === 'breast') {
+      const last = store.lastLog('breast');
+      const side = last?.data?.lastSide === 'L' ? 'R' : 'L';
+      timers.start('breast', { side });
+      ui.toast(`開始餵${side === 'L' ? '左' : '右'}邊`, { action: '取消', onAction: () => timers.cancel('breast') });
+      return;
+    }
+    if (type === 'sleep' || type === 'pump') {
+      timers.start(type);
+      ui.toast(type === 'sleep' ? '開始記錄睡眠 😴' : '開始擠奶計時', { action: '取消', onAction: () => timers.cancel(type) });
+      return;
+    }
+    if (type === 'bottle') {
+      const last = store.lastLog('bottle');
+      if (!last) { openAdd('bottle'); return; }
+      const data = { kind: last.data?.kind || 'breastmilk', ml: last.data?.ml || 90 };
+      withUndo(`已記錄瓶餵・${data.ml} ml ${data.kind === 'formula' ? '配方奶' : '母乳'}`, () => store.addLog({ type, data }));
+      return;
+    }
+    if (type === 'diaper') {
+      withUndo('已記錄濕尿布', () => store.addLog({ type, data: { kind: 'wet' } }));
+      return;
+    }
+    openAdd(type);
+    return def;
+  }
 
   /* ================= add / edit sheets ================= */
   const timeInput = (v) => h('input', { type: 'datetime-local', value: C.toLocalInput(v || new Date()), max: C.toLocalInput(new Date(Date.now() + C.DAY)) });
@@ -133,12 +191,16 @@
       };
     } else if (type === 'bottle') {
       const kind = ui.seg([{ value: 'breastmilk', label: '母乳' }, { value: 'formula', label: '配方奶' }], data.kind || lastOf('bottle')?.data?.kind || 'breastmilk', (v) => { useInv.closest('.check-row').hidden = v !== 'breastmilk' || isEdit || !invMl(); });
-      const ml = ui.stepper({ value: data.ml ?? lastOf('bottle')?.data?.ml ?? 90, step: 10, unit: 'ml' });
+      const ml = ui.stepper({ value: data.ml ?? lastOf('bottle')?.data?.ml ?? 90, step: 10, unit: 'ml', onChange: (v) => markPreset(v) });
+      const presets = h('div', { class: 'chips preset-chips' });
+      const markPreset = (v) => presets.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', Number(c.dataset.ml) === Number(v)));
+      [60, 90, 120, 150, 180, 210].forEach((v) => presets.append(h('button', { type: 'button', class: 'chip', dataset: { ml: v }, onclick: () => { ml.setValue(v); } }, `${v}`)));
+      markPreset(ml.getValue());
       const useInv = h('input', { type: 'checkbox' });
       const invMl = () => (App.milk ? App.milk.available() : 0);
       const invRow = h('label', { class: 'check-row' }, useInv, h('span', null, `從母乳庫存扣除（目前 ${invMl()} ml，先進先出）`));
       invRow.hidden = (data.kind || 'breastmilk') !== 'breastmilk' || isEdit || !invMl();
-      body.append(ui.field('時間', startIn), ui.field('種類', kind), ui.field('奶量', ml), invRow);
+      body.append(ui.field('時間', startIn), ui.field('種類', kind), ui.field('奶量（ml）', h('div', null, ml, presets)), invRow);
       collect = () => {
         if (useInv.checked && App.milk) App.milk.consume(ml.getValue());
         return { data: { ...data, kind: kind.dataset.value, ml: ml.getValue() } };
@@ -219,19 +281,29 @@
       const extra = collect();
       const patch = { start: new Date(startIn.value).toISOString(), note: noteIn.value.trim(), ...extra };
       if (patch.data === undefined) patch.data = data;
-      if (isEdit) store.updateLog(existing.id, patch);
-      else store.addLog({ type, ...patch });
       sh.close();
-      ui.toast(isEdit ? '已更新' : `已記錄${def.label}`);
+      if (isEdit) { store.updateLog(existing.id, patch); ui.toast('已更新'); return; }
+      withUndo(`已記錄${def.label}`, () => store.addLog({ type, ...patch }));
+    };
+    // collect() may touch the milk inventory, so run it inside the undo snapshot for new entries
+    const saveNew = () => {
+      if (!startIn.value) { ui.toast('請填時間'); return; }
+      sh.close();
+      withUndo(`已記錄${def.label}`, () => {
+        const extra = collect();
+        const patch = { start: new Date(startIn.value).toISOString(), note: noteIn.value.trim(), ...extra };
+        if (patch.data === undefined) patch.data = data;
+        return store.addLog({ type, ...patch });
+      });
     };
     const footer = h('div', { class: 'row gap' },
       isEdit ? h('button', {
         class: 'btn btn-ghost', 'aria-label': '刪除', onclick: async () => { if (await ui.confirm('刪除這筆紀錄？', { ok: '刪除', danger: true })) { store.removeLog(existing.id); sh.close(); ui.toast('已刪除'); } },
       }, ui.icon('trash')) : null,
-      h('button', { class: 'btn btn-primary grow', onclick: save }, isEdit ? '儲存' : '新增'));
+      h('button', { class: 'btn btn-primary grow', onclick: isEdit ? save : saveNew }, isEdit ? '儲存' : '新增'));
     const sh = ui.sheet({ title: `${def.icon} ${isEdit ? '編輯' : ''}${def.label}`, body, footer });
   }
-  App.babylog = { openAdd, typePicker };
+  App.babylog = { openAdd, typePicker, quickLog, withUndo };
 
   /* ================= running timer banner (home + log) ================= */
   App.babylog.activeBanner = () => {
@@ -244,14 +316,14 @@
         h('div', { class: 'seg seg-sm at-seg' },
           h('button', { class: a.feed.side === 'L' ? 'active' : '', onclick: () => timers.switchSide('L') }, '左'),
           h('button', { class: a.feed.side === 'R' ? 'active' : '', onclick: () => timers.switchSide('R') }, '右')),
-        h('button', { class: 'btn btn-sm btn-primary', onclick: () => { timers.stop('breast'); ui.toast('已記錄親餵'); } }, '完成')));
+        h('button', { class: 'btn btn-sm btn-primary', onclick: () => timers.stopWithUndo('breast') }, '完成')));
     }
     if (a.sleep) {
       items.push(h('div', { class: 'active-timer', style: { '--tc': 'var(--t-sleep)' } },
         h('span', { class: 'at-ico' }, '😴'),
         h('div', { class: 'grow' }, h('div', { class: 'bold' }, '睡覺中'), h('div', { class: 'big-num small-num', dataset: { clock: a.sleep.start } }, '00:00')),
         h('button', { class: 'btn btn-sm btn-ghost', onclick: async () => { if (await ui.confirm('取消這次睡眠計時？')) timers.cancel('sleep'); } }, '取消'),
-        h('button', { class: 'btn btn-sm btn-primary', onclick: () => { timers.stop('sleep'); ui.toast('已記錄睡眠'); } }, '醒來了')));
+        h('button', { class: 'btn btn-sm btn-primary', onclick: () => timers.stopWithUndo('sleep') }, '醒來了')));
     }
     if (a.pump) {
       items.push(h('div', { class: 'active-timer', style: { '--tc': 'var(--t-pump)' } },

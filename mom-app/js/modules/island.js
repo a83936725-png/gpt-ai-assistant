@@ -379,8 +379,8 @@
         const ly = ty - 0.11 * SC;
         const beamWrap = sv('g', { transform: `translate(${R1(bx)} ${R1(ly)})`, class: 'isl-beam-wrap' });
         const beam = sv('g', null,
-          sv('polygon', { points: `0,0 ${R1(3.4 * SC)},${R1(-0.55 * SC)} ${R1(3.4 * SC)},${R1(0.55 * SC)}`, class: 'isl-beam' }),
-          sv('polygon', { points: `0,0 ${R1(-3.4 * SC)},${R1(-0.55 * SC)} ${R1(-3.4 * SC)},${R1(0.55 * SC)}`, class: 'isl-beam' }));
+          sv('polygon', { points: `0,0 ${R1(3.4 * SC)},${R1(-0.55 * SC)} ${R1(3.4 * SC)},${R1(0.55 * SC)}`, class: 'isl-beam', fill: 'url(#isl-beam-r)' }),
+          sv('polygon', { points: `0,0 ${R1(-3.4 * SC)},${R1(-0.55 * SC)} ${R1(-3.4 * SC)},${R1(0.55 * SC)}`, class: 'isl-beam', fill: 'url(#isl-beam-l)' }));
         beam.appendChild(sv('animateTransform', {
           attributeName: 'transform', type: 'rotate', values: '-28;28;-28', dur: '9s', repeatCount: 'indefinite',
         }));
@@ -529,7 +529,7 @@
         c.g.appendChild(sv('ellipse', { cx: R1(sx), cy: R1(sy), rx: 16, ry: 7, class: 'isl-shadow' }));
       });
       c.balloon = P(c.x + 0.05, c.y - 0.05, c.z + 2.1);
-      c.babyPath = [P(c.x - 0.45, c.y + 0.28, c.z), P(c.x + 0.3, c.y + 0.5, c.z)];
+      c.babyPath = [P(c.x + 0.1, c.y + 0.2, c.z), P(c.x + 0.56, c.y + 0.04, c.z)];
     },
     woods(c) {
       treesAt(c, [
@@ -972,7 +972,11 @@
     const sea = sv('rect', { class: 'm-sea-t isl-sea', x: 0, y: 0, width: '100%', height: '100%' });
     const stars = sv('g', { class: 'isl-stars' });
     const built = buildScene(tiles);
-    svg.append(sea, stars, built.world);
+    const grad = (id, o1, o2) => sv('linearGradient', { id, x1: 0, x2: 1, y1: 0, y2: 0 },
+      sv('stop', { offset: 0, 'stop-color': '#fff6c2', 'stop-opacity': o1 }),
+      sv('stop', { offset: 1, 'stop-color': '#fff6c2', 'stop-opacity': o2 }));
+    const defs = sv('defs', null, grad('isl-beam-r', 0.9, 0), grad('isl-beam-l', 0, 0.9));
+    svg.append(defs, sea, stars, built.world);
 
     const fx = h('div', { class: 'isl-fx', 'aria-hidden': 'true' });
     const bubble = h('div', { class: 'isl-bubble', 'aria-live': 'polite' });
@@ -987,10 +991,12 @@
     let W = root.clientWidth || 360; let H = root.clientHeight || 600;
     const bb = built.scene.getBBox();
     const bbox = { x: bb.x - 20, y: bb.y - 50, w: bb.width + 40, h: bb.height + 60 };
-    const PAD = { t: 64, b: 56, l: 8, r: 8 };
+    // leave room for the HUD (top), ticker (bottom) and the control column (right, on phones)
+    const PAD = { t: 64, b: 56, l: 6, r: W < 600 ? 34 : 8 };
     let fitK = 1;
     const view = { k: 1, tx: 0, ty: 0 };
     const computeFit = () => {
+      PAD.r = W < 600 ? 34 : 8;
       fitK = Math.min((W - PAD.l - PAD.r) / bbox.w, (H - PAD.t - PAD.b) / bbox.h);
       return {
         k: fitK,
@@ -1009,7 +1015,9 @@
       built.world.setAttribute('transform', `translate(${R1(view.tx)} ${R1(view.ty)}) scale(${view.k.toFixed(4)})`);
       if (view.k !== lastK) {
         lastK = view.k;
-        const s = (1 / view.k).toFixed(4);
+        // labels keep a constant on-screen size, slightly smaller in the zoomed-out overview
+        const rel = view.k / (fitK || view.k);
+        const s = ((1 / view.k) * Math.min(1, Math.max(0.88, 0.88 + (rel - 1) * 0.25))).toFixed(4);
         built.labelEls.forEach((l) => l.inner.setAttribute('transform', `scale(${s})`));
       }
       ST.view = { ...view }; ST.size = { W, H };

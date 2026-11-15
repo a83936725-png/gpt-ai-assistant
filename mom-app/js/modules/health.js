@@ -480,7 +480,7 @@
       const head = stageHeader();
       if (head) el.append(head);
       const tools = App.tools
-        .filter((t) => (t.stages || []).includes(st))
+        .filter((t) => store().inStage(t.stages))
         .sort((a, c) => (a.order ?? 50) - (c.order ?? 50));
       if (!tools.length) {
         el.append(ui.empty('🧰', '這個階段的工具準備中。'));
@@ -663,6 +663,31 @@
     });
   }
 
+  let vacShowAll = false;
+  const markVaccine = (v, b) => {
+    const doneMap = store().state.vaccines[b.id] || {};
+    const st = vaccineStatus(v, b, doneMap);
+    openDoneSheet({
+      title: `${v.name}`,
+      sub: `${v.dose}・建議 ${fmtYMD(st.due)}（${monthsLabel(v.months)}）`,
+      note: v.note,
+      doneDate: doneMap[v.key],
+      onSave: (d) => store().update((S) => { S.vaccines[b.id] = { ...(S.vaccines[b.id] || {}), [v.key]: d }; }),
+      onClear: () => store().update((S) => { if (S.vaccines[b.id]) delete S.vaccines[b.id][v.key]; }),
+    });
+  };
+  const markCheckup = (c, b) => {
+    const doneMap = store().state.checkups[b.id] || {};
+    const st = checkupStatus(c, b, doneMap);
+    openDoneSheet({
+      title: c.name,
+      sub: `${fmtYMD(st.start)} – ${fmtYMD(st.end)}・${c.suggest}`,
+      doneDate: doneMap[c.key],
+      onSave: (d) => store().update((S) => { S.checkups[b.id] = { ...(S.checkups[b.id] || {}), [c.key]: d }; }),
+      onClear: () => store().update((S) => { if (S.checkups[b.id]) delete S.checkups[b.id][c.key]; }),
+    });
+  };
+
   App.screen('vaccines', {
     title: '疫苗時程',
     tab: 'health',
@@ -683,9 +708,16 @@
         nv ? h('p', { class: 'small mt', style: { marginBottom: 0 } },
           `下一劑：${nv.v.name} ${nv.v.dose}・${fmtYMD(nv.st.due)}${nv.st.daysToDue > 0 ? `（還有 ${nv.st.daysToDue} 天）` : nv.st.key === 'overdue' ? '（已逾期）' : '（現在可接種）'}`) : null));
 
-      // group by recommended month
+      // group by recommended month; by default hide groups that are all done or more than 6 months away
       const groups = C.groupBy(items, (x) => x.v.months);
+      const horizon = C.addMonths(today(), 6);
+      let hidden = 0;
       Object.keys(groups).map(Number).sort((a, c) => a - c).forEach((mo) => {
+        if (!vacShowAll) {
+          const allDone = groups[mo].every((x) => ['done', 'cond'].includes(x.st.key));
+          const far = dueFrom(b.birthday, mo) > horizon;
+          if (allDone || far) { hidden += groups[mo].length; return; }
+        }
         const due = dueFrom(b.birthday, mo);
         el.append(h('div', { class: 'section-title' },
           h('span', null, mo === 60 ? '滿 5 歲至入國小前' : monthsLabel(mo)),
@@ -694,14 +726,7 @@
         groups[mo].forEach(({ v, st }) => {
           list.append(h('button', {
             type: 'button', class: `list-item vac-item vac-${st.key}`,
-            onclick: () => openDoneSheet({
-              title: `${v.name}`,
-              sub: `${v.dose}・建議 ${fmtYMD(st.due)}（${monthsLabel(v.months)}）`,
-              note: v.note,
-              doneDate: doneMap[v.key],
-              onSave: (d) => store().update((S) => { S.vaccines[b.id] = { ...(S.vaccines[b.id] || {}), [v.key]: d }; }),
-              onClear: () => store().update((S) => { if (S.vaccines[b.id]) delete S.vaccines[b.id][v.key]; }),
-            }),
+            onclick: () => markVaccine(v, b),
           },
           h('span', { class: 'li-icon' }, st.key === 'done' ? '✅' : '💉'),
           h('span', { class: 'li-body' },
@@ -713,6 +738,8 @@
         });
         el.append(list);
       });
+      el.append(h('button', { class: 'btn btn-ghost btn-block mt', onclick: () => { vacShowAll = !vacShowAll; App.refresh(); } },
+        vacShowAll ? '只看接下來半年' : `顯示全部時程（另有 ${hidden} 劑：已完成或半年後）`));
       el.append(h('p', { class: 'disclaimer' }, '實際時程以衛福部疾管署公告與醫師建議為準。自費疫苗是否接種，請與兒科醫師討論。'));
     }),
   });
@@ -742,13 +769,7 @@
         arr.forEach(({ c, st }) => {
           list.append(h('button', {
             type: 'button', class: `list-item${st.key === 'now' ? ' is-current' : ''}`,
-            onclick: () => openDoneSheet({
-              title: c.name,
-              sub: `${fmtYMD(st.start)} – ${fmtYMD(st.end)}・${c.suggest}`,
-              doneDate: doneMap[c.key],
-              onSave: (d) => store().update((S) => { S.checkups[b.id] = { ...(S.checkups[b.id] || {}), [c.key]: d }; }),
-              onClear: () => store().update((S) => { if (S.checkups[b.id]) delete S.checkups[b.id][c.key]; }),
-            }),
+            onclick: () => markCheckup(c, b),
           },
           h('span', { class: 'li-icon' }, st.key === 'done' ? '✅' : c.kind === 'screen' ? '🧪' : '🩺'),
           h('span', { class: 'li-body' },
@@ -762,6 +783,52 @@
       render('新生兒篩檢', items.filter((x) => x.c.kind === 'screen'));
       render('預防保健 7 次', visits);
       el.append(h('p', { class: 'disclaimer' }, '時程依國民健康署兒童預防保健服務整理，實際以國健署公告為準。'));
+    }),
+  });
+
+  /* =====================================================================
+   * 預防保健時間表（疫苗＋兒童預防保健合併）
+   * ===================================================================== */
+  let prevTab = 'vaccines';
+  function preventionTodo(b) {
+    const vDone = store().state.vaccines[b.id] || {};
+    const cDone = store().state.checkups[b.id] || {};
+    const vac = H.VACCINES.filter((v) => !v.conditional).map((v) => ({ kind: 'v', v, st: vaccineStatus(v, b, vDone) }))
+      .filter((x) => ['overdue', 'due', 'soon'].includes(x.st.key));
+    const chk = H.CHECKUPS.map((c) => ({ kind: 'c', c, st: checkupStatus(c, b, cDone) })).filter((x) => x.st.key === 'now');
+    const list = [...vac, ...chk];
+    // always surface the next 公費 dose too, even when only 自費 doses are currently due
+    if (!vac.some((x) => x.v.free)) { const nv = nextVaccine(b); if (nv && nv.st.key === 'upcoming') list.push({ kind: 'v', v: nv.v, st: nv.st, next: true }); }
+    return list;
+  }
+  App.screen('prevention', {
+    title: '預防保健',
+    tab: 'health',
+    render: needBaby((el, params, b) => {
+      if (params.tab) prevTab = params.tab;
+      const todo = preventionTodo(b);
+      const card = ui.card({ class: 'soft prev-next' }, h('div', { class: 'card-title' }, '🗓️ 下一步要做的'),
+        h('p', { class: 'tiny muted' }, '台灣常在同一次門診一起打疫苗、做兒童健檢，可以一起安排。'));
+      if (!todo.length) card.append(h('p', { class: 'small' }, '目前沒有待辦的疫苗或健檢 👍'));
+      else {
+        card.append(h('div', { class: 'list' }, todo.map((x) => (x.kind === 'v'
+          ? h('button', { type: 'button', class: 'list-item', onclick: () => markVaccine(x.v, b) },
+            h('span', { class: 'li-icon' }, '💉'),
+            h('span', { class: 'li-body' }, h('span', { class: 'li-title', style: { display: 'block' } }, `${x.v.name.replace(/（.*?）/g, '')} ${x.v.dose}`),
+              h('span', { class: 'li-sub', style: { display: 'block' } }, `${x.next ? '下一劑・' : ''}建議 ${fmtYMD(x.st.due)}${x.v.free ? '' : '・自費'}`)),
+            h('span', { class: 'li-right' }, h('span', { class: `tag ${x.st.cls}` }, x.st.label)))
+          : h('button', { type: 'button', class: 'list-item', onclick: () => markCheckup(x.c, b) },
+            h('span', { class: 'li-icon' }, x.c.kind === 'screen' ? '🧪' : '🩺'),
+            h('span', { class: 'li-body' }, h('span', { class: 'li-title', style: { display: 'block' } }, x.c.name),
+              h('span', { class: 'li-sub', style: { display: 'block' } }, `${fmtYMD(x.st.start)} – ${fmtYMD(x.st.end)}`)),
+            h('span', { class: 'li-right' }, h('span', { class: `tag ${x.st.cls}` }, x.st.label)))))));
+        card.append(h('p', { class: 'tiny faint mt' }, '點一下就能標記完成'));
+      }
+      el.append(card);
+      el.append(h('div', { class: 'mt' }, ui.seg([{ value: 'vaccines', label: '💉 疫苗' }, { value: 'checkups', label: '🩺 兒童健檢' }], prevTab, (v) => { prevTab = v; App.refresh(); })));
+      const box = h('div', { class: 'mt' });
+      el.append(box);
+      App.screens[prevTab].render(box, {});
     }),
   });
 
@@ -837,9 +904,11 @@
   };
 
   App.screen('stats', {
-    title: '統計圖表',
+    title: '統計與報告',
     tab: 'health',
+    actions: () => h('button', { class: 'icon-btn', 'aria-label': '照護報告（PDF）', html: ui.ICONS.print, onclick: () => App.navigate('report') }),
     render: needBaby((el, params, b) => {
+      el.append(h('button', { class: 'btn btn-soft btn-block mb', onclick: () => App.navigate('report') }, '📄 產生照護報告（列印／存成 PDF 給醫師）'));
       el.append(h('div', { class: 'row stats-filter' },
         ui.seg([{ value: 7, label: '近 7 天' }, { value: 14, label: '近 14 天' }], statsRange,
           (v) => { statsRange = Number(v); App.refresh(); }, { small: true })));
@@ -996,16 +1065,10 @@
     id: 'milestones', title: '發展里程碑', icon: '⭐', desc: '翻身、坐、爬、說話…', stages: ['baby'], screen: 'milestones', order: 12, group: '成長發育',
   });
   App.tool({
-    id: 'vaccines', title: '疫苗時程', icon: '💉', desc: '公費／自費疫苗到期提醒', stages: ['baby'], screen: 'vaccines', order: 20, group: '預防保健',
+    id: 'prevention', title: '預防保健', icon: '💉', desc: '疫苗＋兒童健檢，先看下一步', stages: ['baby'], screen: 'prevention', order: 20, group: '預防保健',
   });
   App.tool({
-    id: 'checkups', title: '兒童預防保健', icon: '🩺', desc: '7 次公費健檢＋新生兒篩檢', stages: ['baby'], screen: 'checkups', order: 22, group: '預防保健',
-  });
-  App.tool({
-    id: 'stats', title: '統計圖表', icon: '📊', desc: '奶量、睡眠、尿布趨勢', stages: ['baby'], screen: 'stats', order: 30, group: '紀錄分析',
-  });
-  App.tool({
-    id: 'report', title: '照護報告', icon: '📄', desc: '一鍵產生 PDF 給醫師看', stages: ['baby'], screen: 'report', order: 32, group: '紀錄分析',
+    id: 'stats', title: '統計與報告', icon: '📊', desc: '趨勢圖表・一鍵 PDF 給醫師', stages: ['baby'], screen: 'stats', order: 30, group: '紀錄分析',
   });
 
   /* =====================================================================
@@ -1029,7 +1092,7 @@
       const card = ui.card({ class: 'home-health' }, h('div', { class: 'card-title' }, '健康追蹤'));
       if (nv) {
         const when = nv.st.key === 'overdue' ? '已逾期' : nv.st.daysToDue > 0 ? `還有 ${nv.st.daysToDue} 天` : '現在可接種';
-        card.append(row('💉', `下一劑：${nv.v.name.replace(/（.*?）/g, '')} ${nv.v.dose}`, `${fmtYMD(nv.st.due)}・${when}`, 'vaccines',
+        card.append(row('💉', `下一劑：${nv.v.name.replace(/（.*?）/g, '')} ${nv.v.dose}`, `${fmtYMD(nv.st.due)}・${when}`, 'prevention',
           nv.st.cls ? h('span', { class: `tag ${nv.st.cls}` }, nv.st.label) : null));
       }
       const parts = ['weight', 'length'].filter((k) => latest[k]).map((k) => {
@@ -1043,6 +1106,6 @@
 
   // expose helpers for other modules / tests
   App.health = {
-    percentileOf, curveValue, vaccineStatus, nextVaccine, checkupStatus, dailyStats, latestGrowth, growthPoints,
+    percentileOf, curveValue, vaccineStatus, nextVaccine, checkupStatus, dailyStats, latestGrowth, growthPoints, preventionTodo,
   };
 }());

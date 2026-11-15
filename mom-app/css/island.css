@@ -40,8 +40,8 @@ body[data-screen="island"] #view { padding: 0; max-width: none; }
 .isl.night .isl-rail { stroke: #4a3a3a; }
 .isl-steam { fill: none; stroke: #fff; stroke-width: 2px !important; stroke-linecap: round; opacity: 0; animation: isl-steam 3.4s ease-out infinite; }
 @keyframes isl-steam { 0% { opacity: 0; transform: translateY(4px); } 30% { opacity: .75; } 100% { opacity: 0; transform: translateY(-12px); } }
-.isl-beam { fill: #fff3b0; stroke: none; opacity: 0; transition: opacity .6s; }
-.isl.night .isl-beam { opacity: .2; }
+.isl-beam { stroke: none !important; opacity: 0; transition: opacity .6s; }
+.isl.night .isl-beam { opacity: .45; }
 .isl-wheel { fill: none; stroke: #e2725b; stroke-width: 3px !important; }
 .isl-wheel-spoke { stroke: #f1b3a3; stroke-width: 1.4px !important; fill: none; }
 .isl.night .isl-wheel { stroke: #ffcf6b; }
@@ -99,6 +99,12 @@ body[data-screen="island"] #view { padding: 0; max-width: none; }
 .isl-cicon { display: inline-flex; width: 17px; justify-content: center; }
 .isl-cicon svg { width: 17px; height: 17px; }
 .isl-cicon.emoji { font-size: 14px; line-height: 1; }
+@media (max-width: 599px) {
+  .isl-hud { max-width: calc(100% - 82px); }
+  .isl-ctrl { gap: 6px; }
+  .isl-cbtn { flex-direction: column; justify-content: center; gap: 1px; width: 48px; height: 46px; padding: 0; font-size: 10.5px; }
+  .isl-cicon svg { width: 18px; height: 18px; }
+}
 
 .isl-ticker {
   position: absolute; left: 10px; right: 10px; bottom: 10px;
@@ -180,7 +186,7 @@ body[data-screen="island"] #view { padding: 0; max-width: none; }
 .isl-stamp small { font-size: 9.5px; font-weight: 800; text-align: center; line-height: 1.15; max-width: 60px; }
 @keyframes isl-stamp { from { transform: rotate(-12deg) scale(1.8); opacity: 0; } to { transform: rotate(-12deg) scale(1); opacity: 1; } }
 .isl-brand { text-align: center; margin-top: 12px; }
-.isl-brand-logo { width: 104px; height: auto; display: block; margin: 0 auto 8px; }
+.isl-brand-logo { width: 116px; height: auto; display: block; margin: 0 auto 10px; padding: 8px 12px; border-radius: 16px; background: #fff; }
 
 /* list + journey sheets */
 .isl-list-h { display: flex; align-items: center; gap: 6px; margin: 14px 2px 6px; }

@@ -91,13 +91,19 @@
   }
 
   /* ---------- toast ---------- */
-  function toast(msg, ms = 2200) {
+  // toast('已儲存') or toast('已記錄', { action: '復原', onAction() {...}, ms: 5000 })
+  function toast(msg, opts = {}) {
+    const o = typeof opts === 'number' ? { ms: opts } : opts;
+    const ms = o.ms || (o.action ? 5000 : 2200);
     let wrap = document.querySelector('.toast-wrap');
     if (!wrap) { wrap = h('div', { class: 'toast-wrap', 'aria-live': 'polite' }); document.body.appendChild(wrap); }
-    const t = h('div', { class: 'toast' }, msg);
+    wrap.querySelectorAll('.toast.has-action').forEach((x) => x.remove()); // only one undo at a time
+    const hide = () => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); };
+    const t = h('div', { class: `toast${o.action ? ' has-action' : ''}` }, h('span', null, msg),
+      o.action ? h('button', { class: 'toast-action', onclick: () => { hide(); o.onAction(); } }, o.action) : null);
     wrap.appendChild(t);
     requestAnimationFrame(() => t.classList.add('show'));
-    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, ms);
+    setTimeout(hide, ms);
   }
 
   function confirm(msg, { ok = '確定', cancel = '取消', danger = false } = {}) {
@@ -149,6 +155,7 @@
       unit ? h('span', { class: 'stepper-unit' }, unit) : null,
       h('button', { type: 'button', class: 'stepper-btn', 'aria-label': '增加', onclick: () => set(v + step) }, '+'));
     wrap.getValue = () => v;
+    wrap.setValue = (nv) => set(nv);
     return wrap;
   }
 

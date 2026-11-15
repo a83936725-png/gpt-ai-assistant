@@ -208,26 +208,57 @@
     const now = new Date();
     s.reminders.forEach((r) => {
       if (!r.enabled) return;
+      const today = C.dateKey(now);
+      const [hh, mm] = (r.time || '09:00').split(':').map(Number);
+      const pastTime = now.getHours() > hh || (now.getHours() === hh && now.getMinutes() >= mm);
       if (r.type === 'feed' && s.profile.stage === 'baby') {
+        // 依預測：用「接下來」算出的時間（寶寶自己的作息）；固定：上次餵奶＋設定的間隔
         const last = store.lastLog(['breast', 'bottle']);
         if (!last || store.state.active.feed) return;
-        const due = new Date(last.start).getTime() + (r.minutes || 180) * C.MIN;
+        const pred = r.mode !== 'fixed' && App.predict ? App.predict.feed() : null;
+        const due = pred ? pred.next.getTime() : new Date(last.start).getTime() + (r.minutes || 180) * C.MIN;
         if (now.getTime() >= due && n.feed !== last.id) {
           n.feed = last.id; setN(n);
-          notify('餵奶提醒', `距離上次餵奶已經 ${C.fmtDuration(now - new Date(last.start))}`);
+          notify('餵奶提醒', `${pred ? '差不多是寶寶平常喝奶的時間了・' : ''}距離上次餵奶 ${C.fmtDuration(now - new Date(last.start))}`);
         }
       }
-      if (r.type === 'chicken') {
-        const [hh, mm] = (r.time || '09:00').split(':').map(Number);
-        const today = C.dateKey(now);
-        if ((now.getHours() > hh || (now.getHours() === hh && now.getMinutes() >= mm)) && n.chicken !== today && !s.chicken.log[today]) {
-          n.chicken = today; setN(n);
-          notify('滴雞精時光', '休息一下，溫熱一杯給自己 💜');
-        }
+      if (r.type === 'appt' && pastTime && n.appt !== today) {
+        const items = upcomingAppointments(now);
+        if (items.length) { n.appt = today; setN(n); notify('預約提醒', items.join('、')); }
+      }
+      if (r.type === 'chicken' && pastTime && n.chicken !== today && !s.chicken.log[today]) {
+        n.chicken = today; setN(n);
+        notify('滴雞精時光', '休息一下，溫熱一杯給自己 💜');
       }
     });
   }
-  App.reminders = { start() { checkReminders(); setInterval(checkReminders, 60 * 1000); }, notify };
+  // 今天或明天要做的：疫苗、兒童健檢、產檢
+  function upcomingAppointments(now = new Date()) {
+    const out = [];
+    const tomorrow = C.dateKey(C.addDays(now, 1));
+    const b = store.baby();
+    if (store.inStage(['baby']) && b && App.health && App.HEALTH) {
+      const vDone = store.state.vaccines[b.id] || {};
+      App.HEALTH.VACCINES.filter((v) => v.free && !v.conditional).forEach((v) => {
+        const st = App.health.vaccineStatus(v, b, vDone);
+        if (st.key === 'done') return;
+        const due = C.dateKey(st.due);
+        if (due === C.dateKey(now) || due === tomorrow) out.push(`${b.name} ${v.name.replace(/（.*?）/g, '')}${v.dose}（${due === tomorrow ? '明天' : '今天'}）`);
+      });
+      const cDone = store.state.checkups[b.id] || {};
+      App.HEALTH.CHECKUPS.forEach((c) => {
+        const st = App.health.checkupStatus(c, b, cDone);
+        if (st.key !== 'done' && C.dateKey(st.start) === tomorrow) out.push(`${c.name}從明天開始可以做`);
+      });
+    }
+    if (store.inStage(['preg']) && App.preg && App.preg.nextPrenatal) {
+      const np = App.preg.nextPrenatal();
+      if (np && (np.date === tomorrow || np.date === C.dateKey(now))) out.push(`第 ${np.no} 次產檢（約${np.date === tomorrow ? '明天' : '今天'}）`);
+    }
+    return out;
+  }
+
+  App.reminders = { upcomingAppointments, start() { checkReminders(); setInterval(checkReminders, 60 * 1000); }, notify };
 
   App.screen('reminders', {
     title: '提醒設定',
@@ -242,7 +273,10 @@
         toggle.addEventListener('change', () => store.update((s) => { s.reminders.find((x) => x.id === r.id).enabled = toggle.checked; }));
         let control;
         if (r.type === 'feed') {
-          control = ui.seg([120, 150, 180, 210, 240].map((m) => ({ value: m, label: `${m / 60}h` })), r.minutes, (v) => store.update((s) => { s.reminders.find((x) => x.id === r.id).minutes = Number(v); }), { small: true });
+          const setR = (patch) => store.update((s) => { Object.assign(s.reminders.find((x) => x.id === r.id), patch); });
+          control = h('div', { class: 'stack-sm' },
+            ui.seg([{ value: 'predict', label: '依寶寶作息預測' }, { value: 'fixed', label: '固定間隔' }], r.mode || 'predict', (v) => setR({ mode: v }), { small: true }),
+            r.mode === 'fixed' ? ui.seg([120, 150, 180, 210, 240].map((m) => ({ value: m, label: `${m / 60}h` })), r.minutes, (v) => setR({ minutes: Number(v) }), { small: true }) : null);
         } else {
           const t = h('input', { type: 'time', value: r.time || '09:00', class: 'input' });
           t.addEventListener('change', () => store.update((s) => { s.reminders.find((x) => x.id === r.id).time = t.value; }));
@@ -250,7 +284,11 @@
         }
         el.append(h('section', { class: 'card' },
           h('div', { class: 'row between' }, h('div', { class: 'card-title' }, r.label), toggle),
-          h('p', { class: 'small muted' }, r.type === 'feed' ? '距離上次餵奶超過設定時間時提醒' : '每天在這個時間提醒（當天已打卡就不提醒）'),
+          h('p', { class: 'small muted' }, {
+            feed: r.mode === 'fixed' ? '距離上次餵奶超過設定時間時提醒' : '到了「接下來」預測的下一餐時間就提醒，會跟著寶寶的作息調整',
+            appt: '每天這個時間檢查：疫苗到期、兒童健檢開始、產檢日（今天或明天）',
+            chicken: '每天在這個時間提醒（當天已打卡就不提醒）',
+          }[r.type]),
           h('div', { class: 'mt' }, control)));
       });
       el.append(h('p', { class: 'disclaimer' }, '目前提醒在 App 開著或在背景時運作。要在 App 完全關閉時也收到推播，需要後端推播服務（見 docs/TEARDOWN.md 第二階段）。'));
@@ -379,12 +417,31 @@
     render(el) {
       const s = store.state;
       const p = s.profile;
-      const stageLabel = App.STAGES.find((x) => x.value === p.stage);
+      const stageLabel = App.STAGES.find((x) => x.value === p.stage) || App.STAGES[2];
       el.append(h('section', { class: 'card me-card' },
         h('div', { class: 'row gap' },
           h('div', { class: 'me-avatar' }, '💜'),
           h('div', { class: 'grow' }, h('div', { class: 'card-title' }, p.momName || '媽媽'), h('div', { class: 'card-sub' }, `${stageLabel.icon} ${stageLabel.label}・這台裝置記錄者：${p.member}`)),
-          h('button', { class: 'btn btn-sm btn-soft', onclick: editProfile }, '編輯'))));
+          h('button', { class: 'btn btn-sm btn-soft', onclick: editProfile }, '編輯')),
+        h('div', { class: 'mt' }, ui.seg(App.STAGES.map((x) => ({ value: x.value, label: x.label, icon: x.icon })), p.stage, (v) => {
+          store.update((st) => { st.profile.stage = v; if (v !== 'baby') st.profile.pregnantToo = false; });
+          if (v === 'baby' && !store.state.babies.length) editBaby();
+          const ga = store.state.profile.lmp ? C.gestAge(store.state.profile.lmp) : null;
+          if (v === 'preg' && App.preg && (!ga || ga.totalDays < 0 || ga.totalDays > 42 * 7)) App.preg.openDueDateSheet();
+        })),
+        p.stage === 'baby' ? h('label', { class: 'check-row' },
+          h('input', {
+            type: 'checkbox', class: 'switch', checked: !!p.pregnantToo,
+            onchange: (e) => {
+              const on = e.target.checked;
+              store.update((st) => { st.profile.pregnantToo = on; });
+              // the saved LMP may belong to the first pregnancy — ask unless it's a current one (0–42 weeks)
+              const lmp = store.state.profile.lmp;
+              const ga = lmp ? C.gestAge(lmp) : null;
+              if (on && App.preg && (!ga || ga.totalDays < 0 || ga.totalDays > 42 * 7)) App.preg.openDueDateSheet();
+            },
+          }),
+          h('span', null, h('b', null, '同時懷孕中（二寶）'), h('br'), h('span', { class: 'tiny muted' }, '首頁和健康會同時顯示孕期與寶寶的內容'))) : null));
 
       el.append(h('div', { class: 'section-title' }, h('span', null, '寶寶'), h('button', { onclick: () => editBaby() }, '＋ 新增')));
       if (s.babies.length) {
@@ -408,11 +465,16 @@
 
       el.append(h('div', { class: 'section-title' }, '設定'));
       el.append(h('div', { class: 'list' },
-        h('a', { class: 'list-item', href: '#/reminders' }, h('span', { class: 'li-icon' }, '🔔'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '提醒設定'), h('div', { class: 'li-sub' }, '餵奶、滴雞精時光')), h('span', { class: 'li-right', html: ui.ICONS.chevron })),
-        App.screens.report ? h('a', { class: 'list-item', href: '#/report' }, h('span', { class: 'li-icon' }, '📄'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '照護報告（PDF）'), h('div', { class: 'li-sub' }, '看診時給醫師看')), h('span', { class: 'li-right', html: ui.ICONS.chevron })) : null,
+        h('a', { class: 'list-item', href: '#/reminders' }, h('span', { class: 'li-icon' }, '🔔'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '提醒中心'), h('div', { class: 'li-sub' }, '餵奶、疫苗／健檢／產檢、滴雞精時光')), h('span', { class: 'li-right', html: ui.ICONS.chevron })),
         h('a', { class: 'list-item', href: '#/brand' }, h('img', { class: 'li-icon li-logo', src: B().logo, alt: '' }), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, B().brandName || '品牌'), h('div', { class: 'li-sub' }, '品牌故事・滴雞精時光打卡')), h('span', { class: 'li-right', html: ui.ICONS.chevron })),
         h('div', { class: 'list-item' }, h('span', { class: 'li-icon' }, '🌓'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '外觀')),
-          ui.seg([{ value: 'auto', label: '自動' }, { value: 'light', label: '淺色' }, { value: 'dark', label: '深色' }], s.settings.theme, (v) => { store.update((st) => { st.settings.theme = v; }); App.applyTheme(); }, { small: true }))));
+          ui.seg([{ value: 'auto', label: '自動' }, { value: 'light', label: '淺色' }, { value: 'dark', label: '深色' }], s.settings.theme, (v) => { store.update((st) => { st.settings.theme = v; }); App.applyTheme(); }, { small: true })),
+        h('label', { class: 'list-item' }, h('span', { class: 'li-icon' }, '🌙'),
+          h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '夜間模式'), h('div', { class: 'li-sub' }, '22:00–06:00 自動變暗、按鈕放大，半夜單手好按')),
+          h('input', {
+            type: 'checkbox', class: 'switch', checked: s.settings.nightMode !== false, 'aria-label': '夜間模式',
+            onchange: (e) => { store.update((st) => { st.settings.nightMode = e.target.checked; }); App.applyTheme(); },
+          }))));
 
       el.append(h('div', { class: 'section-title' }, '資料'));
       el.append(h('div', { class: 'grid-2' },
@@ -421,7 +483,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.1.0`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.2.0`),
         h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理，不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。資料只儲存在你的裝置上。')));
     },
   });

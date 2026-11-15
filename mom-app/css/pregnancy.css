@@ -194,3 +194,7 @@
   white-space: nowrap; opacity: 0; transition: opacity .12s;
 }
 .pg-tip-box.show { opacity: 1; }
+
+/* larger touch targets (UX pass) */
+.pg-hero-edit { min-height: 36px; min-width: 52px; }
+.pg-slider { height: 36px; }

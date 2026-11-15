@@ -1,5 +1,5 @@
 /* Offline cache for 易家做媽媽 (network-first for HTML so updates show up, cache-first for assets). */
-const CACHE = 'yijia-mom-v1';
+const CACHE = 'yijia-mom-v2';
 const ASSETS = [
   './', 'index.html', 'config.js', 'manifest.webmanifest',
   'css/base.css', 'css/modules.css', 'css/island.css', 'css/health.css', 'css/pregnancy.css',

@@ -23,6 +23,7 @@
       periodLength: 5,
       heightCm: '',
       prePregWeight: '',
+      pregnantToo: false, // 育兒中又懷了二寶：首頁與健康同時顯示孕期內容
     },
     babies: [], // {id, name, sex:'girl'|'boy', birthday, birthTime, birthWeight(kg), birthLength(cm), avatar}
     activeBabyId: null,
@@ -43,13 +44,18 @@
     island: { stamps: {}, quiz: {}, visited: {} },
     chicken: { log: {}, goal: 1 }, // 滴雞精打卡 {'YYYY-MM-DD': count}
     folic: { log: {} }, // 葉酸打卡
-    reminders: [
-      { id: 'feed', label: '餵奶提醒', type: 'feed', enabled: false, minutes: 180 },
-      { id: 'chicken', label: '滴雞精飲用提醒', type: 'chicken', enabled: false, time: '09:00' },
-    ],
+    daily: { log: {} }, // 今日小任務 {'YYYY-MM-DD': {water: n}}
+    reminders: defaultReminders(),
     active: {}, // running timers: { feed: {start, side}, sleep: {start}, pump: {start} }
-    settings: { theme: 'auto', notify: false },
+    settings: { theme: 'auto', notify: false, nightMode: true },
   });
+  function defaultReminders() {
+    return [
+      { id: 'feed', label: '餵奶提醒', type: 'feed', enabled: false, mode: 'predict', minutes: 180 },
+      { id: 'appt', label: '預約與到期提醒', type: 'appt', enabled: false, time: '09:00' },
+      { id: 'chicken', label: '滴雞精時光提醒', type: 'chicken', enabled: false, time: '09:00' },
+    ];
+  }
 
   // Merge saved state onto defaults so newly added keys always exist.
   const merge = (base, saved) => {
@@ -61,10 +67,21 @@
     return out;
   };
 
+  // arrays are taken from the saved state as-is, so add reminders introduced in later versions
+  const migrate = (s) => {
+    if (!['prep', 'preg', 'baby'].includes(s.profile.stage)) s.profile.stage = 'baby';
+    defaultReminders().forEach((r) => {
+      const cur = s.reminders.find((x) => x.id === r.id);
+      if (!cur) s.reminders.push(r);
+      else Object.keys(r).forEach((k) => { if (!(k in cur)) cur[k] = r[k]; });
+    });
+    s.reminders.sort((a, b) => defaultReminders().findIndex((r) => r.id === a.id) - defaultReminders().findIndex((r) => r.id === b.id));
+    return s;
+  };
   const load = () => {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) return merge(defaults(), JSON.parse(raw));
+      if (raw) return migrate(merge(defaults(), JSON.parse(raw)));
     } catch (e) { /* storage blocked or corrupt */ }
     return defaults();
   };
@@ -83,12 +100,18 @@
       listeners.forEach((l) => { try { l(this.state); } catch (e) { console.error(e); } });
     },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
-    replace(next) { this.state = merge(defaults(), next); this.update(() => {}); },
+    replace(next) { this.state = migrate(merge(defaults(), next)); this.update(() => {}); },
     reset() { this.state = defaults(); this.update(() => {}); },
 
     /* ----- convenience selectors ----- */
     get profile() { return this.state.profile; },
     get stage() { return this.state.profile.stage; },
+    // every stage whose content should show right now (育兒＋二寶懷孕 -> ['baby','preg'])
+    stages() {
+      const p = this.state.profile;
+      return p.stage === 'baby' && p.pregnantToo ? ['baby', 'preg'] : [p.stage];
+    },
+    inStage(list) { return this.stages().some((st) => (list || []).includes(st)); },
     baby() {
       const s = this.state;
       return s.babies.find((b) => b.id === s.activeBabyId) || s.babies[0] || null;

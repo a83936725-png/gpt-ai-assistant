@@ -252,6 +252,13 @@ LLM 輸出（JSON，必須通過 Pydantic Schema 驗證）：
 - 每張卡片的文字都可以直接編輯，也可以單張重新產生。
 - 文字溢出：渲染後檢查文字是否超出區塊；先自動縮小字級（有下限），仍放不下就顯示警告，**不可默默截斷**。
 - 日文排版遵守禁則（「、。」等不放句首），中文使用全形標點。
+- 卡片斷行（中日文都適用）：
+  1. 先求最少行數，再挑最好的斷點；不可為了斷得漂亮而多出一行。
+  2. 禁則：「、。，！？」」』）」等不放行首，「「『（」等不放行尾。
+  3. 角色名、作品名和專有名詞（名詞表的詞，例如：伊莎貝爾、調查軍團、立體機動裝置）**不可拆到兩行**。
+  4. 斷點優先順序：標點後 → 詞與詞之間（用斷詞器判斷，例如瀏覽器的 `Intl.Segmenter`）→ 詞中間（最後手段）。
+  5. 在上述條件下，讓各行長度接近（平衡換行）。
+  6. 使用者可以手動換行；手動換行優先於自動結果。
 
 **⑥ 匯出**
 - 每張卡片一張 PNG（sRGB），全部打包成 ZIP。
@@ -306,7 +313,7 @@ videos             id, project_id→projects, source_type(upload|youtube), sourc
                    processing_status, rights_status(unverified|attested|text_only|blocked)
 rights_records     id, video_id, user_id, statement_version, statement_text, ip, accepted_at
 anime_titles       id, title, alternate_titles(text[])
-characters         id, anime_id→anime_titles, name, aliases(text[]), reference_images(jsonb)
+characters         id, anime_id→anime_titles, name, aliases(text[]), pronoun(他/她/TA), reference_images(jsonb)  -- pronoun 用在卡片標題，例如「從她的選擇學到的事」
 glossary_terms     id, anime_id, source_text(日文), target_text(繁中), type(角色|招式|地名|其他)
 speakers           id, video_id, speaker_label, character_id→characters(null), confidence, verified
 transcript_segments id, video_id, speaker_id(null), seq, start_ms, end_ms,

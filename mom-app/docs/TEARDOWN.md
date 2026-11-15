@@ -284,7 +284,9 @@ node tests/extended.playwright.cjs              # 尺寸／深色／無障礙／
 | 串接 | 問答搜尋可直接搜到每一項（汽座、學步車…）；待產包清單底部連到常見好物；路線圖「安裝汽座」→ 前往汽座說明；首頁在孕 20–37 週、寶寶 4–6 個月時輕提示（可「不再顯示」） |
 | 品牌 | 易家滴雞精以「品牌」標籤放在「產後媽媽」分類（`config.js` 的 `goodsBrandItem.show: false` 可隱藏）；其他項目只寫選購原則，不推薦特定第三方品牌 |
 
-測試：`tests/goods.playwright.cjs` 73 項（含親友打開願望清單、XSS、320px、深色模式＋無障礙掃描）。
+畫面截圖：[首頁提醒](screens/goods-1-home.png)・[清單](screens/goods-2-list.png)・[汽座說明](screens/goods-3-detail.png)・[先別買](screens/goods-4-skip.png)・[我的清單](screens/goods-5-mine.png)・[親友看到的願望清單](screens/goods-6-wishlist.png)
+
+測試：`tests/goods.playwright.cjs` 74 項（含親友打開願望清單、XSS、320px、深色模式＋無障礙掃描）。
 
 ### 穩定性測試（`tests/robustness.playwright.cjs`，28 項）
 

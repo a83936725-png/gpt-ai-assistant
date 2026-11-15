@@ -39,8 +39,12 @@
       contractions: [], // {id, start, end}
       weights: [], // {id, date, kg}
       prenatal: {}, // {[visitKey]: 'YYYY-MM-DD'}
+      visitNotes: {}, // {[visitKey]: {weight, sys, dia, fhr, note}} 產檢當天的紀錄
+      journal: [], // 身體狀況日記 {id, at, symptoms:[], sys, dia, mood, note}
       notes: [],
     },
+    journey: { done: {} }, // 孕產路線圖 checklist {itemId: 'YYYY-MM-DD'}
+    postpartum: { start: '', method: '', log: [] }, // 產後：start=生產日；log {id, at, lochia:{amount,color}, pain, temp, mood, symptoms:[], note}
     island: { stamps: {}, quiz: {}, visited: {} },
     chicken: { log: {}, goal: 1 }, // 滴雞精打卡 {'YYYY-MM-DD': count}
     folic: { log: {} }, // 葉酸打卡

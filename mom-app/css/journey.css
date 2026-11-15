@@ -1,0 +1,95 @@
+/* 孕產路線圖 / 孕期紀錄 / 產後恢復 */
+
+/* hero */
+.jr-hero .big-num { margin: 4px 0 2px; }
+.jr-steps { display: flex; justify-content: space-between; margin-top: 14px; position: relative; }
+.jr-steps::before { content: ''; position: absolute; left: 14px; right: 14px; top: 50%; height: 2px; background: rgba(255, 255, 255, .3); }
+.jr-step {
+  position: relative; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; background: rgba(255, 255, 255, .18); opacity: .55;
+}
+.jr-step.done { opacity: .9; background: rgba(255, 255, 255, .3); }
+.jr-step.now { opacity: 1; background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .45); transform: scale(1.12); }
+.jr-hero-btn { background: rgba(255, 255, 255, .92); color: var(--c-primary); }
+:root[data-theme="dark"] .jr-hero-btn { background: var(--c-primary-ink); color: var(--c-primary); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .jr-hero-btn { background: var(--c-primary-ink); color: var(--c-primary); } }
+
+/* phases */
+.jr-list { display: grid; gap: 10px; margin: 14px 0; }
+.jr-phase { border-radius: var(--radius); border: 1px solid var(--c-border); background: var(--c-surface); overflow: hidden; }
+.jr-phase.jr-now { border-color: var(--c-primary); box-shadow: 0 0 0 2px var(--c-primary-soft); }
+.jr-phase-head {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 56px;
+  background: none; border: 0; text-align: left;
+}
+.jr-dot {
+  width: 36px; height: 36px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; background: var(--c-surface-2);
+}
+.jr-done .jr-dot { background: var(--c-ok-soft); color: var(--c-ok-ink); font-weight: 800; }
+.jr-now .jr-dot { background: var(--c-primary-soft); }
+.jr-phase-body { padding: 0 14px 14px; }
+.jr-sub { font-weight: 700; font-size: 14px; margin: 14px 0 6px; }
+.jr-sub-warn { color: var(--c-danger-ink); }
+.jr-todos { display: grid; gap: 6px; }
+.jr-todo { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 12px; background: var(--c-surface-2); }
+.jr-todo.done { opacity: .65; }
+.jr-todo.done .jr-todo-main span { text-decoration: line-through; }
+.jr-todo-main { flex: 1; display: flex; align-items: flex-start; gap: 10px; min-height: 40px; padding: 4px 0; font-size: 14px; line-height: 1.45; cursor: pointer; }
+.jr-todo-main input { width: 22px; height: 22px; margin-top: 1px; flex: none; accent-color: var(--c-primary); }
+.jr-watch { margin: 0; padding: 10px 12px 10px 30px; border-radius: 12px; background: var(--c-danger-soft); font-size: 14px; line-height: 1.55; }
+.jr-watch li { margin: 3px 0; }
+.jr-watch-card .jr-watch { margin-top: 6px; }
+
+/* home cards */
+.jr-home .card-title { margin-bottom: 8px; }
+.jr-home-warn { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: var(--c-danger-soft); color: var(--c-text); line-height: 1.5; }
+.jr-pp-home { background: linear-gradient(160deg, var(--c-accent-soft), var(--c-surface) 70%); }
+
+/* newborn checks */
+.jr-newborn { margin-top: 10px; }
+.jr-check {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; margin-top: 6px;
+  border-radius: 12px; border: 1px solid var(--c-border); background: var(--c-surface); font-size: 13.5px; line-height: 1.45; min-height: 40px;
+}
+.jr-check-ico { flex: none; width: 24px; text-align: center; }
+.jr-check.good { border-color: transparent; background: var(--c-ok-soft); }
+.jr-check.good .jr-check-ico { color: var(--c-ok-ink); font-weight: 800; }
+.jr-check.bad { border-color: transparent; background: var(--c-danger-soft); color: var(--c-danger-ink); font-weight: 600; }
+
+/* sheets */
+.jr-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.jr-chip { min-height: 38px; }
+.jr-chip.lv-soon:not(.active) { border-color: color-mix(in srgb, var(--c-warn) 55%, var(--c-border)); }
+.jr-chip.lv-urgent:not(.active), .jr-chip.lv-crisis:not(.active) { border-color: color-mix(in srgb, var(--c-danger) 55%, var(--c-border)); }
+.jr-chip.active.lv-urgent, .jr-chip.active.lv-crisis { background: var(--c-danger-ink); border-color: var(--c-danger-ink); color: var(--c-surface); }
+.jr-chip.active.lv-soon { background: var(--c-warn-ink); border-color: var(--c-warn-ink); color: var(--c-surface); }
+.jr-bp .input { flex: 1; min-width: 0; }
+.jr-moods { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.jr-mood {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; min-height: 58px;
+  border-radius: 12px; border: 2px solid transparent; background: var(--c-surface-2);
+}
+.jr-mood.active { border-color: var(--c-primary); background: var(--c-primary-soft); }
+.jr-mood-emoji { font-size: 24px; }
+.jr-range { width: 100%; height: 36px; accent-color: var(--c-primary); }
+.jr-swatches { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.jr-alert ul { margin: 8px 0 12px; font-weight: 600; }
+.jr-alert-urgent p:first-child, .jr-alert-crisis p:first-child { font-size: 15.5px; }
+.jr-alert-urgent ul { color: var(--c-danger-ink); }
+.jr-tel { margin-top: 8px; }
+
+/* records tab */
+.jr-quick { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px; scrollbar-width: none; }
+.jr-quick::-webkit-scrollbar { display: none; }
+.jr-quick .chip { flex: none; min-height: 40px; }
+.jr-flag { margin-bottom: 10px; }
+.jr-flag-urgent { background: var(--c-danger-soft); border-color: transparent; color: var(--c-danger-ink); }
+.jr-flag-soon { background: var(--c-warn-soft); border-color: transparent; color: var(--c-warn-ink); }
+
+/* postpartum trend */
+.jr-trend { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin: 10px 0 6px; text-align: center; }
+.jr-trend-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.jr-trend-mood { font-size: 18px; line-height: 1; }
+.jr-trend-dot { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .1); }
+.jr-hotlines .list-item { padding-left: 0; padding-right: 0; min-height: 48px; }

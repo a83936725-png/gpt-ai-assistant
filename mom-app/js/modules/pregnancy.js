@@ -547,10 +547,12 @@
       h('div', { class: 'row gap-sm wrap mt pg-shortcuts' },
         h('button', { class: 'chip', onclick: () => App.navigate('kick') }, '👣 胎動'),
         h('button', { class: 'chip', onclick: () => App.navigate('pregweight') }, '⚖️ 體重'),
+        h('button', { class: 'chip', onclick: () => App.navigate('journey') }, '🗺️ 路線圖'),
         h('button', { class: 'chip', onclick: () => App.navigate('health') }, '🧰 全部孕期工具')),
       h('button', {
         class: 'btn btn-accent btn-block mt-lg',
         onclick: async () => {
+          if (App.journey) { App.journey.openBirthSheet(); return; } // 生產紀錄表單
           if (!(await ui.confirm('恭喜！要切換到「育兒」模式，開始記錄寶寶的生活嗎？', { ok: '寶寶出生了' }))) return;
           const secondBaby = store.state.profile.pregnantToo && store.state.babies.length > 0;
           store.update((st) => { st.profile.stage = 'baby'; st.profile.pregnantToo = false; });
@@ -567,13 +569,23 @@
    * ======================================================= */
   function openVisitSheet(v, recDate) {
     const done = store.state.preg.prenatal[v.key];
+    const notes = (store.state.preg.visitNotes || {})[v.key] || {};
     const input = h('input', { type: 'date', value: done || (recDate && recDate <= todayKey() ? recDate : todayKey()) });
+    const num = (val, ph, label, step = '1') => h('input', { type: 'number', inputmode: 'decimal', step, value: val ?? '', placeholder: ph, 'aria-label': label, class: 'input' });
+    const wIn = num(notes.weight, 'kg', '體重', '0.1');
+    const fhrIn = num(notes.fhr, '次/分', '胎心');
+    const sysIn = num(notes.sys, '收縮壓', '收縮壓');
+    const diaIn = num(notes.dia, '舒張壓', '舒張壓');
+    const noteIn = h('textarea', { rows: 2, placeholder: '醫師交代、下次要問的問題、檢查結果' }, notes.note || '');
     const sh = ui.sheet({
       title: `第 ${v.no} 次產檢`,
       body: h('div', null,
         h('p', { class: 'small muted' }, `建議週數：${v.range}（約第 ${v.week} 週）`),
         h('ul', { class: 'pg-items' }, v.items.map((t) => h('li', null, t))),
-        ui.field('完成日期', input)),
+        ui.field('完成日期', input),
+        h('div', { class: 'grid-2' }, ui.field('體重（kg）', wIn), ui.field('胎心（次/分）', fhrIn)),
+        ui.field('血壓（mmHg）', h('div', { class: 'row gap-sm' }, sysIn, h('span', null, '/'), diaIn)),
+        ui.field('醫師交代／備註', noteIn)),
       footer: h('div', { class: 'row gap' },
         done ? h('button', {
           class: 'btn btn-ghost grow',
@@ -581,7 +593,27 @@
         }, '取消完成') : null,
         h('button', {
           class: 'btn btn-primary grow',
-          onclick: () => { store.update((st) => { ensure(st); st.preg.prenatal[v.key] = input.value || todayKey(); }); sh.close(); ui.toast(`第 ${v.no} 次產檢完成 ✓`); },
+          onclick: () => {
+            const day = input.value || todayKey();
+            const rec = {
+              weight: wIn.value ? Number(wIn.value) : null, fhr: fhrIn.value ? Number(fhrIn.value) : null,
+              sys: sysIn.value ? Number(sysIn.value) : null, dia: diaIn.value ? Number(diaIn.value) : null, note: noteIn.value.trim(),
+            };
+            store.update((st) => {
+              ensure(st);
+              st.preg.prenatal[v.key] = day;
+              st.preg.visitNotes = st.preg.visitNotes || {};
+              st.preg.visitNotes[v.key] = rec;
+              if (rec.weight) { // 產檢量的體重也放進孕期體重曲線
+                st.preg.weights = st.preg.weights.filter((x) => x.date !== day);
+                st.preg.weights.push({ id: C.uid(), date: day, kg: Math.round(rec.weight * 10) / 10 });
+              }
+            });
+            sh.close();
+            const flag = App.journeyAlert ? App.journeyAlert.levelOf([], [], rec) : { level: null };
+            if (flag.level) setTimeout(() => App.journeyAlert.alertSheet(flag.level, flag.hits), 260);
+            else ui.toast(`第 ${v.no} 次產檢完成 ✓`);
+          },
         }, done ? '更新日期' : '標記完成')),
     });
   }
@@ -1093,6 +1125,6 @@
 
   // helpers for other modules (home, report…)
   App.preg = {
-    pregLmp, pregEdd, weekInfo, cycleInfo, nextPrenatal, folicStreak, toggleFolic, openDueDateSheet, openLastPeriodSheet,
+    pregLmp, pregEdd, weekInfo, cycleInfo, nextPrenatal, folicStreak, toggleFolic, openDueDateSheet, openLastPeriodSheet, openVisitSheet, openWeightSheet,
   };
 }());

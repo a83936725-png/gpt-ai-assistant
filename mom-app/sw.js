@@ -1,12 +1,12 @@
 /* Offline cache for 易家做媽媽 (network-first for HTML so updates show up, cache-first for assets). */
-const CACHE = 'yijia-mom-v3';
+const CACHE = 'yijia-mom-v4';
 const ASSETS = [
   './', 'index.html', 'config.js', 'manifest.webmanifest',
-  'css/base.css', 'css/modules.css', 'css/island.css', 'css/health.css', 'css/pregnancy.css',
+  'css/base.css', 'css/modules.css', 'css/island.css', 'css/health.css', 'css/pregnancy.css', 'css/journey.css',
   'js/core.js', 'js/store.js', 'js/ui.js', 'js/app.js',
-  'js/data/log-types.js', 'js/data/island-data.js', 'js/data/health-data.js', 'js/data/pregnancy-data.js',
+  'js/data/log-types.js', 'js/data/island-data.js', 'js/data/health-data.js', 'js/data/pregnancy-data.js', 'js/data/journey-data.js',
   'js/modules/home.js', 'js/modules/babylog.js', 'js/modules/milk.js', 'js/modules/island.js',
-  'js/modules/health.js', 'js/modules/pregnancy.js', 'js/modules/brand.js', 'js/modules/me.js',
+  'js/modules/health.js', 'js/modules/pregnancy.js', 'js/modules/journey.js', 'js/modules/brand.js', 'js/modules/me.js',
   'assets/logo.svg', 'assets/logo-full.svg', 'assets/icon.svg', 'assets/icon-192.png', 'assets/icon-512.png',
 ];
 self.addEventListener('install', (e) => {

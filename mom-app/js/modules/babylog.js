@@ -465,6 +465,7 @@
     render(el, params) {
       const stage = store.stage;
       if (stage === 'prep' && App.screens.cycle) { App.screens.cycle.render(el, params); return; }
+      if (stage === 'preg' && App.screens.pregrecords) { App.screens.pregrecords.render(el, params); return; }
       if (stage === 'preg' && App.screens.pregnancy) { App.screens.pregnancy.render(el, params); return; }
       if (params.day) viewDay = params.day;
       renderBabyLog(el);

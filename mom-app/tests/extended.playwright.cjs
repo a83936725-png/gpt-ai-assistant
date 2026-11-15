@@ -65,19 +65,20 @@ const errs = [];
   /* ===== B. accessibility (axe) light + dark ===== */
   if (!AXE) console.log('(skipping accessibility: axe-core not found — npm i -D axe-core or set AXE_PATH)');
   if (AXE) {
-  const axeScreens = ['home', 'log', 'health', 'prevention', 'vaccines', 'checkups', 'growth', 'milestones', 'stats', 'report', 'milk', 'brand', 'me', 'reminders', 'island'];
+  const axeScreens = ['home', 'log', 'health', 'prevention', 'vaccines', 'checkups', 'growth', 'milestones', 'stats', 'report', 'milk', 'brand', 'me', 'reminders', 'island', 'postpartum', 'journey'];
   const axeAgg = {};
   for (const theme of ['light', 'dark']) {
     const p = await mk(); await demo(p);
     await S(p, (t) => { App.store.update((s) => { s.settings.theme = t; s.settings.nightMode = false; }); App.applyTheme(); }, theme);
     const run = async (label) => {
+      await S(p, () => document.querySelectorAll('.toast-wrap').forEach((t) => t.remove())); // toasts fade in/out; scanning mid-animation gives false contrast hits
       await p.addScriptTag({ content: AXE }).catch(() => {});
       const v = await S(p, async () => (await axe.run(document, { resultTypes: ['violations'], runOnly: ['wcag2a', 'wcag2aa'] })).violations
         .filter((x) => ['serious', 'critical'].includes(x.impact)).map((x) => ({ id: x.id, n: x.nodes.length, ex: x.nodes[0].target.join(' ').slice(0, 60), sum: (x.nodes[0].failureSummary || '').split('\n')[1]?.slice(0, 90) })));
       v.forEach((x) => { const k = `${theme}:${x.id}`; (axeAgg[k] = axeAgg[k] || []).push(`${label}×${x.n} [${x.ex}] ${x.sum || ''}`); });
     };
     for (const id of axeScreens) { await go(p, id, id === 'island' ? 600 : 250); await run(id); }
-    for (const st of ['preg', 'prep']) { await S(p, (x) => App.store.update((s) => { s.profile.stage = x; s.profile.lmp = Core.dateKey(Core.addDays(new Date(), -170)); }), st); for (const id of (st === 'preg' ? ['home', 'log', 'health', 'prenatal', 'kick', 'contraction', 'pregweight', 'hospitalbag'] : ['home', 'log', 'health', 'cycle', 'prepcheck'])) { await go(p, id, 250); await run(`${st}-${id}`); } }
+    for (const st of ['preg', 'prep']) { await S(p, (x) => App.store.update((s) => { s.profile.stage = x; s.profile.lmp = Core.dateKey(Core.addDays(new Date(), -170)); }), st); for (const id of (st === 'preg' ? ['home', 'log', 'health', 'journey', 'prenatal', 'kick', 'contraction', 'pregweight', 'hospitalbag'] : ['home', 'log', 'health', 'cycle', 'prepcheck'])) { await go(p, id, 250); await run(`${st}-${id}`); } }
     if (theme === 'dark') { for (const id of ['home', 'health', 'brand']) { await S(p, () => App.store.update((s) => { s.profile.stage = 'baby'; })); await go(p, id, 300); await p.screenshot({ path: `${SHOT}dark-${id}.png` }); } }
     await p.context().close();
   }

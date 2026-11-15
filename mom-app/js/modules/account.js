@@ -83,6 +83,7 @@
       if (user && user.code) { s.share = s.share || {}; s.share.code = user.code; } // the server-registered code counts referrals
       if (user && user.nickname && !s.profile.momName) s.profile.momName = user.nickname;
     });
+    setTimeout(tick, 100); // show the new registered count right away
   }
   let lastRefresh = 0;
   async function refreshMe() {

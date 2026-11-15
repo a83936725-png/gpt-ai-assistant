@@ -140,8 +140,26 @@
       withUndo('已記錄濕尿布', () => store.addLog({ type, data: { kind: 'wet' } }));
       return;
     }
+    if (type === 'bath') {
+      withUndo('已記錄洗澡 🛁', () => store.addLog({ type }));
+      return;
+    }
     openAdd(type);
     return def;
+  }
+
+  /* ================= launch actions (home-screen icon shortcuts, ?action=...) =================
+   * 計時類直接開始（有「取消」），瓶餵／尿布打開表單，避免一碰就誤記。 */
+  function handleAction(action) {
+    if (!App.LOG_TYPES[action] || !store.state.onboarded) return false;
+    if (!store.baby()) { App.navigate('home'); ui.toast('先新增寶寶資料，就能用捷徑記錄'); return false; }
+    if (store.stage !== 'baby') store.update((s) => { s.profile.stage = 'baby'; });
+    if (['breast', 'sleep', 'pump'].includes(action)) {
+      const key = action === 'breast' ? 'feed' : action;
+      if (store.state.active[key]) { ui.toast('已經在計時中'); return true; }
+      quickLog(action);
+    } else openAdd(action);
+    return true;
   }
 
   /* ================= add / edit sheets ================= */
@@ -303,7 +321,7 @@
       h('button', { class: 'btn btn-primary grow', onclick: isEdit ? save : saveNew }, isEdit ? '儲存' : '新增'));
     const sh = ui.sheet({ title: `${def.icon} ${isEdit ? '編輯' : ''}${def.label}`, body, footer });
   }
-  App.babylog = { openAdd, typePicker, quickLog, withUndo };
+  App.babylog = { openAdd, typePicker, quickLog, withUndo, handleAction };
 
   /* ================= running timer banner (home + log) ================= */
   App.babylog.activeBanner = () => {

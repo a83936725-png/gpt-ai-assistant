@@ -50,18 +50,68 @@
   }
 
   // tap the tile = full form; tap ＋ = one-tap quick log (see App.babylog.quickLog)
-  const QUICK = [
-    { type: 'breast', label: '親餵', active: 'feed', plusHint: '開始計時' },
-    { type: 'bottle', label: '瓶餵', plusHint: '同上次' },
-    { type: 'diaper', label: '尿布', plusHint: '濕尿布' },
-    { type: 'sleep', label: '睡眠', active: 'sleep', plusHint: '開始計時' },
-    { type: 'pump', label: '擠奶', active: 'pump', plusHint: '開始計時' },
-    { type: 'temp', label: '體溫', plusHint: '量體溫' },
-  ];
+  const QUICK_DEFS = {
+    breast: { label: '親餵', active: 'feed', plusHint: '開始計時' },
+    bottle: { label: '瓶餵', plusHint: '同上次' },
+    diaper: { label: '尿布', plusHint: '濕尿布' },
+    sleep: { label: '睡眠', active: 'sleep', plusHint: '開始計時' },
+    pump: { label: '擠奶', active: 'pump', plusHint: '開始計時' },
+    temp: { label: '體溫', plusHint: '量體溫' },
+    food: { label: '副食品', plusHint: '記一筆' },
+    med: { label: '用藥', plusHint: '記一筆' },
+    bath: { label: '洗澡', plusHint: '洗好了' },
+    other: { label: '其他', plusHint: '記一筆' },
+  };
+  const DEFAULT_TILES = ['breast', 'bottle', 'diaper', 'sleep', 'pump', 'temp'];
+  const MAX_TILES = 9;
+  const tileTypes = () => {
+    const t = store.state.settings.quickTiles;
+    return (Array.isArray(t) && t.length ? t : DEFAULT_TILES).filter((x) => QUICK_DEFS[x]);
+  };
+  App.home = { DEFAULT_TILES, tileTypes };
+
+  function editTiles() {
+    let chosen = tileTypes().slice();
+    const ageM = store.baby() ? C.babyAge(store.baby().birthday)?.months || 0 : 0;
+    const list = h('div', { class: 'list' });
+    const count = h('span', { class: 'tag primary' });
+    const draw = () => {
+      list.innerHTML = '';
+      count.textContent = `${chosen.length} / ${MAX_TILES}`;
+      App.LOG_ORDER.forEach((t) => {
+        const def = App.LOG_TYPES[t];
+        const on = chosen.includes(t);
+        const cb = h('input', { type: 'checkbox', checked: on, disabled: !on && chosen.length >= MAX_TILES });
+        cb.addEventListener('change', () => { chosen = cb.checked ? App.LOG_ORDER.filter((x) => x === t || chosen.includes(x)) : chosen.filter((x) => x !== t); draw(); });
+        list.append(h('label', { class: 'list-item check-row' }, cb, h('span', { class: 'li-icon' }, def.icon),
+          h('span', { class: 'li-body' }, h('span', { class: 'li-title' }, def.label), h('span', { class: 'li-sub', style: { display: 'block' } }, `＋：${QUICK_DEFS[t].plusHint}`))));
+      });
+    };
+    draw();
+    const sh = ui.sheet({
+      title: '自訂快速鍵',
+      body: h('div', null,
+        h('p', { class: 'small muted' }, '選 3～9 個常用的紀錄放在首頁，順序跟「紀錄」相同。', count),
+        ageM >= 5 && !chosen.includes('food') ? h('p', { class: 'small', style: { color: 'var(--c-accent)' } }, '💡 寶寶快要開始吃副食品了，可以把「擠奶」換成「副食品」。') : null,
+        list),
+      footer: h('div', { class: 'row gap' },
+        h('button', { class: 'btn btn-ghost', onclick: () => { store.update((s) => { s.settings.quickTiles = null; }); sh.close(); ui.toast('已恢復預設'); } }, '恢復預設'),
+        h('button', {
+          class: 'btn btn-primary grow',
+          onclick: () => {
+            if (chosen.length < 3) { ui.toast('至少選 3 個'); return; }
+            store.update((s) => { s.settings.quickTiles = chosen; });
+            sh.close(); ui.toast('已更新首頁快速鍵');
+          },
+        }, '儲存')),
+    });
+  }
+  App.home.editTiles = editTiles;
+
   function quickTiles() {
     const wrap = h('div', { class: 'quick-row', role: 'list' });
     const today = store.logsOn(new Date());
-    QUICK.forEach((q) => {
+    tileTypes().map((type) => ({ type, ...QUICK_DEFS[type] })).forEach((q) => {
       const def = App.LOG_TYPES[q.type];
       const last = store.lastLog(q.type);
       const running = q.active && store.state.active[q.active];
@@ -83,7 +133,8 @@
           onclick: () => { if (running) App.timers.stopWithUndo(q.type); else App.babylog.quickLog(q.type); },
         }, running ? '✓' : '+')));
     });
-    return wrap;
+    return h('div', null, wrap,
+      h('div', { class: 'quick-edit-row' }, h('button', { class: 'link-btn tiny', onclick: editTiles }, '⚙︎ 自訂快速鍵')));
   }
 
   function whatsNext() {

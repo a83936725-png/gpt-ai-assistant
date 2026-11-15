@@ -150,6 +150,11 @@
     App.applyTheme();
     if (App.reminders && App.reminders.start) App.reminders.start();
     render();
+    const action = new URLSearchParams(location.search).get('action');
+    if (action) {
+      history.replaceState(null, '', location.pathname + (location.hash || '#/home'));
+      setTimeout(() => App.babylog && App.babylog.handleAction(action), 50);
+    }
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }

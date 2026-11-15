@@ -304,7 +304,7 @@
       const startOffset = first.getDay();
       const daysInMonth = new Date(y, m + 1, 0).getDate();
       const tk = todayKey();
-      const grid = h('div', { class: 'pg-cal-grid', role: 'grid' });
+      const grid = h('div', { class: 'pg-cal-grid', role: 'group', 'aria-label': '經期月曆' });
       C.WEEKDAYS.forEach((wd) => grid.append(h('div', { class: 'pg-cal-wd' }, wd)));
       for (let i = 0; i < startOffset; i += 1) grid.append(h('div', { class: 'pg-cal-blank' }));
       for (let d = 1; d <= daysInMonth; d += 1) {

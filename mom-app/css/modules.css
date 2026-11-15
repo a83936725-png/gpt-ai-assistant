@@ -88,7 +88,7 @@
 .ww-now { position: absolute; top: -4px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--c-accent); border: 3px solid var(--c-surface); }
 .next-lines { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--c-border); }
 .next-line { display: flex; gap: 8px; font-size: 14px; padding: 3px 0; color: var(--c-text-2); }
-.next-line b { color: var(--c-accent); }
+.next-line b { color: var(--c-accent-ink); }
 .today-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .today-chips .chip { font-size: 13px; padding: 4px 10px; }
 
@@ -139,7 +139,7 @@
 .swatch { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; border-radius: 12px; border: 2px solid transparent; background: var(--c-surface); }
 .swatch.active { border-color: var(--c-primary); }
 .swatch-dot { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .12); }
-.warn-text { color: var(--c-danger); }
+.warn-text { color: var(--c-danger-ink); }
 .poo-box { padding: 12px; margin-bottom: 14px; border-radius: 14px; background: var(--c-surface-2); }
 .poo-box .field:last-of-type { margin-bottom: 0; }
 
@@ -173,7 +173,7 @@ ul.tight li { margin: 3px 0; }
 .mg-cell.empty { background: none; }
 .mg-cell.on { background: var(--c-primary); color: var(--c-primary-ink); font-weight: 700; }
 .mg-cell.today { outline: 2px solid var(--c-accent); }
-.btn-line { background: #06c755; color: #fff; }
+.btn-line { background: #037f37; color: #fff; } /* deeper LINE green: white text 5.1:1 (#06c755 is only 2.3:1) */
 .btn-line svg { width: 20px; height: 20px; }
 
 /* ---------- me ---------- */
@@ -182,7 +182,7 @@ ul.tight li { margin: 3px 0; }
 .li-logo { object-fit: contain; padding: 6px; background: var(--c-primary-soft); }
 .li-right svg { width: 18px; height: 18px; color: var(--c-text-3); }
 .list-item .seg { width: 190px; flex: none; }
-.danger-text { color: var(--c-danger); }
+.danger-text { color: var(--c-danger-ink); }
 .about-logo { display: block; width: 92px; margin: 4px auto 6px; }
 .avatar-preview { width: 84px; height: 84px; border-radius: 50%; background: var(--c-primary-soft); display: flex; align-items: center; justify-content: center; font-size: 46px; overflow: hidden; flex: none; }
 .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
@@ -215,7 +215,7 @@ body[data-screen="onboarding"] #view { padding-bottom: 40px; }
 /* ---------- undo toast / presets ---------- */
 .toast.has-action { display: flex; align-items: center; gap: 12px; pointer-events: auto; padding: 6px 6px 6px 18px; }
 .toast-action {
-  background: transparent; border: 0; color: var(--c-accent); font-weight: 800; font-size: 14.5px;
+  background: transparent; border: 0; color: #ffb59e; font-weight: 800; font-size: 14.5px;
   min-height: 36px; padding: 0 12px; border-radius: 999px;
 }
 .toast-action:active { background: rgba(255, 255, 255, .12); }
@@ -258,3 +258,9 @@ body.night .quick-row { row-gap: 34px; }
 body.night .active-timer .btn { min-height: 44px; padding: 0 18px; font-size: 15px; }
 body.night .at-seg button { min-height: 40px; }
 body.night .fab { width: 66px; height: 66px; }
+
+/* ---------- 自訂快速鍵 ---------- */
+.quick-edit-row { display: flex; justify-content: flex-end; margin-top: 22px; }
+.quick-edit-row .link-btn { min-height: 36px; padding: 0 4px; color: var(--c-text-2); font-weight: 500; }
+.quick-row + .quick-edit-row + .card, div:has(> .quick-edit-row) + .card { margin-top: 6px; }
+body.night .quick-edit-row { margin-top: 28px; }

@@ -47,7 +47,7 @@
     daily: { log: {} }, // 今日小任務 {'YYYY-MM-DD': {water: n}}
     reminders: defaultReminders(),
     active: {}, // running timers: { feed: {start, side}, sleep: {start}, pump: {start} }
-    settings: { theme: 'auto', notify: false, nightMode: true },
+    settings: { theme: 'auto', notify: false, nightMode: true, quickTiles: null }, // quickTiles null = default set
   });
   function defaultReminders() {
     return [

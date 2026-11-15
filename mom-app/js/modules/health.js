@@ -315,7 +315,7 @@
         const main = `${fmtNum(p.value, def.digits)} ${def.unit}`;
         const sub = `${fmtYMD(p.date)}・${age ? age.text : ''}${pct !== null ? `・${pctText(pct)}` : ''}${p.birth ? '（出生）' : ''}`;
         const hit = s('circle', {
-          cx, cy, r: 13, class: 'viz-hit', tabindex: '0', 'aria-label': `${main}，${sub}`,
+          cx, cy, r: 13, class: 'viz-hit', tabindex: '0', role: 'img', 'aria-label': `${main}，${sub}`,
         });
         const on = () => tip.show(hit, main, sub);
         hit.addEventListener('pointerenter', on);
@@ -403,7 +403,7 @@
       }
       // hit target = whole slot column
       const hit = s('rect', {
-        x: m.l + slot * i, y: m.t, width: slot, height: ph, class: 'viz-hit', tabindex: '0',
+        x: m.l + slot * i, y: m.t, width: slot, height: ph, class: 'viz-hit', tabindex: '0', role: 'img',
         'aria-label': `${C.fmtDate(d.date)}：${series.map((se) => `${se.name} ${fmt(se.values[i])}${unit}`).join('，')}`,
       });
       const on = () => tip.show(hit, series.length > 1 ? `${fmt(totals[i])} ${unit}` : `${fmt(totals[i])} ${unit}`, C.fmtDate(d.date),

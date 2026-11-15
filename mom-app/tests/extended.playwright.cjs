@@ -201,6 +201,8 @@ const errs = [];
     for (const id of ['home', 'log', 'me', 'health']) { await go(p, id, 200); worst = Math.max(worst, await S(p, () => document.documentElement.scrollWidth - innerWidth)); }
     ok('I. very long baby/mom names on a 320px phone: no sideways scroll', worst <= 1, `${worst}px`);
     await go(p, 'home', 200); await p.screenshot({ path: `${SHOT}long-names-320.png` });
+    const heroH = await S(p, () => Math.round(document.querySelector('.baby-hero').getBoundingClientRect().height));
+    ok('I. long baby name stays on one line (header not stretched)', heroH <= 90, `${heroH}px`);
     await p.context().close();
   }
 

@@ -17,7 +17,19 @@ const errors = [];
 const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info });
 
 (async () => {
-  const browser = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
+  // fake microphone: 2 s of 440 Hz tone then 4 s of silence, looped. Loud enough for the meter check,
+  // but never 3 s of continuous sound, so it cannot trigger the cry alert on its own.
+  const wav = require('path').join(require('os').tmpdir(), 'yijia-monitor-tone.wav');
+  (function writeTone(file) {
+    const rate = 48000; const secs = 6; const n = rate * secs;
+    const buf = Buffer.alloc(44 + n * 2);
+    buf.write('RIFF', 0); buf.writeUInt32LE(36 + n * 2, 4); buf.write('WAVE', 8); buf.write('fmt ', 12);
+    buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20); buf.writeUInt16LE(1, 22); buf.writeUInt32LE(rate, 24);
+    buf.writeUInt32LE(rate * 2, 28); buf.writeUInt16LE(2, 32); buf.writeUInt16LE(16, 34); buf.write('data', 36); buf.writeUInt32LE(n * 2, 40);
+    for (let i = 0; i < n; i += 1) buf.writeInt16LE(i < rate * 2 ? Math.round(Math.sin((2 * Math.PI * 440 * i) / rate) * 0.5 * 32767) : 0, 44 + i * 2);
+    require('fs').writeFileSync(file, buf);
+  }(wav));
+  const browser = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', `--use-file-for-fake-audio-capture=${wav}`] });
   const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, locale: 'zh-TW', permissions: ['camera', 'microphone'],
   });
@@ -127,8 +139,8 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   ok('攝影機知道誰在看（data channel）', (await cam.textContent('.mon-status-text')).includes('媽媽的手機正在看'));
   ok('攝影機徽章：傳送中', await cam.isVisible('.mon-player-cam .mon-badge.is-live'));
   // remote audio can take a few seconds to start flowing: sample up to 8 s, stop as soon as there is signal
-  const maxLevel = await S(view, () => new Promise((r) => { let m = 0; const t = setInterval(() => { m = Math.max(m, App.monitor.state.level); if (m > 3) { clearInterval(t); r(m); } }, 50); setTimeout(() => { clearInterval(t); r(m); }, 8000); }));
-  ok('聲音條有動（WebAudio 分析遠端聲音）', maxLevel > 3, `max ${maxLevel.toFixed(1)}`);
+  const maxLevel = await S(view, () => new Promise((r) => { let m = 0; const t = setInterval(() => { m = Math.max(m, App.monitor.state.level); if (m > 20) { clearInterval(t); r(m); } }, 50); setTimeout(() => { clearInterval(t); r(m); }, 8000); }));
+  ok('聲音條有動（WebAudio 分析遠端聲音）', maxLevel > 20, `max ${maxLevel.toFixed(1)}`);
   await shot(view, 'viewer-live');
   await shot(view, 'viewer-live-full', { fullPage: true });
   await shot(cam, 'camera-live', { fullPage: true });
@@ -153,6 +165,8 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   /* ---------- cry alert (level forced through the test hook) ---------- */
   await S(view, () => { window.__vib = []; navigator.vibrate = (p) => { window.__vib.push(p); return true; }; });
   ok('哭聲提醒預設開啟＋門檻線', (await view.isChecked('.mon-switch >> nth=0')) && await view.isVisible('.mon-meter-mark'));
+  await S(view, () => { App.monitor.testLevel = 0; }); // drain any loudness collected from the real (fake-mic) audio
+  await wait(view, 4500);
   await S(view, () => { App.monitor.testLevel = 95; });
   await wait(view, 1500);
   ok('大聲 1.5 秒還不提醒', !(await view.isVisible('.mon-cry')));

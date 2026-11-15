@@ -81,7 +81,9 @@
   function render({ keepScroll = false } = {}) {
     const { id, params } = parseHash();
     let def = App.screens[id];
-    if (!App.store.state.onboarded && App.screens.onboarding && id !== 'onboarding' && id !== 'login') def = App.screens.onboarding; // login is reachable before setup
+    // visitors who haven't set up yet can still open login and shared content (Q&A, island articles, roadmap)
+    const PUBLIC = ['onboarding', 'login', 'search', 'island', 'journey'];
+    if (!App.store.state.onboarded && App.screens.onboarding && !PUBLIC.includes(id)) def = App.screens.onboarding;
     if (!def) def = App.screens.home;
     const el = view();
     const scroll = keepScroll ? window.scrollY : 0;

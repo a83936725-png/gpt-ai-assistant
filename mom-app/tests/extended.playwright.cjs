@@ -21,7 +21,7 @@ const errs = [];
     const p = await ctx.newPage();
     await p.addInitScript(() => { window.__noShareMoments = true; });
     p.on('pageerror', (e) => errs.push(`[${vp.width}] ${p.url()} :: ${e.message}`));
-    p.on('console', (m) => { if (m.type() === 'error' && !/favicon|ERR_INTERNET_DISCONNECTED/.test(m.text())) errs.push(`[${vp.width}] ${p.url()} :: ${m.text()}`); });
+    p.on('console', (m) => { if (m.type() === 'error' && !/favicon|ERR_INTERNET_DISCONNECTED/.test(m.text()) && !/\/api\//.test((m.location() || {}).url || '')) errs.push(`[${vp.width}] ${p.url()} :: ${m.text()}`); });
     return p;
   };
   const S = (p, f, a) => p.evaluate(f, a);

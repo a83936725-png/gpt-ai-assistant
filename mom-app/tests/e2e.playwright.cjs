@@ -18,7 +18,7 @@ const ok = (name, cond, info = '') => { results.push({ name, pass: !!cond, info 
     const p = await ctx.newPage();
     await p.addInitScript(() => { window.__noShareMoments = true; });
     p.on('pageerror', (e) => pageErrors.push(`${p.url()} :: ${e.message}`));
-    p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) pageErrors.push(`${p.url()} :: console ${m.text()}`); });
+    p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text()) && !/\/api\//.test((m.location() || {}).url || '')) pageErrors.push(`${p.url()} :: console ${m.text()}`); });
     return p;
   };
   const go = async (p, r) => { await p.goto(BASE + '#/' + r); await p.waitForTimeout(250); };

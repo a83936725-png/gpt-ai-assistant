@@ -33,6 +33,7 @@
   }
   function current(now = new Date()) {
     const phases = J().PHASES;
+    if (!store.state.onboarded) return { idx: -1, kind: 'visitor' }; // opened from a shared link
     if (store.inStage(['preg']) && lmp()) {
       const ga = C.gestAge(lmp(), now);
       const found = phases.findIndex((p) => p.to !== undefined && ga.weeks <= p.to);
@@ -334,6 +335,11 @@
       else if (cur.kind === 'pp') { headline = `產後第 ${cur.pp.day} 天`; sub = `坐月子中・${cur.pp.day <= 42 ? `還有 ${42 - cur.pp.day} 天滿 6 週` : ''}`; }
       else if (cur.kind === 'done') { headline = '路線圖都走完了 🎉'; sub = '產後 6 週之後，記得持續照顧自己'; }
       else { headline = '準備好了再出發'; sub = '懷孕後設定預產期，路線圖會自動標出你在哪裡'; }
+      if (cur.kind === 'visitor') {
+        el.append(ui.card({ class: 'soft mb' }, h('div', { class: 'bold' }, `👋 歡迎！這是${(window.BRAND && window.BRAND.appName) || '易家做媽媽'}的孕產路線圖`),
+          h('p', { class: 'small muted' }, '設定你的階段後，路線圖會標出你在哪裡，並提醒該做的事。'),
+          h('button', { class: 'btn btn-sm btn-primary', onclick: () => App.navigate('onboarding') }, '免費開始使用')));
+      }
       el.append(ui.card({ class: 'card-hero jr-hero' },
         h('div', { class: 'small muted' }, '從懷孕到出生到坐月子'),
         h('div', { class: 'big-num' }, headline), h('div', { class: 'small muted' }, sub),

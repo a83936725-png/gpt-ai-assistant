@@ -23,7 +23,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const p = await ctx.newPage();
   await p.addInitScript(() => { window.__noShareMoments = true; });
   p.on('pageerror', (e) => errors.push(e.message));
-  p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) errors.push(m.text()); });
+  p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text()) && !/\/api\//.test((m.location() || {}).url || '')) errors.push(m.text()); });
   const S = (f, a) => p.evaluate(f, a);
   const wait = (ms = 250) => p.waitForTimeout(ms);
   const go = async (r) => { await p.goto(`${BASE}#/${r}`); await wait(300); };

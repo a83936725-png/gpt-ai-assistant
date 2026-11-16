@@ -5,13 +5,14 @@
   const { h, ui } = App;
   const C = window.Core;
   const store = App.store;
-  // quick tiles: the 2nd tap of an accidental double-tap must not log twice, start + stop a timer, or —
-  // after the timer banner pushes the tiles down — land on another tile
-  // (same tile: 700 ms; any other tile: 350 ms — quicker than anyone taps two different tiles on purpose)
+  // quick tiles: the 2nd tap of an accidental double-tap must not log twice or start + stop a timer (same tile,
+  // 700 ms); and right after a timer starts/stops, its banner pushes the tiles down, so for 400 ms a tap on
+  // any tile is ignored (it would land on a different tile than the one under the finger)
   let lastQuickTap = { key: '', at: 0 };
+  let shiftUntil = 0;
   const quickTapOk = (key) => {
-    const now = Date.now(); const gap = now - lastQuickTap.at;
-    if (gap < 350 || (key === lastQuickTap.key && gap < 700)) return false;
+    const now = Date.now();
+    if (now < shiftUntil || (key === lastQuickTap.key && now - lastQuickTap.at < 700)) return false;
     lastQuickTap = { key, at: now }; return true;
   };
 
@@ -143,6 +144,7 @@
           class: 'qt-plus', 'aria-label': plusLabel, title: plusLabel,
           onclick: () => {
             if (!quickTapOk(q.type)) return;
+            if (running || ['breast', 'sleep', 'pump'].includes(q.type)) shiftUntil = Date.now() + 400; // timer banner appears / goes
             if (running) App.timers.stopWithUndo(q.type); else App.babylog.quickLog(q.type);
           },
         }, running ? '✓' : '+')));

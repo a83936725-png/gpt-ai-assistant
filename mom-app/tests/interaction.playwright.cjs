@@ -130,6 +130,12 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: t
   n0 = await logs();
   await p.click('.quick-tile:has-text("尿布") .qt-plus'); await wait(p, 300);
   ok('a separate tap later still logs', (await logs()) === n0 + 1);
+  await wait(p, 800);
+  n0 = await logs();
+  await p.click('.quick-tile:has-text("瓶餵") .qt-plus'); await wait(p, 250);
+  await p.click('.quick-tile:has-text("尿布") .qt-plus'); await wait(p, 300);
+  ok('two different tiles tapped quickly (0.3 s apart) both log', (await logs()) === n0 + 2, (await logs()) - n0);
+  await wait(p, 800);
   await p.dblclick('.quick-tile:has-text("睡眠") .qt-plus'); await wait(p, 500);
   ok('double-tap on ＋睡眠 starts the timer (does not start + stop it)', await S(p, () => !!App.store.state.active.sleep));
   await wait(p, 800);

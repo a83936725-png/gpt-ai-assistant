@@ -39,6 +39,7 @@
       const found = phases.findIndex((p) => p.to !== undefined && ga.weeks <= p.to);
       return { idx: found === -1 ? 3 : found, ga, kind: 'preg' }; // past 42 weeks stays on 足月待產
     }
+    if (store.stage === 'preg') return { idx: -1, kind: 'nodate' }; // 選了懷孕但還沒填日期
     if (store.stage === 'baby') {
       const pp = ppInfo(now);
       if (pp && pp.inConfinement) return { idx: 5, pp, kind: 'pp' };
@@ -334,6 +335,7 @@
       if (cur.kind === 'preg') { headline = `懷孕 ${cur.ga.weeks} 週 ${cur.ga.days} 天`; sub = `目前在「${phases[cur.idx].title}」・預產期 ${C.fmtDate(C.eddFromLmp(lmp()), false)}`; }
       else if (cur.kind === 'pp') { headline = `產後第 ${cur.pp.day} 天`; sub = `坐月子中・${cur.pp.day <= 42 ? `還有 ${42 - cur.pp.day} 天滿 6 週` : ''}`; }
       else if (cur.kind === 'done') { headline = '路線圖都走完了 🎉'; sub = '產後 6 週之後，記得持續照顧自己'; }
+      else if (cur.kind === 'nodate') { headline = '還沒設定預產期'; sub = '填上最後一次月經或預產期，路線圖就會標出你在哪裡'; }
       else { headline = '準備好了再出發'; sub = '懷孕後設定預產期，路線圖會自動標出你在哪裡'; }
       if (cur.kind === 'visitor') {
         el.append(ui.card({ class: 'soft mb' }, h('div', { class: 'bold' }, `👋 歡迎！這是${(window.BRAND && window.BRAND.appName) || '易家做媽媽'}的孕產路線圖`),
@@ -345,6 +347,7 @@
         h('div', { class: 'big-num' }, headline), h('div', { class: 'small muted' }, sub),
         h('div', { class: 'jr-steps', 'aria-hidden': 'true' }, phases.map((p, i) => h('span', { class: `jr-step${i < cur.idx ? ' done' : i === cur.idx ? ' now' : ''}` }, p.icon))),
         h('div', { class: 'row gap-sm mt' },
+          cur.kind === 'nodate' && App.me ? h('button', { class: 'btn btn-sm jr-hero-btn', onclick: () => App.me.editProfile() }, '📅 設定預產期') : null,
           cur.kind === 'preg' ? h('button', { class: 'btn btn-sm jr-hero-btn', onclick: () => openPregJournal() }, '📝 記錄身體狀況') : null,
           cur.kind === 'pp' || (cur.kind === 'done' && cur.pp && cur.pp.day <= 90) ? h('button', { class: 'btn btn-sm jr-hero-btn', onclick: () => openPPLog() }, '🍲 記錄身體恢復') : null,
           cur.kind === 'preg' && cur.ga.weeks >= 20 ? h('button', { class: 'btn btn-sm jr-hero-btn', onclick: openBirthSheet }, '🎉 寶寶出生了') : null)));

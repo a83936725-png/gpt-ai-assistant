@@ -189,6 +189,43 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     await p.context().close();
   }
 
+  /* ---------- 8. skipped the optional fields in onboarding ---------- */
+  {
+    const p = await open({ viewport: { width: 390, height: 844 } }, 'nodate');
+    const bad = /TypeError|undefined|NaN|Invalid Date|\[object Object\]/;
+    const sweep = async () => {
+      const found = [];
+      for (const id of await screens(p)) {
+        await S(p, (x) => { location.hash = `#/${x}`; }, id); await p.waitForTimeout(150);
+        const txt = await S(p, () => document.getElementById('view').innerText);
+        const line = txt.split('\n').find((l) => bad.test(l));
+        if (line) found.push(`${id}: ${line.slice(0, 60)}`);
+      }
+      return found;
+    };
+    for (const [choice, label] of [['懷孕中', 'pregnant'], ['備孕中', 'trying'], ['育兒中', 'baby']]) {
+      await p.goto(BASE); await S(p, () => { localStorage.clear(); }); await p.goto(BASE); await p.waitForTimeout(300);
+      await p.click('text=開始使用'); await p.click(`.ob-choice:has-text("${choice}")`).catch(() => {}); await p.waitForTimeout(200);
+      const stage = await S(p, () => !!document.querySelector('.ob-q') && document.querySelector('.ob-q').textContent);
+      await p.click('text=完成，開始使用'); await p.waitForTimeout(400);
+      const before = errors.filter((e) => e.startsWith('[nodate]')).length;
+      const found = await sweep();
+      const errs = errors.filter((e) => e.startsWith('[nodate]')).slice(before);
+      ok(`${label}, every optional field left blank: every screen works`, stage === '基本資料' && !found.length && !errs.length, [stage, ...found, ...errs].slice(0, 3).join(' | '));
+    }
+    // pregnant without a date → the roadmap asks for the date instead of breaking
+    await p.goto(BASE); await S(p, () => { localStorage.clear(); }); await p.goto(BASE); await p.waitForTimeout(300);
+    await p.click('text=開始使用'); await p.click('.ob-choice:has-text("懷孕中")'); await p.click('text=完成，開始使用'); await p.waitForTimeout(300);
+    await S(p, () => { location.hash = '#/journey'; }); await p.waitForTimeout(300);
+    ok('pregnant without a date: roadmap asks for the due date', await p.isVisible('text=還沒設定預產期'));
+    await p.click('button:has-text("設定預產期")'); await p.waitForTimeout(300);
+    const edd = await S(p, () => Core.dateKey(Core.addDays(new Date(), 100)));
+    await p.fill('.sheet input[type=date] >> nth=1', edd); await p.click('.sheet-footer .btn-primary'); await p.waitForTimeout(400);
+    const head = await S(p, () => document.querySelector('.jr-hero .big-num').textContent);
+    ok('after setting the due date the roadmap shows the week', /懷孕 2[45] 週/.test(head), head);
+    await p.context().close();
+  }
+
   ok('no page errors anywhere', !errors.length, errors.slice(0, 4).join(' | '));
   results.forEach((r) => console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${r.name}${r.info && !r.pass ? `   [${r.info}]` : ''}`));
   console.log(`\n${results.filter((r) => r.pass).length}/${results.length} passed`);

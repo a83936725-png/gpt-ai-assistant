@@ -88,6 +88,17 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: t
   await back(p);
   ok('…and one back leaves the screen', (await hash(p)) === '#/home');
 
+  // a form saved on a screen, then the same screen opened again (tab tap / same link) must not jump anywhere
+  await nav(p, '#/log'); await p.click('.tab[href="#/home"]'); await wait(p);
+  await S(p, () => App.babylog.openAdd('diaper')); await wait(p);
+  await p.click('.sheet .btn-primary >> nth=0'); await wait(p);
+  await p.click('.tab[href="#/home"]'); await wait(p, 500);
+  ok('after saving a form, tapping the current tab stays on it', (await hash(p)) === '#/home');
+  await p.goto(`${await S(p, () => location.href.split('#')[0])}#/home`); await wait(p, 500);
+  ok('…and opening the same address again stays too', (await hash(p)) === '#/home');
+  await back(p);
+  ok('…then one back goes to the previous screen', (await hash(p)) === '#/log');
+
   // other modules' sheets behave the same (log form, island spot)
   await nav(p, '#/log'); await S(p, () => App.babylog.openAdd('diaper')); await wait(p);
   ok('log form sheet opens', (await open(p)) === 1);

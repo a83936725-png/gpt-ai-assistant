@@ -66,6 +66,14 @@
   const openSheets = []; // stack: { token, close(fromHistory) }
   let sheetSeq = 0;
   let stale = null; // URL of a stale sheet entry we are on / just left
+  // Every history entry the app has seen carries a key (__k). A popstate that lands on a keyed entry is a real
+  // back/forward press; one with no key is a new navigation (a link, a tab, location.hash = …), even to the same URL.
+  let entryKey = 0;
+  const tagEntry = () => {
+    try { if (!history.state || history.state.__k === undefined) history.replaceState({ ...(history.state || {}), __k: (entryKey += 1) }, ''); } catch (e) { /* ignore */ }
+  };
+  tagEntry();
+  window.addEventListener('load', tagEntry);
   const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
   const focusables = (root) => [...root.querySelectorAll(FOCUSABLE)].filter((x) => x.offsetParent !== null || x === document.activeElement);
 
@@ -82,7 +90,7 @@
     document.body.appendChild(backdrop);
     sheetSeq += 1;
     const rec = { token: `sh${Date.now().toString(36)}-${sheetSeq}`, close: null };
-    try { history.pushState({ ...(history.state || {}), __sheet: rec.token }, '', location.href); stale = null; } catch (e) { /* ignore */ }
+    try { history.pushState({ ...(history.state || {}), __sheet: rec.token, __k: (entryKey += 1) }, '', location.href); stale = null; } catch (e) { /* ignore */ }
     openSheets.push(rec);
     document.body.classList.add('has-sheet');
     requestAnimationFrame(() => backdrop.classList.add('open'));
@@ -132,6 +140,12 @@
   window.addEventListener('popstate', (e) => {
     const st = e.state || {};
     const here = location.href;
+    if (st.__k === undefined) { // a new navigation, not back/forward: just start fresh on the new entry
+      if (stale !== here) stale = null; // (re-opening the same screen keeps the skip-over for the next back)
+      while (openSheets.length) openSheets[openSheets.length - 1].close(true);
+      tagEntry();
+      return;
+    }
     if (!openSheets.length) {
       if (stale && here === stale) { history.back(); return; } // left a stale entry: skip its same-URL twin
       stale = st.__sheet ? here : null;
@@ -145,7 +159,7 @@
   });
   // a new screen never keeps an old sheet on top (e.g. a link tapped inside a sheet)
   const closeAllSheets = () => { while (openSheets.length) openSheets[openSheets.length - 1].close(true); };
-  window.addEventListener('hashchange', closeAllSheets);
+  window.addEventListener('hashchange', () => { closeAllSheets(); tagEntry(); });
 
   /* ---------- toast ---------- */
   // toast('已儲存') or toast('已記錄', { action: '復原', onAction() {...}, ms: 5000 })

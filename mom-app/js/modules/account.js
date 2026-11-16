@@ -139,7 +139,7 @@
       const expectNonce = (() => { try { return sessionStorage.getItem('mom-line-nonce') || ''; } catch (e) { return ''; } })();
       if (params && (params.token || params.error)) {
         try { sessionStorage.removeItem('mom-line-nonce'); } catch (e) { /* ignore */ }
-        history.replaceState(null, '', `${location.pathname}${location.search}#/login`); // keep the token out of history
+        history.replaceState(history.state, '', `${location.pathname}${location.search}#/login`); // keep the token out of history
       }
       if (params && params.token && (!expectNonce || params.nonce !== expectNonce)) {
         box.append(ui.card({ class: 'soft' }, h('div', { class: 'card-title' }, '這個登入連結無法使用'),

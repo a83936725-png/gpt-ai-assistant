@@ -43,7 +43,7 @@
     }
     const keep = new URLSearchParams();
     if (qs.get('action')) keep.set('action', qs.get('action'));
-    history.replaceState(null, '', location.pathname + (keep.toString() ? `?${keep}` : '') + location.hash);
+    history.replaceState(history.state, '', location.pathname + (keep.toString() ? `?${keep}` : '') + location.hash);
   }());
 
   /* ================= links ================= */

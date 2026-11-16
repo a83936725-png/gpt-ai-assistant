@@ -160,7 +160,7 @@
     render();
     const action = new URLSearchParams(location.search).get('action');
     if (action) {
-      history.replaceState(null, '', location.pathname + (location.hash || '#/home'));
+      history.replaceState(history.state, '', location.pathname + (location.hash || '#/home'));
       setTimeout(() => App.babylog && App.babylog.handleAction(action), 50);
     }
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

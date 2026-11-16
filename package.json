@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "nodemon api/index.js",
     "start": "node api/index.js",
-    "test": "jest"
+    "test": "jest",
+    "ask": "node scripts/ask.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.2",

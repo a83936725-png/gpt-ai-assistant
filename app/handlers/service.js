@@ -65,17 +65,53 @@ const interpretReply = (text = '') => {
 
 /**
  * Logs a question the knowledge base could not answer, so it shows up in the server logs.
- * @param {Context} context
- * @param {string} question
+ * @param {Object} param
+ * @param {string} param.userId
+ * @param {string} [param.name]
+ * @param {string} param.question
  */
-const reportMiss = (context, question) => {
+const reportMiss = ({ userId, name, question }) => {
   console.info(JSON.stringify({
     type: 'knowledge_miss',
-    userId: context.userId,
-    name: context.source?.name,
+    userId,
+    name,
     question,
     at: new Date().toISOString(),
   }));
+};
+
+/**
+ * Answers one customer message from the knowledge base and remembers the turn. Shared by the LINE
+ * handler and anything else that asks the knowledge base, such as the local test tool.
+ * @param {Object} param
+ * @param {string} param.userId Keeps each customer's recent turns apart.
+ * @param {string} param.question
+ * @returns {Promise<{isAnswered: boolean, text: string}>}
+ */
+const answerQuestion = async ({ userId, question }) => {
+  const history = getConversation(userId);
+  const knowledgeBase = getKnowledgeBase();
+  let reply;
+  if (knowledgeBase.isEmpty) {
+    reply = interpretReply(NO_ANSWER_MARK);
+  } else {
+    // Recent customer turns help pick the right sections for follow-up questions.
+    const query = [...history.filter(({ role }) => role === ROLE_HUMAN).map(({ content }) => content), question].join('\n');
+    const knowledge = knowledgeBase.buildContext(query);
+    const messages = [
+      { role: ROLE_SYSTEM, content: t('__SERVICE_SYSTEM_PROMPT')(config.BOT_NAME, knowledge, NO_ANSWER_MARK) },
+      ...history,
+      { role: ROLE_HUMAN, content: question },
+    ].map((message) => new Message(message));
+    const { text } = await generateCompletion({ prompt: { messages } });
+    reply = interpretReply(text);
+  }
+  saveConversation(userId, [
+    ...history,
+    { role: ROLE_HUMAN, content: question },
+    { role: ROLE_AI, content: reply.text },
+  ]);
+  return reply;
 };
 
 /**
@@ -102,36 +138,16 @@ const exec = (context) => check(context) && (
       return context;
     }
     const question = context.trimmedText;
-    const history = getConversation(context.userId);
-    const knowledgeBase = getKnowledgeBase();
+    const who = { userId: context.userId, name: context.source?.name, question };
     try {
-      let reply;
-      if (knowledgeBase.isEmpty) {
-        reply = interpretReply(NO_ANSWER_MARK);
-      } else {
-        // Recent customer turns help pick the right sections for follow-up questions.
-        const query = [...history.filter(({ role }) => role === ROLE_HUMAN).map(({ content }) => content), question].join('\n');
-        const knowledge = knowledgeBase.buildContext(query);
-        const messages = [
-          { role: ROLE_SYSTEM, content: t('__SERVICE_SYSTEM_PROMPT')(config.BOT_NAME, knowledge, NO_ANSWER_MARK) },
-          ...history,
-          { role: ROLE_HUMAN, content: question },
-        ].map((message) => new Message(message));
-        const { text } = await generateCompletion({ prompt: { messages } });
-        reply = interpretReply(text);
-      }
-      if (!reply.isAnswered) reportMiss(context, question);
-      saveConversation(context.userId, [
-        ...history,
-        { role: ROLE_HUMAN, content: question },
-        { role: ROLE_AI, content: reply.text },
-      ]);
+      const reply = await answerQuestion({ userId: context.userId, question });
+      if (!reply.isAnswered) reportMiss(who);
       context.pushText(reply.text);
     } catch (err) {
       // Customers should not see API URLs or status codes; keep the details in the logs.
       context.error = err;
       console.error(`Service reply failed: ${err.message}`);
-      reportMiss(context, question);
+      reportMiss(who);
       context.pushText(t('__SERVICE_ERROR'));
     }
     return context;
@@ -139,6 +155,7 @@ const exec = (context) => check(context) && (
 )();
 
 export {
+  answerQuestion,
   getConversation,
   interpretReply,
   removeConversation,

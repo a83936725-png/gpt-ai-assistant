@@ -416,8 +416,9 @@
       }, h('span', { 'aria-hidden': 'true' }, emoji), label);
       box.append(
         h('div', { class: 'sr-fb-q', id: `sr-fb-${f.id}` }, '這有幫助嗎？'),
-        h('div', { class: 'sr-fb-row', role: 'group', 'aria-labelledby': `sr-fb-${f.id}` }, b('up', '👍', '有幫助'), b('down', '👎', '沒幫助')),
-        cur ? h('p', { class: 'small muted sr-fb-thanks', role: 'status' }, cur === 'up' ? '謝謝你！很高興幫上忙 💜' : '謝謝回饋！可以換個說法再搜尋，或直接詢問醫師。') : null);
+        h('div', { class: 'sr-fb-row', role: 'group', 'aria-labelledby': `sr-fb-${f.id}` }, b('up', '👍', '有幫助'), b('down', '👎', '沒幫助')));
+      // native append() prints null as the text "null", so only append the thank-you line when there is one
+      if (cur) box.append(h('p', { class: 'small muted sr-fb-thanks', role: 'status' }, cur === 'up' ? '謝謝你！很高興幫上忙 💜' : '謝謝回饋！可以換個說法再搜尋，或直接詢問醫師。'));
     };
     draw();
     return box;

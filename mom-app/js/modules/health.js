@@ -457,7 +457,7 @@
           h('div', { class: 'health-avatar' }, b.avatar && b.avatar.length <= 4 ? b.avatar : '👶'),
           h('div', { class: 'grow' },
             h('div', { class: 'bold' }, b.name || '寶寶'),
-            h('div', { class: 'small muted' }, `${b.sex === 'boy' ? '男孩' : '女孩'}・${age ? age.text : ''}・${age ? age.dayText : ''}`))));
+            h('div', { class: 'small muted' }, [b.sex === 'boy' ? '男孩' : '女孩', age && age.text, age && age.dayText].filter(Boolean).join('・')))));
     }
     if (st === 'preg') {
       const ga = p.lmp ? C.gestAge(p.lmp) : null;

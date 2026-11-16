@@ -42,7 +42,7 @@
         avatar,
         h('span', { class: 'hero-text' },
           h('span', { class: 'hero-name' }, baby.name),
-          h('span', { class: 'tiny muted' }, age ? `${age.text}・第 ${age.days + 1} 天` : ''))),
+          h('span', { class: 'tiny muted' }, age ? (age.days < 0 ? age.text : `${age.text}・第 ${age.days + 1} 天`) : ''))),
       h('div', { class: 'hero-stats' },
         h('a', { class: 'hero-stat', href: '#/growth' }, h('b', { class: 'num' }, g.length || '—'), h('span', { class: 'tiny muted' }, '公分')),
         h('a', { class: 'hero-stat', href: '#/growth' }, h('b', { class: 'num' }, g.weight || '—'), h('span', { class: 'tiny muted' }, '公斤'))),

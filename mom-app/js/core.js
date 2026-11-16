@@ -106,7 +106,7 @@
     else if (months === 0) text = `${days} 天`;
     else if (months < 24) text = `${months} 個月${remDays ? ` ${remDays} 天` : ''}`;
     else text = `${Math.floor(months / 12)} 歲${months % 12 ? ` ${months % 12} 個月` : ''}`;
-    return { days, months, remDays, ageMonthsFloat: days / 30.4375, text, dayText: `出生第 ${days + 1} 天` };
+    return { days, months, remDays, ageMonthsFloat: days / 30.4375, text, dayText: days < 0 ? '' : `出生第 ${days + 1} 天` };
   };
 
   /* ---------- pregnancy ---------- */

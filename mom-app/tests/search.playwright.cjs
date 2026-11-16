@@ -170,6 +170,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   ok('sheet 有免責聲明「不能取代醫師診斷」', (await p.textContent('.sr-sheet')).includes('不能取代醫師診斷'));
   ok('答案內關鍵字高亮', (await p.locator('.sr-sheet mark.sr-hl').count()) > 0);
   ok('有分享按鈕（App.share 存在時）', !(await S(() => !!App.share)) || await p.isVisible('.sr-sheet .sh-btn'));
+  ok('還沒回饋時，答案裡沒有「null」字樣', !/(^|\n)\s*null\s*(\n|$)/.test(await S(() => document.querySelector('.sr-sheet').innerText)));
   await p.click('.sr-sheet .sr-fb-btn:has-text("有幫助")'); await wait(200);
   ok('👍 存到 faqFeedback', await S((id) => (App.store.state.faqFeedback || {})[id]?.up === 1, fid));
   ok('👍 aria-pressed', await p.getAttribute('.sr-sheet .sr-fb-btn:has-text("有幫助")', 'aria-pressed') === 'true');

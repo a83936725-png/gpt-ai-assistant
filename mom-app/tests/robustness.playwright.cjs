@@ -223,6 +223,26 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     await p.fill('.sheet input[type=date] >> nth=1', edd); await p.click('.sheet-footer .btn-primary'); await p.waitForTimeout(400);
     const head = await S(p, () => document.querySelector('.jr-hero .big-num').textContent);
     ok('after setting the due date the roadmap shows the week', /懷孕 2[45] 週/.test(head), head);
+    // a typo'd date (future period / over a year ago) → roadmap agrees with home: ask to fix it, never "懷孕 -2 週" or "60 週"
+    for (const [days, label] of [[10, 'future'], [-60 * 7, '60 weeks ago']]) {
+      await S(p, (d) => App.store.update((s) => { s.profile.lmp = Core.dateKey(Core.addDays(new Date(), d)); s.profile.edd = Core.eddFromLmp(s.profile.lmp); }), days);
+      await S(p, () => { location.hash = '#/home'; }); await p.waitForTimeout(250);
+      const homeAsks = await p.isVisible('text=預產期需要確認');
+      const roadCard = await p.isVisible('.jr-home');
+      await S(p, () => { location.hash = '#/journey'; }); await p.waitForTimeout(250);
+      const road = await S(p, () => document.querySelector('.jr-hero').innerText);
+      ok(`period date ${label}: home and roadmap both ask to fix the date`, homeAsks && !roadCard && /預產期需要確認/.test(road) && !/懷孕 -?\d+ 週/.test(road), road.replace(/\n/g, ' / '));
+    }
+    // baby's birthday a few days ahead (allowed when adding a baby before birth) → no "第 -2 天"
+    await S(p, () => { App.demo.seed(); App.isNight = () => false; App.store.update((s) => { s.babies[0].birthday = Core.dateKey(Core.addDays(new Date(), 3)); }); });
+    const ahead = [];
+    for (const id of ['home', 'health', 'log', 'growth', 'journey', 'milestones', 'vaccines']) {
+      await S(p, (x) => { location.hash = `#/${x}`; }, id); await p.waitForTimeout(200);
+      const t = await S(p, () => document.getElementById('view').innerText);
+      const line = t.split('\n').find((l) => /第 ?-\d+ ?天|-\d+ 天|-\d+ 個月/.test(l));
+      if (line) ahead.push(`${id}: ${line}`);
+    }
+    ok('baby not born yet: says "還有 3 天出生", never a negative day count', !ahead.length && /還有 3 天出生/.test(await S(p, () => { location.hash = '#/home'; return new Promise((r) => setTimeout(() => r(document.getElementById('view').innerText), 250)); })), ahead.slice(0, 3).join(' | '));
     await p.context().close();
   }
 

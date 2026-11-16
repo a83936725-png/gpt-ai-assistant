@@ -15,6 +15,7 @@ import postHandler from './post.js';
 import reportHandler from './report.js';
 import retryHandler from './retry.js';
 import searchHandler from './search.js';
+import serviceHandler from './service.js';
 import talkHandler from './talk.js';
 import uiHandler from './ui.js';
 import versionHandler from './version.js';
@@ -37,6 +38,7 @@ export {
   reportHandler,
   retryHandler,
   searchHandler,
+  serviceHandler,
   talkHandler,
   uiHandler,
   versionHandler,

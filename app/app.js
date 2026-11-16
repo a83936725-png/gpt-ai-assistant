@@ -1,3 +1,4 @@
+import config from '../config/index.js';
 import { replyMessage } from '../utils/index.js';
 import {
   activateHandler,
@@ -17,6 +18,7 @@ import {
   reportHandler,
   retryHandler,
   searchHandler,
+  serviceHandler,
   talkHandler,
   uiHandler,
   versionHandler,
@@ -54,6 +56,18 @@ const handleContext = async (context) => (
 );
 
 /**
+ * Customer service mode: one-to-one chats get answers from the knowledge base only, so customers
+ * cannot reach drawing, search or other commands. Groups get no reply.
+ * @param {Context} context
+ * @returns {Promise<Context>}
+ */
+const handleServiceContext = async (context) => (
+  idHandler(context)
+  || serviceHandler(context)
+  || context
+);
+
+/**
  * A source that is not on the allowlist can only ask for its ID.
  * @param {Context} context
  * @returns {Promise<Context>}
@@ -70,6 +84,7 @@ const handleBlockedContext = async (context) => (
 const routeContext = (context) => {
   if (context.isBlocked) return handleBlockedContext(context);
   if (context.error || context.isFlagged) return context;
+  if (config.SERVICE_MODE_ENABLED) return handleServiceContext(context);
   return handleContext(context);
 };
 
@@ -90,5 +105,9 @@ const handleEvents = async (events = []) => (
       .map((context) => replyMessage(context)),
   ))
 );
+
+export {
+  handleServiceContext,
+};
 
 export default handleEvents;

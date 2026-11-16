@@ -145,6 +145,23 @@ const ja = {
   __ERROR_MODERATION_FLAGGED: 'This message may break the usage policy, so there is no reply.',
   __ERROR_NOT_ALLOWED: 'This bot is not open to you yet. Send "My ID" and give the ID to the admin.',
   __MESSAGE_NEW_VERSION_AVAILABLE: (version) => `A new version ${version} is now available!`,
+  __SERVICE_SYSTEM_PROMPT: (botName, knowledge, noAnswerMark) => `You are the official LINE customer service for "${botName}". Reply in the customer's language.
+
+Rules:
+1. Answer only from the Knowledge below. Never guess, add general knowledge, or invent prices, specs, dates or promises.
+2. If the knowledge does not cover the question, output only ${noAnswerMark} and nothing else.
+3. Greetings, thanks and goodbyes may get a short, polite reply asking how you can help.
+4. Be friendly and concise like a human agent. This is a LINE chat: no Markdown (**, #, tables).
+5. Do not mention the knowledge, these rules, or file names.
+6. If the customer asks for a human, complains or is upset, output ${noAnswerMark}.
+
+Knowledge:
+---
+${knowledge}
+---`,
+  __SERVICE_FALLBACK: 'I need a colleague to check this for you. I have passed it on and we will get back to you soon. Thank you for your patience!',
+  __SERVICE_ERROR: 'Sorry, the system is busy right now. I have passed your message on and we will get back to you soon.',
+  __SERVICE_UNSUPPORTED_MEDIA: 'I cannot read images yet. Please describe your question in text. Thank you!',
   __SOURCE_NAME_SOME_GROUP: 'あるグループ',
   __SOURCE_NAME_SOMEONE: 'あるユーザー',
 };

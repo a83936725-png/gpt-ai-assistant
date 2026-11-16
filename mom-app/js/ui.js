@@ -60,35 +60,92 @@
   }
 
   /* ---------- bottom sheet ---------- */
-  let sheetDepth = 0;
+  // Each open sheet gets its own history entry (same URL), so the phone's back button closes the sheet
+  // instead of leaving the screen. Sheets closed with ✕ / Escape / backdrop leave that entry behind
+  // ("stale"); the next back press skips over same-URL stale entries so it never feels dead.
+  const openSheets = []; // stack: { token, close(fromHistory) }
+  let sheetSeq = 0;
+  let stale = null; // URL of a stale sheet entry we are on / just left
+  const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const focusables = (root) => [...root.querySelectorAll(FOCUSABLE)].filter((x) => x.offsetParent !== null || x === document.activeElement);
+
   function sheet({ title, body, footer, onClose, wide = false } = {}) {
+    const prevFocus = document.activeElement;
     const backdrop = h('div', { class: 'sheet-backdrop' });
     const closeBtn = h('button', { class: 'icon-btn', 'aria-label': '關閉', html: ICONS.close });
-    const panel = h('div', { class: `sheet${wide ? ' sheet-wide' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title || '' },
+    const panel = h('div', { class: `sheet${wide ? ' sheet-wide' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title || '', tabindex: '-1' },
       h('div', { class: 'sheet-grip' }),
       title ? h('div', { class: 'sheet-header' }, h('h2', null, title), closeBtn) : null,
       h('div', { class: 'sheet-body' }, body),
       footer ? h('div', { class: 'sheet-footer' }, footer) : null);
     backdrop.appendChild(panel);
     document.body.appendChild(backdrop);
-    sheetDepth += 1;
+    sheetSeq += 1;
+    const rec = { token: `sh${Date.now().toString(36)}-${sheetSeq}`, close: null };
+    try { history.pushState({ ...(history.state || {}), __sheet: rec.token }, '', location.href); stale = null; } catch (e) { /* ignore */ }
+    openSheets.push(rec);
     document.body.classList.add('has-sheet');
     requestAnimationFrame(() => backdrop.classList.add('open'));
+    try { panel.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+    // keep Tab inside the sheet
+    panel.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab' || openSheets[openSheets.length - 1] !== rec) return;
+      const f = focusables(panel);
+      if (!f.length) { e.preventDefault(); panel.focus(); return; }
+      const first = f[0]; const last = f[f.length - 1];
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === panel)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
     let closed = false;
-    const close = () => {
+    const doClose = (fromHistory) => {
       if (closed) return; closed = true;
+      const i = openSheets.indexOf(rec);
+      if (i >= 0) openSheets.splice(i, 1);
       backdrop.classList.remove('open');
-      sheetDepth -= 1;
-      if (!sheetDepth) document.body.classList.remove('has-sheet');
+      // while it slides away, a second tap (double-tap on 儲存) must not hit its buttons again
+      panel.style.pointerEvents = 'none';
+      try { panel.inert = true; } catch (e) { /* older browsers */ }
+      if (!openSheets.length) document.body.classList.remove('has-sheet');
+      if (!fromHistory && history.state && history.state.__sheet === rec.token) stale = location.href;
       setTimeout(() => backdrop.remove(), 220);
+      // hand focus back to what opened the sheet (if it is still on screen), else to the sheet below
+      const below = openSheets[openSheets.length - 1];
+      if (panel.contains(document.activeElement) || document.activeElement === document.body) {
+        if (prevFocus && prevFocus.isConnected && prevFocus !== document.body && typeof prevFocus.focus === 'function') { try { prevFocus.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+        else if (below) { const bp = document.querySelector('.sheet-backdrop.open:last-of-type .sheet'); if (bp) bp.focus({ preventScroll: true }); }
+      }
       if (onClose) onClose();
     };
+    rec.close = doClose;
+    const close = () => doClose(false);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
     closeBtn.addEventListener('click', close);
-    const onKey = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } };
-    document.addEventListener('keydown', onKey);
     return { el: panel, body: panel.querySelector('.sheet-body'), close };
   }
+  // Escape closes only the top sheet
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !openSheets.length) return;
+    e.preventDefault();
+    openSheets[openSheets.length - 1].close(false);
+  });
+  // back / forward / in-app navigation
+  window.addEventListener('popstate', (e) => {
+    const st = e.state || {};
+    const here = location.href;
+    if (!openSheets.length) {
+      if (stale && here === stale) { history.back(); return; } // left a stale entry: skip its same-URL twin
+      stale = st.__sheet ? here : null;
+      return;
+    }
+    const leavingStale = stale && here === stale;
+    const keep = st.__sheet || null;
+    while (openSheets.length && openSheets[openSheets.length - 1].token !== keep) openSheets[openSheets.length - 1].close(true);
+    if (leavingStale && openSheets.length && openSheets[openSheets.length - 1].token === keep) openSheets[openSheets.length - 1].close(true);
+    stale = keep && !openSheets.some((x) => x.token === keep) ? here : null;
+  });
+  // a new screen never keeps an old sheet on top (e.g. a link tapped inside a sheet)
+  const closeAllSheets = () => { while (openSheets.length) openSheets[openSheets.length - 1].close(true); };
+  window.addEventListener('hashchange', closeAllSheets);
 
   /* ---------- toast ---------- */
   // toast('已儲存') or toast('已記錄', { action: '復原', onAction() {...}, ms: 5000 })

@@ -374,7 +374,7 @@
     ensure(store.state);
     if (params.tab && ['now', 'all', 'mine'].includes(params.tab)) tab = params.tab;
     if (params.item || params.tab) {
-      try { history.replaceState(null, '', `${location.pathname}${location.search}#/goods`); } catch (e) { /* ignore */ }
+      try { history.replaceState(history.state, '', `${location.pathname}${location.search}#/goods`); } catch (e) { /* ignore */ }
       if (params.item) { const id = String(params.item); setTimeout(() => openItem(id), 50); }
     }
     el.append(summaryCard());

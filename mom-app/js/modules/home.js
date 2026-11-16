@@ -5,6 +5,15 @@
   const { h, ui } = App;
   const C = window.Core;
   const store = App.store;
+  // quick tiles: the 2nd tap of an accidental double-tap must not log twice, start + stop a timer, or —
+  // after the timer banner pushes the tiles down — land on another tile
+  // (same tile: 700 ms; any other tile: 350 ms — quicker than anyone taps two different tiles on purpose)
+  let lastQuickTap = { key: '', at: 0 };
+  const quickTapOk = (key) => {
+    const now = Date.now(); const gap = now - lastQuickTap.at;
+    if (gap < 350 || (key === lastQuickTap.key && gap < 700)) return false;
+    lastQuickTap = { key, at: now }; return true;
+  };
 
   const STAGES = [
     { value: 'prep', label: '備孕中', icon: '🌱' },
@@ -126,13 +135,16 @@
       const plusLabel = running ? `完成${def.label}` : `${def.label}：${q.type === 'bottle' && last ? `${last.data?.ml || ''} ml ${q.plusHint}` : q.plusHint}`;
       wrap.append(h('div', { class: `quick-tile${running ? ' running' : ''}`, role: 'listitem', style: { '--tc': def.color } },
         todayCount ? h('span', { class: 'qt-badge', 'aria-label': `今天 ${todayCount} 次` }, todayCount) : null,
-        h('button', { class: 'qt-main', onclick: () => App.babylog.openAdd(q.type), 'aria-label': `新增${def.label}（完整表單）` },
+        h('button', { class: 'qt-main', onclick: () => { if (quickTapOk(q.type)) App.babylog.openAdd(q.type); }, 'aria-label': `新增${def.label}（完整表單）` },
           h('span', { class: 'qt-ico' }, def.icon),
           h('span', { class: 'qt-label' }, q.label),
           h('span', { class: 'qt-sub tiny' }, sub, extra)),
         h('button', {
           class: 'qt-plus', 'aria-label': plusLabel, title: plusLabel,
-          onclick: () => { if (running) App.timers.stopWithUndo(q.type); else App.babylog.quickLog(q.type); },
+          onclick: () => {
+            if (!quickTapOk(q.type)) return;
+            if (running) App.timers.stopWithUndo(q.type); else App.babylog.quickLog(q.type);
+          },
         }, running ? '✓' : '+')));
     });
     return h('div', null, wrap,

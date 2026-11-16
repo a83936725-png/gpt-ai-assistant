@@ -502,7 +502,7 @@
   const sectionOf = (params) => (params && SECTIONS.includes(params.tab) ? params.tab : section);
   function setSection(v) {
     section = v;
-    try { history.replaceState(null, '', `#/outing?${encodeURIComponent(JSON.stringify({ tab: v }))}`); } catch (e) { /* ignore */ }
+    try { history.replaceState(history.state, '', `#/outing?${encodeURIComponent(JSON.stringify({ tab: v }))}`); } catch (e) { /* ignore */ }
     App.refresh();
     window.scrollTo(0, 0);
   }

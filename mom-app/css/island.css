@@ -102,10 +102,16 @@ body[data-screen="island"] #view { padding: 0; max-width: none; }
 @media (max-width: 599px) {
   .isl-hud { max-width: calc(100% - 82px); }
   .isl-ctrl { gap: 6px; }
-  .isl-cbtn { flex-direction: column; justify-content: center; gap: 1px; width: 48px; height: 46px; padding: 0; font-size: 10.5px; }
+  .isl-cbtn { flex-direction: column; justify-content: center; gap: 1px; width: 48px; height: 46px; padding: 0; font-size: 11.5px; }
   .isl-cicon svg { width: 18px; height: 18px; }
 }
 
+/* phone on its side: the island fits between the bars (no 360px minimum, which pushed the news ticker under the tab bar
+   where the map's own touch handling made it impossible to scroll to); the map buttons go in a row along the top */
+@media (orientation: landscape) and (max-height: 520px) {
+  .isl { min-height: 0; }
+  .isl-ctrl { flex-direction: row; }
+}
 .isl-ticker {
   position: absolute; left: 10px; right: 10px; bottom: 10px;
   display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px 0 6px;
@@ -114,7 +120,7 @@ body[data-screen="island"] #view { padding: 0; max-width: none; }
   font-size: 13px; color: var(--c-text); text-align: left; overflow: hidden;
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
-.isl-ticker-tag { flex: none; background: var(--c-accent-ink); color: var(--c-surface); font-weight: 700; font-size: 11.5px; padding: 4px 10px; border-radius: 999px; }
+.isl-ticker-tag { flex: none; background: var(--c-accent-ink); color: var(--c-surface); font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 999px; }
 .isl-ticker-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .isl-ticker-text.in { animation: isl-in .5s ease-out; }
 @keyframes isl-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

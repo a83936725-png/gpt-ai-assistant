@@ -60,7 +60,7 @@
         isEdit && store.state.babies.length > 0 ? h('button', {
           class: 'btn btn-ghost', 'aria-label': '刪除寶寶',
           onclick: async () => {
-            if (!(await ui.confirm(`刪除「${baby.name}」和他的所有紀錄？此動作無法復原。`, { ok: '刪除', danger: true }))) return;
+            if (!(await ui.confirm(`刪除「${baby.name || '寶寶'}」和所有相關紀錄？此動作無法復原。`, { ok: '刪除', danger: true }))) return;
             store.update((s) => {
               s.babies = s.babies.filter((x) => x.id !== baby.id);
               s.logs = s.logs.filter((l) => l.babyId !== baby.id);
@@ -288,7 +288,8 @@
           control = t;
         }
         el.append(h('section', { class: 'card' },
-          h('div', { class: 'row between' }, h('div', { class: 'card-title' }, r.label), toggle),
+          // the whole title row toggles the switch (a bigger target than the switch alone)
+          h('label', { class: 'row between switch-row' }, h('span', { class: 'card-title' }, r.label), toggle),
           h('p', { class: 'small muted' }, {
             feed: r.mode === 'fixed' ? '距離上次餵奶超過設定時間時提醒' : '到了「接下來」預測的下一餐時間就提醒，會跟著寶寶的作息調整',
             appt: '每天這個時間檢查：疫苗到期、兒童健檢開始、產檢日（今天或明天）',
@@ -496,7 +497,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.6.4`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.6.5`),
         h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理，不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。資料只儲存在你的裝置上。')));
     },
   });

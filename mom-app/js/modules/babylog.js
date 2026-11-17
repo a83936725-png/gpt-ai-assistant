@@ -89,6 +89,7 @@
       const snap = store.state.active[key] ? JSON.parse(JSON.stringify(store.state.active[key])) : null;
       const entry = timers.stop(type);
       if (!entry) return null;
+      ui.haptic();
       ui.toast(`已記錄${T()[type].label}・${App.logSummary(entry)}`, {
         action: '復原',
         onAction: () => store.update((s) => { s.logs = s.logs.filter((l) => l.id !== entry.id); if (snap) s.active[key] = snap; }),
@@ -120,12 +121,12 @@
     if (type === 'breast') {
       const last = store.lastLog('breast');
       const side = last?.data?.lastSide === 'L' ? 'R' : 'L';
-      timers.start('breast', { side });
+      timers.start('breast', { side }); ui.haptic();
       ui.toast(`開始餵${side === 'L' ? '左' : '右'}邊`, { action: '取消', onAction: () => timers.cancel('breast') });
       return;
     }
     if (type === 'sleep' || type === 'pump') {
-      timers.start(type);
+      timers.start(type); ui.haptic();
       ui.toast(type === 'sleep' ? '開始記錄睡眠 😴' : '開始擠奶計時', { action: '取消', onAction: () => timers.cancel(type) });
       return;
     }
@@ -133,14 +134,17 @@
       const last = store.lastLog('bottle');
       if (!last) { openAdd('bottle'); return; }
       const data = { kind: last.data?.kind || 'breastmilk', ml: last.data?.ml || 90 };
+      ui.haptic();
       withUndo(`已記錄瓶餵・${data.ml} ml ${data.kind === 'formula' ? '配方奶' : '母乳'}`, () => store.addLog({ type, data }));
       return;
     }
     if (type === 'diaper') {
+      ui.haptic();
       withUndo('已記錄濕尿布', () => store.addLog({ type, data: { kind: 'wet' } }));
       return;
     }
     if (type === 'bath') {
+      ui.haptic();
       withUndo('已記錄洗澡 🛁', () => store.addLog({ type }));
       return;
     }

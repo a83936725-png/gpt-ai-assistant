@@ -46,7 +46,7 @@
 .viz-svg { display: block; width: 100%; height: auto; overflow: visible; }
 .viz-grid { stroke: var(--viz-grid); stroke-width: 1; shape-rendering: crispEdges; }
 .viz-axis { stroke: var(--viz-axis); stroke-width: 1; shape-rendering: crispEdges; }
-.viz-tick { fill: var(--viz-text); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.viz-tick { fill: var(--viz-text); font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .viz-tick-strong { fill: var(--viz-text-strong); font-weight: 700; }
 .viz-value { fill: var(--viz-text-strong); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .viz-band-outer { fill: var(--viz-band-outer); }
@@ -114,7 +114,7 @@
 .growth-stat-label { font-size: 12px; color: var(--c-text-2); font-weight: 600; }
 .growth-stat-value { font-size: 20px; font-weight: 800; line-height: 1.15; }
 .growth-stat-value small { font-size: 12px; font-weight: 500; color: var(--c-text-2); }
-.growth-stat-pct { font-size: 11.5px; color: var(--c-primary); font-weight: 600; }
+.growth-stat-pct { font-size: 12px; color: var(--c-primary); font-weight: 600; }
 
 /* ---------- vaccines / checkups ---------- */
 .vac-item .li-title { font-size: 14.5px; }
@@ -125,7 +125,7 @@
 .ms-band.is-current { border-color: var(--c-warn); }
 .ms-head {
   display: flex; align-items: center; gap: 8px; width: 100%;
-  background: none; border: 0; padding: 2px 0 8px; text-align: left;
+  background: none; border: 0; padding: 2px 0 8px; text-align: left; min-height: 44px;
 }
 .ms-age { font-weight: 700; font-size: 15.5px; }
 .ms-chev { transition: transform .15s; color: var(--c-text-3); }
@@ -173,7 +173,7 @@
 @media (max-width: 420px) {
   .report { padding: 14px; }
   .report-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .report-table { font-size: 11.5px; }
+  .report-table { font-size: 12px; }
 }
 
 @media print {

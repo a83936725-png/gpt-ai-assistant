@@ -10,7 +10,7 @@
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
 .live-sep { color: var(--c-text-3); }
 .live-today { color: var(--c-ok-ink); }
-.live-test { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--c-warn-soft); color: var(--c-warn-ink); }
+.live-test { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--c-warn-soft); color: var(--c-warn-ink); }
 .home-live { margin: -4px 0 10px; }
 .acct-live, .login-live { display: flex; }
 .login-hero { padding: 12px 0 6px; }

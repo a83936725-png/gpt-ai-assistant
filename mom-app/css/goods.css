@@ -11,7 +11,7 @@
 .gd-filter, .gd-cats { margin: 12px 0 4px; }
 .gd-cats { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .gd-cats::-webkit-scrollbar { display: none; }
-.gd-cats .chip, .gd-filter .chip { flex: none; min-height: 36px; }
+.gd-cats .chip, .gd-filter .chip { flex: none; min-height: 40px; }
 
 .gd-group { margin-top: 6px; }
 .gd-skip-intro { margin: -4px 0 8px; }
@@ -22,7 +22,7 @@
 .gd-item.done .gd-ico { opacity: .55; }
 .gd-ico { width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; font-size: 21px; }
 .gd-right { margin-left: auto; flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-.gd-mini { margin-left: 6px; font-size: 11px; vertical-align: 1px; }
+.gd-mini { margin-left: 6px; font-size: 12px; vertical-align: 1px; }
 .gd-state { font-size: 12px; font-weight: 700; white-space: nowrap; color: var(--c-text-2); }
 .gd-s-have { color: var(--c-ok-ink); }
 .gd-s-want { color: var(--c-accent-ink); }

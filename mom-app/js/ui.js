@@ -128,6 +128,37 @@
     const close = () => doClose(false);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
     closeBtn.addEventListener('click', close);
+    // swipe down on the grip or the title bar to close (one-handed); the sheet body keeps scrolling normally
+    let drag = null;
+    panel.addEventListener('pointerdown', (e) => {
+      if (closed || e.pointerType === 'mouse' || !e.target.closest('.sheet-grip, .sheet-header') || e.target.closest('button, a, input, select, textarea')) return;
+      drag = { id: e.pointerId, y: e.clientY, dy: 0, trail: [{ t: performance.now(), y: e.clientY }] };
+      panel.style.transition = 'none';
+      try { panel.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    });
+    panel.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      drag.dy = Math.max(0, e.clientY - drag.y);
+      drag.trail.push({ t: performance.now(), y: e.clientY });
+      if (drag.trail.length > 8) drag.trail.shift();
+      panel.style.transform = drag.dy ? `translateY(${drag.dy}px)` : '';
+    });
+    const endDrag = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const { dy, trail } = drag; drag = null;
+      panel.style.transition = '';
+      // release speed over the last ~100 ms (px/ms), so a quick flick closes even if it was short
+      const now = performance.now(); const last = trail[trail.length - 1];
+      const ref = trail.find((s) => now - s.t <= 100) || trail[0];
+      const v = ref === last ? 0 : (last.y - ref.y) / Math.max(1, last.t - ref.t);
+      const fast = dy > 30 && v > 0.5;
+      if (e.type === 'pointerup' && (dy > Math.min(140, panel.offsetHeight * 0.3) || fast)) {
+        panel.style.transform = 'translateY(100%)';
+        close();
+      } else panel.style.transform = '';
+    };
+    panel.addEventListener('pointerup', endDrag);
+    panel.addEventListener('pointercancel', endDrag);
     return { el: panel, body: panel.querySelector('.sheet-body'), close };
   }
   // Escape closes only the top sheet
@@ -162,6 +193,10 @@
   window.addEventListener('hashchange', () => { closeAllSheets(); tagEntry(); });
 
   /* ---------- toast ---------- */
+  // a short buzz when a tap records something (Android phones; iPhone browsers ignore it); off with reduced motion
+  function haptic(ms = 12) {
+    try { if (navigator.vibrate && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) navigator.vibrate(ms); } catch (e) { /* ignore */ }
+  }
   // toast('已儲存') or toast('已記錄', { action: '復原', onAction() {...}, ms: 5000 })
   function toast(msg, opts = {}) {
     const o = typeof opts === 'number' ? { ms: opts } : opts;
@@ -284,6 +319,6 @@
   App.h = h;
   App.s = s;
   App.ui = {
-    h, s, append, sheet, toast, confirm, field, seg, stepper, empty, card, progress, ICONS, icon,
+    h, s, append, sheet, toast, haptic, confirm, field, seg, stepper, empty, card, progress, ICONS, icon,
   };
 }());

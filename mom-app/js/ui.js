@@ -195,7 +195,12 @@
   /* ---------- toast ---------- */
   // a short buzz when a tap records something (Android phones; iPhone browsers ignore it); off with reduced motion
   function haptic(ms = 12) {
-    try { if (navigator.vibrate && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) navigator.vibrate(ms); } catch (e) { /* ignore */ }
+    try {
+      if (!navigator.vibrate || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+      // browsers only allow vibration after the person has tapped the page (otherwise Chrome logs an error)
+      if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+      navigator.vibrate(ms);
+    } catch (e) { /* ignore */ }
   }
   // toast('已儲存') or toast('已記錄', { action: '復原', onAction() {...}, ms: 5000 })
   function toast(msg, opts = {}) {

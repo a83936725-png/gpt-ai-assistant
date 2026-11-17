@@ -82,6 +82,9 @@ const handleBlockedContext = async (context) => (
  * @returns {Promise<Context>}
  */
 const routeContext = (context) => {
+  // While customer service is tested on the real official account, customers who are not on the
+  // allowlist must not get a reply at all; staff answer them by hand as usual.
+  if (context.isBlocked && config.SERVICE_MODE_ENABLED) return idHandler(context) || context;
   if (context.isBlocked) return handleBlockedContext(context);
   if (context.error || context.isFlagged) return context;
   if (config.SERVICE_MODE_ENABLED) return handleServiceContext(context);
@@ -108,6 +111,7 @@ const handleEvents = async (events = []) => (
 
 export {
   handleServiceContext,
+  routeContext,
 };
 
 export default handleEvents;

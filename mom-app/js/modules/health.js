@@ -43,14 +43,16 @@
 
   /* ---------- growth math ---------- */
   const Z = { 3: -1.880794, 15: -1.036433, 50: 0, 85: 1.036433, 97: 1.880794 };
+  const MAX_MONTH = 60; // the WHO standards (and our tables) cover 0–5 years
+  const outOfBand = (p) => typeof p === 'number' && (p < 3 || p > 97); // null = no percentile (e.g. over 5 years), never a warning
   const lmsAt = (metric, sex, month) => C.interpLMS(H.WHO[metric][sex], month);
   const curveValue = (metric, sex, month, z) => {
     const [L, M, S] = lmsAt(metric, sex, month);
     return C.lmsValue(L, M, S, z);
   };
   const percentileOf = (metric, sex, month, value) => {
-    if (!(value > 0) || month < 0 || month > 24.5) return null;
-    const [L, M, S] = lmsAt(metric, sex, Math.min(24, month));
+    if (!(value > 0) || month < 0 || month > MAX_MONTH + 0.5) return null;
+    const [L, M, S] = lmsAt(metric, sex, Math.min(MAX_MONTH, month));
     return C.zToPercentile(C.lmsZ(L, M, S, value));
   };
   const pctText = (p) => {
@@ -59,10 +61,11 @@
     if (p > 97) return '高於第 97 百分位';
     return `約第 ${Math.round(p)} 百分位`;
   };
+  // short label: "P62", or "< P3" / "> P97" outside the band (never "P0" / "P100")
+  const pctShort = (p) => (p < 3 ? '< P3' : p > 97 ? '> P97' : `P${Math.round(p)}`);
   const pctTag = (p) => {
     if (p === null || p === undefined) return null;
-    const out = p < 3 || p > 97;
-    return h('span', { class: `tag ${out ? 'warn' : 'primary'}` }, out ? (p < 3 ? '< P3' : '> P97') : `P${Math.round(p)}`);
+    return h('span', { class: `tag ${outOfBand(p) ? 'warn' : 'primary'}` }, pctShort(p));
   };
 
   // measurements (plus birth data from profile) for one metric, sorted by date
@@ -235,10 +238,10 @@
   function growthChart(b, metric) {
     const def = H.GROWTH_METRICS[metric];
     const sex = sexKey(b);
-    const pts = growthPoints(b, metric).filter((p) => p.month >= -0.01 && p.month <= 24.5);
+    const pts = growthPoints(b, metric).filter((p) => p.month >= -0.01 && p.month <= MAX_MONTH + 0.5);
     const ageNow = Math.max(0, ageMonthsAt(b.birthday, today()));
     const maxAge = Math.max(ageNow, ...pts.map((p) => p.month), 0);
-    const xMax = maxAge <= 5 ? 6 : maxAge <= 10 ? 12 : maxAge <= 16 ? 18 : 24;
+    const xMax = maxAge <= 5 ? 6 : maxAge <= 10 ? 12 : maxAge <= 16 ? 18 : maxAge <= 22 ? 24 : maxAge <= 34 ? 36 : maxAge <= 46 ? 48 : MAX_MONTH;
 
     const W = 340; const HGT = 240;
     const m = {
@@ -270,7 +273,7 @@
       }, String(t)));
     });
     // x ticks
-    const xStep = xMax <= 6 ? 1 : xMax <= 12 ? 2 : 3;
+    const xStep = xMax <= 6 ? 1 : xMax <= 12 ? 2 : xMax <= 24 ? 3 : xMax <= 48 ? 6 : 12;
     for (let x = 0; x <= xMax; x += xStep) {
       svg.append(s('text', {
         x: X(x), y: HGT - m.b + 16, 'text-anchor': 'middle', class: 'viz-tick',
@@ -577,7 +580,7 @@
         },
         h('span', { class: 'growth-stat-label' }, def.label),
         h('span', { class: 'growth-stat-value' }, v ? fmtNum(v.value, def.digits) : '—', h('small', null, ` ${def.unit}`)),
-        h('span', { class: 'growth-stat-pct' }, v && v.pct !== null ? `P${Math.round(v.pct)}` : '尚無資料'));
+        h('span', { class: 'growth-stat-pct' }, !v ? '尚無資料' : v.pct !== null ? pctShort(v.pct) : v.month > MAX_MONTH ? '5 歲以上' : '—'));
       })));
 
       const def = H.GROWTH_METRICS[growthMetric];
@@ -589,6 +592,7 @@
             h('div', { class: 'card-sub' }, `依 WHO 兒童生長標準（近似值）・${b.sex === 'boy' ? '男孩' : '女孩'}`)),
           lv ? pctTag(lv.pct) : null),
         lv && lv.pct !== null ? h('p', { class: 'small mt' }, `最新${def.label} ${fmtNum(lv.value, def.digits)} ${def.unit}，${pctText(lv.pct)}。`) : null,
+        lv && lv.pct === null && lv.month > MAX_MONTH ? h('p', { class: 'small mt' }, `最新${def.label} ${fmtNum(lv.value, def.digits)} ${def.unit}。WHO 兒童生長標準到 5 歲，曲線畫到 5 歲為止；之後的測量列在下方紀錄，可參考兒童健康手冊或學校健檢的生長曲線。`) : null,
         growthChart(b, growthMetric),
         h('div', { class: 'viz-legend' },
           h('span', { class: 'viz-legend-item' }, h('i', { class: 'viz-key-line viz-key-baby' }), b.name || '寶寶'),
@@ -596,7 +600,7 @@
           h('span', { class: 'viz-legend-item' }, h('i', { class: 'viz-key-rect viz-key-outer' }), 'P3–P97'),
           h('span', { class: 'viz-legend-item' }, h('i', { class: 'viz-key-line viz-key-ref' }), 'P50 中位數')));
       el.append(chartCard);
-      if (lv && (lv.pct < 3 || lv.pct > 97)) {
+      if (lv && outOfBand(lv.pct)) {
         el.append(ui.card({ class: 'accent mt' }, h('p', { class: 'small' },
           `目前${def.label}落在第 3–97 百分位以外。單次數字不代表異常，重要的是長期趨勢；建議帶著紀錄和兒科醫師討論。`)));
       }
@@ -614,7 +618,7 @@
           .filter(([, d]) => Number(g[d.field]) > 0)
           .map(([k, d]) => {
             const p = percentileOf(k, sexKey(b), mo, Number(g[d.field]));
-            return `${d.label} ${fmtNum(g[d.field], d.digits)}${d.unit}${p !== null ? `（P${Math.round(p)}）` : ''}`;
+            return `${d.label} ${fmtNum(g[d.field], d.digits)}${d.unit}${p !== null ? `（${pctShort(p)}）` : ''}`;
           });
         list.append(h('button', { type: 'button', class: 'list-item', onclick: () => openMeasureSheet(b, g) },
           h('span', { class: 'li-icon' }, '📏'),
@@ -638,7 +642,7 @@
       } else {
         el.append(list);
       }
-      el.append(h('p', { class: 'disclaimer' }, '百分位為依 WHO 兒童生長標準（0–24 個月）計算的近似值，僅供參考；早產兒請依矯正年齡並與醫師討論。'));
+      el.append(h('p', { class: 'disclaimer' }, '百分位為依 WHO 兒童生長標準（0–5 歲）計算的近似值，僅供參考；5 歲以上請參考兒童健康手冊或學校健檢的生長曲線；早產兒請依矯正年齡並與醫師討論。'));
     }),
   });
 
@@ -1143,7 +1147,7 @@
       }
       const parts = ['weight', 'length'].filter((k) => latest[k]).map((k) => {
         const d = H.GROWTH_METRICS[k];
-        return `${fmtNum(latest[k].value, d.digits)} ${d.unit}${latest[k].pct !== null ? `（P${Math.round(latest[k].pct)}）` : ''}`;
+        return `${fmtNum(latest[k].value, d.digits)} ${d.unit}${latest[k].pct !== null ? `（${pctShort(latest[k].pct)}）` : ''}`;
       });
       card.append(row('📈', parts.length ? `最新：${parts.join('・')}` : '記錄第一次身高體重', parts.length ? `依 WHO 兒童生長標準・${fmtYMD((latest.weight || latest.length).date)}` : '看看寶寶落在哪個百分位', 'growth'));
       el.append(card);

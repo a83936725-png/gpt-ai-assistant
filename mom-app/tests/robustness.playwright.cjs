@@ -251,6 +251,25 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
       if (line) ahead.push(`${id}: ${line}`);
     }
     ok('baby not born yet: says "還有 3 天出生", never a negative day count', !ahead.length && /還有 3 天出生/.test(await S(p, () => { location.hash = '#/home'; return new Promise((r) => setTimeout(() => r(document.getElementById('view').innerText), 250)); })), ahead.slice(0, 3).join(' | '));
+    // growth after 2 years: WHO median measurements → a normal percentile and no "outside P3–P97" warning; over 5 years → "5 歲以上", still no warning
+    const growthAt = async (days, kgAtMonth) => {
+      await S(p, ([d, kg]) => {
+        App.demo.seed(); App.isNight = () => false;
+        App.store.update((s) => {
+          const b = s.babies[0]; b.birthday = Core.dateKey(Core.addDays(new Date(), -d));
+          s.growth = [{ id: 'g1', babyId: b.id, date: Core.dateKey(Core.addDays(new Date(), -3)), weight: kg, length: '', head: '' }];
+        });
+        location.hash = `#/growth?${encodeURIComponent(JSON.stringify({ d }))}`;
+      }, [days, kgAtMonth]);
+      await p.waitForTimeout(300);
+      return S(p, () => document.getElementById('view').innerText);
+    };
+    const four = await growthAt(1500, 16.1); // girl, ~49 months, WHO median ≈ 16.0 kg
+    const six = await growthAt(2200, 20.5);
+    const heavy = await growthAt(400, 14.5); // 13 months, far above P97
+    ok('4-year-old at the WHO median: shows its percentile, no false "outside P3–P97" warning; 6-year-old: "5 歲以上", no warning; never "P0"/"P100"',
+      /約第 (4\d|5\d) 百分位/.test(four) && !/百分位以外/.test(four) && /5 歲以上/.test(six) && !/百分位以外/.test(six) && /> P97/.test(heavy) && /百分位以外/.test(heavy) && !/P100|P0\b/.test(heavy + four + six),
+      [four, six, heavy].map((t) => (t.split('\n').find((l) => /百分位|5 歲以上/.test(l)) || '')).join(' | '));
     await p.context().close();
   }
 

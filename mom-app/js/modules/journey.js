@@ -400,7 +400,7 @@
     const np = App.preg && App.preg.nextPrenatal ? App.preg.nextPrenatal() : null;
     const items = [
       ['📝', '身體狀況日記', '症狀、血壓、心情', () => openPregJournal()],
-      ['🩺', '產檢紀錄', np ? `第 ${np.no} 次（約 ${C.fmtDate(np.date, false)}）` : '體重、血壓、胎心、醫師交代', () => (np && App.preg.openVisitSheet ? App.preg.openVisitSheet(np, np.date) : App.navigate('prenatal'))],
+      ['🩺', '產檢紀錄', np ? `第 ${np.no} 次（${np.thisWeek ? '本週' : `約 ${C.fmtDate(np.date, false)}`}）` : '體重、血壓、胎心、醫師交代', () => (np && App.preg.openVisitSheet ? App.preg.openVisitSheet(np, np.date) : App.navigate('prenatal'))],
       ['⚖️', '體重', '看增重是否在建議範圍', () => (App.preg.openWeightSheet ? App.preg.openWeightSheet() : App.navigate('pregweight'))],
       ['👣', '胎動計數', '數到 10 下', () => App.navigate('kick')],
       ['⏱️', '宮縮計時', '判斷產兆 5-1-1', () => App.navigate('contraction')],

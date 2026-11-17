@@ -87,6 +87,8 @@
 .next-big { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 .next-ico { font-size: 30px; }
 .next-big .big-num { font-size: 26px; color: var(--c-primary); }
+/* text headlines (「可以準備哄睡了」) are wider than a countdown: a little smaller, and never leave one character alone on the second line */
+.next-big .big-num:not(.num) { font-size: 22px; line-height: 1.25; text-wrap: balance; }
 .next-range { text-align: right; color: var(--c-text-2); line-height: 1.35; }
 .next-range b { color: var(--c-text); font-size: 15px; }
 .ww-bar { position: relative; height: 8px; border-radius: 4px; background: var(--c-surface-2); margin: 14px 0 6px; }

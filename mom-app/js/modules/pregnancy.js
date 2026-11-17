@@ -55,7 +55,9 @@
     const done = store.state.preg.prenatal || {};
     const v = D.PRENATAL.find((x) => !done[x.key] && x.week >= ga.weeks);
     if (!v) return null;
-    return { ...v, date: C.dateKey(C.addDays(lmp, v.week * 7)) };
+    const date = C.dateKey(C.addDays(lmp, v.week * 7));
+    // 已進入這次產檢的建議週、但建議日已過還沒記錄：顯示「本週該產檢」，不要秀一個過去的日期當「下次」
+    return { ...v, date, thisWeek: date < todayKey() };
   }
 
   /* ---------- cycle math ---------- */
@@ -540,7 +542,7 @@
           h('div', { class: 'li-icon' }, '🩺'),
           h('div', { class: 'grow' },
             h('div', { class: 'bold' }, `下次產檢：第 ${np.no} 次（第 ${np.week} 週）`),
-            h('div', { class: 'small muted' }, `約 ${C.fmtDate(np.date)}・${np.items[np.items.length > 1 ? 1 : 0]}`)),
+            h('div', { class: 'small muted' }, `${np.thisWeek ? `本週該產檢（建議 ${np.range}）` : `約 ${C.fmtDate(np.date)}`}・${np.items[np.items.length > 1 ? 1 : 0]}`)),
           h('span', { class: 'faint', html: ui.ICONS.chevron }))) : null,
       h('div', { class: 'section-title' }, '每週寶寶變化'),
       weekCard(cw),
@@ -646,7 +648,7 @@
               h('div', { class: 'bold' }, `第 ${v.no} 次・${v.range}`),
               h('div', { class: 'row gap-sm' },
                 v.us ? h('span', { class: 'tag primary' }, '超音波') : null,
-                isNext ? h('span', { class: 'tag warn' }, '下一次') : null,
+                isNext ? h('span', { class: 'tag warn' }, np.thisWeek ? '本週' : '下一次') : null,
                 isDone ? h('span', { class: 'tag ok' }, `已完成 ${C.fmtDate(done[v.key], false)}`) : null,
                 overdue ? h('span', { class: 'tag' }, '已過建議週數') : null)),
             date ? h('div', { class: 'small muted' }, `約 ${C.fmtDate(date)}（第 ${v.week} 週）`) : h('div', { class: 'small muted' }, `約第 ${v.week} 週`),
@@ -1129,7 +1131,7 @@
         h('div', { class: 'mt' }, ui.progress(ga.progress)),
         h('div', { class: 'row between small mt' },
           h('span', null, ga.daysLeft > 0 ? `還有 ${ga.daysLeft} 天見面` : ga.daysLeft === 0 ? '預產期就是今天！' : `已超過預產期 ${-ga.daysLeft} 天`),
-          np ? h('span', null, `下次產檢 ${C.fmtDate(np.date, false)}`) : null),
+          np ? h('span', null, np.thisWeek ? '本週該產檢' : `下次產檢 ${C.fmtDate(np.date, false)}`) : null),
         h('div', { class: 'row gap-sm mt' },
           h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); App.navigate('kick'); } }, '👣 胎動'),
           h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); App.navigate('contraction'); } }, '⏱️ 宮縮'),

@@ -233,6 +233,14 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
       const road = await S(p, () => document.querySelector('.jr-hero').innerText);
       ok(`period date ${label}: home and roadmap both ask to fix the date`, homeAsks && !roadCard && /預產期需要確認/.test(road) && !/懷孕 -?\d+ 週/.test(road), road.replace(/\n/g, ' / '));
     }
+    // mid-week of a visit (28 週 3 天, visit 6 is suggested at 28+0 and not done yet) → "本週該產檢", never a "下次產檢" date already gone
+    await S(p, () => App.store.update((s) => { s.profile.lmp = Core.dateKey(Core.addDays(new Date(), -(28 * 7 + 3))); s.profile.edd = Core.eddFromLmp(s.profile.lmp); s.preg.prenatal = {}; }));
+    const visitTexts = [];
+    for (const id of ['home', 'pregnancy', 'prenatal']) {
+      await S(p, (x) => { location.hash = `#/${x}`; }, id); await p.waitForTimeout(250);
+      visitTexts.push(await S(p, () => document.getElementById('view').innerText));
+    }
+    ok('visit due this week: says "本週該產檢", never a "下次產檢" date that has already passed', /本週該產檢/.test(visitTexts[0]) && !/下次產檢 \d/.test(visitTexts[0]) && /本週該產檢（建議 25–28 週）/.test(visitTexts[1]) && /本週/.test(visitTexts[2]), visitTexts.map((t) => t.split('\n').find((l) => /產檢/.test(l)) || '').join(' | '));
     // baby's birthday a few days ahead (allowed when adding a baby before birth) → no "第 -2 天"
     await S(p, () => { App.demo.seed(); App.isNight = () => false; App.store.update((s) => { s.babies[0].birthday = Core.dateKey(Core.addDays(new Date(), 3)); }); });
     const ahead = [];

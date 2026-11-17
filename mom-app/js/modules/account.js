@@ -172,7 +172,7 @@
           holder.innerHTML = '';
           if (!cfg) {
             holder.append(ui.card({ class: 'soft' }, h('div', { class: 'card-title' }, '目前無法連到會員服務'),
-              h('p', { class: 'small muted' }, '可能是離線，或網站還沒有部署會員後端。你仍然可以不登入，使用 App 的全部紀錄功能。'),
+              h('p', { class: 'small muted' }, '可能是網路不穩，或登入服務暫時無法使用。你仍然可以不登入，使用 App 的全部紀錄功能。'),
               h('button', { class: 'btn btn-primary btn-block mt', onclick: () => App.navigate(store.state.onboarded ? 'home' : 'onboarding') }, '先不登入，直接使用')));
             return;
           }

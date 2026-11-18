@@ -79,6 +79,12 @@
   }
 
   function render({ keepScroll = false } = {}) {
+    // records kept in IndexedDB are still loading: show nothing that could act on an empty, not-yet-loaded state
+    if (App.store.loading) {
+      const v = view(); v.innerHTML = '';
+      v.append(h('p', { class: 'center muted mt-lg', role: 'status' }, App.store.health === 'failed' ? '暫時讀不到手機裡的紀錄，請關閉 App 後再開一次。紀錄沒有被刪除。' : '載入紀錄中…'));
+      return;
+    }
     const { id, params } = parseHash();
     let def = App.screens[id];
     // visitors who haven't set up yet can still open login and shared content (Q&A, island articles, roadmap)
@@ -152,6 +158,15 @@
   };
   setInterval(() => App.applyTheme(), 60 * 1000);
 
+  /* ---------- a save that could not be kept: never silent ---------- */
+  let lastWarn = 0;
+  const warnStorage = () => {
+    if (App.store.health !== 'failed' || Date.now() - lastWarn < 60 * 1000 || !App.ui) return;
+    lastWarn = Date.now();
+    App.ui.toast('⚠️ 手機空間不足，最新的紀錄可能沒有存到。請先匯出備份。', { action: '匯出備份', onAction: () => App.me && App.me.exportData(), ms: 10000 });
+  };
+  window.addEventListener('store-health', () => { warnStorage(); if (current) App.refresh(); });
+
   /* ---------- boot ---------- */
   function boot() {
     document.title = (window.BRAND && BRAND.appName) || '易家做媽媽';
@@ -167,6 +182,8 @@
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  // wait for the saved data first (instant unless it lives in IndexedDB)
+  const start = () => { if (!App.store.loading) boot(); else { render(); App.store.ready.then(() => { if (!App.store.loading) boot(); else render(); }); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 }());

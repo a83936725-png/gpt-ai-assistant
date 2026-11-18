@@ -133,13 +133,25 @@
   };
   function mergeState(incoming) {
     store.update((s) => {
+      // a device that was never set up (e.g. dad opening mom's backup) takes her profile as it is: stage, 預產期, …;
+      // otherwise only blanks are filled in, so nobody's own settings change
+      const inP = incoming.profile || {};
+      if (!s.onboarded) s.profile = { ...s.profile, ...inP, member: s.profile.member };
+      else ['momName', 'lmp', 'edd', 'heightCm', 'prePregWeight'].forEach((k) => { if (!s.profile[k] && inP[k]) s.profile[k] = inP[k]; });
       s.babies = mergeById(s.babies, incoming.babies);
       s.logs = mergeById(s.logs, incoming.logs);
       s.growth = mergeById(s.growth, incoming.growth);
       s.milk = mergeById(s.milk, incoming.milk);
       s.periods = mergeById(s.periods, incoming.periods);
-      ['kicks', 'contractions', 'weights'].forEach((k) => { s.preg[k] = mergeById(s.preg[k], incoming.preg?.[k]); });
+      ['kicks', 'contractions', 'weights', 'journal'].forEach((k) => { s.preg[k] = mergeById(s.preg[k], incoming.preg?.[k]); });
       s.preg.prenatal = mergeMaps(s.preg.prenatal, incoming.preg?.prenatal);
+      s.preg.visitNotes = mergeMaps(s.preg.visitNotes, incoming.preg?.visitNotes); // 產檢當天的體重、血壓、醫師交代
+      // 產後恢復紀錄 and the 生產日
+      s.postpartum.log = mergeById(s.postpartum.log, incoming.postpartum?.log);
+      if (!s.postpartum.start && incoming.postpartum?.start) { s.postpartum.start = incoming.postpartum.start; s.postpartum.method = incoming.postpartum.method || s.postpartum.method; }
+      s.journey.done = mergeMaps(s.journey.done, incoming.journey?.done); // 孕產路線圖 checklist
+      s.folic.log = mergeMaps(s.folic.log, incoming.folic?.log);
+      s.daily.log = mergeMaps(s.daily.log, incoming.daily?.log);
       ['vaccines', 'checkups', 'milestones'].forEach((k) => { s[k] = mergeMaps(s[k], incoming[k]); });
       s.chicken.log = mergeMaps(s.chicken.log, incoming.chicken?.log);
       if (!s.activeBabyId && s.babies[0]) s.activeBabyId = s.babies[0].id;
@@ -154,8 +166,24 @@
     const a = h('a', { href: URL.createObjectURL(blob), download: `做媽媽備份-${C.dateKey()}.json` });
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    store.update((st) => { st.settings.lastBackupAt = new Date().toISOString(); });
     ui.toast('已下載備份檔');
   }
+  // how much is saved and where, plus the last backup — shown under the backup buttons
+  function storageLine() {
+    const st = store.state;
+    const n = st.logs.length;
+    const days = st.settings.lastBackupAt ? C.diffDays(st.settings.lastBackupAt, new Date()) : null;
+    const backup = days === null ? '還沒匯出過備份' : days <= 0 ? '今天匯出過備份' : `上次匯出備份：${days} 天前`;
+    const where = store.where === 'idb' ? '存在手機的資料庫（空間充足）' : `已用手機儲存空間約 ${Math.max(1, Math.round((store.savedChars / 5e6) * 100))}%`;
+    return `紀錄 ${n.toLocaleString()} 筆・${where}・${backup}`;
+  }
+  // red card on 首頁 and 我的 while a save could not be kept (otherwise not shown at all)
+  const storageAlert = () => (store.health !== 'failed' ? null : ui.card({ class: 'accent storage-alert', role: 'alert' },
+    h('div', { class: 'card-title' }, '⚠️ 最新的紀錄可能沒有存到'),
+    h('p', { class: 'small' }, '手機的儲存空間不足（或瀏覽器不允許儲存）。紀錄還在畫面上，但關掉 App 後可能會不見。請先匯出備份，再清出一些手機空間。'),
+    h('button', { class: 'btn btn-primary btn-sm mt', onclick: exportData }, '⬇️ 立刻匯出備份')));
+  App.homeCard('storage-alert', { stages: ['prep', 'preg', 'baby'], order: -100, render(el) { const c = storageAlert(); if (c) el.append(c); } });
   function importData() {
     const file = h('input', { type: 'file', accept: 'application/json,.json', class: 'hide' });
     const mode = ui.seg([{ value: 'merge', label: '合併（家人資料）' }, { value: 'replace', label: '整個取代' }], 'merge', null, { small: true });
@@ -430,6 +458,7 @@
       const s = store.state;
       const p = s.profile;
       const stageLabel = App.STAGES.find((x) => x.value === p.stage) || App.STAGES[2];
+      const alertCard = storageAlert(); if (alertCard) el.append(alertCard);
       if (App.account) el.append(App.account.card());
       el.append(h('section', { class: 'card me-card' },
         h('div', { class: 'row gap' },
@@ -474,6 +503,7 @@
           h('button', { class: 'btn btn-line', onclick: inviteLine, html: `${ui.ICONS.line}<span>LINE 邀請</span>` }),
           h('button', { class: 'btn btn-soft', onclick: exportData }, '⬇️ 匯出備份')),
         h('button', { class: 'btn btn-ghost btn-block mt', onclick: importData }, '⬆️ 匯入／合併家人的備份'),
+        h('p', { class: 'small muted mt storage-line' }, storageLine()),
         h('p', { class: 'tiny faint mt' }, '目前資料只存在這台裝置。家人之間可用「匯出 → 用 LINE 傳檔 → 匯入合併」同步。即時雲端同步（LINE 登入）規劃於第二階段。')));
 
       el.append(h('div', { class: 'section-title' }, '設定'));
@@ -497,7 +527,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.6.5`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.6.6`),
         h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理，不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。資料只儲存在你的裝置上。')));
     },
   });

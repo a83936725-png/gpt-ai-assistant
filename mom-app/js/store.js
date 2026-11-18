@@ -1,4 +1,4 @@
-/* 易家做媽媽 — store: single state tree persisted to localStorage.
+/* 易家做媽媽 — store: single state tree persisted to localStorage (IndexedDB when it outgrows it).
  * Usage:
  *   App.store.state                      // read
  *   App.store.update(s => { s.x = 1 })   // mutate + persist + notify
@@ -51,7 +51,7 @@
     daily: { log: {} }, // 今日小任務 {'YYYY-MM-DD': {water: n}}
     reminders: defaultReminders(),
     active: {}, // running timers: { feed: {start, side}, sleep: {start}, pump: {start} }
-    settings: { theme: 'auto', notify: false, nightMode: true, quickTiles: null }, // quickTiles null = default set
+    settings: { theme: 'auto', notify: false, nightMode: true, quickTiles: null, lastBackupAt: null }, // quickTiles null = default set; lastBackupAt = last 匯出備份
   });
   function defaultReminders() {
     return [
@@ -80,27 +80,158 @@
       else Object.keys(r).forEach((k) => { if (!(k in cur)) cur[k] = r[k]; });
     });
     s.reminders.sort((a, b) => defaultReminders().findIndex((r) => r.id === a.id) - defaultReminders().findIndex((r) => r.id === b.id));
+    if (Array.isArray(s.logs)) s.logs = s.logs.map(unpackLog);
     return s;
   };
+
+  /* ---------- saving on the phone ----------
+   * localStorage holds about 5 MB per site; a family logs 20–40 records a day, so one baby fills it in under
+   * 3 years and twins in about 1½. Two things keep that from ever losing a record:
+   *  1. Logs (most of the data) are saved without their blank parts (end: null, note: '', data: {}, createdAt equal to
+   *     start) and with times as numbers; loading puts every field back exactly.
+   *  2. If it still does not fit, everything moves to IndexedDB (far more room) and localStorage keeps only a small
+   *     copy of the newest week (see writeRecent). The app waits for that data before showing anything, so nothing
+   *     can overwrite it with an empty start.
+   * A save that cannot be kept anywhere is never silent: health turns 'failed' and the app asks for a backup. */
+  const ISO = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/;
+  const TIMES = ['start', 'end', 'createdAt'];
+  const packLog = (l) => {
+    if (!l || typeof l !== 'object') return l;
+    const o = {};
+    Object.keys(l).forEach((k) => {
+      const v = l[k];
+      if (k === 'end' && v == null) return;
+      if (k === 'note' && (v === '' || v == null)) return;
+      if (k === 'data' && v && typeof v === 'object' && !Array.isArray(v) && !Object.keys(v).length) return;
+      if (k === 'createdAt' && v === l.start) return;
+      o[k] = TIMES.includes(k) && typeof v === 'string' && ISO.test(v) ? Date.parse(v) : v;
+    });
+    return o;
+  };
+  function unpackLog(o) {
+    if (!o || typeof o !== 'object') return o;
+    const l = { ...o };
+    TIMES.forEach((k) => { if (typeof l[k] === 'number') l[k] = new Date(l[k]).toISOString(); });
+    if (!('end' in l)) l.end = null;
+    if (!('note' in l)) l.note = '';
+    if (!('data' in l)) l.data = {};
+    if (!('createdAt' in l) && l.start) l.createdAt = l.start;
+    return l;
+  }
+  const serialize = (st) => JSON.stringify({ ...st, logs: (st.logs || []).map(packLog) });
+  const isQuota = (e) => !!e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014);
+
+  // IndexedDB: one key/value store, the whole saved state as one string
+  let dbp = null;
+  const idb = () => dbp || (dbp = new Promise((res, rej) => {
+    if (!window.indexedDB) { rej(new Error('no IndexedDB')); return; }
+    const rq = indexedDB.open('yijia-mom', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+    rq.onblocked = () => rej(new Error('IndexedDB blocked'));
+  }));
+  const idbDo = (mode, fn) => idb().then((db) => new Promise((res, rej) => {
+    const tx = db.transaction('kv', mode);
+    const rq = fn(tx.objectStore('kv'));
+    tx.oncomplete = () => res(rq.result);
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error || new Error('aborted'));
+  }));
+  const idbGet = () => idbDo('readonly', (os) => os.get(KEY));
+  const idbPut = (rec) => idbDo('readwrite', (os) => os.put(rec, KEY)); // rec = { seq, json }
+
+  // While the data lives in IndexedDB, every save also writes (instantly, to localStorage) a small copy of the
+  // newest part: everything except logs, plus the logs of the last 7 days. Database writes take a moment; if the
+  // app is closed before one finishes, the next start puts this copy on top (its seq is newer), so a record tapped
+  // just before closing is never lost.
+  const RECENT_MS = 7 * 864e5;
+  const ms = (v) => { const t = typeof v === 'number' ? v : Date.parse(v); return Number.isFinite(t) ? t : 0; };
+  // a log counts as recent if it happened or was written down in the last week (so moving a new log's time back is kept too)
+  const logTime = (l) => Math.max(ms(l.start), ms(l.createdAt === undefined ? l.start : l.createdAt));
+  let walSeq = 0;
+  const writeRecent = (st, seq) => {
+    const cutoff = Date.now() - RECENT_MS;
+    const rest = { ...st }; delete rest.logs;
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ __idb: 1, seq, cutoff, rest, recent: (st.logs || []).filter((l) => logTime(l) >= cutoff).map(packLog) }));
+    } catch (e) { /* ignore: the database copy still follows */ }
+  };
+
+  let pointer = null; // set when the saved data lives in IndexedDB
+  let loadedChars = 0;
   const load = () => {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) return migrate(merge(defaults(), JSON.parse(raw)));
+      loadedChars = raw ? raw.length : 0;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.__idb) { pointer = parsed; walSeq = parsed.seq || 0; return defaults(); }
+        return migrate(merge(defaults(), parsed));
+      }
     } catch (e) { /* storage blocked or corrupt */ }
     return defaults();
   };
 
   const listeners = new Set();
+  let saveSeq = 0;
+  let pendingSave = null; // timer of a save waiting for the screen to update first (big data only)
+  let lastWrite = Promise.resolve(); // the IndexedDB write in flight, if any
+  const BIG = 400000; // characters: about 3 months of records; below this every change is saved at once
   const store = {
     KEY,
     state: load(),
     defaults,
-    save() {
-      try { localStorage.setItem(KEY, JSON.stringify(this.state)); } catch (e) { /* ignore */ }
+    where: pointer ? 'idb' : 'local', // where the saved data lives
+    loading: !!pointer, // true until IndexedDB data is back in memory: nothing is saved meanwhile
+    health: 'ok', // 'ok' | 'failed' (a save could not be kept anywhere)
+    savedChars: loadedChars, // size of the last save (characters)
+    ready: null, // Promise: resolves when the saved data is loaded (immediately unless it lives in IndexedDB)
+    setHealth(h) {
+      if (this.health === h) return;
+      this.health = h;
+      try { window.dispatchEvent(new CustomEvent('store-health', { detail: h })); } catch (e) { /* ignore */ }
     },
+    save() {
+      if (this.loading) return; // never overwrite the real data while it is still loading
+      const json = serialize(this.state);
+      this.savedChars = json.length;
+      if (this.where === 'local') {
+        try { localStorage.setItem(KEY, json); this.setHealth('ok'); return; } catch (e) {
+          if (!isQuota(e)) return; // storage blocked (private mode): the app keeps working in memory, as before
+        }
+      }
+      // too big for localStorage (or already moved): keep it in IndexedDB
+      saveSeq += 1; walSeq += 1;
+      const seq = saveSeq; const wseq = walSeq;
+      if (this.where === 'idb') writeRecent(this.state, wseq);
+      lastWrite = idbPut({ seq: wseq, json }).then(() => {
+        if (this.where !== 'idb') {
+          // first move: only now that the database holds everything does localStorage give up the full copy
+          this.where = 'idb';
+          writeRecent(this.state, walSeq);
+          // ask the browser to keep this data even when the phone is short of space
+          try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) { /* ignore */ }
+        }
+        if (seq === saveSeq) this.setHealth('ok');
+      }).catch(() => this.setHealth('failed'));
+    },
+    // With years of records, writing everything takes a moment on a phone (0.5 s for 2½ years of twins), so the
+    // screen updates first and the save follows right after; a burst of taps becomes one save. Hiding or leaving
+    // the app saves at once (flush), so nothing waits long enough to be lost.
+    scheduleSave() {
+      if (this.savedChars < BIG) { this.save(); return; }
+      if (pendingSave) return;
+      pendingSave = setTimeout(() => { pendingSave = null; this.save(); }, 250);
+    },
+    flush() {
+      if (pendingSave) { clearTimeout(pendingSave); pendingSave = null; this.save(); }
+    },
+    // resolves once everything changed so far is stored (tests, and before export)
+    whenSaved() { this.flush(); return lastWrite.catch(() => {}); },
     update(fn) {
       fn(this.state);
-      this.save();
+      this.scheduleSave();
       listeners.forEach((l) => { try { l(this.state); } catch (e) { console.error(e); } });
     },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
@@ -169,5 +300,24 @@
     },
   };
 
+  // leaving or hiding the app (switching apps, locking the phone, closing the tab) saves whatever is waiting
+  window.addEventListener('pagehide', () => store.flush());
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') store.flush(); });
+  store.ready = !pointer ? Promise.resolve() : idbGet().then((rec) => {
+    const base = rec && typeof rec === 'object' ? rec : rec ? { seq: 0, json: rec } : null;
+    let st = base ? JSON.parse(base.json) : null;
+    if (pointer.rest && (!base || (pointer.seq || 0) > (base.seq || 0))) {
+      // closed before the last database write finished: put the newest part (from localStorage) on top
+      const fresh = new Set((pointer.recent || []).map((l) => l.id));
+      const older = st && Array.isArray(st.logs) ? st.logs.filter((l) => logTime(l) < pointer.cutoff && !fresh.has(l.id)) : [];
+      st = { ...(st || {}), ...pointer.rest, logs: [...older, ...(pointer.recent || [])] };
+    }
+    if (st) { store.state = migrate(merge(defaults(), st)); store.savedChars = base ? base.json.length : JSON.stringify(st).length; }
+    else { store.where = 'local'; try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ } } // the browser cleared it
+    store.loading = false;
+  }).catch(() => {
+    // the data is there but cannot be read right now: keep it untouched (no saves) and say so
+    store.setHealth('failed');
+  }).then(() => { listeners.forEach((l) => { try { l(store.state); } catch (e) { console.error(e); } }); });
   App.store = store;
 }());

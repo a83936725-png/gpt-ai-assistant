@@ -106,7 +106,7 @@
         : { key: 'optional', label: '自費・可補打', cls: '', due, end, daysToDue };
     }
     if (daysToDue <= 0) return { key: 'due', label: '可接種', cls: 'warn', due, end, daysToDue };
-    if (daysToDue <= 14) return { key: 'soon', label: `${daysToDue} 天後到期`, cls: 'warn', due, end, daysToDue };
+    if (daysToDue <= 14) return { key: 'soon', label: `${daysToDue}\u00a0天後到期`, cls: 'warn', due, end, daysToDue };
     return { key: 'upcoming', label: '未到', cls: '', due, end, daysToDue };
   }
   // next dose worth showing: overdue/due/soon first, else nearest upcoming (公費 first)
@@ -1071,13 +1071,16 @@
         ]),
         h('p', { class: 'tiny faint' }, '百分位依 WHO 兒童生長標準（近似值）計算。')));
 
+      const nb = (t) => String(t).replace(/ /g, '\u00a0'); // 「第 1 劑」 never splits across lines
       const vacDoneList = vacItems.filter((x) => x.st.key === 'done');
       const vacAttn = vacItems.filter((x) => ['overdue', 'due', 'soon'].includes(x.st.key));
       rep.append(sec('疫苗接種',
-        table(['疫苗', '劑次', '狀態', '日期'], [
-          ...vacDoneList.map((x) => [x.v.name, x.v.dose, '已完成', fmtYMD(x.st.done)]),
-          ...vacAttn.map((x) => [x.v.name, x.v.dose, x.st.label, `建議 ${fmtYMD(x.st.due)}`]),
-        ], 'report-table-vac')));
+        // three columns so it fits a phone: 疫苗＋劑次 (wraps), 狀態 and 日期 (each on one line)
+        table(['疫苗・劑次', '狀態', '日期'], [
+          ...vacDoneList.map((x) => [`${x.v.name} ${nb(x.v.dose)}`, '已完成', fmtYMD(x.st.done)]),
+          ...vacAttn.map((x) => [`${x.v.name} ${nb(x.v.dose)}`, x.st.label, fmtYMD(x.st.due)]),
+        ], 'report-table-vac'),
+        h('p', { class: 'tiny faint' }, '日期：已完成者為接種日，其他為建議接種日。')));
 
       rep.append(sec('兒童預防保健與篩檢',
         table(['項目', '狀態'], H.CHECKUPS.map((c) => [c.name, chkDone[c.key] ? `${fmtYMD(chkDone[c.key])} 完成` : '—']))));

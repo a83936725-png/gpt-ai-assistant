@@ -167,9 +167,9 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     await S(p, () => App.babylog.quickLog('diaper'));
     await p.waitForFunction(() => App.store.health === 'failed', null, { timeout: 10000 }).catch(() => {});
     await p.waitForTimeout(400);
-    const r = await S(p, () => ({ health: App.store.health, n: App.store.state.logs.length, toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | '), card: !!document.querySelector('[data-card="storage-alert"] .storage-alert') }));
+    const r = await S(p, () => ({ health: App.store.health, n: App.store.state.logs.length, toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | '), card: !!document.querySelector('[data-card="storage-alert"] .storage-alert'), onTop: (() => { const c = document.querySelector('.storage-alert'); const t = document.querySelector('.qt-main'); return !!c && !!t && c.getBoundingClientRect().top < t.getBoundingClientRect().top; })() }));
     ok('phone full: says so right away (message with 匯出備份) instead of silently dropping the record', r.health === 'failed' && /手機空間不足/.test(r.toast) && /匯出備份/.test(r.toast), JSON.stringify(r));
-    ok('phone full: a red card stays on 首頁 until it is solved, and the record is still on screen', r.card && r.n === n0 + 1);
+    ok('phone full: a red card stays at the top of 首頁 (above the record buttons) until it is solved, and the record is still on screen', r.card && r.onTop && r.n === n0 + 1, JSON.stringify(r));
     await S(p, () => { location.hash = '#/me'; }); await p.waitForTimeout(300);
     ok('phone full: 我的 shows the same warning with a backup button', await p.isVisible('.storage-alert >> text=立刻匯出備份'));
     await S(p, () => { window.__full = false; App.store.update(() => {}); }); await p.waitForTimeout(300);

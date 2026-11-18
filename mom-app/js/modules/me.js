@@ -183,7 +183,7 @@
     h('div', { class: 'card-title' }, '⚠️ 最新的紀錄可能沒有存到'),
     h('p', { class: 'small' }, '手機的儲存空間不足（或瀏覽器不允許儲存）。紀錄還在畫面上，但關掉 App 後可能會不見。請先匯出備份，再清出一些手機空間。'),
     h('button', { class: 'btn btn-primary btn-sm mt', onclick: exportData }, '⬇️ 立刻匯出備份')));
-  App.homeCard('storage-alert', { stages: ['prep', 'preg', 'baby'], order: -100, render(el) { const c = storageAlert(); if (c) el.append(c); } });
+  App.storageAlert = storageAlert; // 首頁 shows it right under the greeting
   function importData() {
     const file = h('input', { type: 'file', accept: 'application/json,.json', class: 'hide' });
     const mode = ui.seg([{ value: 'merge', label: '合併（家人資料）' }, { value: 'replace', label: '整個取代' }], 'merge', null, { small: true });

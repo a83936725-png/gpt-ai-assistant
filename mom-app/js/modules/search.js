@@ -446,7 +446,10 @@
     const age = f.ageMonths ? h('span', { class: 'tag' }, `${f.ageMonths[0]}–${f.ageMonths[1]} 個月`) : null;
     body.append(h('div', { class: 'row gap-sm wrap sr-faq-tags' }, stageTag(f.stage), age, levelTag(f.level)));
     if (f.level) body.append(levelBanner(f.level));
-    body.append(h('ul', { class: 'sr-ans' }, sentences(f.a).map((s) => h('li', null, hl(s, terms)))));
+    const cite = App.src ? App.src.collector() : null;
+    const ss = sentences(f.a);
+    body.append(h('ul', { class: 'sr-ans' }, ss.map((s, i) => h('li', null, hl(s, terms), i === ss.length - 1 && cite ? cite.mark(`faq:${f.id}`) : null))));
+    if (cite) { const foot = cite.footer(); if (foot) body.append(foot); }
 
     const links = (f.see || []).filter((x) => (x.faq ? FAQ_BY_ID()[x.faq] : x.screen && App.screens[x.screen]));
     if (links.length) {

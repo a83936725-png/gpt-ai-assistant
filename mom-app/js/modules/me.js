@@ -144,7 +144,7 @@
       s.growth = mergeById(s.growth, incoming.growth);
       s.milk = mergeById(s.milk, incoming.milk);
       s.periods = mergeById(s.periods, incoming.periods);
-      ['kicks', 'contractions', 'weights', 'journal'].forEach((k) => { s.preg[k] = mergeById(s.preg[k], incoming.preg?.[k]); });
+      ['kicks', 'contractions', 'weights', 'journal', 'diary'].forEach((k) => { s.preg[k] = mergeById(s.preg[k], incoming.preg?.[k]); });
       s.preg.prenatal = mergeMaps(s.preg.prenatal, incoming.preg?.prenatal);
       s.preg.visitNotes = mergeMaps(s.preg.visitNotes, incoming.preg?.visitNotes); // 產檢當天的體重、血壓、醫師交代
       // 產後恢復紀錄 and the 生產日
@@ -161,8 +161,10 @@
   }
   App.mergeState = mergeState;
 
-  function exportData() {
-    const json = JSON.stringify({ app: 'yijia-mom', exportedAt: new Date().toISOString(), data: store.state });
+  async function exportData() {
+    let media = {};
+    try { if (App.media) media = await App.media.exportAll(App.media.referenced(store.state)); } catch (e) { media = {}; }
+    const json = JSON.stringify({ app: 'yijia-mom', exportedAt: new Date().toISOString(), data: store.state, media });
     const blob = new Blob([json], { type: 'application/json' });
     const a = h('a', { href: URL.createObjectURL(blob), download: `做媽媽備份-${C.dateKey()}.json` });
     document.body.append(a); a.click(); a.remove();
@@ -242,6 +244,7 @@
         const parsed = JSON.parse(await f.text());
         const data = parsed.data || parsed;
         if (!data || !Array.isArray(data.logs)) throw new Error('bad');
+        if (parsed.media && App.media) await App.media.importAll(parsed.media); // 產檢日記的照片
         if (mode.dataset.value === 'replace') {
           if (!(await ui.confirm('用備份檔取代這台裝置上的所有資料？'))) return;
           store.replace({ ...data, share: store.state.share || data.share, auth: store.state.auth }); // keep my own invite code and login
@@ -513,7 +516,8 @@
       if (App.account) el.append(App.account.card());
       el.append(h('section', { class: 'card me-card' },
         h('div', { class: 'row gap' },
-          h('div', { class: 'me-avatar' }, '💜'),
+          h('button', { class: 'me-avatar av-me', 'aria-label': p.avatar ? '編輯我的 Q 版角色' : '建立我的 Q 版角色', onclick: () => App.navigate('avatar') },
+            p.avatar && App.avatar ? App.avatar.head(52) : '💜', p.avatar ? null : h('span', { class: 'av-me-plus' }, '＋')),
           h('div', { class: 'grow' }, h('div', { class: 'card-title' }, p.momName || '媽媽'), h('div', { class: 'card-sub' }, `${stageLabel.icon} ${stageLabel.label}・這台裝置記錄者：${p.member}`)),
           h('button', { class: 'btn btn-sm btn-soft', onclick: editProfile }, '編輯')),
         h('div', { class: 'mt' }, ui.seg(App.STAGES.map((x) => ({ value: x.value, label: x.label, icon: x.icon })), p.stage, (v) => {
@@ -579,8 +583,9 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.6.9`),
-        h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理，不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。資料只儲存在你的裝置上。')));
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.7.0`),
+        h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
+        h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理（每則都附來源，可點開查看），不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。資料只儲存在你的裝置上。')));
     },
   });
 

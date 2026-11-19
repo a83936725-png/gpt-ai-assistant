@@ -134,16 +134,28 @@
     const panelH = format === 'story' ? 1170 : 760;
     ctx.fillStyle = 'rgba(255,255,255,0.97)'; roundRect(ctx, px, y, pw, panelH, 56); ctx.fill();
     const cx = W / 2; y += 70;
-    // emoji / photo
-    const photo = spec.photo ? await loadImg(spec.photo) : null;
-    ctx.fillStyle = soft; ctx.beginPath(); ctx.arc(cx, y + 130, 130, 0, Math.PI * 2); ctx.fill();
-    if (photo) { ctx.save(); ctx.beginPath(); ctx.arc(cx, y + 130, 122, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(photo, cx - 122, y + 8, 244, 244); ctx.restore(); }
-    else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `150px ${FONT}`; ctx.fillText(spec.emoji || '💜', cx, y + 138); }
-    y += 300;
+    // a big picture (an ultrasound photo) in a rounded frame, or the emoji / round photo
+    const big = spec.bigPhoto ? await loadImg(spec.bigPhoto) : null;
+    if (big) {
+      const bw = pw - 100; const bh = format === 'story' ? 640 : 420; const bx = px + 50; const by = y - 20;
+      ctx.save(); roundRect(ctx, bx, by, bw, bh, 36); ctx.clip();
+      const k = Math.max(bw / big.naturalWidth, bh / big.naturalHeight);
+      ctx.fillStyle = '#111'; ctx.fillRect(bx, by, bw, bh);
+      ctx.drawImage(big, bx + (bw - big.naturalWidth * k) / 2, by + (bh - big.naturalHeight * k) / 2, big.naturalWidth * k, big.naturalHeight * k);
+      ctx.restore();
+      y = by + bh + 50;
+    } else {
+      const photo = spec.photo ? await loadImg(spec.photo) : null;
+      ctx.fillStyle = soft; ctx.beginPath(); ctx.arc(cx, y + 130, 130, 0, Math.PI * 2); ctx.fill();
+      if (photo) { ctx.save(); ctx.beginPath(); ctx.arc(cx, y + 130, 122, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(photo, cx - 122, y + 8, 244, 244); ctx.restore(); }
+      else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `150px ${FONT}`; ctx.fillText(spec.emoji || '💜', cx, y + 138); }
+      y += 300;
+    }
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     if (spec.kicker) { ctx.fillStyle = c2; ctx.font = `700 36px ${FONT}`; ctx.fillText(spec.kicker, cx, y); y += 62; }
-    ctx.fillStyle = '#2b2231'; ctx.font = `900 80px ${FONT}`;
-    wrap(ctx, spec.title || '', pw - 120).slice(0, 3).forEach((ln) => { ctx.fillText(ln, cx, y); y += 98; });
+    const quote = (spec.title || '').length > 12;
+    ctx.fillStyle = '#2b2231'; ctx.font = `900 ${quote ? 56 : 80}px ${FONT}`;
+    wrap(ctx, spec.title || '', pw - 120).slice(0, 3).forEach((ln) => { ctx.fillText(ln, cx, y); y += quote ? 72 : 98; });
     if (spec.subtitle) {
       ctx.fillStyle = '#5f5566'; ctx.font = `500 38px ${FONT}`;
       wrap(ctx, spec.subtitle, pw - 140).slice(0, 3).forEach((ln) => { ctx.fillText(ln, cx, y + 6); y += 54; });

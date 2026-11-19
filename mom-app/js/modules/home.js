@@ -250,8 +250,11 @@
       const hour = new Date().getHours();
       const greet = hour < 5 ? '夜深了，辛苦了' : hour < 11 ? '早安' : hour < 14 ? '午安' : hour < 18 ? '午後好' : '晚安';
       const stageLabel = STAGES.find((s) => s.value === stage) || STAGES[2];
+      const myHead = App.avatar && App.avatar.head(44);
       el.append(h('div', { class: 'greet row between' },
-        h('div', null, h('div', { class: 'greet-hi' }, `${greet}${name ? `，${name}` : ''} `, h('span', { class: 'beat' }, '💜')), h('div', { class: 'tiny muted' }, C.fmtDateLong(new Date()))),
+        h('div', { class: 'row' },
+          myHead ? h('button', { class: 'greet-av', 'aria-label': '我的 Q 版角色', onclick: () => App.navigate('avatar') }, myHead) : null,
+          h('div', null, h('div', { class: 'greet-hi' }, `${greet}${name ? `，${name}` : ''} `, h('span', { class: 'beat' }, '💜')), h('div', { class: 'tiny muted' }, C.fmtDateLong(new Date())))),
         h('a', { class: 'stage-pill', href: '#/me', title: '到「我的」切換階段' }, `${stageLabel.icon} ${stageLabel.label}${store.state.profile.pregnantToo && stage === 'baby' ? '＋懷孕' : ''}`)));
       if (App.livePill) el.append(App.livePill('home-live'));
       // a save that could not be kept: the warning goes right under the greeting, above everything else

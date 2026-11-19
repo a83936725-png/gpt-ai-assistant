@@ -272,7 +272,10 @@
    * Positions are in "screen units" (u right, v down); neighbouring slots touch, so bridges can join them.
    * ========================================================= */
   const ISLANDS = (D.ISLANDS && D.ISLANDS.length) ? D.ISLANDS : [{ id: 'all', no: 1, name: '好孕島', emoji: '🏝️', color: '#e7809a', range: '', unlock: { kind: 'always' }, spots: D.SPOTS.map((s) => s.id), notes: [], guide: { title: '', steps: [] } }];
-  const ISL = Object.fromEntries(ISLANDS.map((i) => [i.id, i]));
+  // 產檢日記島: not a stage of its own — a side island next to 孕中期島 that holds every prenatal visit, the
+  // ultrasound photos and the sentences to the baby (screen 'diary')
+  const DIARY = { id: 'diary', special: 'diary', no: '💌', name: '產檢日記島', nick: '回憶灣', emoji: '💌', color: '#e7809a', range: '每次產檢的回憶', unlock: { kind: 'preg', weeks: 0 }, spots: [], notes: [], guide: { title: '', steps: [] }, near: 'preg2' };
+  const ISL = Object.fromEntries(ISLANDS.map((i) => [i.id, i]).concat([[DIARY.id, DIARY]]));
   const DECOR = { prep: 'garden', preg1: 'woods', preg2: 'garden', preg3: 'woods', newborn: 'harbor', infant: 'garden', crawl: 'woods', y1: 'garden', y2: 'woods', y3: 'garden', y4: 'harbor' };
   // 3 stops: a diamond with a decor tile behind; 4 stops: a full diamond with a decor tile on the outer side
   const shapeFor = (n, side) => (n >= 4
@@ -305,6 +308,18 @@
       const links = shape.links.filter(([a, b]) => own[a] && own[b]).map(([a, b]) => [own[a], own[b]]);
       islands.push({ isl, k, side, cu, cv, tiles: own, links });
     });
+    // the diary island sits beside 孕中期島, on the other side of the sea lane
+    const nearI = islands.find((x) => x.isl.id === DIARY.near);
+    if (nearI && ISLANDS.length > 1) {
+      const cu = -nearI.side * 3.7; const cv = nearI.cv + 0.4;
+      const own = [];
+      [[-0.725, -0.725, 'studio'], [0.725, 0.725, 'memorytree']].forEach(([u, v, kind], j) => {
+        const [x, y] = fromUV(cu + u, cv + v);
+        const t = { id: `diary@${j}`, isl: DIARY.id, x, y, z: 0.42 + j * 0.06, decor: true, spot: null, kind, seed: 900 + j };
+        own.push(t); tiles.push(t);
+      });
+      islands.push({ isl: DIARY, k: nearI.k + 0.5, side: -nearI.side, cu, cv, tiles: own, links: [[own[0], own[1]]], special: true });
+    }
     return { tiles, islands };
   }
 
@@ -695,6 +710,34 @@
       c.add(0.8, () => { sign(c.g, c.x - 0.36, c.y + 0.46, c.z, sp.sym || 'car', '#e2725b', 0.3); });
       treesAt(c, [[-0.66, 0.42, 0.14, 'leafB'], [0.5, 0.5, 0.14, 'leafA']]);
     },
+    /* ----- 產檢日記島 ----- */
+    studio(c) {
+      c.add(-0.1, () => {
+        box(c.g, c.x - 0.42, c.y - 0.44, c.z, 0.78, 0.56, 0.44, 'pink', { winL: 2, winR: 1, door: true });
+        const top = gable(c.g, c.x - 0.42, c.y - 0.44, c.z + 0.44, 0.78, 0.56, 0.28, 'roofPurple', 'pink');
+        // little polaroids on the wall
+        [[-0.3, 0.05], [0.12, 0.08]].forEach(([dx, dz]) => {
+          const [px, py] = P(c.x + dx, c.y + 0.12, c.z + 0.2 + dz);
+          c.g.appendChild(sv('rect', { x: R1(px - 5), y: R1(py - 6), width: 10, height: 12, rx: 1, class: 'm-white-t isl-polaroid' }));
+          c.g.appendChild(sv('rect', { x: R1(px - 3.5), y: R1(py - 4.5), width: 7, height: 6, class: 'm-blue-t' }));
+        });
+        c.anchor = [top[0], top[1] - 6];
+      });
+      c.add(0.6, () => { sign(c.g, c.x + 0.46, c.y + 0.2, c.z, 'heart', '#e7809a', 0.34); });
+      treesAt(c, [[-0.62, 0.36, 0.15, 'leafC'], [0.5, -0.46, 0.14, 'leafA']]);
+    },
+    memorytree(c) {
+      c.add(0, () => {
+        const [bx, cy, r] = tree(c.g, c.x, c.y, c.z, 0.34, 'leafA');
+        // hearts hanging in the tree: one for every sentence to the baby
+        [[-0.55, -0.1], [0.4, -0.35], [0.1, 0.25], [-0.2, -0.55], [0.6, 0.15]].forEach(([fx, fy]) => {
+          const hx = bx + fx * r; const hy = cy + fy * r;
+          c.g.appendChild(sv('path', { d: `M${R1(hx)} ${R1(hy + 3)}c-5 -3.5 -4.6 -8 -1.8 -8c1 0 1.8 .7 1.8 1.6c0 -.9 .8 -1.6 1.8 -1.6c2.8 0 3.2 4.5 -1.8 8z`, class: 'isl-heartfruit' }));
+        });
+      });
+      c.add(0.6, () => { box(c.g, c.x + 0.3, c.y + 0.32, c.z, 0.3, 0.1, 0.07, 'wood'); });
+      c.add(0.7, () => { sign(c.g, c.x - 0.45, c.y + 0.38, c.z, 'envelope', '#e7809a', 0.3); });
+    },
     /* ----- decor tiles ----- */
     garden(c) {
       const r = rng(c.seed);
@@ -888,8 +931,9 @@
 
     // sea lanes between islands: dashed, a little boat sails from where you are to the next island
     const routePaths = [];
-    for (let k = 0; k + 1 < world.islands.length; k += 1) {
-      const A = world.islands[k]; const Bi = world.islands[k + 1];
+    const lane = world.islands.filter((x) => !x.special);
+    for (let k = 0; k + 1 < lane.length; k += 1) {
+      const A = lane[k]; const Bi = lane[k + 1];
       const cB = P(...fromUV(Bi.cu, Bi.cv), 0); const cA = P(...fromUV(A.cu, A.cv), 0);
       const near = (list, to) => list.slice().sort((a, b) => Math.hypot(P(a.x, a.y, 0)[0] - to[0], P(a.x, a.y, 0)[1] - to[1]) - Math.hypot(P(b.x, b.y, 0)[0] - to[0], P(b.x, b.y, 0)[1] - to[1]))[0];
       const ta = near(A.tiles, cB); const tb = near(Bi.tiles, cA);
@@ -916,7 +960,7 @@
     world.islands.forEach((wi) => {
       const open = openMap[wi.isl.id];
       const ig = sv('g', { class: `isl-island${open ? '' : ' locked'}`, 'data-isl': wi.isl.id });
-      if (!open) ig.setAttribute('data-island', wi.isl.id);
+      if (!open || wi.special) ig.setAttribute('data-island', wi.isl.id); // the diary island is one big button
       scene.appendChild(ig);
       islandGroups[wi.isl.id] = ig;
       const queue = [];
@@ -987,11 +1031,11 @@
       }
     });
     // the little boat sailing on toward the next island
-    const lane = routePaths.find((rp) => rp.from === here);
-    if (lane) {
+    const sail = routePaths.find((rp) => rp.from === here);
+    if (sail) {
       const g = sv('g', { class: 'isl-sailer' });
       g.appendChild(boatShape(0.7));
-      g.appendChild(sv('animateMotion', { path: lane.d, dur: '16s', repeatCount: 'indefinite', keyPoints: '0;1;1', keyTimes: '0;0.8;1', calcMode: 'linear' }));
+      g.appendChild(sv('animateMotion', { path: sail.d, dur: '16s', repeatCount: 'indefinite', keyPoints: '0;1;1', keyTimes: '0;0.8;1', calcMode: 'linear' }));
       people.appendChild(g);
     }
 
@@ -1077,9 +1121,20 @@
         sv('text', { class: 'isl-ib-mini-e' }, openMap[wi.isl.id] ? wi.isl.emoji : '🔒'),
         sv('text', { class: 'isl-ib-mini-n', x: 23 }, wi.isl.name));
       inner.appendChild(mini);
+      if (wi.isl.id === here) {
+        const av = App.avatar && App.avatar.current();
+        const me = sv('g', { class: `isl-ib-av${av ? '' : ' empty'}`, 'data-avatar': '1' });
+        if (av) me.appendChild(sv('image', { href: App.avatar.dataUrl(av), width: 50, height: 62.5, x: -25, y: -60 }));
+        else {
+          me.appendChild(sv('circle', { cx: 0, cy: -30, r: 17, class: 'isl-ib-av-ghost' }));
+          me.appendChild(sv('text', { class: 'isl-ib-av-plus', y: -30 }, '＋'));
+          me.appendChild(sv('text', { class: 'isl-ib-av-t', y: -4 }, '我的角色'));
+        }
+        inner.appendChild(me);
+      }
       g.appendChild(inner);
       banners.appendChild(g);
-      bannerEls.push({ g, inner, pill, dot, num, nm, sub, pin, mini, wi });
+      bannerEls.push({ g, inner, pill, dot, num, nm, sub, pin, mini, wi, me: inner.querySelector('.isl-ib-av') });
     });
     return { world: root, labels, labelEls, bannerEls, infos, scene, islandGroups, openMap };
   }
@@ -1237,8 +1292,10 @@
           : (brand.shopUrl ? h('a', { class: 'btn btn-primary btn-sm', href: brand.shopUrl, target: '_blank', rel: 'noopener' }, '前往官網') : null)));
     }
 
+    const cite = App.src ? App.src.collector() : null;
+    const mk = (...k) => (cite ? cite.mark(...k) : null);
     body.append(h('h3', { class: 'isl-sh-h' }, '小知識'));
-    body.append(h('div', { class: 'isl-know-list' }, spot.cards.map((cd) => h('div', { class: 'isl-know' }, h('strong', null, cd.t), h('p', null, cd.d)))));
+    body.append(h('div', { class: 'isl-know-list' }, spot.cards.map((cd, i) => h('div', { class: 'isl-know' }, h('strong', null, cd.t), h('p', null, cd.d, mk(`card:${spot.id}:${i}`))))));
     if (App.share) {
       body.append(h('div', { class: 'mt' }, App.share.button(() => ({
         sheetTitle: '分享這篇小知識', title: `${spot.name}・小知識`, campaign: `island-${spot.id}`, path: 'island', params: { spot: spot.id }, emoji: spot.emoji, kicker: isl ? `好孕群島・${isl.name}` : '好孕島小知識', theme: 'night',
@@ -1262,27 +1319,28 @@
         },
       }, `打開「${TOOL_LABELS[spot.tool] || '相關工具'}」`));
     }
+    if (cite) { cite.add(`spot:${spot.id}`); const f = cite.footer(); if (f) body.append(f); }
     body.append(h('p', { class: 'disclaimer' }, DISCLAIMER));
     const sh = ui.sheet({ title: `${pad2(spot.no)} ${spot.name}`, body });
     return sh;
   }
 
   /* ----- one island: 注意事項, 新手教學, its stops, share / image / PDF ----- */
-  function notesBlock(isl, open) {
+  function notesBlock(isl, open, cite = null) {
     if (!isl.notes || !isl.notes.length) return null;
     return h('div', { class: 'isl-notes' },
       h('h3', { class: 'isl-sh-h' }, '⚠️ 這個階段要注意'),
-      isl.notes.map((n) => h('div', { class: `isl-note${n.urgent ? ' urgent' : ''}` },
+      isl.notes.map((n, i) => h('div', { class: `isl-note${n.urgent ? ' urgent' : ''}` },
         h('div', { class: 'isl-note-t' }, n.urgent ? h('span', { class: 'isl-urgent-tag' }, '就醫警訊') : null, n.t),
         // a warning sign is always shown in full; the rest opens with the island
-        open || n.urgent ? h('p', null, n.d) : null)),
+        open || n.urgent ? h('p', null, n.d, cite ? cite.mark(`note:${isl.id}:${i}`) : null) : null)),
       open ? null : h('p', { class: 'tiny muted' }, '小島開放後就能看完整說明和新手教學。'));
   }
-  function guideBlock(isl) {
+  function guideBlock(isl, cite = null) {
     const g = isl.guide;
     if (!g || !g.steps || !g.steps.length) return null;
     return h('div', { class: 'isl-guide' },
-      h('h3', { class: 'isl-sh-h' }, `📖 ${g.title || '新手教學'}`),
+      h('h3', { class: 'isl-sh-h' }, `📖 ${g.title || '新手教學'}`, cite ? cite.mark(`guide:${isl.id}`) : null),
       h('ol', { class: 'isl-steps' }, g.steps.map((s) => h('li', null, s))));
   }
   function islandActions(isl, open, close) {
@@ -1304,14 +1362,24 @@
   function openIsland(id) {
     const isl = ISL[id]; if (!isl) return null;
     const st = statusOf(isl);
+    if (isl.special === 'diary') {
+      if (st.open) { App.navigate('diary'); return null; }
+      return ui.sheet({
+        title: '💌 產檢日記島',
+        body: h('div', { class: 'isl-sh' },
+          h('p', null, '懷孕後開放：每次產檢放一張超音波照片、寫一句想對寶寶說的話，慢慢收集成一本產檢日記，還能印成 PDF。'),
+          h('p', { class: 'small muted' }, '照片只存在你的手機。')),
+      });
+    }
     const stamps = islandState().stamps || {};
     let sh = null;
     const close = () => sh && sh.close();
+    const cite = App.src ? App.src.collector() : null;
     const body = h('div', { class: 'isl-sh isl-ish' },
       islandHero(isl, st),
       isl.intro ? h('p', { class: 'isl-intro' }, isl.intro) : null,
-      notesBlock(isl, st.open),
-      st.open ? guideBlock(isl) : null,
+      notesBlock(isl, st.open, cite),
+      st.open ? guideBlock(isl, cite) : null,
       h('h3', { class: 'isl-sh-h' }, '📍 島上地點'),
       h('div', { class: 'list' }, islandSpots(isl).map((s) => h('button', {
         class: 'list-item', onclick: () => { close(); setTimeout(() => (goSpotHook ? goSpotHook(s.id) : openSpot(s.id)), 240); },
@@ -1320,6 +1388,7 @@
       h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, `${pad2(s.no)} ${s.name}`), h('div', { class: 'li-sub' }, s.intro)),
       h('span', { class: 'li-right' }, !st.open ? '🔒' : stamps[s.id] ? '🏅' : h('span', { class: 'tiny faint' }, '未蓋章'))))),
       islandActions(isl, st.open, close),
+      cite ? cite.footer() : null,
       h('p', { class: 'disclaimer' }, DISCLAIMER));
     sh = ui.sheet({ title: `${pad2(isl.no || 1)} ${isl.name}`, body });
     return sh;
@@ -1330,6 +1399,7 @@
     const st = statusOf(isl);
     let sh = null;
     const close = () => sh && sh.close();
+    const cite = App.src ? App.src.collector() : null;
     const body = h('div', { class: 'isl-sh isl-unlock' },
       h('div', { class: 'isl-unlock-hero', style: { '--ic': isl.color || '#8b57a8' } },
         h('div', { class: 'isl-unlock-emoji', 'aria-hidden': 'true' }, isl.emoji),
@@ -1338,10 +1408,11 @@
         h('div', { class: 'small muted' }, `${isl.range}${isl.nick ? `・${isl.nick}` : ''}`),
         others > 0 ? h('div', { class: 'tiny muted mt-xs' }, `另外還有 ${others} 座島也開放了，在地圖上看得到。`) : null),
       isl.intro ? h('p', { class: 'isl-intro center' }, isl.intro) : null,
-      notesBlock(isl, true),
-      guideBlock(isl),
+      notesBlock(isl, true, cite),
+      guideBlock(isl, cite),
       h('button', { class: 'btn btn-primary btn-block mt', onclick: () => { close(); if (flyHook) flyHook(isl.id); } }, `🏝️ 開始逛${isl.name}`),
       islandActions(isl, true, close),
+      cite ? cite.footer() : null,
       h('p', { class: 'disclaimer' }, DISCLAIMER));
     sh = ui.sheet({ title: '🎉 新的小島開放了', body });
     ui.celebrate({ big: true, emojis: [isl.emoji, '🎉', '🏝️', '✨', '💜'] });
@@ -1611,7 +1682,8 @@
       built.bannerEls.forEach((b) => {
         const isl = b.wi.isl; const ist = statusOf(isl);
         const done = islandDone(isl); const all = islandSpots(isl).length;
-        b.sub.textContent = ist.open ? `${isl.range}・🏅 ${done}/${all}` : `🔒 ${lockText(ist)}`;
+        const dc = isl.special && App.diary ? App.diary.counts() : null;
+        b.sub.textContent = !ist.open ? `🔒 ${lockText(ist)}` : dc ? (dc.pages ? `${dc.pages} 頁日記・📷 ${dc.photos}` : '放超音波照片、寫給寶寶的話') : `${isl.range}・🏅 ${done}/${all}`;
         const w = Math.ceil(Math.max(textW(b.nm, isl.name.length * 15 + 20), textW(b.sub, 90)) + 46);
         b.pill.setAttribute('x', -w / 2); b.pill.setAttribute('width', w);
         b.dot.setAttribute('cx', -w / 2 + 19); b.num.setAttribute('x', -w / 2 + 19);
@@ -1620,6 +1692,7 @@
         b.pin.firstChild.setAttribute('x', -pw / 2); b.pin.firstChild.setAttribute('width', pw);
         b.pin.lastChild.setAttribute('x', 0);
         b.g.classList.toggle('done', ist.open && all > 0 && done === all);
+        if (b.me) b.me.setAttribute('transform', `translate(${-w / 2 - 30} 18)`);
         b.g.setAttribute('aria-label', `${isl.name}，${b.sub.textContent}`);
       });
       const hereIsl = ISL[here];
@@ -1627,18 +1700,19 @@
       const next = nextSpot();
       hud.innerHTML = '';
       hud.append(
-        h('span', { class: 'isl-hud-top' }, h('strong', null, `${hereIsl.emoji} ${hereIsl.name}`), h('span', { class: 'isl-hud-title' }, `🏅 ${n}/${all}・${titleFor(stampCount())}`)),
+        h('span', { class: 'isl-hud-top' }, App.avatar && App.avatar.current() ? App.avatar.head(26) : null, h('strong', null, `${hereIsl.emoji} ${hereIsl.name}`), h('span', { class: 'isl-hud-title' }, `🏅 ${n}/${all}・${titleFor(stampCount())}`)),
         h('span', { class: 'isl-hud-next' }, next ? `下一站 ${pad2(next.no)} ${next.name}` : '開放的小島都蓋完章了 🎉'),
       );
       hud.onclick = () => (next ? goSpot(next.id) : openIsland(here));
       hud.setAttribute('aria-label', next ? `你在${hereIsl.name}，前往下一站 ${next.name}` : `你在${hereIsl.name}，查看小島`);
       strip.innerHTML = '';
-      ISLANDS.forEach((isl) => {
+      const order = ISLANDS.flatMap((i) => (i.id === DIARY.near ? [i, DIARY] : [i]));
+      order.forEach((isl) => {
         const ist = statusOf(isl); const done = islandDone(isl); const all = islandSpots(isl).length;
         strip.append(h('button', {
-          class: `isl-chip${ist.open ? '' : ' locked'}${isl.id === here ? ' here' : ''}${ist.open && all && done === all ? ' done' : ''}`,
+          class: `isl-chip${ist.open ? '' : ' locked'}${isl.id === here ? ' here' : ''}${ist.open && all && done === all ? ' done' : ''}${isl.special ? ' special' : ''}`,
           role: 'tab', dataset: { island: isl.id }, style: { '--ic': isl.color || '#8b57a8' },
-          'aria-label': `${isl.name}（${isl.range}）${ist.open ? `，蓋章 ${done}/${all}` : `，${lockText(ist)}`}`,
+          'aria-label': `${isl.name}（${isl.range}）${!ist.open ? `，${lockText(ist)}` : isl.special ? '' : `，蓋章 ${done}/${all}`}`,
           onclick: () => { if (focusId === isl.id) openIsland(isl.id); else flyTo(isl.id); },
         }, h('span', { class: 'isl-chip-emoji', 'aria-hidden': 'true' }, ist.open ? isl.emoji : '🔒'), h('span', { class: 'isl-chip-name' }, isl.name)));
       });
@@ -1748,7 +1822,7 @@
       cancelAnimationFrame(anim);
       try { svg.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (ptrs.size === 1) { moved = 0; multi = false; downTarget = e.target.closest('[data-spot],[data-baby],[data-island]'); root.classList.add('dragging'); }
+      if (ptrs.size === 1) { moved = 0; multi = false; downTarget = e.target.closest('[data-avatar],[data-spot],[data-baby],[data-island]'); root.classList.add('dragging'); }
       if (ptrs.size > 1) multi = true;
       startGesture();
     });
@@ -1775,7 +1849,8 @@
       if (ptrs.size === 0) {
         root.classList.remove('dragging');
         if (!multi && moved <= 6 && downTarget && e.type === 'pointerup') {
-          if (downTarget.dataset.baby) showBubble(downTarget);
+          if (downTarget.dataset.avatar) App.navigate('avatar');
+          else if (downTarget.dataset.baby) showBubble(downTarget);
           else if (downTarget.dataset.spot) goSpot(downTarget.dataset.spot);
           else if (downTarget.dataset.island) { const id = downTarget.dataset.island; if (focusId !== id) flyTo(id); openIsland(id); }
         }
@@ -1839,7 +1914,9 @@
           h('li', null, h('strong', null, '時間到了自己開島'), h('span', null, '懷孕週數、寶寶年齡一到，下一座島就會開放，這個階段的「注意事項」和「新手教學」馬上打開。')),
           h('li', null, h('strong', null, '點島下方的名牌'), h('span', null, '看注意事項、新手教學，還有島上有哪些地點。')),
           h('li', null, h('strong', null, '逛地點、答題蓋章'), h('span', null, '讀小知識、打勾，答完小測驗就能蓋章收集。')),
-          h('li', null, h('strong', null, '分享給家人'), h('span', null, '每座島都能分享、存成圖片，或下載 PDF 手冊印出來。'))),
+          h('li', null, h('strong', null, '分享給家人'), h('span', null, '每座島都能分享、存成圖片，或下載 PDF 手冊印出來。')),
+          h('li', null, h('strong', null, '💌 產檢日記島'), h('span', null, '懷孕後開放：每次產檢放超音波照片、寫一句想對寶寶說的話。'))),
+        App.avatar && !App.avatar.current() ? h('button', { class: 'btn btn-soft btn-block mt', onclick: () => { sh.close(); dismissCoach(); App.navigate('avatar'); } }, '🙂 上傳正面照，做一個長得像我的 Q 版角色') : null,
         h('div', { class: 'row gap-sm mt' },
           h('button', { class: 'btn btn-primary grow', onclick: () => { sh.close(); dismissCoach(); setTimeout(() => openIsland(here), 240); } }, `看${hereIsl.name}注意事項`),
           h('button', { class: 'btn btn-ghost', onclick: () => { sh.close(); dismissCoach(); } }, '開始逛')));
@@ -1889,6 +1966,8 @@
       const qr = share && share.qr ? share.qr(url, 220) : '';
       const code = share && share.code ? share.code() : '';
       const brand = window.BRAND || {};
+      const cite = App.src ? App.src.collector() : null;
+      const mk = (...k) => (cite ? cite.mark(...k) : null);
       el.append(h('div', { class: 'no-print mb stack-sm' },
         h('button', { class: 'btn btn-primary btn-block', onclick: () => window.print() }, h('span', { class: 'ic', html: ui.ICONS.print }), '列印／存成 PDF'),
         h('div', { class: 'row gap-sm' },
@@ -1904,14 +1983,15 @@
             h('div', { class: 'small' }, `${isl.range}${isl.nick ? `・${isl.nick}` : ''}${st.open ? '' : `・${lockText(st)}`}`))),
         isl.intro ? h('p', { class: 'isl-doc-intro' }, isl.intro) : null,
         h('section', { class: 'isl-doc-sec' }, h('h3', null, '⚠️ 這個階段要注意'),
-          h('ul', { class: 'isl-doc-notes' }, (isl.notes || []).map((n) => h('li', { class: n.urgent ? 'urgent' : '' }, h('strong', null, `${n.urgent ? '【就醫警訊】' : ''}${n.t}`), `：${n.d}`)))),
-        isl.guide && isl.guide.steps && isl.guide.steps.length ? h('section', { class: 'isl-doc-sec' }, h('h3', null, `📖 ${isl.guide.title || '新手教學'}`),
+          h('ul', { class: 'isl-doc-notes' }, (isl.notes || []).map((n, i) => h('li', { class: n.urgent ? 'urgent' : '' }, h('strong', null, `${n.urgent ? '【就醫警訊】' : ''}${n.t}`), `：${n.d}`, mk(`note:${isl.id}:${i}`))))),
+        isl.guide && isl.guide.steps && isl.guide.steps.length ? h('section', { class: 'isl-doc-sec' }, h('h3', null, `📖 ${isl.guide.title || '新手教學'}`, mk(`guide:${isl.id}`)),
           h('ol', null, isl.guide.steps.map((s) => h('li', null, s)))) : null,
         islandSpots(isl).map((sp) => h('section', { class: 'isl-doc-sec' },
           h('h3', null, `${sp.emoji} ${sp.name}`),
           h('p', { class: 'small' }, sp.intro),
-          h('ul', null, sp.cards.map((cd) => h('li', null, h('strong', null, cd.t), `：${cd.d}`))),
+          h('ul', null, sp.cards.map((cd, i) => h('li', null, h('strong', null, cd.t), `：${cd.d}`, mk(`card:${sp.id}:${i}`)))),
           h('div', { class: 'isl-doc-checks' }, sp.checks.map((c) => h('span', null, `☐ ${c}`))))),
+        cite ? cite.footer({ print: true }) : null,
         h('footer', { class: 'isl-doc-foot' },
           qr ? h('img', { src: qr, alt: '加入易家做媽媽的 QR code', class: 'isl-doc-qr' }) : null,
           h('div', { class: 'grow' },

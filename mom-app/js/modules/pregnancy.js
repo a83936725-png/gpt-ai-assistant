@@ -585,6 +585,9 @@
     const sysIn = num(notes.sys, '收縮壓', '收縮壓');
     const diaIn = num(notes.dia, '舒張壓', '舒張壓');
     const noteIn = h('textarea', { rows: 2, placeholder: '醫師交代、下次要問的問題、檢查結果' }, notes.note || '');
+    // 產檢日記: ultrasound photos and one sentence to the baby, kept with this visit
+    const photos = App.diary ? App.diary.photoField(notes.photos || []) : null;
+    const msgIn = App.diary ? App.diary.msgInput(notes.msg) : null;
     const sh = ui.sheet({
       title: `第 ${v.no} 次產檢`,
       body: h('div', null,
@@ -593,7 +596,11 @@
         ui.field('完成日期', input),
         h('div', { class: 'grid-2' }, ui.field('體重（kg）', wIn), ui.field('胎心（次/分）', fhrIn)),
         ui.field('血壓（mmHg）', h('div', { class: 'row gap-sm' }, sysIn, h('span', null, '/'), diaIn)),
-        ui.field('醫師交代／備註', noteIn)),
+        ui.field('醫師交代／備註', noteIn),
+        photos ? h('div', { class: 'dy-in-visit' },
+          h('div', { class: 'dy-in-visit-t' }, '💌 放進產檢日記（選填）'),
+          ui.field('超音波照片', photos.el),
+          ui.field('想對寶寶說的一句話', msgIn)) : null),
       footer: h('div', { class: 'row gap' },
         done ? h('button', {
           class: 'btn btn-ghost grow',
@@ -607,6 +614,7 @@
               weight: wIn.value ? Number(wIn.value) : null, fhr: fhrIn.value ? Number(fhrIn.value) : null,
               sys: sysIn.value ? Number(sysIn.value) : null, dia: diaIn.value ? Number(diaIn.value) : null, note: noteIn.value.trim(),
             };
+            if (photos) { rec.photos = photos.ids(); rec.msg = msgIn.value.trim(); (notes.photos || []).filter((pid) => !rec.photos.includes(pid)).forEach((pid) => App.media.del(pid)); }
             store.update((st) => {
               ensure(st);
               st.preg.prenatal[v.key] = day;

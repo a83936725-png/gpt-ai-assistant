@@ -59,7 +59,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   ok('stops show on open islands only, and the 3 stops of 小寶貝島 are on screen', labels.spots === 20 && labels.onScreen === 3, JSON.stringify(labels));
   await p.click('.isl-coach-main'); await p.waitForTimeout(500);
   const tour = await sheetText(p);
-  ok('the guide chip opens 「好孕群島怎麼玩」: 5 short steps (islands open with age, 注意事項, stamps, share / PDF)', /好孕群島怎麼玩/.test(tour) && /時間到了自己開島/.test(tour) && /下載 PDF/.test(tour) && (await S(p, () => document.querySelectorAll('.sheet .isl-tour-steps li').length)) === 5, tour.slice(0, 80));
+  ok('the guide chip opens 「好孕群島怎麼玩」: 6 short steps (islands open with age, 注意事項, stamps, share / PDF, 產檢日記島)', /好孕群島怎麼玩/.test(tour) && /時間到了自己開島/.test(tour) && /下載 PDF/.test(tour) && (await S(p, () => document.querySelectorAll('.sheet .isl-tour-steps li').length)) === 6, tour.slice(0, 80));
   await p.click('.sheet button:has-text("開始逛")'); await p.waitForTimeout(400);
   ok('「開始逛」 puts the guide chip away for good', await S(p, () => document.querySelector('.isl-coach').hidden && !!App.store.state.island.toured));
 
@@ -119,7 +119,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   ok('closed islands show 🔒 in the strip', await S(p, () => document.querySelector('.isl-chip[data-island="y3"]').classList.contains('locked') && /🔒/.test(document.querySelector('.isl-chip[data-island="y3"]').textContent)));
   await p.click('.isl-cbtn:has-text("全景")'); await p.waitForTimeout(900);
   const far = await S(p, () => ({ far: document.querySelector('.isl').classList.contains('far'), labels: [...document.querySelectorAll('.isl-label')].filter((l) => getComputedStyle(l).display !== 'none').length, minis: [...document.querySelectorAll('.isl-ib-mini')].filter((m) => getComputedStyle(m).display !== 'none').length }));
-  ok('全景: the whole journey as 11 round badges (stop labels hidden so nothing piles up)', far.far && far.labels === 0 && far.minis === 11, JSON.stringify(far));
+  ok('全景: the whole journey as 11 round badges + 產檢日記島 (stop labels hidden so nothing piles up)', far.far && far.labels === 0 && far.minis === 12, JSON.stringify(far));
   await p.click('.isl-cbtn:has-text("旅程")'); await p.waitForTimeout(500);
   const jr = await sheetText(p);
   ok('旅程: every island with its stamps, locks, and 「分享我的護照」', /分享我的護照/.test(jr) && /4–6 歲島/.test(jr) && /🔒/.test(jr), jr.slice(0, 100));

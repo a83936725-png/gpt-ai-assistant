@@ -160,6 +160,13 @@
     });
   }
   App.mergeState = mergeState;
+  // a full restore must not lose the keys of the walls this phone opened: without them a wall can't be managed
+  function keepSocial(mine, theirs) {
+    if (!mine || !mine.key) return theirs || mine;
+    const walls = [...(mine.walls || [])];
+    ((theirs && theirs.walls) || []).forEach((w) => { if (w && w.id && w.key && !walls.some((x) => x.id === w.id)) walls.push(w); });
+    return { ...mine, walls };
+  }
 
   async function exportData() {
     let media = {};
@@ -247,7 +254,8 @@
         if (parsed.media && App.media) await App.media.importAll(parsed.media); // 產檢日記的照片
         if (mode.dataset.value === 'replace') {
           if (!(await ui.confirm('用備份檔取代這台裝置上的所有資料？'))) return;
-          store.replace({ ...data, share: store.state.share || data.share, auth: store.state.auth }); // keep my own invite code and login
+          // keep my own invite code, login, and 島上的媽媽 identity + 祝福牆 keys (the backup's walls are added to mine)
+          store.replace({ ...data, share: store.state.share || data.share, auth: store.state.auth, social: keepSocial(store.state.social, data.social) });
           if (App.media) await App.media.prune(); // photos of the replaced data go; the backup's own photos stay
         } else mergeState(data);
         sh.close(); ui.toast('匯入完成');
@@ -421,6 +429,7 @@
     s.island.stamps = {};
     if (store.state.share) s.share = store.state.share; // keep invite code + who invited me
     if (store.state.auth) s.auth = store.state.auth; // stay logged in
+    if (store.state.social) s.social = store.state.social; // keep 島上的媽媽／好孕圈 and the keys of my 祝福牆
     store.replace(s);
     if (App.media) App.media.prune(); // the old diary photos belonged to the data that was just replaced
     App.navigate('home');
@@ -574,18 +583,23 @@
         App.screens.invite ? h('a', { class: 'list-item', href: '#/invite' }, h('span', { class: 'li-icon' }, '💌'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '邀請好友・分享卡'), h('div', { class: 'li-sub' }, `好孕點數 ${(s.share && s.share.points) || 0}・邀請碼 ${(s.share && s.share.code) || ''}`)), h('span', { class: 'li-right', html: ui.ICONS.chevron })) : null,
         App.social ? (() => {
           const so = App.social.soc();
+          if (App.social.isReady() === false) {
+            // a site without the member service (or offline): say so once, instead of three invitations that can't work
+            return h('div', { class: 'list-item' }, h('span', { class: 'li-icon' }, '👭'),
+              h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '島上的媽媽・同週好孕圈・祝福牆'), h('div', { class: 'li-sub' }, '需要連上會員服務，目前連不到（離線，或這個網址還沒開放）')));
+          }
           return h('button', { class: 'list-item', onclick: () => App.social.openSettings() }, h('span', { class: 'li-icon' }, '👭'),
             h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '島上的媽媽'), h('div', { class: 'li-sub' }, so.on ? `已開啟・顯示為「${so.name || '匿名媽咪'}」` : '和同階段的媽媽互相揮手、送愛心（未開啟）')),
             h('span', { class: 'li-right', html: ui.ICONS.chevron }));
         })() : null,
-        App.screens.circle ? (() => {
+        App.screens.circle && !(App.social && App.social.isReady() === false) ? (() => {
           const cc = (App.social && App.social.soc().circle) || {};
           const lb = App.circle && App.circle.label();
           return h('a', { class: 'list-item', href: '#/circle' }, h('span', { class: 'li-icon' }, '🗳️'),
             h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '同週好孕圈'), h('div', { class: 'li-sub' }, cc.on && lb ? `已加入・${lb.title}` : '和同週的媽媽一起回答每週小問題、互相打氣')),
             h('span', { class: 'li-right', html: ui.ICONS.chevron }));
         })() : null,
-        App.screens.wall ? (() => {
+        App.screens.wall && !(App.social && App.social.isReady() === false) ? (() => {
           const ws = (App.social && App.social.soc().walls) || [];
           const pend = ws.reduce((n, w) => n + (w.pending || 0), 0);
           return h('a', { class: 'list-item', href: '#/wall' }, h('span', { class: 'li-icon' }, '💌'),

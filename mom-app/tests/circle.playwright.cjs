@@ -122,6 +122,9 @@ const WEEKS = 12 + Math.floor(Math.random() * 20); // a random circle each run, 
   const N = await mk('N'); await preg(N, 10, { noDate: true });
   await go(N, 'circle', 1200);
   ok('no due date yet: asks for it first, nothing to join', /先填預產期/.test(await text(N)) && !(await N.isVisible('button:has-text("加入同週好孕圈")')));
+  await S(N, () => App.store.update((s) => { s.profile.lmp = Core.dateKey(Core.addDays(new Date(), -70)); s.profile.edd = ''; }));
+  await go(N, 'circle', 1200);
+  ok('only the last period entered: the due date is worked out, and she can join', /^p:\d{4}-W\d{2}$/.test(await S(N, () => App.circle.cohort())) && await N.isVisible('button:has-text("加入同週好孕圈")'));
 
   /* ---------- dark mode + small phone ---------- */
   const SE = await mk('SE', { scheme: 'dark', device: 'iPhone SE' }); await preg(SE, WEEKS); await S(SE, () => App.circle.join());

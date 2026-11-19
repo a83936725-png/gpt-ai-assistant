@@ -78,7 +78,11 @@ export function normaliseAccount(raw) {
   return null;
 }
 
-export const cleanText = (s, max = 20) => String(s || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max);
+// max counts characters as people see them (an emoji is one), so a cut never splits one in half
+export const cleanText = (s, max = 20) => Array.from(String(s || '')
+  .replace(/[\u0000-\u001f<>]/g, '')
+  .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
+  .trim()).slice(0, max).join('');
 export const newId = () => b64url(crypto.randomBytes(12));
 export const randomCode = () => {
   const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

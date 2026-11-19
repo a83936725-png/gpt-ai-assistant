@@ -31,9 +31,11 @@
     const y = t.getUTCFullYear(); const w = Math.ceil(((t - Date.UTC(y, 0, 1)) / 86400000 + 1) / 7);
     return { y, w, key: `${y}-W${String(w).padStart(2, '0')}` };
   }
+  // the saved due date, or the one worked out from the last period
+  const dueDate = () => { const p = store.state.profile; return p.edd || (p.lmp ? C.eddFromLmp(p.lmp) : ''); };
   function cohort() {
     if (store.stage === 'preg') {
-      const edd = store.state.profile.edd; if (!edd) return null;
+      const edd = dueDate(); if (!edd) return null;
       return `p:${isoWeek(C.parseKey(edd)).key}`;
     }
     if (store.stage === 'baby') {
@@ -47,7 +49,7 @@
     if (!co) return null;
     if (co === 'prep') return { emoji: '🌱', title: '一起備孕的媽媽', sub: '每週一題，一起準備迎接寶寶' };
     if (co.startsWith('p:')) {
-      const edd = C.parseKey(store.state.profile.edd);
+      const edd = C.parseKey(dueDate());
       const mon = C.addDays(edd, -((edd.getDay() + 6) % 7));
       const ga = store.state.profile.lmp ? C.gestAge(store.state.profile.lmp) : null;
       return { emoji: '🤰', title: `預產期 ${md(mon)}–${md(C.addDays(mon, 6))} 的媽媽`, sub: ga && ga.weeks >= 0 ? `大家都差不多懷孕 ${ga.weeks} 週` : '和你同一週預產的媽媽' };

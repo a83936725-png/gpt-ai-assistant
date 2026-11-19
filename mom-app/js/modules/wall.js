@@ -284,7 +284,8 @@
       const draw = (data) => {
         box.innerHTML = '';
         const w = data.wall; const o = occ(w);
-        const wrote = ((S().wrote || {})[id] || []).filter((x) => !data.wishes.some((y) => y.id === x.id));
+        // my own blessings still waiting for the mom (after 30 days they were most likely not kept, so stop showing them)
+        const wrote = ((S().wrote || {})[id] || []).filter((x) => !data.wishes.some((y) => y.id === x.id) && Date.now() - (x.at || 0) < 30 * 86400e3);
         box.append(hero(w, mine ? '這是你的祝福牆' : `${w.mom || '媽咪'}邀請你留下一句祝福`));
         if (mine) box.append(h('button', { class: 'btn btn-soft btn-block', onclick: () => App.navigate('wall', { id }) }, '⚙️ 管理這面牆（確認祝福、分享）'));
         box.append(h('div', { class: 'wish-wall', 'aria-label': '牆上的祝福' },
@@ -303,10 +304,15 @@
           class: 'input', type: 'text', maxlength: 10, placeholder: '例如：阿嬤、小美阿姨', value: S().wishName || '', 'aria-label': '你的名字',
         });
         const text = h('textarea', {
-          class: 'input', maxlength: 60, rows: 3, placeholder: '寫一句祝福（最多 60 字）', 'aria-label': '祝福的話',
+          class: 'input', rows: 3, placeholder: '寫一句祝福（最多 60 字）', 'aria-label': '祝福的話',
         });
         const count = h('span', { class: 'tiny muted' }, '0 / 60');
-        text.addEventListener('input', () => { count.textContent = `${[...text.value].length} / 60`; });
+        // 60 characters as people count them (an emoji is one; the browser's own limit would count it as two)
+        text.addEventListener('input', () => {
+          const ch = [...text.value];
+          if (ch.length > 60) text.value = ch.slice(0, 60).join('');
+          count.textContent = `${Math.min(60, ch.length)} / 60`;
+        });
         const presets = h('div', { class: 'wish-presets' }, o.presets.map((p) => h('button', { type: 'button', class: 'chip', onclick: () => { text.value = p; text.dispatchEvent(new Event('input')); } }, p)));
         const stickers = h('div', { class: 'wish-stickers', role: 'radiogroup', 'aria-label': '選一個貼圖' });
         const drawStickers = () => {

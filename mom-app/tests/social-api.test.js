@@ -34,6 +34,11 @@ describe('text and avatar cleaning', () => {
     expect(cleanWish('mail me a@b.com')).toBe('mail me');
     expect(cleanWish('第一行\n第二行')).toBe('第一行 第二行');
     expect(cleanWish('   ')).toBe('');
+    // an emoji is one character, as people count them; a cut never splits one in half
+    const party = `${'🎉'.repeat(30)}寶寶加油`;
+    expect([...cleanWish(party)]).toHaveLength(34);
+    expect(cleanName(`a${'😀'.repeat(20)}`)).toBe(`a${'😀'.repeat(9)}`);
+    expect(cleanWish('x\ud83d')).toBe('x');
   });
   test('only the chibi\'s colours and style are kept: never a face photo or anything else', () => {
     const av = cleanAvatar({

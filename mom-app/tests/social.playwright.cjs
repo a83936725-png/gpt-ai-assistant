@@ -246,6 +246,23 @@ const AV_B = {
   ok('deleted: the link says the wall is closed', /已經關閉/.test(await S(G, () => document.body.innerText)));
   ok('…and the wall is gone from the mom\'s phone', await S(M, () => App.social.soc().walls.length === 0));
 
+  /* ================= the walls' keys survive 載入範例資料 and a full restore ================= */
+  {
+    const K = await mk('K'); await baby(K, 30, '小芸');
+    const w = await S(K, async () => { await App.social.api(); return App.wall.create({ occasion: 'month', baby: '小湯圓', mom: '小芸' }); });
+    await S(K, () => App.demo.seed()); await K.waitForTimeout(600);
+    ok('載入範例資料 keeps the key of the wall this phone opened', await S(K, (id) => App.social.soc().walls.some((x) => x.id === id && x.key), w.id));
+    const backup = await S(K, () => { const d = JSON.parse(JSON.stringify(App.store.state)); delete d.social; return JSON.stringify({ app: 'yijia-mom', data: d }); });
+    const file = `${process.env.SHOT_DIR || '/tmp'}/social-backup.json`; fs.writeFileSync(file, backup);
+    await S(K, () => App.me.importData()); await K.waitForTimeout(400);
+    await K.click('.sheet .seg button:has-text("整個取代")');
+    const [fc] = await Promise.all([K.waitForEvent('filechooser'), K.click('.sheet button:has-text("選擇備份檔")')]);
+    await fc.setFiles(file); await K.waitForTimeout(600);
+    await K.click('.sheet-footer .btn-primary'); await K.waitForTimeout(900);
+    ok('整個取代 (restore a backup) keeps it too', /匯入完成/.test(await toasts(K)) && await S(K, (id) => App.social.soc().walls.some((x) => x.id === id && x.key), w.id), await toasts(K));
+    ok('…and the mom can still manage the wall', (await S(K, (id) => App.wall.loadAdmin(App.social.soc().walls.find((x) => x.id === id)).then(() => 'ok').catch((e) => e.code), w.id)) === 'ok');
+  }
+
   /* ================= without the member service ================= */
   if (STATIC_BASE) {
     const O = await mk('O', { base: STATIC_BASE }); await preg(O, 22, '小美', AV_B);
@@ -256,8 +273,10 @@ const AV_B = {
     await go(O, 'wish', { w: 'AAAAAAAAAA' }, 1500);
     ok('offline: a wish link shows a calm message', /連不到|已經關閉/.test(await S(O, () => document.body.innerText)));
     await go(O, 'me');
-    await O.click('button.list-item:has-text("島上的媽媽")'); await O.waitForTimeout(500);
-    ok('offline: 我的 → 島上的媽媽 says it cannot connect', /目前連不到社群服務/.test(await topSheet(O)));
+    const meRows = await S(O, () => [...document.querySelectorAll('.list-item')].map((e) => e.innerText.replace(/\s+/g, ' ')).filter((t) => /島上的媽媽|同週好孕圈|祝福牆/.test(t)));
+    ok('offline: 我的 shows one line saying the social features need the member service', meRows.length === 1 && /需要連上會員服務/.test(meRows[0]), meRows.join(' || '));
+    await S(O, () => App.social.openSettings()); await O.waitForTimeout(500);
+    ok('offline: 島上的媽媽 settings say it cannot connect', /目前連不到社群服務/.test(await topSheet(O)));
     await O.click('.sheet button:has-text("開啟島上的媽媽")'); await O.waitForTimeout(400);
     await O.click('.sheet-footer .btn-primary'); await O.waitForTimeout(900);
     ok('offline: joining does not pretend to work', await S(O, () => !App.social.soc().on) && /連不到/.test(await toasts(O)), await toasts(O));

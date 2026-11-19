@@ -32,7 +32,12 @@
   let apiP = null; let apiOk = null;
   function api() {
     if (!apiP) {
-      apiP = call('GET', 'config').then((c) => !!(c && c.social)).catch(() => false).then((ok) => { apiOk = ok; emit(); if (ok && App.homeRefresh) App.homeRefresh(); return ok; });
+      apiP = call('GET', 'config').then((c) => !!(c && c.social)).catch(() => false).then((ok) => {
+        apiOk = ok; emit();
+        if (ok && App.homeRefresh) App.homeRefresh();
+        if (!ok && document.body.dataset.screen === 'me' && !document.body.classList.contains('has-sheet') && App.refresh) App.refresh(); // 我的 says it can't connect
+        return ok;
+      });
     }
     return apiP;
   }

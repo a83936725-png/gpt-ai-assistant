@@ -89,7 +89,7 @@
     const { id, params } = parseHash();
     let def = App.screens[id];
     // visitors who haven't set up yet can still open login and shared content (Q&A, island articles, roadmap)
-    const PUBLIC = ['onboarding', 'login', 'search', 'island', 'island-guide', 'journey', 'wishlist', 'sources'];
+    const PUBLIC = ['onboarding', 'login', 'search', 'island', 'island-guide', 'journey', 'wishlist', 'sources', 'wish'];
     if (!App.store.state.onboarded && App.screens.onboarding && !PUBLIC.includes(id)) def = App.screens.onboarding;
     if (!def) def = App.screens.home;
     const el = view();
@@ -118,6 +118,8 @@
     else window.scrollTo(0, 0);
   }
   App.refresh = () => render({ keepScroll: true });
+  // something on 首頁 changed in the background (a reaction arrived, a new blessing): redraw it if it is showing
+  App.homeRefresh = () => { if (document.body.dataset.screen === 'home' && !document.body.classList.contains('has-sheet')) render({ keepScroll: true }); };
 
   window.addEventListener('hashchange', () => { App._navCount += 1; render(); });
   App.store.subscribe(() => {

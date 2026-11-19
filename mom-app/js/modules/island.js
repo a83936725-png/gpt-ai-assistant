@@ -1132,9 +1132,12 @@
         }
         inner.appendChild(me);
       }
+      // other moms on this island (島上的媽媽, filled in by social.js)
+      const nb = sv('g', { class: 'isl-ib-nb', 'data-nb': wi.isl.id });
+      inner.appendChild(nb);
       g.appendChild(inner);
       banners.appendChild(g);
-      bannerEls.push({ g, inner, pill, dot, num, nm, sub, pin, mini, wi, me: inner.querySelector('.isl-ib-av') });
+      bannerEls.push({ g, inner, pill, dot, num, nm, sub, pin, mini, wi, nb, me: inner.querySelector('.isl-ib-av') });
     });
     return { world: root, labels, labelEls, bannerEls, infos, scene, islandGroups, openMap };
   }
@@ -1550,6 +1553,8 @@
     const ticker = h('button', { class: 'isl-ticker', 'aria-label': '下一則好孕小報' }, h('span', { class: 'isl-ticker-tag' }, '好孕小報'), tickerText);
     const coach = h('div', { class: 'isl-coach', hidden: true });
     const root = h('div', { class: `isl s-${ST.season}${ST.night ? ' night' : ''}` }, svg, fx, hud, ctrl, strip, ticker, coach, bubble);
+    // 島上的媽媽: a chip under the HUD, and other moms' chibis beside each island's name plate
+    let socChip = null;
     el.append(root);
 
     /* ----- view transform ----- */
@@ -1606,7 +1611,7 @@
         root.classList.toggle('far', view.k < nearK * 0.6);
       }
       const f = nearestIsland();
-      if (f !== focusId) { focusId = f; markStrip(); }
+      if (f !== focusId) { focusId = f; markStrip(); if (App.social) { App.social.look(f); if (socChip) socChip.update(); } }
       ST.view = { ...view }; ST.size = { W, H };
     };
     let raf = 0;
@@ -1693,6 +1698,7 @@
         b.pin.lastChild.setAttribute('x', 0);
         b.g.classList.toggle('done', ist.open && all > 0 && done === all);
         if (b.me) b.me.setAttribute('transform', `translate(${-w / 2 - 30} 18)`);
+        b.nb.setAttribute('transform', `translate(${w / 2 + 24} 18)`);
         b.g.setAttribute('aria-label', `${isl.name}，${b.sub.textContent}`);
       });
       const hereIsl = ISL[here];
@@ -1718,9 +1724,59 @@
       });
       markStrip();
     };
-    onStampChange = updateMarks;
+    // the 島上的媽媽 chip goes right under the HUD (which can wrap to more lines on a small phone)
+    function placeChip() {
+      if (!socChip) return;
+      let top = hud.offsetTop + hud.offsetHeight + 8;
+      if (!coach.hidden) { coach.style.top = `${top}px`; top += coach.offsetHeight + 8; }
+      socChip.el.style.top = `${top}px`;
+    }
+    onStampChange = () => { updateMarks(); placeChip(); };
     apply();
     updateMarks();
+
+    /* ----- 島上的媽媽 ----- */
+    const drawNeighbours = () => {
+      if (!App.social || !App.avatar) return;
+      built.bannerEls.forEach((b) => {
+        const isl = b.wi.isl;
+        const d = !isl.special && statusOf(isl).open ? App.social.forIsland(isl.id) : null;
+        // redraw only when something changed (a tap in progress keeps its target)
+        const sig = d ? `${d.others}|${d.people.slice(0, 3).map((p) => `${p.nid}${JSON.stringify(p.av)}`).join(',')}` : '';
+        if (b.nbSig === sig) return;
+        b.nbSig = sig;
+        b.nb.innerHTML = '';
+        b.g.classList.toggle('has-nb', !!(d && d.others));
+        // far out (群島全景): a small count on the round badge
+        const old = b.mini.querySelector('.isl-mini-nb'); if (old) old.remove();
+        if (d && d.others) {
+          b.mini.appendChild(sv('g', { class: 'isl-mini-nb', transform: 'translate(13 -13)' },
+            sv('circle', { r: 9.5 }), sv('text', null, d.others > 99 ? '99+' : String(d.others))));
+        }
+        if (!d || !d.others) return;
+        const shown = d.people.slice(0, 3);
+        shown.forEach((p, i) => {
+          b.nb.appendChild(sv('image', {
+            href: App.avatar.dataUrl({ ...p.av, mode: 'draw' }, { pose: p.av.pose }), width: 34, height: 42.5, x: -17 + i * 27, y: -41, class: 'isl-nb-p',
+          }));
+        });
+        const rest = d.others - shown.length;
+        if (rest > 0 || !shown.length) {
+          const t = shown.length ? `+${rest}` : `👭 ${d.others}`;
+          const x0 = shown.length ? shown.length * 27 - 6 : -6;
+          const wPill = 14 + t.length * 8;
+          b.nb.appendChild(sv('g', { class: 'isl-nb-more', transform: `translate(${x0} -16)` },
+            sv('rect', { rx: 11, height: 22, width: wPill, y: -11 }),
+            sv('text', { x: wPill / 2, class: 'isl-nb-t' }, t)));
+        }
+        b.nb.appendChild(sv('rect', { class: 'isl-hit', x: -22, y: -46, width: Math.max(44, shown.length * 27 + 30), height: 52 }));
+      });
+    };
+    if (App.social) { socChip = App.social.mapChip(() => focusId || here); root.append(socChip.el); }
+    placeChip();
+    const offSocial = App.social ? App.social.subscribe(() => { drawNeighbours(); if (socChip) socChip.update(); }) : null;
+    drawNeighbours();
+    if (App.social) App.social.mapOpened(focusId || here);
 
     /* ----- controls ----- */
     const ctrlBtn = (icon, label, onclick, extraCls = '') => h('button', { class: `isl-cbtn ${extraCls}`, onclick, 'aria-label': label },
@@ -1822,7 +1878,7 @@
       cancelAnimationFrame(anim);
       try { svg.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (ptrs.size === 1) { moved = 0; multi = false; downTarget = e.target.closest('[data-avatar],[data-spot],[data-baby],[data-island]'); root.classList.add('dragging'); }
+      if (ptrs.size === 1) { moved = 0; multi = false; downTarget = e.target.closest('[data-avatar],[data-nb],[data-spot],[data-baby],[data-island]'); root.classList.add('dragging'); }
       if (ptrs.size > 1) multi = true;
       startGesture();
     });
@@ -1850,6 +1906,7 @@
         root.classList.remove('dragging');
         if (!multi && moved <= 6 && downTarget && e.type === 'pointerup') {
           if (downTarget.dataset.avatar) App.navigate('avatar');
+          else if (downTarget.dataset.nb) { if (App.social) App.social.openResidents(downTarget.dataset.nb); }
           else if (downTarget.dataset.baby) showBubble(downTarget);
           else if (downTarget.dataset.spot) goSpot(downTarget.dataset.spot);
           else if (downTarget.dataset.island) { const id = downTarget.dataset.island; if (focusId !== id) flyTo(id); openIsland(id); }
@@ -1888,7 +1945,7 @@
         W = nw; H = nh;
         computeFit(); nearK = islandView(here).k; lastK = null;
         Object.assign(view, clampView(islandView(keep || here)));
-        apply(); makeStars();
+        apply(); makeStars(); placeChip();
       });
       ro.observe(root);
     }
@@ -1903,8 +1960,9 @@
         h('button', { class: 'isl-coach-main', onclick: () => openTour() }, '👋 第一次來？看看怎麼玩 ›'),
         h('button', { class: 'isl-coach-x', 'aria-label': '不用了', onclick: () => dismissCoach() }, '✕'));
       coach.hidden = false;
+      placeChip();
     };
-    const dismissCoach = () => { coach.hidden = true; updIsland((x) => { x.toured = C.dateKey(); }); };
+    const dismissCoach = () => { coach.hidden = true; placeChip(); updIsland((x) => { x.toured = C.dateKey(); }); };
     const openTour = () => {
       const hereIsl = ISL[here];
       let sh = null;
@@ -1939,6 +1997,7 @@
     cleanup = () => {
       clearInterval(tipTimer); clearTimeout(bubbleTimer); clearTimeout(afterTimer); cancelAnimationFrame(anim); cancelAnimationFrame(raf);
       if (ro) ro.disconnect();
+      if (offSocial) offSocial();
       onStampChange = () => {};
       goSpotHook = null; flyHook = null;
     };

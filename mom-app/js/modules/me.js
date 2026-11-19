@@ -572,6 +572,19 @@
       el.append(h('div', { class: 'section-title' }, '設定'));
       el.append(h('div', { class: 'list' },
         App.screens.invite ? h('a', { class: 'list-item', href: '#/invite' }, h('span', { class: 'li-icon' }, '💌'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '邀請好友・分享卡'), h('div', { class: 'li-sub' }, `好孕點數 ${(s.share && s.share.points) || 0}・邀請碼 ${(s.share && s.share.code) || ''}`)), h('span', { class: 'li-right', html: ui.ICONS.chevron })) : null,
+        App.social ? (() => {
+          const so = App.social.soc();
+          return h('button', { class: 'list-item', onclick: () => App.social.openSettings() }, h('span', { class: 'li-icon' }, '👭'),
+            h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '島上的媽媽'), h('div', { class: 'li-sub' }, so.on ? `已開啟・顯示為「${so.name || '匿名媽咪'}」` : '和同階段的媽媽互相揮手、送愛心（未開啟）')),
+            h('span', { class: 'li-right', html: ui.ICONS.chevron }));
+        })() : null,
+        App.screens.wall ? (() => {
+          const ws = (App.social && App.social.soc().walls) || [];
+          const pend = ws.reduce((n, w) => n + (w.pending || 0), 0);
+          return h('a', { class: 'list-item', href: '#/wall' }, h('span', { class: 'li-icon' }, '💌'),
+            h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '祝福牆'), h('div', { class: 'li-sub' }, ws.length ? `${ws.length} 面牆${pend ? `・${pend} 則等你確認` : ''}` : '滿月、百日、週歲，親友不用下載 App 就能留言')),
+            h('span', { class: 'li-right', html: ui.ICONS.chevron }));
+        })() : null,
         h('a', { class: 'list-item', href: '#/reminders' }, h('span', { class: 'li-icon' }, '🔔'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '提醒中心'), h('div', { class: 'li-sub' }, '餵奶、疫苗／健檢／產檢、滴雞精時光')), h('span', { class: 'li-right', html: ui.ICONS.chevron })),
         h('a', { class: 'list-item', href: '#/brand' }, h('img', { class: 'li-icon li-logo', src: B().logo, alt: '' }), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, B().brandName || '品牌'), h('div', { class: 'li-sub' }, '品牌故事・滴雞精時光打卡')), h('span', { class: 'li-right', html: ui.ICONS.chevron })),
         h('div', { class: 'list-item' }, h('span', { class: 'li-icon' }, '🌓'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '外觀')),
@@ -590,9 +603,9 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.7.1`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.7.2`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
-        h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理（每則都附來源，可點開查看），不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。資料只儲存在你的裝置上。')));
+        h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理（每則都附來源，可點開查看），不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。紀錄只儲存在你的裝置上；只有你開啟「島上的媽媽」或祝福牆時，才會送出角色樣子、名稱和祝福。')));
     },
   });
 

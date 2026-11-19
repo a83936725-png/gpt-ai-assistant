@@ -92,6 +92,12 @@
     if (line) lines.push(line);
     return lines;
   }
+  function fitLine(ctx, text, maxW) {
+    if (ctx.measureText(text).width <= maxW) return text;
+    const ch = [...text];
+    while (ch.length && ctx.measureText(`${ch.join('')}…`).width > maxW) ch.pop();
+    return `${ch.join('')}…`;
+  }
   function roundRect(ctx, x, y, w, h0, r) {
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h0, r); ctx.arcTo(x + w, y + h0, x, y + h0, r);
     ctx.arcTo(x, y + h0, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
@@ -180,7 +186,9 @@
       ctx.textAlign = 'left'; ctx.fillStyle = '#3d3442'; ctx.font = `${big ? 600 : 500} ${big ? 42 : 34}px ${FONT}`;
       spec.lines.slice(0, format === 'story' ? 5 : 3).forEach((ln) => {
         if (big) { ctx.fillStyle = soft; roundRect(ctx, px + 56, y - 10, pw - 112, 72, 22); ctx.fill(); ctx.fillStyle = '#3d3442'; }
-        wrap(ctx, `${big ? '' : '• '}${ln}`, pw - 160).slice(0, big ? 1 : 2).forEach((l2) => { if (y < 300 + panelH - 60) { ctx.fillText(l2, px + (big ? 84 : 70), y + (big ? 6 : 0)); y += big ? 86 : 50; } });
+        // a big row holds one line: a longer one ends in 「…」 instead of being cut off mid-word
+        const rows = big ? [fitLine(ctx, String(ln), pw - 180)] : wrap(ctx, `• ${ln}`, pw - 160).slice(0, 2);
+        rows.forEach((l2) => { if (y < 300 + panelH - 60) { ctx.fillText(l2, px + (big ? 84 : 70), y + (big ? 6 : 0)); y += big ? 86 : 50; } });
       });
       ctx.textAlign = 'center';
       if (spec.footnote && y < 300 + panelH - 80) { ctx.fillStyle = '#7a6f80'; ctx.font = `500 30px ${FONT}`; ctx.fillText(spec.footnote, cx, y + 14); }

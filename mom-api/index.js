@@ -9,6 +9,7 @@
  *   GET  /me, POST /me           profile (+ how many people registered with my invite code)
  *   POST /presence {sid}         heartbeat from an open app
  *   GET  /stats                  {online (last 2 min), registered, todaySignups}
+ *   /social/*, /wall/*           島上的媽媽 (preset reactions) and 祝福牆 — see social.js
  *
  * Health records and pregnancy stage are NOT sent here; they stay on the user's device.
  * Env: MOM_AUTH_SECRET (≥32 chars, required on Vercel/production; shorter ones are ignored), KV_REST_API_URL +
@@ -19,6 +20,7 @@ import express from 'express';
 import crypto from 'crypto';
 import axios from 'axios';
 import { storeFromEnv } from './store.js';
+import { mountSocial } from './social.js';
 import {
   hashPassword, verifyPassword, needsRehash, isCommonPassword, DUMMY_HASH, makeSigner, normaliseAccount, cleanText, newId, randomCode, hashKey, ipBucket,
 } from './auth.js';
@@ -149,7 +151,7 @@ export function createMomRouter({
   let statsCache = null; // /stats is cached briefly to save database calls; a new sign-up clears it
   const needAuth = (res) => { if (!authOn) { res.status(503).json({ error: 'not_configured' }); return true; } return false; };
 
-  router.get('/config', (req, res) => res.json({ providers: { password: authOn, line: lineOn }, storage: store.kind }));
+  router.get('/config', (req, res) => res.json({ providers: { password: authOn, line: lineOn }, storage: store.kind, social: true }));
 
   router.post('/auth/register', wrap(async (req, res) => {
     if (needAuth(res)) return;
@@ -293,6 +295,10 @@ export function createMomRouter({
       backToApp(req, res, { error: 'line_error', nonce: st.n });
     }
   }));
+
+  mountSocial(router, {
+    store, now, secret, over, clientIp, wrap,
+  });
 
   return router;
 }

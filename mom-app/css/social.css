@@ -1,0 +1,124 @@
+/* 島上的媽媽 + 祝福牆 */
+
+/* ---------- the chibi of another mom ---------- */
+.soc-chibi { display: inline-flex; justify-content: center; align-items: flex-end; flex: none; }
+.soc-chibi svg { width: 100%; height: 100%; }
+
+/* ---------- on the map ---------- */
+.soc-chip {
+  position: absolute; left: 10px; top: 72px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; max-width: calc(100% - 82px); padding: 0 12px 0 8px;
+  border-radius: 999px; border: 1px solid var(--c-border); color: var(--c-text);
+  background: color-mix(in srgb, var(--c-surface) 94%, transparent); box-shadow: var(--shadow-1);
+  font-size: 13px; font-weight: 700; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.soc-chip[hidden] { display: none; }
+.soc-chip > span:not(.soc-heads):not(.soc-dot):not(.soc-chip-e) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.soc-chip-e { font-size: 17px; line-height: 1; }
+.soc-heads { display: inline-flex; }
+.soc-heads .soc-chibi { width: 22px !important; height: 26px !important; margin-right: -7px; border-radius: 50%; background: var(--c-primary-soft); overflow: hidden; box-shadow: 0 0 0 2px var(--c-surface); }
+.soc-heads .soc-chibi svg { width: 32px; height: 40px; margin-top: -2px; }
+.soc-heads .soc-chibi:last-child { margin-right: 2px; }
+.soc-dot {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px;
+  border-radius: 999px; background: #a3271c; color: #fff; font-size: 12px; font-weight: 800; flex: none;
+}
+.isl-ib-nb { cursor: pointer; }
+.isl-nb-p { filter: drop-shadow(0 2px 2px rgba(40, 20, 50, .28)); }
+.isl-nb-more rect { fill: #fff; stroke: rgba(60, 30, 70, .18); stroke-width: 1px !important; filter: drop-shadow(0 1px 2px rgba(40, 20, 50, .2)); }
+.isl-nb-t { font-size: 12px; font-weight: 800; fill: #5a2873; text-anchor: middle; dominant-baseline: central; }
+.isl-mini-nb circle { fill: #5a2873; stroke: #fff; stroke-width: 2px !important; }
+.isl-mini-nb text { font-size: 10px; font-weight: 900; fill: #fff; text-anchor: middle; dominant-baseline: central; }
+@media (prefers-reduced-motion: no-preference) {
+  .isl-nb-p { animation: soc-bob 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: bottom; }
+  .isl-nb-p:nth-of-type(2) { animation-delay: -.9s; }
+  .isl-nb-p:nth-of-type(3) { animation-delay: -1.7s; }
+  @keyframes soc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+}
+
+/* ---------- sheets ---------- */
+.soc-join-hero { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.soc-join-t { font-size: 17px; font-weight: 800; margin-bottom: 2px; }
+.soc-privacy { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.soc-pv { border-radius: 12px; padding: 10px 12px; background: var(--c-primary-soft); font-size: 13px; }
+.soc-pv.no { background: var(--c-surface-2, #f5f1f4); }
+.soc-pv strong { display: block; margin-bottom: 4px; }
+.soc-pv ul { margin: 0; padding-left: 18px; line-height: 1.55; color: var(--c-text-2); }
+@media (max-width: 360px) { .soc-privacy { grid-template-columns: 1fr; } }
+.soc-rule { background: var(--c-accent-soft); border-radius: 10px; padding: 8px 12px; margin: 8px 0 12px; }
+.soc-warn { color: var(--c-danger-ink); }
+.soc-count { font-weight: 800; margin: 0 0 10px; }
+.soc-me { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--c-primary-soft); margin-bottom: 12px; }
+.soc-list { display: grid; gap: 10px; }
+.soc-p { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border: 1px solid var(--c-border); border-radius: 16px; background: var(--c-surface); }
+.soc-p-main { flex: 1; min-width: 0; }
+.soc-p-top { display: flex; align-items: center; gap: 6px; }
+.soc-p-name { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.soc-p-hearts { font-size: 12px; font-weight: 700; color: var(--c-primary); white-space: nowrap; }
+.soc-more { margin-left: auto; width: 40px; height: 40px; border: 0; border-radius: 12px; background: none; color: var(--c-text-2); font-size: 20px; font-weight: 800; cursor: pointer; flex: none; }
+.soc-p-meta { font-size: 12px; color: var(--c-text-2); margin: -4px 0 6px; }
+.soc-acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.soc-act {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 48px;
+  border-radius: 12px; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text); cursor: pointer; font-size: 20px; line-height: 1.1;
+}
+.soc-act-l { font-size: 11px; font-weight: 700; color: var(--c-text-2); }
+.soc-act:active { transform: scale(.94); }
+.soc-act.sent { background: var(--c-primary-soft); border-color: var(--c-primary); }
+.soc-act.sent .soc-act-l { color: var(--c-primary); }
+.soc-empty { text-align: center; padding: 14px 8px 4px; color: var(--c-text-2); }
+.soc-empty-e { font-size: 34px; }
+.soc-empty p { margin: 4px 0 0; }
+.soc-h { font-weight: 800; margin: 14px 0 8px; }
+.soc-inbox { margin-bottom: 6px; }
+.soc-in { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--c-border); }
+.soc-in:last-child { border-bottom: 0; }
+.soc-in.new .soc-in-t::after { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #a3271c; margin-left: 6px; vertical-align: middle; }
+.soc-in-t { font-size: 14px; font-weight: 700; }
+.soc-bl { align-items: center; }
+.soc-home, .wall-home { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; padding: 12px 14px; }
+.soc-home .grow, .wall-home-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wall-home-main { background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.wall-home-e { font-size: 26px; width: 44px; height: 44px; border-radius: 14px; background: var(--c-accent-soft); display: flex; align-items: center; justify-content: center; flex: none; }
+
+/* ---------- 祝福牆 ---------- */
+.wish-hero { display: flex; gap: 12px; align-items: center; padding: 16px; border-radius: 20px; color: #fff; }
+.wish-hero.t-purple { background: linear-gradient(135deg, #4a1f62, #7b4597); }
+.wish-hero.t-peach { background: linear-gradient(135deg, #9a4527, #c9684a); }
+.wish-hero.t-green { background: linear-gradient(135deg, #1f6b4a, #3a8c65); }
+.wish-hero .soc-chibi { background: rgba(255, 255, 255, .18); border-radius: 16px; padding-top: 4px; }
+.wish-hero-e { font-size: 44px; line-height: 1; }
+.wish-kicker { font-size: 12px; font-weight: 800; opacity: .92; }
+.wish-title { margin: 2px 0; font-size: 21px; line-height: 1.3; color: #fff; }
+.wish-sub { font-size: 13px; opacity: .95; }
+.wish-wall { display: grid; gap: 10px; }
+.wish-first { padding: 18px 0; }
+.wish-card { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: var(--c-surface); border: 1px solid var(--c-border); box-shadow: var(--shadow-1); }
+.wish-card.pending { border-style: dashed; }
+.wish-st { font-size: 26px; line-height: 1.1; flex: none; }
+.wish-text { margin: 0; font-size: 15.5px; line-height: 1.55; word-break: break-word; }
+.wish-by { font-size: 13px; color: var(--c-text-2); margin-top: 2px; font-weight: 600; }
+.wish-mod { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.wish-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.wish-presets .chip { min-height: 40px; }
+.wish-count { text-align: right; margin-top: 2px; }
+.wish-stickers { display: flex; flex-wrap: wrap; gap: 6px; }
+.wish-stk { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--c-border); background: var(--c-surface); font-size: 22px; cursor: pointer; }
+.wish-stk.on { border-color: var(--c-primary); box-shadow: 0 0 0 2px var(--c-primary); background: var(--c-primary-soft); }
+.wish-form textarea { resize: vertical; min-height: 76px; }
+.wall-btns { display: grid; gap: 8px; }
+.wall-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; }
+.wall-tabs .chip { flex: none; min-height: 40px; }
+.wall-tabs .chip.on { background: var(--c-primary); color: var(--c-primary-ink, #fff); border-color: var(--c-primary); }
+.wall-occ { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.wall-occ-b { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 12px; border-radius: 14px; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text); font-weight: 700; cursor: pointer; }
+.wall-occ-b span:first-child { font-size: 20px; }
+.wall-occ-b.on { border-color: var(--c-primary); box-shadow: 0 0 0 2px var(--c-primary); background: var(--c-primary-soft); }
+.wall-av { align-items: center; font-size: 14px; }
+.wall-av input { width: 22px; height: 22px; flex: none; }
+
+@media print {
+  .no-print, .wish-form, .wish-cta { display: none !important; }
+  .wish-hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .wish-card { break-inside: avoid; box-shadow: none; }
+}

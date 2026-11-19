@@ -28,3 +28,6 @@
 .login-err { color: var(--c-danger-ink); font-weight: 600; font-size: 14px; }
 .acct-card .card-title .tag { margin-left: 4px; }
 .ob-login { margin-top: 10px; }
+/* a narrow phone: the sign-out buttons go under the name instead of squeezing it */
+.acct-row { flex-wrap: wrap; }
+.acct-row > .grow { min-width: 190px; }

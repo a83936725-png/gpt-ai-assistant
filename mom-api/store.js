@@ -89,6 +89,16 @@ export class MemoryStore {
 
   async countReferrals(code) { return this.referrals.get(code) || 0; }
 
+  // 刪除帳號: the account, its sign-in name, its invite code and its count are gone (the inviter's own count stays)
+  async deleteUser(user) {
+    this.users.delete(user.id);
+    if (this.accounts.get(user.account) === user.id) this.accounts.delete(user.account);
+    if (user.code && this.codes.get(user.code) === user.id) this.codes.delete(user.code);
+    if (user.code) this.referrals.delete(user.code);
+    this.tv.delete(user.id);
+    const i = this.signups.indexOf(user.createdAt); if (i >= 0) this.signups.splice(i, 1);
+  }
+
   /* ---- small generic helpers for the social features (島上的媽媽, 祝福牆) ---- */
   gone(key, now = Date.now()) {
     const e = this.exp.get(key);
@@ -221,6 +231,15 @@ export class RedisRestStore {
   }
 
   async addReferral(code) { await this.cmd('HINCRBY', 'mom:referrals', code, 1); }
+
+  async deleteUser(user) {
+    await this.cmd('DEL', `mom:user:${user.id}`);
+    if ((await this.cmd('GET', `mom:acct:${user.account}`)) === user.id) await this.cmd('DEL', `mom:acct:${user.account}`);
+    if (user.code) { await this.cmd('HDEL', 'mom:codes', user.code); await this.cmd('HDEL', 'mom:referrals', user.code); }
+    await this.cmd('SREM', 'mom:users', user.id);
+    await this.cmd('ZREM', 'mom:signups', user.id);
+    await this.cmd('DEL', `mom:tv:${user.id}`);
+  }
 
   // INCR and EXPIRE in one atomic step: if the expiry were set by a second call that failed, the counter would
   // never reset and that account or address would stay locked out for good

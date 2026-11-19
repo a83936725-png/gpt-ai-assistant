@@ -241,6 +241,7 @@
     };
     drawSeg(); drawPreview();
     const submit = h('button', { class: 'btn btn-primary btn-block' }, '開一面祝福牆');
+    const agree = App.privacy ? App.privacy.box({ label: ['我了解知道連結的人都看得到牆上「已顯示」的祝福，並同意', App.privacy.link()] }) : null;
     const available = h('div');
     el.append(h('div', { class: 'stack' },
       h('div', { class: 'card soft' }, h('div', { class: 'card-title' }, '💌 祝福牆'), h('p', { class: 'small' }, '滿月、百日、週歲（或懷孕時的好孕加油），開一面牆、把連結傳到家族群組。親友不用下載 App 就能留言，你按「顯示」才會出現在牆上，最後可以存成一張祝福卡。')),
@@ -248,10 +249,12 @@
       ui.field('寶寶的名字或小名', baby, '會顯示在牆的標題，可以只寫小名'),
       ui.field('媽媽的名稱', mom),
       h('label', { class: 'row gap-sm wall-av' }, withAv, h('span', null, hasAv ? '放上我的 Q 版角色（畫的版本，不會用照片）' : '放上 Q 版角色（還沒做角色，會用預設樣子）')),
-      err, submit, available,
+      agree ? agree.el : null, err, submit, available,
       h('p', { class: 'tiny muted' }, '知道連結的人都看得到你確認過的祝福。寶寶的生日、照片和紀錄都不會放上去。')));
     submit.addEventListener('click', async () => {
-      err.hidden = true; submit.disabled = true; submit.textContent = '建立中…';
+      err.hidden = true;
+      if (agree && !agree.need('請先勾選同意，才能開一面祝福牆')) return;
+      submit.disabled = true; submit.textContent = '建立中…';
       try {
         const w = await create({
           occasion, baby: baby.value.trim(), mom: mom.value.trim(), withAv: withAv.checked,
@@ -324,18 +327,22 @@
         drawStickers();
         const err = h('p', { class: 'login-err', hidden: true });
         const send = h('button', { class: 'btn btn-primary btn-block', type: 'submit' }, `送出祝福 ${o.sticker}`);
+        const agree = App.privacy ? App.privacy.box({ label: ['我同意我的名字和祝福在媽媽確認後顯示在這面牆上，並同意', App.privacy.link()] }) : null;
         const f = h('form', { class: 'card wish-form', novalidate: true },
           h('div', { class: 'card-title' }, '✍️ 留下你的祝福'),
           ui.field('你的名字', name),
           h('div', { class: 'small muted' }, '點一下就能用：'), presets,
           ui.field('祝福的話', h('div', null, text, h('div', { class: 'wish-count' }, count))),
           ui.field('貼圖', stickers),
+          agree ? agree.el : null,
           err, send,
           h('p', { class: 'tiny muted' }, '媽媽確認後才會出現在牆上。請不要留下電話、地址或連結。'));
         f.addEventListener('submit', async (e) => {
           e.preventDefault();
           if (!text.value.trim()) { err.textContent = ERR.empty; err.hidden = false; text.focus(); return; }
-          err.hidden = true; send.disabled = true; send.textContent = '送出中…';
+          err.hidden = true;
+          if (agree && !agree.need('請先勾選同意，才能送出祝福')) return;
+          send.disabled = true; send.textContent = '送出中…';
           try {
             const r = await call('POST', `wall/${w.id}/wish`, { name: name.value, text: text.value, sticker });
             upd((x) => {

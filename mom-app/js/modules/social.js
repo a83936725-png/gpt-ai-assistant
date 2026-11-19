@@ -177,7 +177,10 @@
   async function join(name) {
     if (!(await api())) { ui.toast('目前連不到社群服務，請連上網路後再試'); return false; }
     ensureKey();
-    upd((x) => { x.on = true; x.name = (name || '').trim().slice(0, 10); x.joinedAt = x.joinedAt || new Date().toISOString(); });
+    upd((x) => {
+      x.on = true; x.name = (name || '').trim().slice(0, 10); x.joinedAt = x.joinedAt || new Date().toISOString();
+      x.consent = { ...(x.consent || {}), island: { version: App.privacy ? App.privacy.VERSION : '', at: new Date().toISOString() } }; // she ticked 同意
+    });
     await poll(myIsland());
     if (live.error) ui.toast('已開啟，連上網路後其他媽媽就會看到你');
     else ui.toast('👭 你已經在島上了！');
@@ -200,6 +203,7 @@
 
   function openJoin(after) {
     let sh = null;
+    const agree = App.privacy ? App.privacy.box({ label: ['我同意分享上面「其他媽媽會看到」的資料，並遵守', App.privacy.link('使用條款'), '的社群守則（可隨時關閉）'] }) : null;
     const name = h('input', {
       class: 'input', type: 'text', maxlength: 10, value: soc().name || '', placeholder: '例如：小美（可不填）', 'aria-label': '顯示名稱',
     });
@@ -209,6 +213,7 @@
       privacyList(),
       h('p', { class: 'small soc-rule' }, '互動只有 👋 揮手、💜 愛心、🌸 加油、🤗 抱抱四種，不能私訊、不能留言。隨時可以封鎖、檢舉或關閉。'),
       ui.field('顯示名稱', name, '不填就顯示「匿名媽咪」；不要放電話、LINE ID'),
+      agree ? agree.el : null,
       App.avatar && !App.avatar.current() ? h('button', { class: 'btn btn-soft btn-block', onclick: () => { sh.close(); App.navigate('avatar'); } }, '🙂 先做我的 Q 版角色') : null);
     sh = ui.sheet({
       title: '👭 島上的媽媽',
@@ -218,6 +223,7 @@
         h('button', {
           class: 'btn btn-primary grow',
           onclick: async (e) => {
+            if (agree && !agree.need('請先勾選同意，才能加入島上的媽媽')) return;
             const btn = e.currentTarget; btn.disabled = true;
             const ok = await join(name.value);
             if (!ok) { btn.disabled = false; return; }
@@ -348,6 +354,18 @@
     sh = ui.sheet({ title: '👭 島上的媽媽・設定', body });
   }
 
+  // everything social, off and gone: leave the islands and the circle, delete the walls this phone opened
+  async function forgetAll() {
+    const st = soc();
+    const jobs = [];
+    if (st.key) jobs.push(call('POST', 'social/leave', { key: st.key }).catch(() => {}));
+    if (st.key && st.circle && st.circle.cohort) jobs.push(call('POST', 'circle/leave', { key: st.key, cohort: st.circle.cohort }).catch(() => {}));
+    (st.walls || []).forEach((w) => { if (w.key) jobs.push(call('POST', `wall/${w.id}/delete`, { key: w.key }).catch(() => {})); });
+    await Promise.all(jobs);
+    upd((x) => { x.on = false; x.circle = { ...(x.circle || {}), on: false }; x.walls = []; x.inbox = []; });
+    live.people = []; live.me = null; live.look = null; emit();
+  }
+
   /* ---------------- the chip on the map ---------------- */
   function mapChip(getFocus) {
     const el = h('button', { class: 'soc-chip', hidden: true });
@@ -409,6 +427,6 @@
   }
 
   App.social = {
-    api, isReady: () => apiOk, me: () => live.me, forIsland, subscribe, look, poll, mapOpened, mapChip, openResidents, openSettings, openJoin, unread, publicAv, chibi, soc, upd, call, REACT,
+    api, isReady: () => apiOk, me: () => live.me, forgetAll, forIsland, subscribe, look, poll, mapOpened, mapChip, openResidents, openSettings, openJoin, unread, publicAv, chibi, soc, upd, call, REACT,
   };
 }());

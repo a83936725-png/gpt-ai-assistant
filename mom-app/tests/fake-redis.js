@@ -41,6 +41,7 @@ export function fakeRedis() {
       }
       case 'SADD': { if (!sets.has(a[0])) sets.set(a[0], new Set()); sets.get(a[0]).add(a[1]); return 1; }
       case 'SCARD': return sets.has(a[0]) ? sets.get(a[0]).size : 0;
+      case 'SREM': return sets.has(a[0]) && sets.get(a[0]).delete(String(a[1])) ? 1 : 0;
       case 'ZADD': z(a[0]).set(String(a[2]), Number(a[1])); return 1;
       case 'ZREM': return z(a[0]).delete(String(a[1])) ? 1 : 0;
       case 'ZSCORE': return z(a[0]).has(String(a[1])) ? String(z(a[0]).get(String(a[1]))) : null;

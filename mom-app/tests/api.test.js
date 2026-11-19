@@ -5,6 +5,7 @@ import express from 'express';
 import axios from 'axios';
 import { createMomRouter } from '../../mom-api/index.js';
 import { MemoryStore, RedisRestStore } from '../../mom-api/store.js';
+import { POLICY_VERSION as POLICY } from '../../mom-api/policy.js';
 import {
   normaliseAccount, verifyPassword, hashPassword, makeSigner, safeEqual, ipBucket, isCommonPassword, needsRehash,
 } from '../../mom-api/auth.js';
@@ -68,11 +69,11 @@ describe('member API', () => {
     expect((await api.get(`${base}/config`)).data.providers).toEqual({ password: true, line: true });
   });
   test('register validates input', async () => {
-    expect((await api.post(`${base}/auth/register`, { account: 'nope', password: '12345678' })).status).toBe(400);
-    expect((await api.post(`${base}/auth/register`, { account: 'a@b.co', password: 'short' })).status).toBe(400);
+    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'nope', password: '12345678' })).status).toBe(400);
+    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'a@b.co', password: 'short' })).status).toBe(400);
   });
   test('register, duplicate, login; the server picks the invite code', async () => {
-    const r = await api.post(`${base}/auth/register`, {
+    const r = await api.post(`${base}/auth/register`, { consent: POLICY,
       account: 'alice@example.com', password: 'password-123', nickname: '小美<script>', code: 'ALICE1', stage: 'preg',
     });
     expect(r.status).toBe(201);
@@ -83,14 +84,14 @@ describe('member API', () => {
     expect(r.data.user.accountHint).toBe('a***@example.com');
     expect(r.data.user.passwordHash).toBeUndefined();
     alice = r.data;
-    expect((await api.post(`${base}/auth/register`, { account: 'ALICE@example.com', password: 'password-123' })).status).toBe(409);
+    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'ALICE@example.com', password: 'password-123' })).status).toBe(409);
     expect((await api.post(`${base}/auth/login`, { account: 'alice@example.com', password: 'wrong-pass' })).status).toBe(401);
     expect((await api.post(`${base}/auth/login`, { account: 'nobody@example.com', password: 'wrong-pass' })).status).toBe(401);
     const ok = await api.post(`${base}/auth/login`, { account: 'alice@example.com', password: 'password-123' });
     expect(ok.status).toBe(200);
   });
   test('referral: registering with an invite code counts for the inviter', async () => {
-    const r = await api.post(`${base}/auth/register`, { account: '0912345678', password: 'password-456', invitedBy: alice.user.code.toLowerCase() });
+    const r = await api.post(`${base}/auth/register`, { consent: POLICY, account: '0912345678', password: 'password-456', invitedBy: alice.user.code.toLowerCase() });
     expect(r.status).toBe(201);
     expect((await api.get(`${base}/me`, auth(alice.token))).data.user.referrals).toBe(1);
   });
@@ -163,7 +164,7 @@ describe('production safety', () => {
   test('without MOM_AUTH_SECRET in production, login is switched off (not half-working)', async () => {
     const { server, base } = await serve(createMomRouter({ store: new MemoryStore(), env: { NODE_ENV: 'test', VERCEL: '1' } }));
     expect((await api.get(`${base}/config`)).data.providers).toEqual({ password: false, line: false });
-    expect((await api.post(`${base}/auth/register`, { account: 'p@example.com', password: 'password-1' })).status).toBe(503);
+    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'p@example.com', password: 'password-1' })).status).toBe(503);
     expect((await api.get(`${base}/stats`)).status).toBe(200); // counts still work
     await new Promise((r) => server.close(r));
   });
@@ -216,10 +217,10 @@ describe('member API on the Redis REST store', () => {
   });
   afterAll(() => new Promise((r) => srv.close(r)));
   test('register, duplicate, referral, login, stats, shared rate limits', async () => {
-    const a = await api.post(`${base}/auth/register`, { account: 'kv@example.com', password: 'password-1' });
+    const a = await api.post(`${base}/auth/register`, { consent: POLICY, account: 'kv@example.com', password: 'password-1' });
     expect(a.status).toBe(201);
-    expect((await api.post(`${base}/auth/register`, { account: 'kv@example.com', password: 'password-1' })).status).toBe(409);
-    expect((await api.post(`${base}/auth/register`, { account: '0922333444', password: 'password-2', invitedBy: a.data.user.code })).status).toBe(201);
+    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'kv@example.com', password: 'password-1' })).status).toBe(409);
+    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: '0922333444', password: 'password-2', invitedBy: a.data.user.code })).status).toBe(201);
     const login = await api.post(`${base}/auth/login`, { account: 'kv@example.com', password: 'password-1' });
     expect(login.data.user.referrals).toBe(1);
     await api.post(`${base}/presence`, { sid: 'kv-tab-0001' });
@@ -261,7 +262,7 @@ describe('security hardening', () => {
 
   test('a short MOM_AUTH_SECRET is never used for signing', async () => {
     const { server, base } = await serve(createMomRouter({ store: new MemoryStore(), env: { NODE_ENV: 'test', MOM_AUTH_SECRET: 'secret' } }));
-    const r = await api.post(`${base}/auth/register`, { account: 'weak@example.com', password: 'baby-sleeps-9' });
+    const r = await api.post(`${base}/auth/register`, { consent: POLICY, account: 'weak@example.com', password: 'baby-sleeps-9' });
     expect(r.status).toBe(201);
     expect(makeSigner('secret').verify(r.data.token)).toBeNull(); // not signed with the guessable key
     await close(server);
@@ -270,7 +271,7 @@ describe('security hardening', () => {
   test('「登出所有裝置」 cannot be undone by a profile write that read the user before it (Redis store)', async () => {
     const store = new RedisRestStore({ url: 'https://kv.example', token: 'kv-token', http: fakeRedis() });
     const { server, base } = await start({ store });
-    const reg = await api.post(`${base}/auth/register`, { account: 'race@example.com', password: 'baby-sleeps-9' });
+    const reg = await api.post(`${base}/auth/register`, { consent: POLICY, account: 'race@example.com', password: 'baby-sleeps-9' });
     const stolen = reg.data.token;
     const stale = await store.getUser(reg.data.user.id); // a POST /me in flight read the record here…
     expect((await api.post(`${base}/auth/logout-all`, {}, bearer(stolen))).status).toBe(200);
@@ -283,7 +284,7 @@ describe('security hardening', () => {
 
   test('nobody can lock the owner out by failing on purpose; guessing from one network still stops', async () => {
     const { server, base } = await start({ env: { MOM_TRUST_PROXY: '1' } });
-    await api.post(`${base}/auth/register`, { account: 'owner@example.com', password: 'baby-sleeps-9' }, from('10.0.0.1'));
+    await api.post(`${base}/auth/register`, { consent: POLICY, account: 'owner@example.com', password: 'baby-sleeps-9' }, from('10.0.0.1'));
     let pair;
     for (let i = 0; i < 11; i += 1) pair = await api.post(`${base}/auth/login`, { account: 'owner@example.com', password: `wrong-${i}-xx` }, from('10.0.9.9')); // eslint-disable-line no-await-in-loop
     expect(pair.status).toBe(429); // 10 tries from one network, then stop
@@ -297,20 +298,20 @@ describe('security hardening', () => {
 
   test('behind a proxy each user has their own limits (MOM_TRUST_PROXY), and mistakes do not use up sign-ups', async () => {
     const { server, base } = await start({ env: { MOM_TRUST_PROXY: '1' } });
-    for (let i = 0; i < 20; i += 1) await api.post(`${base}/auth/register`, { account: 'nope', password: '12345678' }, from('10.2.0.1')); // eslint-disable-line no-await-in-loop
-    expect((await api.post(`${base}/auth/register`, { account: 'ok1@example.com', password: 'baby-sleeps-9' }, from('10.2.0.1'))).status).toBe(201);
-    for (let i = 0; i < 10; i += 1) await api.post(`${base}/auth/register`, { account: `junk${i}@example.com`, password: 'baby-sleeps-9' }, from('10.2.0.2')); // eslint-disable-line no-await-in-loop
-    expect((await api.post(`${base}/auth/register`, { account: 'junk-x@example.com', password: 'baby-sleeps-9' }, from('10.2.0.2'))).status).toBe(429);
-    expect((await api.post(`${base}/auth/register`, { account: 'other@example.com', password: 'baby-sleeps-9' }, from('10.2.0.3'))).status).toBe(201); // another user is not blocked
-    expect((await api.post(`${base}/auth/register`, { account: 'pw@example.com', password: 'password123' }, from('10.2.0.4'))).data.error).toBe('common_password');
+    for (let i = 0; i < 20; i += 1) await api.post(`${base}/auth/register`, { consent: POLICY, account: 'nope', password: '12345678' }, from('10.2.0.1')); // eslint-disable-line no-await-in-loop
+    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'ok1@example.com', password: 'baby-sleeps-9' }, from('10.2.0.1'))).status).toBe(201);
+    for (let i = 0; i < 10; i += 1) await api.post(`${base}/auth/register`, { consent: POLICY, account: `junk${i}@example.com`, password: 'baby-sleeps-9' }, from('10.2.0.2')); // eslint-disable-line no-await-in-loop
+    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'junk-x@example.com', password: 'baby-sleeps-9' }, from('10.2.0.2'))).status).toBe(429);
+    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'other@example.com', password: 'baby-sleeps-9' }, from('10.2.0.3'))).status).toBe(201); // another user is not blocked
+    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'pw@example.com', password: 'password123' }, from('10.2.0.4'))).data.error).toBe('common_password');
     await close(server);
   });
 
   test('invites: one network counts at most 3 times per code per day', async () => {
     const { server, base } = await start({ env: { MOM_TRUST_PROXY: '1' } });
-    const inviter = await api.post(`${base}/auth/register`, { account: 'host@example.com', password: 'baby-sleeps-9' }, from('10.3.0.1'));
-    for (let i = 0; i < 6; i += 1) await api.post(`${base}/auth/register`, { account: `friend${i}@example.com`, password: 'baby-sleeps-9', invitedBy: inviter.data.user.code }, from('10.3.0.2')); // eslint-disable-line no-await-in-loop
-    await api.post(`${base}/auth/register`, { account: 'real-friend@example.com', password: 'baby-sleeps-9', invitedBy: inviter.data.user.code }, from('10.3.0.3'));
+    const inviter = await api.post(`${base}/auth/register`, { consent: POLICY, account: 'host@example.com', password: 'baby-sleeps-9' }, from('10.3.0.1'));
+    for (let i = 0; i < 6; i += 1) await api.post(`${base}/auth/register`, { consent: POLICY, account: `friend${i}@example.com`, password: 'baby-sleeps-9', invitedBy: inviter.data.user.code }, from('10.3.0.2')); // eslint-disable-line no-await-in-loop
+    await api.post(`${base}/auth/register`, { consent: POLICY, account: 'real-friend@example.com', password: 'baby-sleeps-9', invitedBy: inviter.data.user.code }, from('10.3.0.3'));
     expect((await api.get(`${base}/me`, bearer(inviter.data.token))).data.user.referrals).toBe(4);
     await close(server);
   });
@@ -337,7 +338,7 @@ describe('security hardening', () => {
   test('an older (weaker) password hash is upgraded at the next login', async () => {
     const store = new MemoryStore();
     const { server, base } = await start({ store });
-    await api.post(`${base}/auth/register`, { account: 'old@example.com', password: 'baby-sleeps-9' });
+    await api.post(`${base}/auth/register`, { consent: POLICY, account: 'old@example.com', password: 'baby-sleeps-9' });
     const u = await store.getUserByAccount('email:old@example.com');
     const crypto = await import('crypto');
     const salt = crypto.randomBytes(16);

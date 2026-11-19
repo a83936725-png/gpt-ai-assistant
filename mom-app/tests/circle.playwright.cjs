@@ -62,6 +62,9 @@ const WEEKS = 12 + Math.floor(Math.random() * 20); // a random circle each run, 
   const joinText = await text(A);
   ok('join screen says what is sent (the week, not the date) and what is not', /預產期是哪一週（不是日期）/.test(joinText) && /誰選了什麼/.test(joinText) && /3 位以上回答才公布結果/.test(joinText), joinText.slice(0, 200));
   await axe(A, 'circle join screen');
+  await A.click('button:has-text("加入同週好孕圈")'); await A.waitForTimeout(500);
+  ok('joining needs the 同意 tick (nothing is sent without it)', /請先勾選同意/.test(await text(A)) && !A.sent.length);
+  await A.check('.pv-box.req input');
   await A.click('button:has-text("加入同週好孕圈")'); await A.waitForTimeout(1500);
   const sent = A.sent.find((r) => /circle\/sync/.test(r.url));
   const cohortA = sent && JSON.parse(sent.body).cohort;

@@ -6,13 +6,18 @@
  *   POST /auth/logout-all        revoke every session of this account
  *   GET  /auth/line/start?nonce  → LINE Login (needs LINE_LOGIN_CHANNEL_ID / LINE_LOGIN_CHANNEL_SECRET)
  *   GET  /auth/line/callback     → back to the app with {token, nonce}
- *   GET  /me, POST /me           profile (+ how many people registered with my invite code)
+ *   GET  /me, POST /me           profile (+ how many people registered with my invite code); POST also records
+ *                                consent to the privacy policy and the marketing choice
+ *   GET  /me/export              everything stored about me (個資法 §3: a copy of my data)
+ *   POST /auth/delete {password} delete my account (§3: deletion); password accounts must re-enter the password
  *   POST /presence {sid}         heartbeat from an open app
  *   GET  /stats                  {online (last 2 min), registered, todaySignups}
  *   /social/*, /wall/*           島上的媽媽 (preset reactions) and 祝福牆 — see social.js
  *   /circle/*                    同週好孕圈 (weekly question, mood, cheers) — see circle.js
  *
  * Health records and pregnancy stage are NOT sent here; they stay on the user's device.
+ * Sign-up needs the current privacy policy version in `consent` (個資法 §7: the collector must be able to show
+ * consent); the version and time are kept with the account. Marketing is a separate, optional choice (§20).
  * Env: MOM_AUTH_SECRET (≥32 chars, required on Vercel/production; shorter ones are ignored), KV_REST_API_URL +
  *      KV_REST_API_TOKEN (Vercel KV) or UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN, MOM_PUBLIC_URL (required
  *      for LINE login in production), MOM_ALLOWED_ORIGINS, MOM_TRUST_PROXY (number of proxies in front, e.g. 1 behind
@@ -23,6 +28,7 @@ import axios from 'axios';
 import { storeFromEnv } from './store.js';
 import { mountSocial } from './social.js';
 import { mountCircle } from './circle.js';
+import { POLICY_VERSION } from './policy.js';
 import {
   hashPassword, verifyPassword, needsRehash, isCommonPassword, DUMMY_HASH, makeSigner, normaliseAccount, cleanText, newId, randomCode, hashKey, ipBucket,
 } from './auth.js';
@@ -102,7 +108,10 @@ export function createMomRouter({
     }
     return ipBucket(ip || (req.socket && req.socket.remoteAddress) || req.ip || '');
   };
-  const over = async (name, id, [max, windowSec]) => (await store.hit(`${name}:${hashKey(id)}`, windowSec, now())) > max;
+  // rate-limit and trusted-network keys hold network addresses: they are hashed with the server secret, so the
+  // stored keys can't be turned back into addresses (an unkeyed hash of an IPv4 address can be brute-forced)
+  const keyed = (s) => crypto.createHmac('sha256', `${secret}:keys`).update(String(s)).digest('hex').slice(0, 32);
+  const over = async (name, id, [max, windowSec]) => (await store.hit(`${name}:${keyed(id)}`, windowSec, now())) > max;
 
   const hint = (u) => {
     const [type, value] = String(u.account).split(/:(.+)/);
@@ -111,7 +120,15 @@ export function createMomRouter({
     return 'LINE';
   };
   const publicUser = (u, extra = {}) => ({
-    id: u.id, nickname: u.nickname, provider: u.provider, code: u.code, createdAt: u.createdAt, accountHint: hint(u), ...extra,
+    id: u.id,
+    nickname: u.nickname,
+    provider: u.provider,
+    code: u.code,
+    createdAt: u.createdAt,
+    accountHint: hint(u),
+    consent: (u.consent && u.consent.version) || null,
+    marketing: !!(u.marketing && u.marketing.on),
+    ...extra,
   });
   // tv (token version) lets 「登出所有裝置」 revoke every issued session; it is kept apart from the user record
   // (store.getTokenVersion) so a profile update in flight can never write an old version back
@@ -130,10 +147,22 @@ export function createMomRouter({
     return `${randomCode()}${randomCode()}`;
   }
   async function createUser({
-    account, provider, nickname, passwordHash = null, invitedBy, ip = '',
+    account, provider, nickname, passwordHash = null, invitedBy, ip = '', consent = false, marketing = false,
   }) {
+    const t = now();
     const user = {
-      id: newId(), account, provider, nickname: cleanText(nickname) || '媽媽', passwordHash, code: await uniqueCode(), invitedBy: null, tv: 0, createdAt: now(),
+      id: newId(),
+      account,
+      provider,
+      nickname: cleanText(nickname) || '媽媽',
+      passwordHash,
+      code: await uniqueCode(),
+      invitedBy: null,
+      tv: 0,
+      createdAt: t,
+      // LINE sign-ups agree in the app right after (the app asks before anything else); null until then
+      consent: consent ? { version: POLICY_VERSION, at: t } : null,
+      marketing: { on: !!marketing, at: t },
     };
     if (invitedBy) {
       const inviter = await store.getUserByCode(String(invitedBy).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16));
@@ -153,27 +182,31 @@ export function createMomRouter({
   let statsCache = null; // /stats is cached briefly to save database calls; a new sign-up clears it
   const needAuth = (res) => { if (!authOn) { res.status(503).json({ error: 'not_configured' }); return true; } return false; };
 
-  router.get('/config', (req, res) => res.json({ providers: { password: authOn, line: lineOn }, storage: store.kind, social: true }));
+  router.get('/config', (req, res) => res.json({
+    providers: { password: authOn, line: lineOn }, storage: store.kind, social: true, policy: POLICY_VERSION,
+  }));
 
   router.post('/auth/register', wrap(async (req, res) => {
     if (needAuth(res)) return;
     const {
-      account: raw, password, nickname, invitedBy,
+      account: raw, password, nickname, invitedBy, consent, marketing,
     } = req.body || {};
     // input is checked first, so mistakes (and junk) never use up a network's sign-up allowance
     const acc = normaliseAccount(raw);
     if (!acc) { res.status(400).json({ error: 'bad_account' }); return; }
+    // the person ticked 「我已閱讀並同意」 for the policy that is current now
+    if (consent !== POLICY_VERSION) { res.status(400).json({ error: consent ? 'policy_changed' : 'need_consent', policy: POLICY_VERSION }); return; }
     if (typeof password !== 'string' || password.length < 8 || password.length > 128) { res.status(400).json({ error: 'weak_password' }); return; }
     if (isCommonPassword(password)) { res.status(400).json({ error: 'common_password' }); return; }
     const ip = clientIp(req);
     if (await over('reg', ip, LIMITS.registerIp)) { res.status(429).json({ error: 'too_many' }); return; }
     if (await store.getUserByAccount(acc.account)) { res.status(409).json({ error: 'exists' }); return; }
     const user = await createUser({
-      account: acc.account, provider: acc.type, nickname, passwordHash: await hashPassword(password), invitedBy, ip,
+      account: acc.account, provider: acc.type, nickname, passwordHash: await hashPassword(password), invitedBy, ip, consent: true, marketing: marketing === true,
     });
     if (!user) { res.status(409).json({ error: 'exists' }); return; }
     statsCache = null;
-    await store.setFlag(`trust:${hashKey(`${acc.account}|${ip}`)}`, TRUSTED_DEVICE_SEC, now());
+    await store.setFlag(`trust:${keyed(`${acc.account}|${ip}`)}`, TRUSTED_DEVICE_SEC, now());
     res.status(201).json({ token: await session(user), user: publicUser(user, { referrals: 0 }) });
   }));
 
@@ -181,7 +214,7 @@ export function createMomRouter({
     if (needAuth(res)) return;
     const acc = normaliseAccount(req.body && req.body.account);
     const ip = clientIp(req);
-    const trustKey = acc ? `trust:${hashKey(`${acc.account}|${ip}`)}` : '';
+    const trustKey = acc ? `trust:${keyed(`${acc.account}|${ip}`)}` : '';
     if (await over('login-ip', ip, LIMITS.loginIp)
       || (acc && await over('login-pair', `${acc.account}|${ip}`, LIMITS.loginPair))
       || (acc && await over('login-acct', acc.account, LIMITS.loginAccount) && !(await store.hasFlag(trustKey, now())))) {
@@ -219,8 +252,52 @@ export function createMomRouter({
     const body = req.body || {};
     const patch = {};
     if (body.nickname !== undefined) patch.nickname = cleanText(body.nickname) || user.nickname;
+    if (body.consent !== undefined) {
+      if (body.consent !== POLICY_VERSION) { res.status(400).json({ error: 'policy_changed', policy: POLICY_VERSION }); return; }
+      patch.consent = { version: POLICY_VERSION, at: now() };
+    }
+    if (typeof body.marketing === 'boolean') patch.marketing = { on: body.marketing, at: now() }; // turning it off is free and instant (§20)
     const updated = await store.updateUser(user.id, patch);
     res.json({ user: publicUser(updated, { referrals: await store.countReferrals(updated.code) }) });
+  }));
+
+  // 個資法 §3: a copy of everything kept about me (never the password hash)
+  router.get('/me/export', wrap(async (req, res) => {
+    const user = await currentUser(req);
+    if (!user) { res.status(401).json({ error: 'unauthorized' }); return; }
+    if (await over('me', user.id, LIMITS.meUser)) { res.status(429).json({ error: 'too_many' }); return; }
+    const [type, value] = String(user.account).split(/:(.+)/);
+    const iso = (t) => (t ? new Date(t).toISOString() : null);
+    res.set('Content-Disposition', 'attachment; filename="my-account-data.json"');
+    res.json({
+      exportedAt: iso(now()),
+      account: { type, value },
+      provider: user.provider,
+      nickname: user.nickname,
+      inviteCode: user.code,
+      invitedBy: user.invitedBy,
+      createdAt: iso(user.createdAt),
+      lastLoginAt: iso(user.lastLoginAt),
+      consent: user.consent ? { version: user.consent.version, at: iso(user.consent.at) } : null,
+      marketing: user.marketing ? { on: !!user.marketing.on, at: iso(user.marketing.at) } : { on: false, at: null },
+      referrals: await store.countReferrals(user.code),
+      note: '懷孕、寶寶與健康紀錄只存在你的手機，伺服器沒有這些資料。',
+    });
+  }));
+
+  // 個資法 §3: delete my account. Password accounts confirm with the password (a stolen phone that is still logged in
+  // must not be able to erase the account); LINE accounts confirm in the app.
+  router.post('/auth/delete', wrap(async (req, res) => {
+    const user = await currentUser(req);
+    if (!user) { res.status(401).json({ error: 'unauthorized' }); return; }
+    if (await over('delete', user.id, LIMITS.loginPair)) { res.status(429).json({ error: 'too_many' }); return; }
+    if (user.passwordHash) {
+      const pw = String((req.body && req.body.password) || '').slice(0, 128);
+      if (!(await verifyPassword(pw, user.passwordHash))) { res.status(401).json({ error: 'invalid' }); return; }
+    }
+    await store.deleteUser(user);
+    statsCache = null;
+    res.json({ ok: true });
   }));
 
   router.post('/presence', wrap(async (req, res) => {

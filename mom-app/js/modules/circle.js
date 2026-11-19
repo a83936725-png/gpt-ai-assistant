@@ -95,7 +95,10 @@
     if (!App.social || !(await App.social.api())) { ui.toast('目前連不到社群服務，請連上網路後再試'); return false; }
     const co = cohort(); if (!co) return false;
     if (!soc().key) App.social.upd((x) => { x.key = Array.from(crypto.getRandomValues(new Uint8Array(24)), (v) => v.toString(36).padStart(2, '0')).join('').slice(0, 40); });
-    upd((x) => { x.on = true; x.cohort = co; x.joinedAt = x.joinedAt || new Date().toISOString(); });
+    upd((x, all) => {
+      x.on = true; x.cohort = co; x.joinedAt = x.joinedAt || new Date().toISOString();
+      all.consent = { ...(all.consent || {}), circle: { version: App.privacy ? App.privacy.VERSION : '', at: new Date().toISOString() } }; // she ticked 同意
+    });
     await sync({ quiet: true });
     if (live.error) { upd((x) => { x.on = false; }); ui.toast(errText(live.error)); return false; }
     ui.toast('🗳️ 歡迎加入同週好孕圈！');
@@ -198,6 +201,7 @@
           return;
         }
         if (!circ().on) {
+          const agree = App.privacy ? App.privacy.box({ label: ['我同意分享上面「會送出」的資料（大家只看得到總數，可隨時離開），並同意', App.privacy.link()] }) : null;
           box.append(h('div', { class: 'cc-hero' }, h('div', { class: 'cc-hero-e', 'aria-hidden': 'true' }, lb.emoji),
             h('div', null, h('div', { class: 'cc-kicker' }, '🗳️ 同週好孕圈'), h('h2', { class: 'cc-title' }, lb.title), h('div', { class: 'cc-sub' }, lb.sub))));
           box.append(ui.card(null,
@@ -209,7 +213,15 @@
             h('div', { class: 'soc-privacy' },
               h('div', { class: 'soc-pv' }, h('strong', null, '會送出'), h('ul', null, h('li', null, co === 'prep' ? '你在備孕' : co.startsWith('p:') ? '預產期是哪一週（不是日期）' : '寶寶出生的年月（不是日期）'), h('li', null, '你的回答（大家只看到總數）'))),
               h('div', { class: 'soc-pv no' }, h('strong', null, '不會送出'), h('ul', null, h('li', null, '名字、照片、生日'), h('li', null, '任何紀錄'), h('li', null, '誰選了什麼（3 位以上回答才公布結果）')))),
-            h('button', { class: 'btn btn-primary btn-block mt', onclick: async (e) => { e.currentTarget.disabled = true; if (!(await join())) e.currentTarget.disabled = false; else draw(); } }, '加入同週好孕圈')));
+            agree ? agree.el : null,
+            h('button', {
+              class: 'btn btn-primary btn-block mt',
+              onclick: async (e) => {
+                if (agree && !agree.need('請先勾選同意，才能加入同週好孕圈')) return;
+                const btn = e.currentTarget; btn.disabled = true;
+                if (!(await join())) btn.disabled = false; else draw();
+              },
+            }, '加入同週好孕圈')));
           return;
         }
         const d = live.data;

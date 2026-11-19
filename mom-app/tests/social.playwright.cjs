@@ -72,6 +72,9 @@ const AV_B = {
   ok('join sheet says what others see and what they never see', /不會用你的照片/.test(joinText) && /你的照片、週數、寶寶資料/.test(joinText) && /不能私訊、不能留言/.test(joinText), joinText.slice(0, 200));
   await axe(A, 'join sheet');
   await A.fill('.sheet input[aria-label="顯示名稱"]', '小美 0912345678');
+  await A.click('.sheet-footer .btn-primary'); await A.waitForTimeout(500);
+  ok('joining needs the 同意 tick (nothing is sent without it)', /請先勾選同意/.test(await topSheet(A)) && !A.sent.some((r) => /social\/here/.test(r.url)));
+  await A.check('.sheet .pv-box.req input');
   await A.click('.sheet-footer .btn-primary'); await A.waitForTimeout(1500);
   const hereReq = A.sent.find((r) => /social\/here/.test(r.url));
   ok('joining sends only the drawn chibi: never the face photo', hereReq && !/data:image|face|photo/.test(hereReq.body) && /"pose":"preg"/.test(hereReq.body), hereReq && hereReq.body.slice(0, 200));
@@ -83,6 +86,7 @@ const AV_B = {
   await B.click('button.list-item:has-text("島上的媽媽")'); await B.waitForTimeout(400);
   ok('我的 → 島上的媽媽 shows it is off', /目前沒有開啟/.test(await topSheet(B)));
   await B.click('.sheet button:has-text("開啟島上的媽媽")'); await B.waitForTimeout(500);
+  await B.check('.sheet .pv-box.req input');
   await B.click('.sheet-footer .btn-primary'); await B.waitForTimeout(1500);
   ok('B joined anonymously (no name → 匿名媽咪)', await S(B, () => App.social.soc().on && !App.social.soc().name));
 
@@ -155,6 +159,7 @@ const AV_B = {
   await axe(D, 'join sheet (dark, small phone)');
   const over = await S(D, () => document.documentElement.scrollWidth - innerWidth);
   ok('small phone: no sideways scroll', over <= 1, over);
+  await D.check('.sheet .pv-box.req input');
   await D.click('.sheet-footer .btn-primary'); await D.waitForTimeout(1200);
   await S(D, () => App.social.openResidents('newborn')); await D.waitForTimeout(900);
   const dSheet = await topSheet(D);
@@ -186,6 +191,9 @@ const AV_B = {
   await M.click('.wall-home-main'); await M.waitForTimeout(900);
   ok('…opens the wall maker with 滿月祝福牆 picked and the baby\'s name filled in', await S(M, () => document.querySelector('.wall-occ-b.on').textContent.includes('滿月') && document.querySelector('input[aria-label="寶寶的名字或小名"]').value === '小湯圓'));
   await axe(M, 'wall maker');
+  await M.click('button:has-text("開一面祝福牆")'); await M.waitForTimeout(500);
+  ok('opening a wall needs the tick that the link is public', /請先勾選同意/.test(await S(M, () => document.body.innerText)) && !(await S(M, () => (App.social.soc().walls || []).length)));
+  await M.check('.pv-box.req input');
   await M.click('button:has-text("開一面祝福牆")'); await M.waitForTimeout(1500);
   ok('making the wall opens the share sheet right away', /分享/.test(await topSheet(M)) && await S(M, () => !!document.querySelector('.sheet .sh-preview')));
   await esc(M);
@@ -208,6 +216,9 @@ const AV_B = {
   ok('a preset fills the text', (await F.inputValue('textarea')) === '頭好壯壯、一眠大一吋');
   await F.fill('textarea', '頭好壯壯！加 line id: abc123 www.spam.tw');
   await F.click('.wish-stk[aria-label="貼圖 🧸"]');
+  await F.click('.wish-form button[type=submit]'); await F.waitForTimeout(500);
+  ok('a friend ticks that her name and words will be shown (nothing sent before)', /請先勾選同意/.test(await S(F, () => document.querySelector('.wish-form').innerText)) && !(await S(F, () => Object.keys(App.social.soc().wrote || {}).length)));
+  await F.check('.wish-form .pv-box.req input');
   await F.click('.wish-form button[type=submit]'); await F.waitForTimeout(1300);
   const fPage = await S(F, () => document.querySelector('.wish-wall').innerText);
   ok('sent: the friend sees it waiting for the mom, without the spam', /頭好壯壯/.test(fPage) && /等媽媽確認/.test(fPage) && !/spam|abc123/.test(fPage), fPage);
@@ -278,6 +289,7 @@ const AV_B = {
     await S(O, () => App.social.openSettings()); await O.waitForTimeout(500);
     ok('offline: 島上的媽媽 settings say it cannot connect', /目前連不到社群服務/.test(await topSheet(O)));
     await O.click('.sheet button:has-text("開啟島上的媽媽")'); await O.waitForTimeout(400);
+    await O.check('.sheet .pv-box.req input');
     await O.click('.sheet-footer .btn-primary'); await O.waitForTimeout(900);
     ok('offline: joining does not pretend to work', await S(O, () => !App.social.soc().on) && /連不到/.test(await toasts(O)), await toasts(O));
   }

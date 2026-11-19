@@ -1,4 +1,6 @@
 /* 會員：登入／註冊頁（Email、手機、LINE）、即時在線人數與註冊人數、我的帳號。
+ * 個資：註冊要勾選同意隱私權政策與使用條款（版本與時間存在帳號裡）；行銷訊息另外勾選、可隨時關閉；
+ * LINE 新帳號與政策更新時，登入後先請她同意；帳號卡可以下載我的會員資料、刪除帳號。
  * 只有在連得到會員 API（/mom-app/api）時才顯示人數與登入；離線或純靜態網站時自動隱藏，絕不顯示假數字。
  * 紀錄資料仍只存在手機，不會上傳。 */
 (function () {
@@ -98,6 +100,7 @@
       const { user } = await call('GET', 'me');
       const before = JSON.stringify(store.state.auth && store.state.auth.user);
       if (JSON.stringify(user) !== before) store.update((s) => { s.auth.user = user; }); // re-renders 我的／邀請好友
+      ensureConsent(user);
     } catch (e) {
       if (e.status === 401) { store.update((s) => { delete s.auth; }); ui.toast('登入已過期，請重新登入'); }
     }
@@ -105,7 +108,116 @@
   setTimeout(refreshMe, 800);
   // keep 「已成功邀請 N 位」 fresh when the user comes back to 我的 or 邀請好友
   const maybeRefresh = () => { if (token() && Date.now() - lastRefresh > 10000) setTimeout(refreshMe, 0); };
-  function logout() { mode = 'login'; store.update((s) => { delete s.auth; }); ui.toast('已登出（手機上的紀錄都還在）'); }
+  function logout({ quiet = false } = {}) { mode = 'login'; store.update((s) => { delete s.auth; }); if (!quiet) ui.toast('已登出（手機上的紀錄都還在）'); }
+
+  /* ---- 個資：同意、下載、刪除 ---- */
+  const MKT_LABEL = () => `我願意收到${B().brandName || '品牌'}的優惠與活動訊息（可隨時關閉）`;
+  let consentOpen = false;
+  // a LINE sign-up, or a policy that changed since she agreed: ask before any member feature
+  function ensureConsent(user) {
+    if (!user || !App.privacy || user.consent === App.privacy.VERSION || consentOpen) return;
+    consentOpen = true;
+    const fresh = !user.consent && user.createdAt && Date.now() - user.createdAt < 15 * 60 * 1000; // made just now (LINE)
+    const agree = App.privacy.box();
+    const mkt = App.privacy.box({ label: MKT_LABEL(), required: false, checked: !!user.marketing });
+    let done = false;
+    const sh = ui.sheet({
+      title: user.consent ? '隱私權政策已更新' : '使用會員功能前',
+      body: h('div', { class: 'stack-sm' },
+        h('p', { class: 'small' }, user.consent
+          ? '我們更新了隱私權政策與使用條款，請閱讀後勾選同意，才能繼續使用會員功能。'
+          : '請先閱讀並勾選同意隱私權政策與使用條款，才能使用會員功能（邀請計數、社群人數）。你的懷孕與寶寶紀錄仍只存在手機。'),
+        h('button', { class: 'btn btn-soft btn-block', onclick: () => App.privacy.open() }, '📄 閱讀隱私權政策與使用條款'),
+        agree.el, mkt.el),
+      footer: h('div', { class: 'row gap-sm' },
+        h('button', { class: 'btn btn-ghost', onclick: () => sh.close() }, '不同意'),
+        h('button', {
+          class: 'btn btn-primary grow',
+          onclick: async (e) => {
+            if (!agree.need('請先勾選同意，才能繼續使用會員功能')) return;
+            const btn = e.currentTarget; btn.disabled = true;
+            try {
+              const r = await call('POST', 'me', { consent: App.privacy.VERSION, marketing: mkt.checked });
+              store.update((s) => { if (s.auth) s.auth.user = r.user; });
+              done = true; sh.close(); ui.toast('謝謝你 💜');
+            } catch (err) { btn.disabled = false; ui.toast(errText(err)); }
+          },
+        }, '同意並繼續')),
+      onClose: async () => {
+        consentOpen = false;
+        if (done) return;
+        // not agreed: no member features. An account made a minute ago (LINE) is removed, so nothing is kept without consent
+        if (fresh) { try { await call('POST', 'auth/delete', {}); } catch (e) { /* logged out below either way */ } }
+        logout({ quiet: true });
+        ui.toast(fresh ? '沒有同意，所以沒有建立會員帳號（紀錄都還在手機裡）' : '需要同意新的政策才能使用會員功能，已登出（紀錄都還在手機裡）');
+        App.refresh();
+      },
+    });
+  }
+  // 個資法 §3: a copy of what the server keeps about me
+  async function exportMine() {
+    try {
+      const data = await call('GET', 'me/export');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = h('a', { href: URL.createObjectURL(blob), download: `我的會員資料-${new Date().toISOString().slice(0, 10)}.json` });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      ui.toast('已下載你的會員資料');
+    } catch (e) { ui.toast(errText(e)); }
+  }
+  // 個資法 §3: correct my data (the nickname is the only thing others ever see)
+  function editNickname(u) {
+    const nick = h('input', {
+      type: 'text', class: 'input', maxlength: 20, value: u.nickname || '', 'aria-label': '暱稱',
+    });
+    let sh = null;
+    sh = ui.sheet({
+      title: '修改暱稱',
+      body: h('div', { class: 'stack-sm' }, ui.field('暱稱', nick, '最多 20 個字')),
+      footer: h('button', {
+        class: 'btn btn-primary btn-block',
+        onclick: async (e) => {
+          const btn = e.currentTarget; btn.disabled = true;
+          try {
+            const r = await call('POST', 'me', { nickname: nick.value });
+            store.update((s) => { if (s.auth) s.auth.user = r.user; });
+            sh.close(); ui.toast('暱稱已更新');
+          } catch (err) { btn.disabled = false; ui.toast(errText(err)); }
+        },
+      }, '儲存'),
+    });
+  }
+  // 個資法 §3: delete my account (a password account confirms with its password)
+  function deleteAccount(u) {
+    const pw = u.provider === 'line' ? null : h('input', {
+      type: 'password', class: 'input', autocomplete: 'current-password', placeholder: '輸入密碼確認', 'aria-label': '密碼',
+    });
+    const also = App.social ? h('input', { type: 'checkbox', checked: true }) : null;
+    const err = h('p', { class: 'login-err', hidden: true });
+    let sh = null;
+    const go = h('button', {
+      class: 'btn btn-danger btn-block',
+      onclick: async () => {
+        err.hidden = true; go.disabled = true;
+        try {
+          await call('POST', 'auth/delete', pw ? { password: pw.value } : {});
+          if (also && also.checked && App.social && App.social.forgetAll) await App.social.forgetAll();
+          sh.close(); logout({ quiet: true });
+          ui.toast('帳號已刪除。謝謝你陪我們走過這一段 💜'); App.refresh();
+        } catch (e) {
+          err.textContent = e.code === 'invalid' ? '密碼不正確' : errText(e); err.hidden = false; go.disabled = false;
+        }
+      },
+    }, '永久刪除帳號');
+    sh = ui.sheet({
+      title: '刪除帳號',
+      body: h('div', { class: 'stack-sm' },
+        h('p', { class: 'small' }, '會從伺服器永久刪除：Email／手機、暱稱、邀請碼、同意紀錄與行銷設定，邀請人數也會歸零。刪除後無法復原。'),
+        h('p', { class: 'small muted' }, '手機上的懷孕、寶寶紀錄和照片不會被刪除，App 照常可以使用。'),
+        also ? h('label', { class: 'check-row' }, also, h('span', { class: 'small' }, '同時關閉島上的媽媽、同週好孕圈，並刪除我開的祝福牆')) : null,
+        pw, err, go),
+    });
+  }
 
   let mode = 'login'; // 登入／註冊 toggle on the login page
   const ERR = {
@@ -122,6 +234,8 @@
     line_error: 'LINE 登入失敗，請再試一次',
     line_disabled: '尚未開放 LINE 登入',
     not_configured: '會員服務尚未開放',
+    need_consent: '請先勾選「我已閱讀並同意隱私權政策與使用條款」才能註冊',
+    policy_changed: '隱私權政策剛更新，請重新整理頁面後再看一次並同意',
   };
   const errText = (e) => ERR[e.code] || (e.name === 'AbortError' ? ERR.offline : '發生錯誤，請稍後再試');
 
@@ -155,6 +269,7 @@
           setAuth(params.token, user);
           ui.toast(`歡迎，${user.nickname} 💜`);
           App.navigate(store.state.onboarded ? 'home' : 'onboarding');
+          setTimeout(() => ensureConsent(user), 300); // a new LINE account agrees before anything else
         }).catch((e) => { store.update((s) => { delete s.auth; }); box.innerHTML = ''; box.append(h('p', { class: 'login-err' }, errText(e))); drawForm(); });
         return;
       }
@@ -202,25 +317,34 @@
           const inv = h('input', { type: 'text', value: share.invitedBy || '', placeholder: '邀請碼（選填）', class: 'input', maxlength: 12, 'aria-label': '邀請碼' });
           const err = h('p', { class: 'login-err', hidden: true });
           const submit = h('button', { class: 'btn btn-primary btn-block', type: 'submit' }, mode === 'login' ? '登入' : '註冊並登入');
+          // 註冊: an unticked box for the policy (required) and a separate one for marketing (optional)
+          const agree = mode === 'register' && App.privacy ? App.privacy.box() : null;
+          const mkt = mode === 'register' && App.privacy ? App.privacy.box({ label: MKT_LABEL(), required: false }) : null;
           const form = h('form', { class: 'login-form', novalidate: true },
             ui.seg([{ value: 'login', label: '登入' }, { value: 'register', label: '註冊' }], mode, (v) => { mode = v; App.refresh(); }),
             ui.field('帳號', acct),
             ui.field('密碼', h('div', { class: 'login-pw' }, pw, showPw)),
             mode === 'register' ? ui.field('暱稱', nick) : null,
             mode === 'register' ? ui.field('邀請碼', inv, share.inviterName ? `由「${share.inviterName}」邀請` : '朋友給你的邀請碼，可以不填') : null,
+            agree ? h('div', { class: 'pv-boxes' }, agree.el, mkt.el) : null,
             err, submit);
           form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            err.hidden = true; submit.disabled = true; submit.textContent = '處理中…';
+            err.hidden = true;
+            if (agree && !agree.need('請先勾選「我已閱讀並同意隱私權政策與使用條款」才能註冊')) return;
+            submit.disabled = true; submit.textContent = '處理中…';
             try {
               const body = mode === 'login'
                 ? { account: acct.value, password: pw.value }
-                : { account: acct.value, password: pw.value, nickname: nick.value, invitedBy: inv.value };
+                : {
+                  account: acct.value, password: pw.value, nickname: nick.value, invitedBy: inv.value, consent: App.privacy ? App.privacy.VERSION : '', marketing: !!(mkt && mkt.checked),
+                };
               const res = await call('POST', mode === 'login' ? 'auth/login' : 'auth/register', body);
               setAuth(res.token, res.user);
               ui.toast(mode === 'login' ? `歡迎回來，${res.user.nickname} 💜` : `註冊成功！歡迎 ${res.user.nickname} 💜`);
               mode = 'login';
               App.navigate(store.state.onboarded ? 'home' : 'onboarding');
+              setTimeout(() => ensureConsent(res.user), 300); // agreed to an older policy: ask again
             } catch (ex) {
               err.textContent = errText(ex); err.hidden = false;
               submit.disabled = false; submit.textContent = mode === 'login' ? '登入' : '註冊並登入';
@@ -228,7 +352,8 @@
           });
           holder.append(form,
             h('button', { class: 'btn btn-ghost btn-block mt', onclick: () => App.navigate(store.state.onboarded ? 'home' : 'onboarding') }, '先不登入，直接使用'),
-            h('p', { class: 'tiny muted center mt' }, '登入只用來辨識帳號、計算邀請人數與社群人數；你的懷孕、寶寶紀錄仍只存在這支手機，不會上傳。'));
+            h('p', { class: 'tiny muted center mt' }, '登入只用來辨識帳號、計算邀請人數與社群人數；你的懷孕、寶寶紀錄仍只存在這支手機，不會上傳。'),
+            App.privacy ? h('p', { class: 'center pv-standalone' }, App.privacy.link()) : null);
         });
       }
     },
@@ -242,7 +367,7 @@
       if (a && a.user) {
         const u = a.user;
         return ui.card({ class: 'acct-card' },
-          h('div', { class: 'row gap' },
+          h('div', { class: 'row gap acct-row' },
             h('div', { class: 'grow' },
               h('div', { class: 'card-title' }, `👤 ${u.nickname}`, h('span', { class: 'tag primary' }, { line: 'LINE', email: 'Email', phone: '手機' }[u.provider] || '')),
               h('div', { class: 'small muted' }, `${u.accountHint}・邀請碼 ${u.code}`),
@@ -256,7 +381,23 @@
                   try { await call('POST', 'auth/logout-all'); } catch (e) { /* still log out here */ }
                   logout(); App.refresh();
                 },
-              }, '登出所有裝置'))));
+              }, '登出所有裝置'))),
+          // 個資：行銷訊息（可隨時關閉）、隱私權政策、下載我的資料、刪除帳號
+          h('label', { class: 'check-row acct-mkt' },
+            h('input', {
+              type: 'checkbox', class: 'switch', checked: !!u.marketing, 'aria-label': '接收優惠與活動訊息',
+              onchange: async (e) => {
+                const on = e.target.checked; e.target.disabled = true;
+                try { const r = await call('POST', 'me', { marketing: on }); store.update((s) => { if (s.auth) s.auth.user = r.user; }); ui.toast(on ? '已開啟優惠與活動訊息' : '已關閉，不會再寄送優惠與活動訊息'); } catch (er) { e.target.checked = !on; ui.toast(errText(er)); }
+                e.target.disabled = false;
+              },
+            }),
+            h('span', null, h('b', null, '接收優惠與活動訊息'), h('br'), h('span', { class: 'tiny muted' }, '可隨時關閉，關閉後立即停止寄送'))),
+          h('div', { class: 'acct-links' },
+            App.privacy ? App.privacy.link('隱私權政策') : null,
+            h('button', { class: 'link-btn small', onclick: () => editNickname(u) }, '修改暱稱'),
+            h('button', { class: 'link-btn small', onclick: exportMine }, '下載我的會員資料'),
+            h('button', { class: 'link-btn small danger-text', onclick: () => deleteAccount(u) }, '刪除帳號')));
       }
       return ui.card({ class: 'acct-card soft' },
         h('div', { class: 'row gap' },
@@ -264,6 +405,6 @@
           h('button', { class: 'btn btn-sm btn-primary', onclick: () => App.navigate('login') }, '登入')),
         App.livePill('acct-live'));
     },
-    logout, refreshMe, refreshSoon: () => maybeRefresh(), call, available: async () => !!(await config()),
+    logout, refreshMe, refreshSoon: () => maybeRefresh(), call, available: async () => !!(await config()), ensureConsent, exportMine,
   };
 }());

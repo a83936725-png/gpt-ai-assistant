@@ -111,6 +111,8 @@
   const ERR = {
     bad_account: '請輸入正確的 Email 或手機號碼（09 開頭 10 碼）',
     weak_password: '密碼至少 8 個字',
+    common_password: '這個密碼太常見，很容易被猜到，請換一個（例如加上幾個字或符號）',
+    bad_request: '送出的資料有問題，請重新整理後再試',
     exists: '這個帳號已經註冊過了，請直接登入',
     invalid: '帳號或密碼不正確',
     too_many: '嘗試太多次了，請 10 分鐘後再試',

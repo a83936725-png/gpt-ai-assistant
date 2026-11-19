@@ -14,7 +14,30 @@ export class MemoryStore {
     this.signups = []; // [ts]
     this.referrals = new Map(); // code -> count
     this.counters = new Map(); // key -> {n, reset}
+    this.tv = new Map(); // user id -> token version (kept apart from the user record, see RedisRestStore)
+    this.flags = new Map(); // key -> expiry ts
   }
+
+  async getTokenVersion(id, fallback = 0) { return this.tv.has(id) ? this.tv.get(id) : fallback; }
+
+  async bumpTokenVersion(id, current = 0) { const v = (this.tv.has(id) ? this.tv.get(id) : current) + 1; this.tv.set(id, v); return v; }
+
+  // short-lived marks: trusted device for an account, one-time LINE state
+  async setFlag(key, ttlSec, now = Date.now()) {
+    if (this.flags.size > 20000) this.flags.forEach((exp, k) => { if (exp <= now) this.flags.delete(k); });
+    this.flags.set(key, now + ttlSec * 1000);
+  }
+
+  async hasFlag(key, now = Date.now()) { const exp = this.flags.get(key); return !!exp && exp > now; }
+
+  // true only the first time a key is claimed within ttl
+  async claimOnce(key, ttlSec, now = Date.now()) {
+    if (await this.hasFlag(key, now)) return false;
+    await this.setFlag(key, ttlSec, now);
+    return true;
+  }
+
+  async hasPresence(sid) { return this.presence.has(sid); }
 
   // fixed-window counter shared by every request this process handles (Redis version is shared across instances)
   async hit(key, windowSec, now = Date.now()) {
@@ -119,11 +142,29 @@ export class RedisRestStore {
 
   async addReferral(code) { await this.cmd('HINCRBY', 'mom:referrals', code, 1); }
 
+  // INCR and EXPIRE in one atomic step: if the expiry were set by a second call that failed, the counter would
+  // never reset and that account or address would stay locked out for good
   async hit(key, windowSec) {
-    const n = Number(await this.cmd('INCR', `mom:rl:${key}`));
-    if (n === 1) await this.cmd('EXPIRE', `mom:rl:${key}`, windowSec);
-    return n;
+    return Number(await this.cmd('EVAL', "local n = redis.call('INCR', KEYS[1]) if redis.call('TTL', KEYS[1]) < 0 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end return n", 1, `mom:rl:${key}`, windowSec));
   }
+
+  // The token version lives in its own key and only ever goes up (INCR). updateUser rewrites the whole user record,
+  // so if the version were a field of it, a request in flight could write the old version back and silently undo
+  // 「登出所有裝置」. Users created before this keep their version in the record until the first bump copies it over.
+  async getTokenVersion(id, fallback = 0) { const v = await this.cmd('GET', `mom:tv:${id}`); return v === null || v === undefined ? fallback : Number(v); }
+
+  async bumpTokenVersion(id, current = 0) {
+    await this.cmd('SET', `mom:tv:${id}`, String(current), 'NX');
+    return Number(await this.cmd('INCR', `mom:tv:${id}`));
+  }
+
+  async setFlag(key, ttlSec) { await this.cmd('SET', `mom:flag:${key}`, '1', 'EX', ttlSec); }
+
+  async hasFlag(key) { return !!(await this.cmd('EXISTS', `mom:flag:${key}`)); }
+
+  async claimOnce(key, ttlSec) { return (await this.cmd('SET', `mom:flag:${key}`, '1', 'EX', ttlSec, 'NX')) === 'OK'; }
+
+  async hasPresence(sid) { return (await this.cmd('ZSCORE', 'mom:presence', sid)) !== null; }
 
   async countReferrals(code) { return Number(await this.cmd('HGET', 'mom:referrals', code)) || 0; }
 }

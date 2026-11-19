@@ -6,7 +6,7 @@ import axios from 'axios';
 import { createMomRouter } from '../../mom-api/index.js';
 import { MemoryStore, RedisRestStore } from '../../mom-api/store.js';
 import {
-  normaliseAccount, verifyPassword, hashPassword, makeSigner, safeEqual,
+  normaliseAccount, verifyPassword, hashPassword, makeSigner, safeEqual, ipBucket, isCommonPassword, needsRehash,
 } from '../../mom-api/auth.js';
 
 const api = axios.create({ validateStatus: () => true, maxRedirects: 0 });
@@ -48,7 +48,7 @@ describe('member API', () => {
   const lineCalls = [];
   const fakeHttp = {
     post: async (url, body) => { lineCalls.push(['post', url, body]); return { data: { access_token: 'line-access' } }; },
-    get: async (url, opts) => { lineCalls.push(['get', url, opts.headers.Authorization]); return { data: { userId: 'U123', displayName: 'LINE 媽咪' } }; },
+    get: async (url, opts) => { lineCalls.push(['get', url, opts.headers.Authorization]); return { data: { userId: `U${'0123456789abcdef'.repeat(2)}`, displayName: 'LINE 媽咪' } }; },
   };
   let srv; let base; let alice;
   const auth = (tok) => ({ headers: { Authorization: `Bearer ${tok}` } });
@@ -171,16 +171,29 @@ describe('production safety', () => {
 
 /* Same flows through the Redis REST store (Vercel KV / Upstash) using a tiny in-test Redis emulator. */
 function fakeRedis() {
-  const kv = new Map(); const sets = new Map(); const zsets = new Map(); const hashes = new Map();
+  const kv = new Map(); const sets = new Map(); const zsets = new Map(); const hashes = new Map(); const ttl = new Map();
   const z = (k) => { if (!zsets.has(k)) zsets.set(k, new Map()); return zsets.get(k); };
   const hm = (k) => { if (!hashes.has(k)) hashes.set(k, new Map()); return hashes.get(k); };
   const num = (v) => (v === '+inf' ? Infinity : v === '-inf' ? -Infinity : Number(v));
   const run = ([cmd, ...a]) => {
     switch (cmd) {
       case 'GET': return kv.has(a[0]) ? kv.get(a[0]) : null;
-      case 'SET': if (a[2] === 'NX' && kv.has(a[0])) return null; kv.set(a[0], a[1]); return 'OK';
+      case 'SET': {
+        const opts = a.slice(2).map(String);
+        if (opts.includes('NX') && kv.has(a[0])) return null;
+        kv.set(a[0], a[1]);
+        const ex = opts.indexOf('EX'); if (ex >= 0) ttl.set(a[0], Number(opts[ex + 1]));
+        return 'OK';
+      }
       case 'INCR': { const v = Number(kv.get(a[0]) || 0) + 1; kv.set(a[0], String(v)); return v; }
-      case 'EXPIRE': return 1;
+      case 'EXPIRE': ttl.set(a[0], Number(a[1])); return 1;
+      case 'EXISTS': return kv.has(a[0]) ? 1 : 0;
+      case 'TTL': return ttl.has(a[0]) ? ttl.get(a[0]) : -1;
+      case 'EVAL': { // only the rate limiter's script: INCR, then EXPIRE if there is no expiry yet
+        expect(a[0]).toContain("redis.call('INCR'"); expect(a[0]).toContain("redis.call('EXPIRE'");
+        const key = a[2]; const v = Number(kv.get(key) || 0) + 1; kv.set(key, String(v)); if (!ttl.has(key)) ttl.set(key, Number(a[3])); return v;
+      }
+      case 'ZSCORE': return z(a[0]).has(a[1]) ? String(z(a[0]).get(a[1])) : null;
       case 'SADD': { if (!sets.has(a[0])) sets.set(a[0], new Set()); sets.get(a[0]).add(a[1]); return 1; }
       case 'SCARD': return sets.has(a[0]) ? sets.get(a[0]).size : 0;
       case 'ZADD': z(a[0]).set(a[2], Number(a[1])); return 1;
@@ -193,7 +206,7 @@ function fakeRedis() {
       default: throw new Error(`unsupported ${cmd}`);
     }
   };
-  return { post: async (url, args, opts) => { expect(opts.headers.Authorization).toBe('Bearer kv-token'); return { data: { result: run(args) } }; } };
+  return { kv, ttl, post: async (url, args, opts) => { expect(opts.headers.Authorization).toBe('Bearer kv-token'); return { data: { result: run(args) } }; } };
 }
 
 describe('member API on the Redis REST store', () => {
@@ -224,5 +237,140 @@ describe('malformed requests', () => {
     expect(r.status).toBe(400);
     expect(r.data.error).toBe('bad_json');
     await new Promise((res) => server.close(res));
+  });
+});
+
+/* Fixes from the security review (2026-11): each test would fail on the first version of the API. */
+describe('security hardening', () => {
+  const STRONG = 'k'.repeat(40);
+  const start = (opts = {}) => serve(createMomRouter({
+    store: opts.store || new MemoryStore(), env: { NODE_ENV: 'test', MOM_AUTH_SECRET: STRONG, ...opts.env }, http: opts.http, now: opts.now,
+  }));
+  const from = (ip) => ({ headers: { 'X-Forwarded-For': `9.9.9.9, ${ip}` } });
+  const bearer = (tok) => ({ headers: { Authorization: `Bearer ${tok}` } });
+  const close = (server) => new Promise((res) => server.close(res));
+
+  test('helpers: IPv6 grouped by /64, common passwords, old hashes flagged for upgrade', () => {
+    expect(ipBucket('2001:db8:1:2:aaaa::1')).toBe(ipBucket('2001:0db8:0001:0002:bbbb:cccc:dddd:2'));
+    expect(ipBucket('2001:db8:1:3::1')).not.toBe(ipBucket('2001:db8:1:2::1'));
+    expect(ipBucket('::ffff:1.2.3.4')).toBe('1.2.3.4');
+    expect(isCommonPassword('Password1')).toBe(true);
+    expect(isCommonPassword('my-baby-2026')).toBe(false);
+    expect(needsRehash('scrypt$a$b')).toBe(true);
+  });
+
+  test('a short MOM_AUTH_SECRET is never used for signing', async () => {
+    const { server, base } = await serve(createMomRouter({ store: new MemoryStore(), env: { NODE_ENV: 'test', MOM_AUTH_SECRET: 'secret' } }));
+    const r = await api.post(`${base}/auth/register`, { account: 'weak@example.com', password: 'baby-sleeps-9' });
+    expect(r.status).toBe(201);
+    expect(makeSigner('secret').verify(r.data.token)).toBeNull(); // not signed with the guessable key
+    await close(server);
+  });
+
+  test('「登出所有裝置」 cannot be undone by a profile write that read the user before it (Redis store)', async () => {
+    const store = new RedisRestStore({ url: 'https://kv.example', token: 'kv-token', http: fakeRedis() });
+    const { server, base } = await start({ store });
+    const reg = await api.post(`${base}/auth/register`, { account: 'race@example.com', password: 'baby-sleeps-9' });
+    const stolen = reg.data.token;
+    const stale = await store.getUser(reg.data.user.id); // a POST /me in flight read the record here…
+    expect((await api.post(`${base}/auth/logout-all`, {}, bearer(stolen))).status).toBe(200);
+    await store.updateUser(stale.id, { ...stale, nickname: '舊的' }); // …and writes it back after logout-all
+    expect((await api.get(`${base}/me`, bearer(stolen))).status).toBe(401);
+    const fresh = await api.post(`${base}/auth/login`, { account: 'race@example.com', password: 'baby-sleeps-9' });
+    expect((await api.get(`${base}/me`, bearer(fresh.data.token))).status).toBe(200);
+    await close(server);
+  });
+
+  test('nobody can lock the owner out by failing on purpose; guessing from one network still stops', async () => {
+    const { server, base } = await start({ env: { MOM_TRUST_PROXY: '1' } });
+    await api.post(`${base}/auth/register`, { account: 'owner@example.com', password: 'baby-sleeps-9' }, from('10.0.0.1'));
+    let pair;
+    for (let i = 0; i < 11; i += 1) pair = await api.post(`${base}/auth/login`, { account: 'owner@example.com', password: `wrong-${i}-xx` }, from('10.0.9.9')); // eslint-disable-line no-await-in-loop
+    expect(pair.status).toBe(429); // 10 tries from one network, then stop
+    for (let n = 0; n < 6; n += 1) { // 60 more wrong tries spread over many networks
+      for (let i = 0; i < 10; i += 1) await api.post(`${base}/auth/login`, { account: 'owner@example.com', password: `wrong-${n}-${i}` }, from(`10.1.${n}.${i}`)); // eslint-disable-line no-await-in-loop
+    }
+    expect((await api.post(`${base}/auth/login`, { account: 'owner@example.com', password: 'baby-sleeps-9' }, from('10.0.0.1'))).status).toBe(200); // owner's usual network
+    expect((await api.post(`${base}/auth/login`, { account: 'owner@example.com', password: 'baby-sleeps-9' }, from('10.7.7.7'))).status).toBe(429); // unknown network waits
+    await close(server);
+  }, 120000); // 70+ logins, each a real password hash
+
+  test('behind a proxy each user has their own limits (MOM_TRUST_PROXY), and mistakes do not use up sign-ups', async () => {
+    const { server, base } = await start({ env: { MOM_TRUST_PROXY: '1' } });
+    for (let i = 0; i < 20; i += 1) await api.post(`${base}/auth/register`, { account: 'nope', password: '12345678' }, from('10.2.0.1')); // eslint-disable-line no-await-in-loop
+    expect((await api.post(`${base}/auth/register`, { account: 'ok1@example.com', password: 'baby-sleeps-9' }, from('10.2.0.1'))).status).toBe(201);
+    for (let i = 0; i < 10; i += 1) await api.post(`${base}/auth/register`, { account: `junk${i}@example.com`, password: 'baby-sleeps-9' }, from('10.2.0.2')); // eslint-disable-line no-await-in-loop
+    expect((await api.post(`${base}/auth/register`, { account: 'junk-x@example.com', password: 'baby-sleeps-9' }, from('10.2.0.2'))).status).toBe(429);
+    expect((await api.post(`${base}/auth/register`, { account: 'other@example.com', password: 'baby-sleeps-9' }, from('10.2.0.3'))).status).toBe(201); // another user is not blocked
+    expect((await api.post(`${base}/auth/register`, { account: 'pw@example.com', password: 'password123' }, from('10.2.0.4'))).data.error).toBe('common_password');
+    await close(server);
+  });
+
+  test('invites: one network counts at most 3 times per code per day', async () => {
+    const { server, base } = await start({ env: { MOM_TRUST_PROXY: '1' } });
+    const inviter = await api.post(`${base}/auth/register`, { account: 'host@example.com', password: 'baby-sleeps-9' }, from('10.3.0.1'));
+    for (let i = 0; i < 6; i += 1) await api.post(`${base}/auth/register`, { account: `friend${i}@example.com`, password: 'baby-sleeps-9', invitedBy: inviter.data.user.code }, from('10.3.0.2')); // eslint-disable-line no-await-in-loop
+    await api.post(`${base}/auth/register`, { account: 'real-friend@example.com', password: 'baby-sleeps-9', invitedBy: inviter.data.user.code }, from('10.3.0.3'));
+    expect((await api.get(`${base}/me`, bearer(inviter.data.token))).data.user.referrals).toBe(4);
+    await close(server);
+  });
+
+  test('online count: a network adds at most 6 new sessions; open apps keep beating', async () => {
+    const { server, base } = await start();
+    const r = [];
+    for (let i = 0; i < 8; i += 1) r.push((await api.post(`${base}/presence`, { sid: `phone-${i}-aaaa` })).status); // eslint-disable-line no-await-in-loop
+    expect(r).toEqual([200, 200, 200, 200, 200, 200, 429, 429]);
+    expect((await api.post(`${base}/presence`, { sid: 'phone-0-aaaa' })).status).toBe(200);
+    expect((await api.get(`${base}/stats`)).data.online).toBe(6);
+    await close(server);
+  });
+
+  test('odd request bodies get a short JSON error, never a stack trace with server paths', async () => {
+    const { server, base } = await start();
+    const r = await api.post(`${base}/presence`, '{}', { headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'bogus' }, transformRequest: [(d) => d] });
+    expect(r.status).toBeGreaterThanOrEqual(400);
+    expect(r.status).toBeLessThan(500);
+    expect(r.data).toEqual({ error: 'bad_request' });
+    await close(server);
+  });
+
+  test('an older (weaker) password hash is upgraded at the next login', async () => {
+    const store = new MemoryStore();
+    const { server, base } = await start({ store });
+    await api.post(`${base}/auth/register`, { account: 'old@example.com', password: 'baby-sleeps-9' });
+    const u = await store.getUserByAccount('email:old@example.com');
+    const crypto = await import('crypto');
+    const salt = crypto.randomBytes(16);
+    const hash = crypto.scryptSync('baby-sleeps-9', salt, 32, { N: 16384, r: 8, p: 1 });
+    const b64 = (x) => Buffer.from(x).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+    u.passwordHash = ['scrypt', b64(salt), b64(hash)].join('$'); // as saved by the first version
+    expect((await api.post(`${base}/auth/login`, { account: 'old@example.com', password: 'baby-sleeps-9' })).status).toBe(200);
+    expect(u.passwordHash.startsWith('scrypt5$')).toBe(true);
+    expect((await api.post(`${base}/auth/login`, { account: 'old@example.com', password: 'baby-sleeps-9' })).status).toBe(200);
+    await close(server);
+  });
+
+  test('LINE: a state works once (no replay), and an unexpected LINE user id is refused', async () => {
+    let calls = 0;
+    let userId = `U${'ab'.repeat(16)}`;
+    const http = { post: async () => { calls += 1; return { data: { access_token: 't' } }; }, get: async () => ({ data: { userId, displayName: 'L' } }) };
+    const { server, base } = await start({ env: { LINE_LOGIN_CHANNEL_ID: '1650000000', LINE_LOGIN_CHANNEL_SECRET: 'x' }, http });
+    const state = async () => new URL((await api.get(`${base}/auth/line/start?nonce=${NONCE}`)).headers.location).searchParams.get('state');
+    const cb = async (st) => JSON.parse(decodeURIComponent((await api.get(`${base}/auth/line/callback?code=c&state=${encodeURIComponent(st)}`)).headers.location.split('#/login?')[1]));
+    const st = await state();
+    expect((await cb(st)).token).toBeTruthy();
+    expect((await cb(st)).error).toBe('state');
+    expect(calls).toBe(1); // the replay never reached LINE
+    userId = 'U123../../admin';
+    expect((await cb(await state())).error).toBe('line_error');
+    await close(server);
+  });
+
+  test('Redis rate-limit counters always get their expiry in the same step (no permanent lock-out)', async () => {
+    const redis = fakeRedis();
+    const store = new RedisRestStore({ url: 'https://kv.example', token: 'kv-token', http: redis });
+    expect(await store.hit('t:x', 600)).toBe(1);
+    expect(await store.hit('t:x', 600)).toBe(2);
+    expect(redis.ttl.get('mom:rl:t:x')).toBe(600);
   });
 });

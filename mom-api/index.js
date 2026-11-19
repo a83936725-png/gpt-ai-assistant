@@ -11,26 +11,35 @@
  *   GET  /stats                  {online (last 2 min), registered, todaySignups}
  *
  * Health records and pregnancy stage are NOT sent here; they stay on the user's device.
- * Env: MOM_AUTH_SECRET (≥32 chars, required on Vercel/production), KV_REST_API_URL + KV_REST_API_TOKEN
- *      (Vercel KV) or UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN, MOM_PUBLIC_URL, MOM_ALLOWED_ORIGINS. */
+ * Env: MOM_AUTH_SECRET (≥32 chars, required on Vercel/production; shorter ones are ignored), KV_REST_API_URL +
+ *      KV_REST_API_TOKEN (Vercel KV) or UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN, MOM_PUBLIC_URL (required
+ *      for LINE login in production), MOM_ALLOWED_ORIGINS, MOM_TRUST_PROXY (number of proxies in front, e.g. 1 behind
+ *      nginx / a load balancer; leave unset when the server faces the internet directly or runs on Vercel). */
 import express from 'express';
 import crypto from 'crypto';
 import axios from 'axios';
 import { storeFromEnv } from './store.js';
 import {
-  hashPassword, verifyPassword, DUMMY_HASH, makeSigner, normaliseAccount, cleanText, newId, randomCode, hashKey,
+  hashPassword, verifyPassword, needsRehash, isCommonPassword, DUMMY_HASH, makeSigner, normaliseAccount, cleanText, newId, randomCode, hashKey, ipBucket,
 } from './auth.js';
 
 const ONLINE_WINDOW_MS = 2 * 60 * 1000;
 const SESSION_TTL_SEC = 60 * 60 * 24 * 30;
+const TRUSTED_DEVICE_SEC = 60 * 60 * 24 * 90;
 const TAIPEI_OFFSET_MS = 8 * 3600e3;
 const STATS_CACHE_MS = 15 * 1000;
 const LIMITS = {
-  loginIp: [30, 600], // 30 attempts / 10 min per IP
-  loginAccount: [10, 600], // 10 attempts / 10 min per account
-  registerIp: [10, 3600], // 10 sign-ups / hour per IP
+  loginIp: [30, 600], // 30 attempts / 10 min per network
+  loginPair: [10, 600], // 10 attempts / 10 min for one account from one network: the hard stop for password guessing
+  // one account from anywhere: a higher bar, and never applied to a network that has logged in to it before, so
+  // nobody can lock the owner out by failing on purpose (they would only lock out unknown networks)
+  loginAccount: [50, 600],
+  registerIp: [10, 3600], // 10 sign-ups / hour per network (invalid input does not count)
   referralDay: [30, 86400], // at most 30 counted referrals / day per invite code
-  presenceIp: [40, 600], // ~4 open apps per network
+  referralIp: [3, 86400], // …and at most 3 of them from the same network
+  presenceNew: [6, 600], // a network may bring at most 6 new "online" sessions every 10 min (a family's phones)
+  presenceSid: [30, 600], // heartbeats per session (the app sends one a minute)
+  meUser: [60, 600], // profile updates per account
   lineIp: [30, 600],
 };
 
@@ -39,15 +48,22 @@ export function createMomRouter({
 } = {}) {
   const router = express.Router();
   const prodLike = env.NODE_ENV === 'production' || !!env.VERCEL;
-  let secret = env.MOM_AUTH_SECRET;
-  // without a real secret in production, every serverless instance would mint its own and sessions would break at random
-  const authOn = !(prodLike && (!secret || secret.length < 32));
+  // a short secret is never used, in any environment: one captured token is enough to guess it offline and then mint
+  // sessions for anyone. Without a real secret in production, every serverless instance would mint its own and
+  // sessions would break at random, so login is switched off there; elsewhere a random one is used (reset on restart).
+  const weak = !!env.MOM_AUTH_SECRET && env.MOM_AUTH_SECRET.length < 32;
+  let secret = weak ? '' : env.MOM_AUTH_SECRET;
+  const authOn = !(prodLike && !secret);
   if (!secret) {
     secret = crypto.randomBytes(32).toString('hex');
-    if (env.NODE_ENV !== 'test') console.warn(`[mom-api] MOM_AUTH_SECRET is not set; ${authOn ? 'sessions reset when the server restarts' : 'login is disabled until it is set'}.`);
+    if (env.NODE_ENV !== 'test') console.warn(`[mom-api] MOM_AUTH_SECRET is ${weak ? 'too short (needs 32+ characters) and is ignored' : 'not set'}; ${authOn ? 'sessions reset when the server restarts' : 'login is disabled until it is set'}.`);
   }
   const tokens = makeSigner(secret);
-  const lineOn = authOn && !!(env.LINE_LOGIN_CHANNEL_ID && env.LINE_LOGIN_CHANNEL_SECRET);
+  // LINE sends people back to MOM_PUBLIC_URL; in production it must be set (otherwise the Host header would decide)
+  const lineOn = authOn && !!(env.LINE_LOGIN_CHANNEL_ID && env.LINE_LOGIN_CHANNEL_SECRET) && !(prodLike && !env.MOM_PUBLIC_URL);
+  if (authOn && env.LINE_LOGIN_CHANNEL_ID && !lineOn && env.NODE_ENV !== 'test') console.warn('[mom-api] LINE login needs MOM_PUBLIC_URL in production; it is switched off.');
+  // behind a proxy / load balancer, MOM_TRUST_PROXY = how many proxies add themselves to X-Forwarded-For
+  const proxyHops = Math.max(0, Math.min(5, parseInt(env.MOM_TRUST_PROXY, 10) || 0));
   const allowed = String(env.MOM_ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
 
   router.use((req, res, next) => {
@@ -63,15 +79,25 @@ export function createMomRouter({
     next();
   });
   router.use(express.json({ limit: '20kb' }));
-  // oversized or malformed JSON → short JSON error instead of a stack trace in the logs
-  router.use((err, req, res, next) => {
+  // any problem reading the body (too big, bad JSON, unknown encoding, broken gzip…) → a short JSON error;
+  // never Express's default page, which shows a stack trace with server paths
+  router.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
     if (err && err.type === 'entity.too.large') { res.status(413).json({ error: 'too_large' }); return; }
     if (err && err.type === 'entity.parse.failed') { res.status(400).json({ error: 'bad_json' }); return; }
-    next(err);
+    const status = err && err.status >= 400 && err.status < 500 ? err.status : 400;
+    res.status(status).json({ error: 'bad_request' });
   });
 
-  // client IP: Vercel sets x-real-ip; elsewhere use the socket address (X-Forwarded-For is spoofable)
-  const clientIp = (req) => String((env.VERCEL && req.get('x-real-ip')) || (req.socket && req.socket.remoteAddress) || req.ip || '');
+  // client network: Vercel sets x-real-ip; behind MOM_TRUST_PROXY proxies, the address they saw (counted from the
+  // right of X-Forwarded-For, the part a client cannot forge); otherwise the socket. IPv6 is grouped by /64.
+  const clientIp = (req) => {
+    let ip = env.VERCEL && req.get('x-real-ip');
+    if (!ip && proxyHops) {
+      const chain = String(req.get('x-forwarded-for') || '').split(',').map((s) => s.trim()).filter(Boolean);
+      ip = chain[chain.length - proxyHops];
+    }
+    return ipBucket(ip || (req.socket && req.socket.remoteAddress) || req.ip || '');
+  };
   const over = async (name, id, [max, windowSec]) => (await store.hit(`${name}:${hashKey(id)}`, windowSec, now())) > max;
 
   const hint = (u) => {
@@ -83,14 +109,15 @@ export function createMomRouter({
   const publicUser = (u, extra = {}) => ({
     id: u.id, nickname: u.nickname, provider: u.provider, code: u.code, createdAt: u.createdAt, accountHint: hint(u), ...extra,
   });
-  // tv (token version) lets 「登出所有裝置」 revoke every issued session
-  const session = (u) => tokens.issue({ uid: u.id, typ: 's', tv: u.tv || 0 }, SESSION_TTL_SEC);
+  // tv (token version) lets 「登出所有裝置」 revoke every issued session; it is kept apart from the user record
+  // (store.getTokenVersion) so a profile update in flight can never write an old version back
+  const session = async (u) => tokens.issue({ uid: u.id, typ: 's', tv: await store.getTokenVersion(u.id, u.tv || 0) }, SESSION_TTL_SEC);
   const currentUser = async (req) => {
     const header = req.get('authorization') || '';
     const data = tokens.verify(header.startsWith('Bearer ') ? header.slice(7) : '');
     if (!data || data.typ !== 's') return null;
     const user = await store.getUser(data.uid);
-    if (!user || (user.tv || 0) !== (data.tv || 0)) return null;
+    if (!user || (await store.getTokenVersion(user.id, user.tv || 0)) !== (data.tv || 0)) return null;
     return user;
   };
   // invite codes are always generated by the server, so nobody can pre-claim a code someone else already shared
@@ -99,7 +126,7 @@ export function createMomRouter({
     return `${randomCode()}${randomCode()}`;
   }
   async function createUser({
-    account, provider, nickname, passwordHash = null, invitedBy,
+    account, provider, nickname, passwordHash = null, invitedBy, ip = '',
   }) {
     const user = {
       id: newId(), account, provider, nickname: cleanText(nickname) || '媽媽', passwordHash, code: await uniqueCode(), invitedBy: null, tv: 0, createdAt: now(),
@@ -109,7 +136,10 @@ export function createMomRouter({
       if (inviter) user.invitedBy = inviter.code;
     }
     if (!(await store.createUser(user))) return null;
-    if (user.invitedBy && !(await over('ref', user.invitedBy, LIMITS.referralDay))) await store.addReferral(user.invitedBy);
+    // counted only within the daily cap per code and per (code, network): throwaway sign-ups from one place can't
+    // pile up invites. (A real fix needs a verified email / phone — see docs/GROWTH.md.)
+    if (user.invitedBy && !(await over('ref-ip', `${user.invitedBy}|${ip}`, LIMITS.referralIp))
+      && !(await over('ref', user.invitedBy, LIMITS.referralDay))) await store.addReferral(user.invitedBy);
     return user;
   }
   const wrap = (fn) => (req, res) => Promise.resolve().then(() => fn(req, res)).catch((e) => {
@@ -123,26 +153,34 @@ export function createMomRouter({
 
   router.post('/auth/register', wrap(async (req, res) => {
     if (needAuth(res)) return;
-    if (await over('reg', clientIp(req), LIMITS.registerIp)) { res.status(429).json({ error: 'too_many' }); return; }
     const {
       account: raw, password, nickname, invitedBy,
     } = req.body || {};
+    // input is checked first, so mistakes (and junk) never use up a network's sign-up allowance
     const acc = normaliseAccount(raw);
     if (!acc) { res.status(400).json({ error: 'bad_account' }); return; }
     if (typeof password !== 'string' || password.length < 8 || password.length > 128) { res.status(400).json({ error: 'weak_password' }); return; }
+    if (isCommonPassword(password)) { res.status(400).json({ error: 'common_password' }); return; }
+    const ip = clientIp(req);
+    if (await over('reg', ip, LIMITS.registerIp)) { res.status(429).json({ error: 'too_many' }); return; }
     if (await store.getUserByAccount(acc.account)) { res.status(409).json({ error: 'exists' }); return; }
     const user = await createUser({
-      account: acc.account, provider: acc.type, nickname, passwordHash: await hashPassword(password), invitedBy,
+      account: acc.account, provider: acc.type, nickname, passwordHash: await hashPassword(password), invitedBy, ip,
     });
     if (!user) { res.status(409).json({ error: 'exists' }); return; }
     statsCache = null;
-    res.status(201).json({ token: session(user), user: publicUser(user, { referrals: 0 }) });
+    await store.setFlag(`trust:${hashKey(`${acc.account}|${ip}`)}`, TRUSTED_DEVICE_SEC, now());
+    res.status(201).json({ token: await session(user), user: publicUser(user, { referrals: 0 }) });
   }));
 
   router.post('/auth/login', wrap(async (req, res) => {
     if (needAuth(res)) return;
     const acc = normaliseAccount(req.body && req.body.account);
-    if (await over('login-ip', clientIp(req), LIMITS.loginIp) || (acc && await over('login-acct', acc.account, LIMITS.loginAccount))) {
+    const ip = clientIp(req);
+    const trustKey = acc ? `trust:${hashKey(`${acc.account}|${ip}`)}` : '';
+    if (await over('login-ip', ip, LIMITS.loginIp)
+      || (acc && await over('login-pair', `${acc.account}|${ip}`, LIMITS.loginPair))
+      || (acc && await over('login-acct', acc.account, LIMITS.loginAccount) && !(await store.hasFlag(trustKey, now())))) {
       res.status(429).json({ error: 'too_many' }); return;
     }
     const user = acc ? await store.getUserByAccount(acc.account) : null;
@@ -150,14 +188,17 @@ export function createMomRouter({
     // always run scrypt so a missing account takes as long as a wrong password
     const okPw = await verifyPassword(password, (user && user.passwordHash) || DUMMY_HASH);
     if (!user || !user.passwordHash || !okPw) { res.status(401).json({ error: 'invalid' }); return; }
-    await store.updateUser(user.id, { lastLoginAt: now() });
-    res.json({ token: session(user), user: publicUser(user, { referrals: await store.countReferrals(user.code) }) });
+    const patch = { lastLoginAt: now() };
+    if (needsRehash(user.passwordHash)) patch.passwordHash = await hashPassword(password); // upgrade an older, weaker hash
+    await store.updateUser(user.id, patch);
+    await store.setFlag(trustKey, TRUSTED_DEVICE_SEC, now()); // this network may log in even while strangers fail
+    res.json({ token: await session(user), user: publicUser(user, { referrals: await store.countReferrals(user.code) }) });
   }));
 
   router.post('/auth/logout-all', wrap(async (req, res) => {
     const user = await currentUser(req);
     if (!user) { res.status(401).json({ error: 'unauthorized' }); return; }
-    await store.updateUser(user.id, { tv: (user.tv || 0) + 1 });
+    await store.bumpTokenVersion(user.id, user.tv || 0);
     res.json({ ok: true });
   }));
 
@@ -170,6 +211,7 @@ export function createMomRouter({
   router.post('/me', wrap(async (req, res) => {
     const user = await currentUser(req);
     if (!user) { res.status(401).json({ error: 'unauthorized' }); return; }
+    if (await over('me', user.id, LIMITS.meUser)) { res.status(429).json({ error: 'too_many' }); return; }
     const body = req.body || {};
     const patch = {};
     if (body.nickname !== undefined) patch.nickname = cleanText(body.nickname) || user.nickname;
@@ -180,8 +222,10 @@ export function createMomRouter({
   router.post('/presence', wrap(async (req, res) => {
     const sid = String((req.body && req.body.sid) || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
     if (sid.length < 8) { res.status(400).json({ error: 'bad_sid' }); return; }
-    // caps how many "online" sessions one network can create, so the count can't be inflated with fake ids
-    if (await over('presence', clientIp(req), LIMITS.presenceIp)) { res.status(429).json({ error: 'too_many' }); return; }
+    // one network can only bring a few new "online" sessions (a family's phones), and each session only beats
+    // about once a minute, so the online count can't be inflated with made-up ids
+    if (await over('presence-sid', sid, LIMITS.presenceSid)) { res.status(429).json({ error: 'too_many' }); return; }
+    if (!(await store.hasPresence(sid)) && await over('presence-new', clientIp(req), LIMITS.presenceNew)) { res.status(429).json({ error: 'too_many' }); return; }
     await store.touchPresence(sid, now());
     res.json({ ok: true });
   }));
@@ -213,7 +257,7 @@ export function createMomRouter({
     const nonce = cleanText(req.query.nonce, 40).replace(/[^a-zA-Z0-9_-]/g, '');
     if (nonce.length < 16) { res.status(400).json({ error: 'bad_nonce' }); return; }
     const state = tokens.issue({
-      typ: 'line', n: nonce, ref: cleanText(req.query.ref, 16),
+      typ: 'line', n: nonce, ref: cleanText(req.query.ref, 16), j: newId(), // j: single use (see the callback)
     }, 600);
     const u = new URL('https://access.line.me/oauth2/v2.1/authorize');
     u.searchParams.set('response_type', 'code');
@@ -226,8 +270,11 @@ export function createMomRouter({
 
   router.get('/auth/line/callback', wrap(async (req, res) => {
     if (!lineOn) { backToApp(req, res, { error: 'line_disabled' }); return; }
+    if (await over('line-cb', clientIp(req), LIMITS.lineIp)) { backToApp(req, res, { error: 'too_many' }); return; }
     const st = tokens.verify(req.query.state);
     if (!st || st.typ !== 'line' || !st.n) { backToApp(req, res, { error: 'state' }); return; }
+    // each state works once: replaying it (with made-up codes) would make us call LINE again and again with our secret
+    if (!st.j || !(await store.claimOnce(`line-state:${st.j}`, 600, now()))) { backToApp(req, res, { error: 'state' }); return; }
     if (!req.query.code) { backToApp(req, res, { error: 'denied', nonce: st.n }); return; }
     try {
       const form = new URLSearchParams({
@@ -235,11 +282,12 @@ export function createMomRouter({
       });
       const { data: tok } = await http.post('https://api.line.me/oauth2/v2.1/token', form.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 8000 });
       const { data: profile } = await http.get('https://api.line.me/v2/profile', { headers: { Authorization: `Bearer ${tok.access_token}` }, timeout: 8000 });
+      if (!profile || !/^U[0-9a-f]{32}$/.test(String(profile.userId))) throw new Error('unexpected LINE user id');
       const account = `line:${profile.userId}`;
       let user = await store.getUserByAccount(account);
-      if (!user) user = (await createUser({ account, provider: 'line', nickname: profile.displayName, invitedBy: st.ref })) || await store.getUserByAccount(account);
+      if (!user) user = (await createUser({ account, provider: 'line', nickname: profile.displayName, invitedBy: st.ref, ip: clientIp(req) })) || await store.getUserByAccount(account);
       await store.updateUser(user.id, { lastLoginAt: now() });
-      backToApp(req, res, { token: session(user), nonce: st.n });
+      backToApp(req, res, { token: await session(user), nonce: st.n });
     } catch (e) {
       console.error('[mom-api] LINE login failed:', e.message);
       backToApp(req, res, { error: 'line_error', nonce: st.n });

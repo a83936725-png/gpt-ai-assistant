@@ -358,21 +358,61 @@
   }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   function checkMoments() {
     if (!store.state.onboarded) return;
+    // the day someone sets the app up is for getting started, not for share prompts
+    if (store.state.onboardedAt && C.dateKey(store.state.onboardedAt) === C.dateKey()) return;
     if (store.inStage(['preg']) && App.preg && App.preg.pregLmp && App.preg.pregLmp()) {
       const ga = C.gestAge(App.preg.pregLmp());
-      if (ga.weeks >= 5 && ga.weeks <= 42 && moment(`pw-${App.preg.pregLmp()}-${ga.weeks}`, { emoji: '🤰', msg: `進入第 ${ga.weeks} 週了！`, kind: 'preg-week' })) return;
+      // only when the week has really changed since we last looked (not the week the app was started in)
+      const seen = ensure(store.state).seenWeek;
+      if (seen !== ga.weeks) store.update((s) => { ensure(s).seenWeek = ga.weeks; });
+      if (seen && ga.weeks > seen && ga.weeks >= 5 && ga.weeks <= 42 && moment(`pw-${App.preg.pregLmp()}-${ga.weeks}`, { emoji: '🤰', msg: `進入第 ${ga.weeks} 週了！`, kind: 'preg-week' })) return;
     }
-    const b = store.baby();
-    if (b && store.stage === 'baby') {
-      const cu = customFor(b);
-      if (cu && moment(`${b.id}-${cu.id}`, { emoji: cu.emoji, msg: `${b.name} ${cu.title}`, kind: `custom-${cu.id}`, mutedKey: 'custom' })) return;
-    }
+    // 滿月、收涎、百日、度晬 are shown as a warm card on 首頁 (custom-moment below), not as a pop-up
     const pp = App.journey && App.journey.ppInfo ? App.journey.ppInfo() : null;
-    if (pp && pp.day >= 30 && pp.day <= 36 && moment(`pp30-${pp.start}`, { emoji: '🍲', msg: '產後滿月，坐月子辛苦了！', kind: 'pp' })) return;
+    const cuNow = store.baby() ? customFor(store.baby()) : null;
+    if (pp && pp.day >= 30 && pp.day <= 36 && !(cuNow && cuNow.id === 'm30') && moment(`pp30-${pp.start}`, { emoji: '🍲', msg: '產後滿月，坐月子辛苦了！', kind: 'pp' })) return;
     const streak = App.chicken ? App.chicken.streak() : 0;
     const hit = [7, 14, 30, 60, 100].find((n) => streak === n);
     if (hit) moment(`streak-${hit}-${C.dateKey(C.addDays(new Date(), -hit))}`, { emoji: '💜', msg: `連續 ${hit} 天好好照顧自己！`, kind: 'streak' });
   }
+  /* 滿月・百日・四個月收涎・度晬：during that week a one-line banner sits right under the baby on 首頁 (so the
+   * little celebration the first time it shows is seen, not off-screen). Tapping it shows the custom in a line and
+   * the share card one tap away. Nothing pops up by itself. */
+  const TRADITION = {
+    m30: '滿月習俗：剃胎毛、分送滿月油飯或蛋糕，謝謝這個月幫忙的親友。',
+    d100: '百日：拍一張百日照，記下這一百天的樣子。',
+    m4: '收涎：把收涎餅串起來掛在寶寶胸前，請親友來幫忙「收口水」。',
+    y1: '度晬：準備抓周的小物，看看寶寶先拿起什麼。',
+  };
+  let cheering = null;
+  function momentLine(b) {
+    if (!b) return null;
+    const cu = customFor(b); if (!cu) return null;
+    const key = `${b.id}-${cu.id}`;
+    const show = () => {
+      const sh = ui.sheet({
+        title: `${cu.emoji} ${b.name} ${cu.title}`,
+        body: h('div', { class: 'sh-moment' },
+          h('p', null, cu.sub),
+          TRADITION[cu.id] ? h('p', { class: 'small muted' }, TRADITION[cu.id]) : null,
+          h('button', { class: 'btn btn-primary btn-block mt', onclick: () => { sh.close(); setTimeout(() => open({ kind: `custom-${cu.id}` }), 240); } }, '📤 做成分享卡')),
+      });
+    };
+    const el = h('button', { class: 'moment-line', onclick: show },
+      h('span', { class: 'moment-emoji', 'aria-hidden': 'true' }, cu.emoji),
+      h('span', { class: 'grow' }, h('strong', null, `${b.name} ${cu.title}`), h('span', { class: 'moment-more' }, '習俗・分享卡')),
+      h('span', { class: 'chev', 'aria-hidden': 'true' }, '›'));
+    if (!(ensure(store.state).cheered || {})[key] && cheering !== key && !window.__noShareMoments) {
+      cheering = key;
+      setTimeout(() => {
+        store.update((st) => { const x = ensure(st); x.cheered = { ...(x.cheered || {}), [key]: C.dateKey() }; });
+        const line = document.querySelector('.moment-line');
+        ui.celebrate({ from: line || undefined, emojis: [cu.emoji, '🎉', '💜', '✨'] });
+      }, 500);
+    }
+    return el;
+  }
+
   // runs after the home screen renders (renders nothing itself)
   App.homeCard('share-moments', { stages: ['prep', 'preg', 'baby'], order: 999, render() { setTimeout(checkMoments, 700); } });
 
@@ -451,6 +491,9 @@
     stages: ['prep', 'preg', 'baby'],
     order: 95,
     render(el) {
+      // asked only after a week of use: someone who just arrived has nothing to recommend yet
+      const since = store.state.onboardedAt || store.state.createdAt;
+      if (since && C.diffDays(since, new Date()) < 7) return;
       const sh = ensure(store.state);
       el.append(ui.card({ class: 'inv-home tap', onclick: () => App.navigate('invite') },
         h('div', { class: 'row gap' }, h('span', { class: 'inv-home-ico' }, '💌'),
@@ -512,5 +555,5 @@
     if (!on && islandUI.els.length) clearIslandUI();
   }).observe(document.body, { attributes: true, attributeFilter: ['data-screen'] });
 
-  App.share = { open, link, render, cards, moment, checkMoments, button, record, bonus, code: () => ensure(store.state).code, inviteText };
+  App.share = { open, link, render, cards, moment, checkMoments, momentLine, button, record, bonus, code: () => ensure(store.state).code, inviteText };
 }());

@@ -224,3 +224,8 @@ body[data-screen="island"] #view { padding: 0; max-width: none; }
   .isl-wave, .isl-steam, .isl-float, .isl-bob, .isl-star, .isl-fx i, .isl-ticker-text.in, .isl-stamp { animation: none !important; }
   .isl-steam { opacity: .5; }
 }
+/* 首頁: the island as one tappable line */
+.isl-home-line { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; padding: 12px 14px; }
+.isl-home-line .isl-home-emoji { font-size: 26px; width: 44px; height: 44px; border-radius: 14px; background: var(--c-primary-soft); display: flex; align-items: center; justify-content: center; flex: none; }
+.isl-home-count { font-size: 13px; font-weight: 700; color: var(--c-primary); flex: none; }
+

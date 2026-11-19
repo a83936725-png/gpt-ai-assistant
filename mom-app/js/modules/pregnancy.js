@@ -1149,12 +1149,19 @@
         h('div', { class: 'mt' }, ui.progress(ga.progress)),
         h('div', { class: 'row between small mt' },
           h('span', null, ga.daysLeft > 0 ? `還有 ${ga.daysLeft} 天見面` : ga.daysLeft === 0 ? '預產期就是今天！' : `已超過預產期 ${-ga.daysLeft} 天`),
-          np ? h('span', null, np.thisWeek ? '本週該產檢' : `下次產檢 ${C.fmtDate(np.date, false)}`) : null),
-        h('div', { class: 'row gap-sm mt' },
+          // the next visit is a shortcut: this week's → straight to recording it; later → the schedule
+          np ? h('button', {
+            type: 'button', class: 'pg-hero-next',
+            onclick: (e) => { e.stopPropagation(); if (np.thisWeek) openVisitSheet(np, np.date); else App.navigate('prenatal'); },
+          }, `${np.thisWeek ? '本週該產檢' : `下次產檢 ${C.fmtDate(np.date, false)}`} ›`) : null),
+        // the weekly jobs: kicks, weight, check-ups (contractions take weight's place from week 34)
+        h('div', { class: 'row gap-sm mt wrap' },
           h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); App.navigate('kick'); } }, '👣 胎動'),
-          h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); App.navigate('contraction'); } }, '⏱️ 宮縮'),
+          ga.weeks >= 34
+            ? h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); App.navigate('contraction'); } }, '⏱️ 宮縮')
+            : h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); openWeightSheet(); } }, '⚖️ 體重'),
           h('button', { class: 'btn btn-sm pg-hero-btn', onclick: (e) => { e.stopPropagation(); App.navigate('prenatal'); } }, '🩺 產檢'),
-          App.share ? h('button', { class: 'btn btn-sm pg-hero-btn', 'aria-label': '分享孕週卡', onclick: (e) => { e.stopPropagation(); App.share.open({ kind: 'preg-week', sheetTitle: '分享孕週卡' }); } }, '📤') : null)));
+          App.share ? h('button', { class: 'btn btn-sm pg-hero-btn', 'aria-label': '分享孕週卡', onclick: (e) => { e.stopPropagation(); App.share.open({ kind: 'preg-week', sheetTitle: '分享孕週卡' }); } }, '📤 分享') : null)));
     },
   });
 

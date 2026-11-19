@@ -1288,17 +1288,15 @@
     render(el) {
       const n = stampCount(); const N = D.SPOTS.length;
       const next = nextSpot();
-      el.append(ui.card({ class: 'isl-home' },
-        h('div', { class: 'row between' },
-          h('div', { class: 'card-title' }, '🏝️ 好孕島'),
-          h('span', { class: 'tag primary' }, titleFor(n))),
-        h('div', { class: 'row between small muted' }, h('span', null, '一站一站學、一題一題蓋章'), h('span', { class: 'num' }, `🏅 ${n} / ${N}`)),
-        h('div', { class: 'mt' }, ui.progress(n / N)),
-        next ? h('button', {
-          class: 'isl-home-next', onclick: () => App.navigate('island', { spot: next.id }),
-        }, h('span', { class: 'isl-home-emoji' }, next.emoji), h('span', { class: 'grow' }, h('span', { class: 'tiny muted' }, '下一站'), h('br'), h('strong', null, `${pad2(next.no)} ${next.name}`)), h('span', { class: 'ic', html: App.ui.ICONS.chevron }))
-          : h('p', { class: 'small mt' }, '🎉 全部蓋章完成，你就是好孕島主！'),
-        h('button', { class: 'btn btn-primary btn-sm btn-block mt', onclick: () => App.navigate('island') }, '上島逛逛')));
+      // one line on 首頁 (the island has its own tab): where to go next, and how many stamps so far
+      el.append(h('button', {
+        type: 'button', class: 'card isl-home-line', onclick: () => App.navigate('island', next ? { spot: next.id } : {}),
+        'aria-label': next ? `好孕島下一站：${pad2(next.no)} ${next.name}，已蓋 ${n} / ${N} 個章` : `好孕島全部蓋章完成（${N} 個）`,
+      },
+      h('span', { class: 'isl-home-emoji', 'aria-hidden': 'true' }, next ? next.emoji : '🏝️'),
+      h('span', { class: 'grow' }, h('span', { class: 'tiny muted' }, '🏝️ 好孕島・下一站'), h('br'), h('strong', null, next ? `${pad2(next.no)} ${next.name}` : '全部蓋章完成 🎉')),
+      h('span', { class: 'isl-home-count num' }, `🏅 ${n}/${N}`),
+      h('span', { class: 'ic faint', html: App.ui.ICONS.chevron })));
     },
   });
 

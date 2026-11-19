@@ -2,7 +2,10 @@
 
 /* 紀錄頁：日／月曆 + 傳給家人 */
 .log-top { margin-bottom: 6px; }
-.log-top .btn-line { flex: none; min-height: 38px; }
+/* 傳給家人 is useful but not the main thing on this page: a quiet button in LINE's colour */
+.log-top .btn-line { flex: none; min-height: 40px; background: var(--c-surface); color: #037f37; border: 1px solid var(--c-border); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .log-top .btn-line { color: #5fd391; } }
+:root[data-theme="dark"] .log-top .btn-line { color: #5fd391; }
 
 /* 月曆 */
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }

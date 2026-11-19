@@ -36,6 +36,8 @@
     preg: '孕期的每一天，都值得被溫柔對待。',
     baby: '照顧寶寶之餘，也別忘了照顧自己。',
   };
+  // short lines for the 今日小任務 row (the full sentences above were cut off mid-word there)
+  const SHORT_COPY = { prep: '好好吃飯、好好休息', preg: '孕期也被溫柔對待', baby: '也要好好疼自己' };
 
   function checkinCard({ compact = false } = {}) {
     const n = todayCount();
@@ -97,7 +99,7 @@
     const n = todayCount();
     tasks.push({
       id: 'chicken', icon: '💜', label: '滴雞精時光', done: n >= (store.state.chicken.goal || 1),
-      sub: n ? `今天 ${n} 次・連續 ${streak()} 天` : STAGE_COPY[store.stage].slice(0, 12),
+      sub: n ? `今天 ${n} 次・連續 ${streak()} 天` : SHORT_COPY[store.stage] || SHORT_COPY.baby,
       tap: () => checkIn(1),
     });
     const w = dayLog().water || 0;

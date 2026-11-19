@@ -8,11 +8,14 @@
 
 @media (prefers-reduced-motion: no-preference) {
   /* ---- press: what you tap gives a little under the finger, then springs back ---- */
-  .btn, .chip, .seg button, .icon-btn, .stepper-btn, .qt-plus, .qt-main, .type-btn, .av-btn, .daily-main, .daily-minus,
+  .btn, .chip, .seg button, .icon-btn, .stepper-btn, .qt-main, .type-btn, .av-btn, .daily-main, .daily-minus,
   .list-item, .tl-item, .card.tap, .tile, .hero-main, .hero-stat, .pg-kick-btn, .gd-item, .isl-cbtn, .swatch, .pg-cal-day {
     transition: transform .16s cubic-bezier(.3, .7, .4, 1.5), background-color .16s, box-shadow .16s, color .16s;
   }
-  :is(.btn, .chip, .seg button, .icon-btn, .stepper-btn, .qt-plus, .type-btn, .av-btn, .daily-minus, .isl-cbtn, .swatch, .pg-cal-day):active { transform: scale(.93); }
+  :is(.btn, .chip, .seg button, .icon-btn, .stepper-btn, .type-btn, .av-btn, .daily-minus, .isl-cbtn, .swatch, .pg-cal-day):active { transform: scale(.93); }
+  /* the ＋ on a home tile is centred with a transform, so its press keeps that */
+  .qt-plus { transition: transform .16s cubic-bezier(.3, .7, .4, 1.5), box-shadow .16s; }
+  .qt-plus:active { transform: translateX(-50%) scale(.92); }
   :is(.qt-main, .daily-main, .list-item, .tl-item, .card.tap, .tile, .hero-main, .hero-stat, .gd-item):active { transform: scale(.975); }
   .pg-kick-btn:active { transform: scale(.92); }
 

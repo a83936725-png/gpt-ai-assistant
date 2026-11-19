@@ -354,7 +354,21 @@
       isEdit ? h('button', {
         class: 'btn btn-ghost', 'aria-label': '刪除', onclick: async () => { if (await ui.confirm('刪除這筆紀錄？', { ok: '刪除', danger: true })) { store.removeLog(existing.id); sh.close(); ui.toast('已刪除'); } },
       }, ui.icon('trash')) : null,
-      h('button', { class: 'btn btn-primary grow', onclick: isEdit ? save : saveNew }, isEdit ? '儲存' : '新增'));
+      h('button', { class: 'btn btn-primary grow', onclick: isEdit ? save : saveNew }, '儲存'));
+    // most records are written down a little after they happened: one tap for 5 / 15 / 30 minutes or an hour ago
+    if (!isEdit && startIn.isConnected !== undefined && body.contains(startIn)) {
+      const AGO = [['現在', 0], ['5 分前', 5], ['15 分前', 15], ['30 分前', 30], ['1 小時前', 60]];
+      const chips = h('div', { class: 'chips time-chips', role: 'group', 'aria-label': '快速選時間' }, AGO.map(([label, min]) => h('button', {
+        type: 'button', class: `chip${min === 0 ? ' active' : ''}`,
+        onclick: (e) => {
+          startIn.value = C.toLocalInput(new Date(Date.now() - min * C.MIN));
+          startIn.dispatchEvent(new Event('change', { bubbles: true }));
+          chips.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === e.currentTarget));
+        },
+      }, label)));
+      startIn.addEventListener('input', () => chips.querySelectorAll('.chip').forEach((c) => c.classList.remove('active')));
+      startIn.insertAdjacentElement('afterend', chips);
+    }
     const sh = ui.sheet({ title: `${def.icon} ${isEdit ? '編輯' : ''}${def.label}`, body, footer });
   }
   App.babylog = { openAdd, typePicker, quickLog, withUndo, handleAction };
@@ -433,19 +447,16 @@
   /* ================= timeline list ================= */
   App.babylog.timeline = (logs, { limit, showAgoFirst = true } = {}) => {
     const list = h('div', { class: 'timeline' });
-    let prevHour = null;
     (limit ? logs.slice(0, limit) : logs).forEach((l, i) => {
       const def = T()[l.type] || T().other;
       const d = new Date(l.start);
-      const hr = d.getHours();
-      const timeLabel = hr === prevHour ? `:${C.pad(d.getMinutes())}` : C.fmtTime(d);
-      prevHour = hr;
+      // always the full time (a lone ":20" read like a glitch); how long ago sits beside the title instead
       list.append(h('button', { class: 'tl-item', onclick: () => openAdd(l.type, l) },
-        h('div', { class: 'tl-time num' }, timeLabel,
-          i === 0 && showAgoFirst ? h('div', { class: 'tiny faint', dataset: { ago: l.start } }, C.ago(l.start)) : null),
+        h('div', { class: 'tl-time num' }, C.fmtTime(d)),
         h('span', { class: 'tl-ico', style: { '--tc': def.color } }, def.icon),
         h('div', { class: 'tl-body' },
-          h('div', { class: 'tl-title' }, def.label, l.by && l.by !== store.state.profile.member ? h('span', { class: 'tag' }, l.by) : null),
+          h('div', { class: 'tl-title' }, def.label, l.by && l.by !== store.state.profile.member ? h('span', { class: 'tag' }, l.by) : null,
+            i === 0 && showAgoFirst ? h('span', { class: 'tl-ago', dataset: { ago: l.start } }, C.ago(l.start)) : null),
           h('div', { class: 'tl-sub' }, App.logSummary(l), l.note ? ` ・${l.note}` : ''))));
     });
     return list;
@@ -494,7 +505,8 @@
       sumChip('🍼', `${s.bottleCount} 次`, `${s.bottleMl} ml`),
       sumChip('🤱', `${s.breastCount} 次`, '親餵'),
       sumChip('🧷', `${s.diaperCount} 次`, `💧${s.wet} 💩${s.dirty}`),
-      sumChip('😴', s.sleepMs ? C.fmtDuration(s.sleepMs) : '0', '睡眠')));
+      // 8.5 小時 fits the tile; 8 小時 30 分 wrapped over three lines
+      sumChip('😴', !s.sleepMs ? '0' : s.sleepMs >= C.HOUR ? `${(s.sleepMs / C.HOUR).toFixed(1).replace(/\.0$/, '')} 小時` : C.fmtDuration(s.sleepMs), '睡眠')));
     el.append(dayStrip(viewDay, logs));
 
     el.append(h('div', { class: 'mt' }, ui.seg(FILTERS, filter, (v) => { filter = v; App.refresh(); }, { small: true })));
@@ -593,7 +605,7 @@
   const sumChip = (ico, a, b) => h('div', { class: 'sum-chip' }, h('span', { class: 'sum-ico' }, ico), h('div', null, h('div', { class: 'bold num' }, a), h('div', { class: 'tiny muted' }, b)));
 
   App.screen('log', {
-    title: () => ({ prep: '經期紀錄', preg: '孕期紀錄', baby: '育兒日記' }[store.stage]),
+    title: () => ({ prep: '經期紀錄', preg: '孕期紀錄', baby: '育兒紀錄' }[store.stage]),
     render(el, params) {
       const stage = store.stage;
       if (stage === 'prep' && App.screens.cycle) { App.screens.cycle.render(el, params); return; }

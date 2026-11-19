@@ -433,20 +433,24 @@
       const wrap = h('div', { class: 'onboard' });
       el.append(wrap);
       const go = (patch) => { Object.assign(ob, patch); wrap.innerHTML = ''; draw(); };
-      const finish = () => { store.update((s) => { s.onboarded = true; }); ob = { step: 0, stage: null }; App.navigate('home'); App.refresh(); };
+      const finish = () => { store.update((s) => { s.onboarded = true; s.onboardedAt = new Date().toISOString(); }); ob = { step: 0, stage: null }; App.navigate('home'); App.refresh(); };
       function draw() {
         if (ob.step === 0) {
           const inv = store.state.share && store.state.share.invitedBy;
-          wrap.append(h('div', { class: 'ob-hero center' },
+          // first impression: what the app does in one glance, and the two buttons always within thumb reach
+          // (even on a small iPhone SE): a compact brand line, three plain feature lines, actions pinned at the bottom
+          wrap.append(h('div', { class: 'ob-hero' },
             inv ? h('div', { class: 'ob-invited' }, `💌 ${store.state.share.inviterName || '朋友'}邀請你一起使用`) : null,
-            h('img', { src: B().logoFull || B().logo, alt: B().brandName || '', class: 'ob-logo' }),
-            h('h1', { class: 'ob-title' }, B().appName || '易家做媽媽'),
-            h('p', { class: 'muted' }, '從備孕、懷孕到育兒，一個 App 陪你記錄每一步。'),
+            h('div', { class: 'ob-brand' },
+              h('img', { src: B().logo, alt: '', class: 'ob-icon' }),
+              h('div', null, h('h1', { class: 'ob-title' }, B().appName || '易家做媽媽'), h('div', { class: 'ob-by' }, `by ${B().brandName || '易家滴雞精'}`))),
+            h('p', { class: 'ob-tagline' }, '從備孕、懷孕到育兒，陪你記下每一步。'),
             h('ul', { class: 'ob-feats' },
-              h('li', null, '🏝️ 好孕島：邊逛邊學的衛教小島'),
-              h('li', null, '🍼 餵奶・尿布・睡眠，一鍵記錄＋智慧預測'),
-              h('li', null, '📈 成長曲線、疫苗、里程碑、PDF 報告'),
-              h('li', null, '👨‍👩‍👧 全家一起記錄')),
+              h('li', null, h('span', { class: 'ob-feat-ico', 'aria-hidden': 'true' }, '🍼'), h('span', null, h('b', null, '一鍵記錄'), '餵奶、尿布、睡眠，算好下一餐')),
+              h('li', null, h('span', { class: 'ob-feat-ico', 'aria-hidden': 'true' }, '🤰'), h('span', null, h('b', null, '孕期陪伴'), '每週寶寶變化、產檢、胎動')),
+              h('li', null, h('span', { class: 'ob-feat-ico', 'aria-hidden': 'true' }, '📈'), h('span', null, h('b', null, '成長與健康'), '成長曲線、疫苗、里程碑提醒')),
+              h('li', null, h('span', { class: 'ob-feat-ico', 'aria-hidden': 'true' }, '👨‍👩‍👧'), h('span', null, h('b', null, '全家一起'), '爸爸、阿嬤也能一起記錄')))),
+          h('div', { class: 'ob-actions' },
             App.livePill ? App.livePill('ob-live') : null,
             h('button', { class: 'btn btn-primary btn-block', onclick: () => go({ step: 1 }) }, '開始使用'),
             h('button', { class: 'btn btn-ghost btn-block mt', onclick: () => { ob = { step: 0, stage: null }; seedDemo(); } }, '先看看範例資料'),
@@ -478,10 +482,15 @@
             const sex = ui.seg([{ value: 'girl', label: '女孩' }, { value: 'boy', label: '男孩' }], 'girl', null, { small: true });
             const bday = h('input', { type: 'date', value: C.dateKey(), max: C.dateKey() });
             const bw = h('input', { type: 'number', inputmode: 'decimal', step: '0.01', placeholder: '3.20' });
-            fields.append(ui.field('寶寶名字', bname), ui.field('性別', sex), ui.field('生日', bday), ui.field('出生體重（kg，選填）', bw));
+            // the first hepatitis B dose is given in hospital within 24 h of birth: without this the vaccine list would
+            // greet a new parent with a red 「已逾期」 for a shot the baby already had
+            const hepb = h('input', { type: 'checkbox', checked: true });
+            fields.append(ui.field('寶寶名字', bname), ui.field('性別', sex), ui.field('生日', bday), ui.field('出生體重（kg，選填）', bw),
+              h('label', { class: 'check-row ob-hepb' }, hepb, h('span', null, '出生時在醫院打的 B 肝疫苗第 1 劑已完成', h('br'), h('span', { class: 'tiny muted' }, '之後可在「疫苗」修改'))));
             collect = (s) => {
               const baby = { id: C.uid(), name: bname.value.trim() || '寶寶', sex: sex.dataset.value, birthday: bday.value || C.dateKey(), birthWeight: bw.value ? Number(bw.value) : '', avatar: '👶' };
               s.babies.push(baby); s.activeBabyId = baby.id;
+              if (hepb.checked) s.vaccines[baby.id] = { ...(s.vaccines[baby.id] || {}), hepb1: baby.birthday };
             };
           }
           wrap.append(h('h2', { class: 'ob-q' }, '基本資料'), ui.field('你的暱稱', name), fields,
@@ -547,7 +556,7 @@
         h('button', { class: 'btn btn-ghost btn-block mt', onclick: importData }, '⬆️ 匯入／合併家人的備份'),
         h('p', { class: 'small muted mt storage-line' }, storageLine()),
         needsHomeScreen() ? h('p', { class: 'tiny faint' }, 'iPhone：把 App 加到主畫面（Safari「分享」→「加入主畫面」），7 天沒打開也不會被清掉紀錄。') : null,
-        h('p', { class: 'tiny faint mt' }, '目前資料只存在這台裝置。家人之間可用「匯出 → 用 LINE 傳檔 → 匯入合併」同步。即時雲端同步（LINE 登入）規劃於第二階段。')));
+        h('p', { class: 'tiny faint mt' }, '紀錄只存在這台手機。家人之間可以「匯出 → 用 LINE 傳檔 → 匯入合併」來同步；全家手機即時同步正在準備中。')));
 
       el.append(h('div', { class: 'section-title' }, '設定'));
       el.append(h('div', { class: 'list' },
@@ -570,7 +579,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.6.7`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.6.8`),
         h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理，不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。資料只儲存在你的裝置上。')));
     },
   });

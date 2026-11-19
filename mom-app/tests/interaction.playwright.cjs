@@ -170,15 +170,18 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: t
   /* ================= 4. offline + upgrade from the previous cache ================= */
   const o = await newPage();
   await o.goto(BASE); await o.waitForFunction(() => window.App && App.screens.goods);
+  // the cache name comes from sw.js itself, so this keeps working when a release bumps it
+  const CUR = require('fs').readFileSync(require('path').join(__dirname, '..', 'sw.js'), 'utf8').match(/const CACHE = '([^']+)'/)[1];
+  const PREV = CUR.replace(/(\d+)$/, (n) => String(Number(n) - 1));
   // pretend the previous version's cache is still there
-  await S(o, async () => { const c = await caches.open('yijia-mom-v7'); await c.put('old-file.txt', new Response('old')); });
+  await S(o, async (prev) => { const c = await caches.open(prev); await c.put('old-file.txt', new Response('old')); }, PREV);
   await S(o, async () => { await navigator.serviceWorker.ready; });
   await o.reload(); await o.waitForFunction(() => window.App && App.screens.goods);
-  await o.waitForFunction(async () => { const k = await caches.keys(); if (!k.includes('yijia-mom-v8')) return false; const c = await caches.open('yijia-mom-v8'); return !!(await c.match('js/modules/goods.js')) && !!(await c.match('css/goods.css')) && !!(await c.match('js/data/goods-data.js')); }, null, { timeout: 15000 }).catch(() => {});
+  await o.waitForFunction(async (cur) => { const k = await caches.keys(); if (!k.includes(cur)) return false; const c = await caches.open(cur); return !!(await c.match('js/modules/goods.js')) && !!(await c.match('css/goods.css')) && !!(await c.match('js/data/goods-data.js')); }, CUR, { timeout: 15000 }).catch(() => {});
   const keys = await S(o, () => caches.keys());
-  ok('update removes the old offline cache and keeps the new one', keys.includes('yijia-mom-v8') && !keys.includes('yijia-mom-v7'), keys);
-  const cached = await S(o, async () => { const c = await caches.open('yijia-mom-v8'); return { goods: !!(await c.match('js/modules/goods.js')), css: !!(await c.match('css/goods.css')), data: !!(await c.match('js/data/goods-data.js')) }; });
-  ok('常見好物 files are in the offline cache', cached.goods && cached.css && cached.data, cached);
+  ok(`update removes the old offline cache (${PREV}) and keeps the new one (${CUR})`, keys.includes(CUR) && !keys.includes(PREV), keys);
+  const cached = await S(o, async (cur) => { const c = await caches.open(cur); return { goods: !!(await c.match('js/modules/goods.js')), css: !!(await c.match('css/goods.css')), data: !!(await c.match('js/data/goods-data.js')), motion: !!(await c.match('css/motion.css')) }; }, CUR);
+  ok('常見好物 and motion files are in the offline cache', cached.goods && cached.css && cached.data && cached.motion, cached);
   await S(o, () => App.demo.seed()); await wait(o, 400);
   await o.context().setOffline(true);
   await o.reload(); await wait(o, 1200);

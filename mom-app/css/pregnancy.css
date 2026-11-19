@@ -92,7 +92,10 @@
 .pg-hero-edit { background: rgba(255, 255, 255, .2); border: 0; color: inherit; border-radius: 999px; padding: 3px 12px; font-size: 13px; }
 .pg-hero-week { font-size: 26px; font-weight: 800; margin-top: 8px; letter-spacing: .5px; }
 .pg-hero-emoji { font-size: 46px; line-height: 1; }
-.btn.pg-hero-btn { background: rgba(255, 255, 255, .2); color: inherit; }
+.pg-hero-next { background: none; border: 0; color: inherit; font: inherit; font-weight: 700; padding: 6px 0; min-height: 36px; text-decoration: underline; text-underline-offset: 3px; }
+/* the week headline never wraps on a small phone (懷孕 28 週 3 / 天) */
+.pg-hero-week { font-size: clamp(20px, 6.8vw, 26px); white-space: nowrap; }
+.btn.pg-hero-btn { background: rgba(255, 255, 255, .2); color: inherit; padding: 0 11px; font-size: 13.5px; gap: 3px; }
 .pg-next-visit .li-icon { background: var(--c-primary-soft); }
 
 /* week browser */

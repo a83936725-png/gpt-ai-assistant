@@ -1,5 +1,5 @@
 // 質感與互動測試：慶祝動畫（里程碑、疫苗、10 次胎動、寶寶出生、蓋章、今日小任務、連續打卡）、一鍵記錄的小動畫、
-// 首頁會動的寶寶與水果；而且動畫不擋手指、會自己清掉、不讓畫面變寬，手機設定「減少動態效果」時完全不動。
+// 首頁會動的寶寶與水果、滿月／百日／收涎／度晬；而且動畫不擋手指、會自己清掉、不讓畫面變寬，手機設定「減少動態效果」時完全不動。
 // Usage: cd mom-app && python3 -m http.server 8080   then   node tests/delight.playwright.cjs   [BASE=...]
 const { chromium, devices } = require('playwright');
 const BASE = process.env.BASE || 'http://localhost:8080/';
@@ -109,6 +109,35 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   await p.fill('.sheet input[type=text] >> nth=0', '小星星').catch(() => {});
   await p.click('.sheet button:has-text("寶寶出生了，儲存")'); await p.waitForTimeout(500);
   ok('寶寶出生了: the biggest celebration (🎉👶💖🍼)', (await parts(p)) >= 30 && /歡迎/.test(await toastText(p)));
+
+  /* ---------- 滿月・百日・收涎・度晬: a line under the baby, celebrated once, never a pop-up ---------- */
+  {
+    const ctx2 = await browser.newContext({ ...devices['iPhone SE'], locale: 'zh-TW' });
+    const q = await ctx2.newPage(); q.on('pageerror', (e) => errors.push(e.message));
+    await q.goto(BASE); await q.waitForFunction(() => window.App && App.store && !App.store.loading && App.share);
+    const ageTo = (days) => S(q, (d) => App.store.update((s) => { s.babies[0].birthday = Core.dateKey(Core.addDays(new Date(), -d)); }), days);
+    await S(q, () => { App.isNight = () => false; App.demo.seed(); App.store.update((s) => { s.settings.a2hsDismissed = '1'; s.onboardedAt = new Date(Date.now() - 20 * 864e5).toISOString(); }); });
+    await ageTo(29); await go(q, 'home', 1000);
+    const line = () => S(q, () => { const el = document.querySelector('.moment-line'); if (!el) return null; const r = el.getBoundingClientRect(); return { text: el.textContent, bottom: Math.round(r.bottom), vh: innerHeight, n: document.querySelectorAll('.fx-layer .fx-p').length, popup: document.body.classList.contains('has-sheet') }; });
+    const m30 = await line();
+    ok('滿月 week: a line right under the baby, on screen on a small phone, with a little celebration and no pop-up', m30 && /滿月/.test(m30.text) && m30.bottom < m30.vh && m30.n > 0 && !m30.popup, JSON.stringify(m30));
+    await q.waitForTimeout(2200); await go(q, 'home', 1000);
+    ok('…the celebration happens once (coming back to 首頁 is quiet)', (await line()).n === 0);
+    await q.click('.moment-line'); await q.waitForTimeout(500);
+    const sh = await S(q, () => (document.querySelector('.sheet') || {}).textContent || '');
+    ok('tapping it: the custom in a line (剃胎毛、滿月油飯) and the share card one tap away', /剃胎毛/.test(sh) && /做成分享卡/.test(sh), sh.slice(0, 80));
+    await q.click('.sheet button:has-text("做成分享卡")'); await q.waitForTimeout(700);
+    ok('…which opens the share card for 滿月', await S(q, () => /LINE/.test((document.querySelector('.sheet') || {}).textContent || '')));
+    await q.keyboard.press('Escape'); await q.waitForTimeout(400);
+    const seen = [];
+    for (const [d, re] of [[99, /百日/], [125, /收涎/], [366, /度晬/], [75, null], [200, null]]) {
+      await ageTo(d); await go(q, 'home', 500);
+      const l = await line(); seen.push(`${d}:${l ? l.text.slice(0, 12) : '-'}`);
+      if (re ? !(l && re.test(l.text)) : l) { seen.push('✗'); }
+    }
+    ok('百日 (day 100), 收涎 (4 months), 度晬 (1 year) each get their week; other days show nothing', !seen.includes('✗'), seen.join(' '));
+    await ctx2.close();
+  }
 
   /* ---------- reduced motion: the same app, perfectly still ---------- */
   {

@@ -260,7 +260,7 @@
       }
       return ui.card({ class: 'acct-card soft' },
         h('div', { class: 'row gap' },
-          h('div', { class: 'grow' }, h('div', { class: 'card-title' }, '登入／註冊'), h('div', { class: 'small muted' }, 'Email、手機或 LINE・邀請好友可以累積人數')),
+          h('div', { class: 'grow' }, h('div', { class: 'card-title' }, '登入／註冊'), h('div', { class: 'small muted' }, '用 Email、手機或 LINE 登入・邀請好友的人數會記在你的帳號')),
           h('button', { class: 'btn btn-sm btn-primary', onclick: () => App.navigate('login') }, '登入')),
         App.livePill('acct-live'));
     },

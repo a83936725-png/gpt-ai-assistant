@@ -272,8 +272,18 @@
       const bad = pct < -10 || (dayOfLife >= 15 && pct < 0);
       wLine = { bad, text: `體重 ${g.weight} kg（出生 ${b.birthWeight} kg，${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%）${bad ? '・請諮詢兒科醫師' : ''}` };
     }
+    // wet diapers: judged against how much of the day has passed (2 by 8 a.m. is fine), and nothing alarming before
+    // the first diaper of the day is even recorded
+    const diapersToday = today.filter((l) => l.type === 'diaper').length;
+    const nowD = new Date();
+    const soFar = Math.floor(need * ((nowD.getHours() * 60 + nowD.getMinutes()) / 1440));
+    const wetRow = !diapersToday
+      ? { ok: null, icon: '💧', text: `開始記尿布，我幫你看夠不夠（第 ${dayOfLife} 天建議至少 ${need} 片濕尿布）`, act: () => App.navigate('log') }
+      : wet >= need ? { ok: true, icon: '💧', text: `今天濕尿布 ${wet} 片・已達標（第 ${dayOfLife} 天建議至少 ${need} 片）`, act: () => App.navigate('log') }
+        : wet >= soFar - 1 ? { ok: null, icon: '💧', text: `今天濕尿布 ${wet} 片・照這個速度沒問題（第 ${dayOfLife} 天建議至少 ${need} 片）`, act: () => App.navigate('log') }
+          : { ok: false, icon: '💧', text: `今天濕尿布 ${wet} 片，有點少（第 ${dayOfLife} 天建議至少 ${need} 片）・多餵幾次並留意精神`, act: () => App.navigate('log') };
     const rows = [
-      { ok: wet >= need, icon: '💧', text: `今天濕尿布 ${wet} 片／第 ${dayOfLife} 天建議至少 ${need} 片`, act: () => App.navigate('log') },
+      wetRow,
       alertPoo.length ? { ok: false, icon: '💩', text: '最近有灰白、黑色或帶血的便便紀錄，請盡快就醫', act: () => App.navigate('log') } : null,
       wLine ? { ok: !wLine.bad, icon: '⚖️', text: wLine.text, act: () => App.navigate('growth') } : null,
       dayOfLife <= 21 ? { ok: null, icon: '🟡', text: '黃疸：自然光下看眼白、皮膚；黃到肚子手腳要就醫' } : null,

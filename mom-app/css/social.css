@@ -181,7 +181,7 @@
 .pv-k { font-weight: 800; }
 .pv-v { font-size: 14px; }
 .pv-t { font-size: 12.5px; color: var(--c-primary); font-weight: 700; }
-.pv-ext { color: var(--c-primary); font-weight: 700; text-decoration: underline; }
+.pv-ext { display: inline-flex; align-items: center; min-height: 40px; color: var(--c-primary); font-weight: 700; text-decoration: underline; }
 .pv-link { display: inline; min-height: 0; padding: 0 2px; font-size: inherit; text-decoration: underline; vertical-align: baseline; }
 .pv-boxes { display: grid; gap: 8px; margin: 4px 0 10px; }
 .pv-box { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--c-border); background: var(--c-surface); font-size: 14px; line-height: 1.55; cursor: pointer; }

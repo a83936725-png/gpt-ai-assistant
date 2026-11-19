@@ -1,7 +1,7 @@
 // 資料安全測試：紀錄存得完整（壓縮不掉資料）、用了幾年空間不夠時自動改存手機資料庫（IndexedDB）、
 // 存不了時一定會提醒、匯出／匯入（取代、家人合併）不漏資料、壞檔案不會弄壞現有資料、大量資料仍然順。
 // Usage: cd mom-app && python3 -m http.server 8080   then   node tests/data-safety.playwright.cjs   [BASE=...]
-const { chromium } = require('playwright');
+const { chromium, devices } = require('playwright');
 const BASE = process.env.BASE || 'http://localhost:8080/';
 const results = [];
 const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info });
@@ -242,6 +242,41 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
       await p.keyboard.press('Escape'); await p.waitForTimeout(200); await p.keyboard.press('Escape'); await p.waitForTimeout(200);
     }
     ok('wrong or broken backup files (even with 整個取代 chosen): told 檔案格式不正確, nothing changed', (await snapshot(p)) === before);
+  }
+
+  /* ---------- 7. iPhone 7-day wipe and backups: gentle reminders on 首頁 ---------- */
+  {
+    const phone = async (dev, init) => {
+      const ctx = await browser.newContext({ ...devices[dev], locale: 'zh-TW' }); ctxs.push(ctx);
+      await ctx.addInitScript(() => { window.__noShareMoments = true; const o = URL.createObjectURL.bind(URL); URL.createObjectURL = (b) => { window.__lastBlob = b; return o(b); }; });
+      if (init) await ctx.addInitScript(init);
+      const p = await ctx.newPage(); p.on('pageerror', (e) => errors.push(e.message));
+      await p.goto(BASE); await p.waitForFunction(() => window.App && App.store && !App.store.loading && App.screens.goods);
+      await S(p, () => { App.isNight = () => false; App.demo.seed(); location.hash = '#/home?k=1'; }); await p.waitForTimeout(400);
+      return p;
+    };
+    const card = (p) => S(p, () => { const c = document.querySelector('[data-keep]'); return c ? c.dataset.keep : null; });
+    const home = async (p) => { await S(p, () => { location.hash = `#/home?${Math.random()}`; }); await p.waitForTimeout(350); };
+    const ip = await phone('iPhone 13');
+    ok('iPhone Safari (not on the home screen): 首頁 explains the 7-day wipe and how to 加入主畫面', (await card(ip)) === 'a2hs' && await ip.isVisible('[data-keep="a2hs"] >> text=加入主畫面'));
+    await ip.click('[data-keep="a2hs"] button:has-text("知道了")'); await ip.waitForTimeout(300);
+    await ip.reload(); await ip.waitForFunction(() => window.App && App.store && !App.store.loading); await home(ip);
+    ok('知道了 hides it for good (also after reopening); a brand-new user is not asked for a backup in the first week', (await card(ip)) === null);
+    await S(ip, () => App.store.update((s) => { s.createdAt = new Date(Date.now() - 10 * 864e5).toISOString(); })); await home(ip);
+    ok('after a week of records with no backup: 首頁 suggests 匯出備份', (await card(ip)) === 'backup' && await ip.isVisible('[data-keep="backup"] >> text=還沒匯出過備份'));
+    await ip.click('[data-keep="backup"] button:has-text("下週再說")'); await ip.waitForTimeout(300);
+    const snoozed = await card(ip);
+    await S(ip, () => App.store.update((s) => { s.settings.backupSnoozeUntil = new Date(Date.now() - 1000).toISOString(); s.settings.lastBackupAt = new Date(Date.now() - 40 * 864e5).toISOString(); })); await home(ip);
+    const again = await S(ip, () => (document.querySelector('[data-keep="backup"]') || {}).textContent || '');
+    ok('下週再說 hides it for a week; a backup 40 days old is mentioned as such', snoozed === null && /上次備份是 40 天前/.test(again), again.slice(0, 60));
+    await ip.click('[data-keep="backup"] button:has-text("匯出備份")'); await ip.waitForTimeout(400);
+    ok('匯出備份 from the card: the file is made and the card goes away', (await card(ip)) === null && await S(ip, () => !!window.__lastBlob));
+    const droid = await phone('Pixel 7');
+    ok('Android: no 加入主畫面 card (Chrome does not wipe data after 7 days)', (await card(droid)) !== 'a2hs');
+    const installed = await phone('iPhone 13', () => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
+    ok('iPhone, already opened from the home screen icon: no 加入主畫面 card', (await card(installed)) !== 'a2hs');
+    const fresh = await phone('iPhone 13'); await S(fresh, () => { const s = App.store.defaults(); s.onboarded = true; s.profile.stage = 'preg'; App.store.replace(s); location.hash = '#/home?n=1'; }); await fresh.waitForTimeout(350);
+    ok('nothing recorded yet: no reminders at all', (await card(fresh)) === null);
   }
 
   ok('no page errors anywhere', !errors.length, errors.slice(0, 4).join(' | '));

@@ -22,7 +22,7 @@
       return { last, gap, next: new Date(new Date(last.start).getTime() + gap), samples: recent.length };
     },
     sleep(now = Date.now()) {
-      const active = store.state.active.sleep;
+      const active = timers.get('sleep');
       if (active) return { sleeping: true, since: active.start };
       const last = store.babyLogs().filter((l) => l.type === 'sleep' && l.end)
         .sort((a, b) => new Date(b.end) - new Date(a.end))[0];
@@ -40,18 +40,42 @@
     },
   };
 
-  /* ================= timers ================= */
+  /* ================= timers =================
+   * 親餵 and 睡眠 run per baby (twins can sleep at the same time); 擠奶 is the mother's, one at a time.
+   * Every timer remembers its baby, so finishing it records it under that baby even if another one is selected by
+   * then. Storage stays as before for one baby (active.feed / active.sleep / active.pump); a second baby's timer of
+   * the same kind goes in active['sleep@<babyId>']. */
+  const BASE = { breast: 'feed', feed: 'feed', sleep: 'sleep', pump: 'pump' };
+  const PER_BABY = { feed: true, sleep: true };
+  const curBabyId = () => (store.baby() || {}).id || null;
+  const slotKey = (type, babyId = curBabyId(), act = store.state.active || {}) => {
+    const base = BASE[type] || type;
+    return Object.keys(act).find((k) => (k === base || k.startsWith(`${base}@`)) && act[k]
+      && (!PER_BABY[base] || !act[k].babyId || act[k].babyId === babyId)) || null;
+  };
   const timers = {
-    start(type, extra = {}) {
+    // this baby's running timer of this kind (or the mother's 擠奶 timer)
+    get(type, babyId) { const k = slotKey(type, babyId); return k ? store.state.active[k] : null; },
+    // every running baby timer (all babies), for the banner
+    running() {
+      const act = store.state.active || {};
+      return Object.keys(act).filter((k) => /^(feed|sleep|pump)(@|$)/.test(k) && act[k]).map((k) => ({ key: k, base: k.split('@')[0], t: act[k] }));
+    },
+    start(type, extra = {}, babyId = curBabyId()) {
+      const base = BASE[type] || type;
+      if (slotKey(type, babyId)) return; // already running for this baby
       store.update((s) => {
         const now = new Date().toISOString();
-        if (type === 'breast') s.active.feed = { start: now, side: extra.side || 'L', segments: [{ side: extra.side || 'L', start: now }] };
-        else s.active[type] = { start: now };
+        const k = s.active[base] ? `${base}@${babyId}` : base;
+        s.active[k] = base === 'feed'
+          ? { start: now, side: extra.side || 'L', segments: [{ side: extra.side || 'L', start: now }], babyId }
+          : { start: now, babyId };
       });
     },
-    switchSide(side) {
+    switchSide(side, babyId = curBabyId()) {
+      const k = slotKey('feed', babyId); if (!k) return;
       store.update((s) => {
-        const a = s.active.feed; if (!a) return;
+        const a = s.active[k]; if (!a) return;
         const now = new Date().toISOString();
         const seg = a.segments[a.segments.length - 1];
         if (seg && !seg.end) { if (seg.side === side) return; seg.end = now; }
@@ -59,35 +83,36 @@
         a.side = side;
       });
     },
-    stop(type) {
+    stop(type, babyId = curBabyId()) {
       const s = store.state;
       const now = new Date();
+      const k = slotKey(type, babyId); if (!k) return null;
+      const a = s.active[k];
+      const owner = a.babyId || babyId; // the baby this timer was started for
       if (type === 'breast') {
-        const a = s.active.feed; if (!a) return null;
         let L = 0; let R = 0;
         a.segments.forEach((seg) => {
           const ms = (seg.end ? new Date(seg.end) : now) - new Date(seg.start);
           if (seg.side === 'L') L += ms; else R += ms;
         });
         const entry = store.addLog({
-          type: 'breast', start: a.start, end: now.toISOString(),
+          type: 'breast', start: a.start, end: now.toISOString(), babyId: owner,
           data: { leftMin: Math.round(L / C.MIN), rightMin: Math.round(R / C.MIN), lastSide: a.side },
         });
-        store.update((st) => { delete st.active.feed; });
+        store.update((st) => { delete st.active[k]; });
         return entry;
       }
-      const a = s.active[type]; if (!a) return null;
-      store.update((st) => { delete st.active[type]; });
-      if (type === 'sleep') return store.addLog({ type: 'sleep', start: a.start, end: now.toISOString() });
+      store.update((st) => { delete st.active[k]; });
+      if (type === 'sleep') return store.addLog({ type: 'sleep', start: a.start, end: now.toISOString(), babyId: owner });
       if (type === 'pump') { openAdd('pump', null, { start: a.start, durationMin: Math.max(1, Math.round((now - new Date(a.start)) / C.MIN)) }); }
       return null;
     },
-    cancel(type) { store.update((s) => { delete s.active[type === 'breast' ? 'feed' : type]; }); },
+    cancel(type, babyId = curBabyId()) { const k = slotKey(type, babyId); if (k) store.update((s) => { delete s.active[k]; }); },
     // stop + toast with 復原 (restores the running timer and removes the saved log)
-    stopWithUndo(type) {
-      const key = type === 'breast' ? 'feed' : type;
-      const snap = store.state.active[key] ? JSON.parse(JSON.stringify(store.state.active[key])) : null;
-      const entry = timers.stop(type);
+    stopWithUndo(type, babyId = curBabyId()) {
+      const key = slotKey(type, babyId);
+      const snap = key ? JSON.parse(JSON.stringify(store.state.active[key])) : null;
+      const entry = timers.stop(type, babyId);
       if (!entry) return null;
       ui.haptic();
       ui.toast(`已記錄${T()[type].label}・${App.logSummary(entry)}`, {
@@ -159,8 +184,7 @@
     if (!store.baby()) { App.navigate('home'); ui.toast('先新增寶寶資料，就能用捷徑記錄'); return false; }
     if (store.stage !== 'baby') store.update((s) => { s.profile.stage = 'baby'; });
     if (['breast', 'sleep', 'pump'].includes(action)) {
-      const key = action === 'breast' ? 'feed' : action;
-      if (store.state.active[key]) { ui.toast('已經在計時中'); return true; }
+      if (timers.get(action)) { ui.toast('已經在計時中'); return true; }
       quickLog(action);
     } else openAdd(action);
     return true;
@@ -192,7 +216,7 @@
     const lastOf = (t) => store.lastLog(t);
 
     if (type === 'breast') {
-      const running = store.state.active.feed;
+      const running = timers.get('breast');
       if (!isEdit) {
         body.append(h('div', { class: 'card soft mb' },
           h('div', { class: 'card-title' }, '⏱ 計時餵奶'),
@@ -270,7 +294,7 @@
       };
     } else if (type === 'sleep') {
       const endIn = h('input', { type: 'datetime-local', value: log.end ? C.toLocalInput(log.end) : '' });
-      if (!isEdit && !store.state.active.sleep) {
+      if (!isEdit && !timers.get('sleep')) {
         body.append(h('button', { class: 'btn btn-primary btn-block mb', onclick: () => { timers.start('sleep'); sh.close(); ui.toast('開始記錄睡眠 😴'); } }, '😴 寶寶睡著了（開始計時）'),
           h('div', { class: 'section-title small' }, '或補登一段睡眠'));
       }
@@ -337,30 +361,34 @@
 
   /* ================= running timer banner (home + log) ================= */
   App.babylog.activeBanner = () => {
-    const a = store.state.active;
-    const items = [];
-    if (a.feed) {
-      items.push(h('div', { class: 'active-timer', style: { '--tc': 'var(--t-feed)' } },
-        h('span', { class: 'at-ico' }, '🤱'),
-        h('div', { class: 'grow' }, h('div', { class: 'bold' }, `親餵中・${a.feed.side === 'L' ? '左' : '右'}邊`), h('div', { class: 'big-num small-num', dataset: { clock: a.feed.start } }, '00:00')),
-        h('div', { class: 'seg seg-sm at-seg' },
-          h('button', { class: a.feed.side === 'L' ? 'active' : '', onclick: () => timers.switchSide('L') }, '左'),
-          h('button', { class: a.feed.side === 'R' ? 'active' : '', onclick: () => timers.switchSide('R') }, '右')),
-        h('button', { class: 'btn btn-sm btn-primary', onclick: () => timers.stopWithUndo('breast') }, '完成')));
-    }
-    if (a.sleep) {
-      items.push(h('div', { class: 'active-timer', style: { '--tc': 'var(--t-sleep)' } },
-        h('span', { class: 'at-ico' }, '😴'),
-        h('div', { class: 'grow' }, h('div', { class: 'bold' }, '睡覺中'), h('div', { class: 'big-num small-num', dataset: { clock: a.sleep.start } }, '00:00')),
-        h('button', { class: 'btn btn-sm btn-ghost', onclick: async () => { if (await ui.confirm('取消這次睡眠計時？')) timers.cancel('sleep'); } }, '取消'),
-        h('button', { class: 'btn btn-sm btn-primary', onclick: () => timers.stopWithUndo('sleep') }, '醒來了')));
-    }
-    if (a.pump) {
-      items.push(h('div', { class: 'active-timer', style: { '--tc': 'var(--t-pump)' } },
+    // the selected baby's timers first, then the other babies' (twins), then 擠奶; with more than one baby each says whose it is
+    const babies = store.state.babies || [];
+    const cur = (store.baby() || {}).id;
+    const nameOf = (id) => (babies.length > 1 ? `${(babies.find((x) => x.id === id) || {}).name || '寶寶'}・` : '');
+    const runs = timers.running().sort((x, y) => (x.base === 'pump') - (y.base === 'pump') || (x.t.babyId !== cur) - (y.t.babyId !== cur));
+    const items = runs.map(({ base, t }) => {
+      const bid = t.babyId || cur;
+      if (base === 'feed') {
+        return h('div', { class: 'active-timer', style: { '--tc': 'var(--t-feed)' } },
+          h('span', { class: 'at-ico' }, '🤱'),
+          h('div', { class: 'grow' }, h('div', { class: 'bold' }, `${nameOf(bid)}親餵中・${t.side === 'L' ? '左' : '右'}邊`), h('div', { class: 'big-num small-num', dataset: { clock: t.start } }, '00:00')),
+          h('div', { class: 'seg seg-sm at-seg' },
+            h('button', { class: t.side === 'L' ? 'active' : '', onclick: () => timers.switchSide('L', bid) }, '左'),
+            h('button', { class: t.side === 'R' ? 'active' : '', onclick: () => timers.switchSide('R', bid) }, '右')),
+          h('button', { class: 'btn btn-sm btn-primary', onclick: () => timers.stopWithUndo('breast', bid) }, '完成'));
+      }
+      if (base === 'sleep') {
+        return h('div', { class: 'active-timer', style: { '--tc': 'var(--t-sleep)' } },
+          h('span', { class: 'at-ico' }, '😴'),
+          h('div', { class: 'grow' }, h('div', { class: 'bold' }, `${nameOf(bid)}睡覺中`), h('div', { class: 'big-num small-num', dataset: { clock: t.start } }, '00:00')),
+          h('button', { class: 'btn btn-sm btn-ghost', onclick: async () => { if (await ui.confirm('取消這次睡眠計時？')) timers.cancel('sleep', bid); } }, '取消'),
+          h('button', { class: 'btn btn-sm btn-primary', onclick: () => timers.stopWithUndo('sleep', bid) }, '醒來了'));
+      }
+      return h('div', { class: 'active-timer', style: { '--tc': 'var(--t-pump)' } },
         h('span', { class: 'at-ico' }, '🥛'),
-        h('div', { class: 'grow' }, h('div', { class: 'bold' }, '擠奶中'), h('div', { class: 'big-num small-num', dataset: { clock: a.pump.start } }, '00:00')),
-        h('button', { class: 'btn btn-sm btn-primary', onclick: () => timers.stop('pump') }, '完成')));
-    }
+        h('div', { class: 'grow' }, h('div', { class: 'bold' }, '擠奶中'), h('div', { class: 'big-num small-num', dataset: { clock: t.start } }, '00:00')),
+        h('button', { class: 'btn btn-sm btn-primary', onclick: () => timers.stop('pump') }, '完成'));
+    });
     return items.length ? h('div', { class: 'stack-sm mb' }, items) : null;
   };
 

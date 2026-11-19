@@ -162,8 +162,9 @@ body:has(.fab) #view { padding-bottom: calc(var(--tabbar-h) + 96px + env(safe-ar
 .milk-row .li-body > .tag { margin: 4px 0 0; }
 .milk-actions { width: 100%; justify-content: flex-end; }
 .link-reset { background: none; border: 0; padding: 0; text-align: left; }
-ul.tight { margin: 6px 0; padding-left: 20px; }
-ul.tight li { margin: 3px 0; }
+ul.tight, ol.tight { margin: 6px 0; padding-left: 20px; }
+ul.tight li, ol.tight li { margin: 3px 0; }
+.keep-card p { text-wrap: pretty; }
 
 /* ---------- brand ---------- */
 .chicken-card { background: linear-gradient(160deg, var(--c-primary-soft), var(--c-surface) 70%); }

@@ -126,7 +126,7 @@
     tileTypes().map((type) => ({ type, ...QUICK_DEFS[type] })).forEach((q) => {
       const def = App.LOG_TYPES[q.type];
       const last = store.lastLog(q.type);
-      const running = q.active && store.state.active[q.active];
+      const running = q.active && App.timers.get(q.active); // this baby's timer (twins each have their own)
       const todayCount = today.filter((l) => l.type === q.type).length;
       let sub;
       if (running) sub = h('span', { class: 'qt-running' }, '● 計時中');

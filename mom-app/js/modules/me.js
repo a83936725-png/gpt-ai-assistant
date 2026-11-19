@@ -65,6 +65,7 @@
               s.babies = s.babies.filter((x) => x.id !== baby.id);
               s.logs = s.logs.filter((l) => l.babyId !== baby.id);
               s.growth = s.growth.filter((g) => g.babyId !== baby.id);
+              Object.keys(s.active || {}).forEach((k) => { if (s.active[k] && s.active[k].babyId === baby.id) delete s.active[k]; }); // their running timers
               if (s.activeBabyId === baby.id) s.activeBabyId = s.babies[0]?.id || null;
             });
             sh.close();
@@ -184,6 +185,47 @@
     h('p', { class: 'small' }, '手機的儲存空間不足（或瀏覽器不允許儲存）。紀錄還在畫面上，但關掉 App 後可能會不見。請先匯出備份，再清出一些手機空間。'),
     h('button', { class: 'btn btn-primary btn-sm mt', onclick: exportData }, '⬇️ 立刻匯出備份')));
   App.storageAlert = storageAlert; // 首頁 shows it right under the greeting
+
+  /* ---------- keeping records safe on the phone ----------
+   * iPhone Safari clears a website's saved data after 7 days without a visit unless it was added to the home
+   * screen, and any phone can be lost or reset. So 首頁 shows (one at a time, only once there is something worth
+   * keeping): an add-to-home-screen card on iPhone/iPad Safari, then a gentle reminder to export a backup. */
+  const isStandalone = () => { try { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { return false; } };
+  const inFrame = () => { try { return window.top !== window.self; } catch (e) { return true; } };
+  const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const recordCount = (st) => st.logs.length + st.growth.length + st.periods.length + st.milk.length
+    + st.preg.weights.length + st.preg.kicks.length + st.preg.journal.length + st.postpartum.log.length;
+  const worthKeeping = (st) => recordCount(st) >= 20;
+  const needsHomeScreen = () => isIOS() && !isStandalone() && !inFrame();
+  function a2hsCard() {
+    const st = store.state;
+    if (!needsHomeScreen() || st.settings.a2hsDismissed || !worthKeeping(st)) return null;
+    return ui.card({ class: 'soft keep-card', dataset: { keep: 'a2hs' } },
+      h('div', { class: 'card-title' }, '📲 加到主畫面，紀錄更安全'),
+      h('p', { class: 'small' }, 'iPhone 的 Safari 如果 7 天都沒打開這個網站，可能會自動清掉存在手機裡的紀錄；把 App 加到主畫面就不會。'),
+      h('ol', { class: 'small tight' },
+        h('li', null, '點 Safari 的「分享」按鈕（方框加上箭頭）'),
+        h('li', null, '往下選「加入主畫面」'),
+        h('li', null, '之後都從桌面的圖示打開')),
+      h('button', { class: 'btn btn-ghost btn-sm mt', onclick: () => store.update((x) => { x.settings.a2hsDismissed = new Date().toISOString(); }) }, '知道了'));
+  }
+  function backupCard() {
+    const st = store.state;
+    if (!worthKeeping(st)) return null;
+    const days = st.settings.lastBackupAt ? C.diffDays(st.settings.lastBackupAt, new Date()) : null;
+    if (days !== null && days < 30) return null;
+    if (days === null && C.diffDays(st.createdAt, new Date()) < 7) return null; // not in the first week
+    if (st.settings.backupSnoozeUntil && Date.now() < Date.parse(st.settings.backupSnoozeUntil)) return null;
+    return ui.card({ class: 'soft keep-card', dataset: { keep: 'backup' } },
+      h('div', { class: 'card-title' }, '💾 幫紀錄備份一下'),
+      h('p', { class: 'small' }, days === null
+        ? '還沒匯出過備份。手機遺失、換手機或清除資料時，備份檔可以把紀錄全部找回來。'
+        : `上次備份是 ${days} 天前。匯出一份新的備份，存到 LINE「Keep 筆記」或雲端硬碟比較安心。`),
+      h('div', { class: 'row gap-sm mt' },
+        h('button', { class: 'btn btn-primary btn-sm', onclick: exportData }, '⬇️ 匯出備份'),
+        h('button', { class: 'btn btn-ghost btn-sm', onclick: () => store.update((x) => { x.settings.backupSnoozeUntil = new Date(Date.now() + 7 * C.DAY).toISOString(); }) }, '下週再說')));
+  }
+  App.homeCard('keep-safe', { stages: ['prep', 'preg', 'baby'], order: 3, render(el) { const c = a2hsCard() || backupCard(); if (c) el.append(c); } });
   function importData() {
     const file = h('input', { type: 'file', accept: 'application/json,.json', class: 'hide' });
     const mode = ui.seg([{ value: 'merge', label: '合併（家人資料）' }, { value: 'replace', label: '整個取代' }], 'merge', null, { small: true });
@@ -242,7 +284,7 @@
       if (r.type === 'feed' && s.profile.stage === 'baby') {
         // 依預測：用「接下來」算出的時間（寶寶自己的作息）；固定：上次餵奶＋設定的間隔
         const last = store.lastLog(['breast', 'bottle']);
-        if (!last || store.state.active.feed) return;
+        if (!last || App.timers.running().some((r) => r.base === 'feed')) return; // someone is feeding right now
         const pred = r.mode !== 'fixed' && App.predict ? App.predict.feed() : null;
         const due = pred ? pred.next.getTime() : new Date(last.start).getTime() + (r.minutes || 180) * C.MIN;
         if (now.getTime() >= due && n.feed !== last.id) {
@@ -504,6 +546,7 @@
           h('button', { class: 'btn btn-soft', onclick: exportData }, '⬇️ 匯出備份')),
         h('button', { class: 'btn btn-ghost btn-block mt', onclick: importData }, '⬆️ 匯入／合併家人的備份'),
         h('p', { class: 'small muted mt storage-line' }, storageLine()),
+        needsHomeScreen() ? h('p', { class: 'tiny faint' }, 'iPhone：把 App 加到主畫面（Safari「分享」→「加入主畫面」），7 天沒打開也不會被清掉紀錄。') : null,
         h('p', { class: 'tiny faint mt' }, '目前資料只存在這台裝置。家人之間可用「匯出 → 用 LINE 傳檔 → 匯入合併」同步。即時雲端同步（LINE 登入）規劃於第二階段。')));
 
       el.append(h('div', { class: 'section-title' }, '設定'));

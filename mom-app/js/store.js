@@ -51,7 +51,7 @@
     daily: { log: {} }, // 今日小任務 {'YYYY-MM-DD': {water: n}}
     reminders: defaultReminders(),
     active: {}, // running timers: { feed: {start, side}, sleep: {start}, pump: {start} }
-    settings: { theme: 'auto', notify: false, nightMode: true, quickTiles: null, lastBackupAt: null }, // quickTiles null = default set; lastBackupAt = last 匯出備份
+    settings: { theme: 'auto', notify: false, nightMode: true, quickTiles: null, lastBackupAt: null, backupSnoozeUntil: null, a2hsDismissed: null }, // quickTiles null = default set; lastBackupAt = last 匯出備份; the other two: 首頁 safety cards
   });
   function defaultReminders() {
     return [
@@ -81,6 +81,8 @@
     });
     s.reminders.sort((a, b) => defaultReminders().findIndex((r) => r.id === a.id) - defaultReminders().findIndex((r) => r.id === b.id));
     if (Array.isArray(s.logs)) s.logs = s.logs.map(unpackLog);
+    // timers saved before they remembered their baby belong to the baby selected then
+    ['feed', 'sleep', 'pump'].forEach((k) => { const t = s.active && s.active[k]; if (t && !t.babyId) t.babyId = s.activeBabyId || (s.babies[0] && s.babies[0].id) || null; });
     return s;
   };
 

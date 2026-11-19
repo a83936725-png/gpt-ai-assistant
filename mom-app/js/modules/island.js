@@ -803,7 +803,7 @@
         if (!s.island.stamps[spot.id]) { s.island.stamps[spot.id] = C.dateKey(); isNew = true; }
       });
       result = { score, isNew };
-      if (isNew) ui.toast(`🏅 蓋章成功！獲得「${spot.name}」印章`);
+      if (isNew) { ui.toast(`🏅 蓋章成功！獲得「${spot.name}」印章`); ui.celebrate({ emojis: ['🏅', '⭐', '✨', spot.emoji || '💜'] }); }
       if (isNew && App.share && D.TITLES) {
         const n = Object.keys(store.state.island.stamps || {}).length;
         const t = D.TITLES.find((x) => x.min === n && n > 0);

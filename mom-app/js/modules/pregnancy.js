@@ -144,11 +144,17 @@
     return n;
   }
   function toggleFolic(key = todayKey()) {
+    let on = false;
     store.update((st) => {
       ensure(st);
       if (st.folic.log[key]) delete st.folic.log[key];
-      else st.folic.log[key] = true;
+      else { st.folic.log[key] = true; on = true; }
     });
+    const n = folicStreak();
+    if (on && key === todayKey() && [7, 14, 30, 60, 90].includes(n)) { // a streak worth a cheer
+      ui.toast(`葉酸連續吃了 ${n} 天 🎉 好棒的習慣！`, 3500);
+      ui.celebrate({ emojis: ['💊', '🎉', '✨', '💜'] });
+    }
   }
 
   function folicRow() {
@@ -683,11 +689,12 @@
             h('div', { class: 'small muted' }, '經過時間 ', h('span', { class: 'bold num', 'data-clock': act.start }, '00:00')),
             h('button', {
               class: 'pg-kick-btn', 'aria-label': '寶寶動了，加一次',
-              onclick: () => {
+              onclick: (e) => {
+                const at = e.currentTarget.getBoundingClientRect();
                 store.update((st) => { st.active.kick.count = (st.active.kick.count || 0) + 1; st.active.kick.last = new Date().toISOString(); });
                 const n = store.state.active.kick.count;
-                if (navigator.vibrate) navigator.vibrate(30);
-                if (n === goal) ui.toast(`數到 ${goal} 次了！共花了 ${C.fmtDuration(Date.now() - new Date(act.start).getTime())}`, 3500);
+                ui.haptic(30);
+                if (n === goal) { ui.toast(`數到 ${goal} 次了！共花了 ${C.fmtDuration(Date.now() - new Date(act.start).getTime())}`, 3500); ui.celebrate({ from: at, emojis: ['👣', '💜', '✨', '👶'] }); } else ui.burst(at, '👣');
                 paint();
               },
             }, h('span', { class: 'pg-kick-emoji' }, '👣'), h('span', null, '動了！')),
@@ -1127,7 +1134,18 @@
           h('div', { class: 'grow' },
             h('div', { class: 'pg-hero-week' }, `懷孕 ${ga.weeks} 週 ${ga.days} 天`),
             h('div', { class: 'small muted' }, ga.weeks >= 4 ? `寶寶大約像${wk.fruit}一樣大（${sizeText(wk)}）` : '小生命剛剛開始')),
-          ga.weeks >= 4 ? h('div', { class: 'pg-hero-emoji', 'aria-hidden': 'true' }, wk.emoji) : null),
+          ga.weeks >= 4 ? h('button', {
+            type: 'button', class: 'pg-hero-emoji', 'aria-label': `寶寶現在像${wk.fruit}一樣大，點一下看這週的小知識`,
+            // tap the fruit: it wiggles and tells something about this week (does not open the page behind it)
+            onclick: (e) => {
+              e.stopPropagation();
+              const el = e.currentTarget; const fruit = el.firstChild;
+              fruit.classList.remove('wiggle'); void fruit.offsetWidth; fruit.classList.add('wiggle');
+              setTimeout(() => fruit.classList.remove('wiggle'), 650);
+              ui.burst(el, '💜');
+              ui.toast(`第 ${ga.weeks} 週・${wk.fruit}：${wk.baby}`, 4500);
+            },
+          }, h('span', { class: 'pg-fruit' }, wk.emoji)) : null), // the fruit moves, the button stays put
         h('div', { class: 'mt' }, ui.progress(ga.progress)),
         h('div', { class: 'row between small mt' },
           h('span', null, ga.daysLeft > 0 ? `還有 ${ga.daysLeft} 天見面` : ga.daysLeft === 0 ? '預產期就是今天！' : `已超過預產期 ${-ga.daysLeft} 天`),

@@ -37,9 +37,14 @@
     const avatar = baby.photo
       ? h('img', { src: baby.photo, alt: '', class: 'hero-avatar' })
       : h('span', { class: 'hero-avatar emoji', 'aria-hidden': 'true' }, baby.avatar || '👶');
+    // the baby shows what is happening right now: z z z while asleep, hearts while feeding (css/motion.css)
+    const asleep = App.timers && App.timers.get('sleep', baby.id);
+    const feeding = App.timers && App.timers.get('breast', baby.id);
+    const fx = asleep ? h('span', { class: 'hero-fx sleep', 'aria-hidden': 'true' }, h('i', null, 'z'), h('i', null, 'z'), h('i', null, 'Z'))
+      : feeding ? h('span', { class: 'hero-fx feed', 'aria-hidden': 'true' }, h('i', null, '💗'), h('i', null, '💕'), h('i', null, '💗')) : null;
     return h('section', { class: 'baby-hero' },
-      h('button', { class: 'hero-main', onclick: () => App.me && App.me.editBaby(baby), 'aria-label': `編輯${baby.name}的資料` },
-        avatar,
+      h('button', { class: 'hero-main', onclick: () => App.me && App.me.editBaby(baby), 'aria-label': `編輯${baby.name}的資料${asleep ? '（睡覺中）' : feeding ? '（親餵中）' : ''}` },
+        avatar, fx,
         h('span', { class: 'hero-text' },
           h('span', { class: 'hero-name' }, baby.name),
           h('span', { class: 'tiny muted' }, age ? (age.days < 0 ? age.text : `${age.text}・第 ${age.days + 1} 天`) : ''))),
@@ -134,7 +139,7 @@
       else sub = h('span', { class: 'faint' }, '尚無紀錄');
       const extra = q.type === 'breast' && last?.data?.lastSide && !running ? `・上次${last.data.lastSide === 'L' ? '左' : '右'}` : '';
       const plusLabel = running ? `完成${def.label}` : `${def.label}：${q.type === 'bottle' && last ? `${last.data?.ml || ''} ml ${q.plusHint}` : q.plusHint}`;
-      wrap.append(h('div', { class: `quick-tile${running ? ' running' : ''}`, role: 'listitem', style: { '--tc': def.color } },
+      wrap.append(h('div', { class: `quick-tile${running ? ' running' : ''}`, role: 'listitem', style: { '--tc': def.color }, dataset: { type: q.type } },
         todayCount ? h('span', { class: 'qt-badge', 'aria-label': `今天 ${todayCount} 次` }, todayCount) : null,
         h('button', { class: 'qt-main', onclick: () => { if (quickTapOk(q.type)) App.babylog.openAdd(q.type); }, 'aria-label': `新增${def.label}（完整表單）` },
           h('span', { class: 'qt-ico' }, def.icon),
@@ -142,10 +147,17 @@
           h('span', { class: 'qt-sub tiny' }, sub, extra)),
         h('button', {
           class: 'qt-plus', 'aria-label': plusLabel, title: plusLabel,
-          onclick: () => {
+          onclick: (e) => {
             if (!quickTapOk(q.type)) return;
             if (running || ['breast', 'sleep', 'pump'].includes(q.type)) shiftUntil = Date.now() + 400; // timer banner appears / goes
+            const at = e.currentTarget.getBoundingClientRect(); // before the screen updates
+            const n0 = store.logsOn(new Date()).length;
             if (running) App.timers.stopWithUndo(q.type); else App.babylog.quickLog(q.type);
+            // logged (not a form that opened instead): a little puff from the button, and today's count pops
+            if (!document.body.classList.contains('has-sheet')) {
+              ui.burst(at, def.icon);
+              if (store.logsOn(new Date()).length > n0) requestAnimationFrame(() => { const b = document.querySelector(`.quick-tile[data-type="${q.type}"] .qt-badge`); if (b) b.classList.add('pop'); });
+            }
           },
         }, running ? '✓' : '+')));
     });
@@ -221,7 +233,7 @@
       const greet = hour < 5 ? '夜深了，辛苦了' : hour < 11 ? '早安' : hour < 14 ? '午安' : hour < 18 ? '午後好' : '晚安';
       const stageLabel = STAGES.find((s) => s.value === stage) || STAGES[2];
       el.append(h('div', { class: 'greet row between' },
-        h('div', null, h('div', { class: 'greet-hi' }, `${greet}${name ? `，${name}` : ''} 💜`), h('div', { class: 'tiny muted' }, C.fmtDateLong(new Date()))),
+        h('div', null, h('div', { class: 'greet-hi' }, `${greet}${name ? `，${name}` : ''} `, h('span', { class: 'beat' }, '💜')), h('div', { class: 'tiny muted' }, C.fmtDateLong(new Date()))),
         h('a', { class: 'stage-pill', href: '#/me', title: '到「我的」切換階段' }, `${stageLabel.icon} ${stageLabel.label}${store.state.profile.pregnantToo && stage === 'baby' ? '＋懷孕' : ''}`)));
       if (App.livePill) el.append(App.livePill('home-live'));
       // a save that could not be kept: the warning goes right under the greeting, above everything else

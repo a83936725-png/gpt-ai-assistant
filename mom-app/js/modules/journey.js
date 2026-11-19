@@ -246,6 +246,7 @@
           sh.close();
           App.navigate('home');
           ui.toast(`🎉 歡迎 ${baby.name}！接下來是坐月子，好好休息`);
+          setTimeout(() => ui.celebrate({ big: true, emojis: ['🎉', '👶', '💖', '🍼', '⭐', '🎈'] }), 260);
           if (App.share) setTimeout(() => App.share.moment(`birth-${baby.id}`, { emoji: '🎉', msg: `歡迎 ${baby.name} 來到這個世界！`, kind: 'birth', force: true, queue: true }), 1500);
         },
       }, '寶寶出生了，儲存'),

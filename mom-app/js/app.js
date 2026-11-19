@@ -78,6 +78,7 @@
     });
   }
 
+  let enterTimer = null;
   function render({ keepScroll = false } = {}) {
     // records kept in IndexedDB are still loading: show nothing that could act on an empty, not-yet-loaded state
     if (App.store.loading) {
@@ -98,6 +99,10 @@
     document.body.dataset.screen = def.id;
     document.body.dataset.stage = App.store.stage;
     el.innerHTML = '';
+    // arriving on a screen (not an update of the same one): cards settle in (css/motion.css)
+    el.classList.remove('view-enter');
+    clearTimeout(enterTimer);
+    if (!keepScroll) { void el.offsetWidth; el.classList.add('view-enter'); enterTimer = setTimeout(() => el.classList.remove('view-enter'), 700); }
     renderAppbar(def, params);
     renderTabbar(def.tab || def.id);
     document.getElementById('tabbar').hidden = def.id === 'onboarding';

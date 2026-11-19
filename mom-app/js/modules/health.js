@@ -676,7 +676,7 @@
       sub: `${v.dose}・建議 ${fmtYMD(st.due)}（${monthsLabel(v.months)}）`,
       note: v.note,
       doneDate: doneMap[v.key],
-      onSave: (d) => store().update((S) => { S.vaccines[b.id] = { ...(S.vaccines[b.id] || {}), [v.key]: d }; }),
+      onSave: (d) => { store().update((S) => { S.vaccines[b.id] = { ...(S.vaccines[b.id] || {}), [v.key]: d }; }); ui.celebrate({ emojis: ['💉', '✨', '💪', '🌟'] }); },
       onClear: () => store().update((S) => { if (S.vaccines[b.id]) delete S.vaccines[b.id][v.key]; }),
     });
   };
@@ -879,12 +879,13 @@
               type: 'checkbox', checked: !!doneMap[key],
               onchange: (e) => {
                 const on = e.target.checked;
+                const at = (e.target.closest('label') || e.target).getBoundingClientRect(); // before the list redraws
                 store().update((S) => {
                   const mm = { ...(S.milestones[b.id] || {}) };
                   if (on) mm[key] = C.dateKey(); else delete mm[key];
                   S.milestones[b.id] = mm;
                 });
-                if (on) ui.toast('🎉 又長大一點了！');
+                if (on) { ui.toast('🎉 又長大一點了！'); ui.celebrate({ from: at, emojis: ['⭐', '🎉', '💜', '✨'] }); }
                 if (on && App.share) setTimeout(() => App.share.moment(`ms-${b.id}-${key}`, { emoji: '⭐', msg: `${b.name} 新技能：${text}`, kind: 'milestone', force: true, mutedKey: 'milestone' }), 900);
               },
             });

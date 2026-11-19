@@ -14,13 +14,20 @@
     while (store.state.chicken.log[C.dateKey(d)]) { n += 1; d = C.addDays(d, -1); }
     return n;
   };
+  const STREAKS = [7, 14, 21, 30, 60, 100, 180, 365];
   const checkIn = (delta = 1) => {
+    const first = !todayCount();
     store.update((s) => {
       const k = C.dateKey();
       const v = Math.max(0, (s.chicken.log[k] || 0) + delta);
       if (v) s.chicken.log[k] = v; else delete s.chicken.log[k];
     });
-    if (delta > 0) ui.toast(['今天也好好照顧自己了 💜', '打卡成功！給自己一個擁抱', '溫熱一杯，休息一下 ☕'][Math.floor(Math.random() * 3)]);
+    if (delta <= 0) return;
+    const n = streak();
+    if (first && STREAKS.includes(n)) { // a streak worth celebrating (counted once, on the day's first check-in)
+      ui.toast(`連續 ${n} 天好好照顧自己 🎉 真的很棒！`, 3500);
+      ui.celebrate({ emojis: ['💜', '🎉', '✨', '🌟'] });
+    } else ui.toast(['今天也好好照顧自己了 💜', '打卡成功！給自己一個擁抱', '溫熱一杯，休息一下 ☕'][Math.floor(Math.random() * 3)]);
   };
   App.chicken = { todayCount, streak, checkIn };
 
@@ -60,7 +67,20 @@
     const k = C.dateKey();
     s.daily.log[k] = { ...(s.daily.log[k] || {}), water: Math.max(0, Math.min(16, n)) };
   });
-  function dailyCard() {
+  // finishing a task gives its tick a little pop; finishing the last one of the day is celebrated (once a day)
+  let lastTapped = null;
+  function tapTask(t, e, tasks) {
+    const before = tasks.filter((x) => x.done).length;
+    const at = (e.currentTarget.closest('.daily-card') || e.currentTarget).getBoundingClientRect();
+    lastTapped = t.id;
+    t.tap();
+    const list = dailyTasks();
+    if (list.every((x) => x.done) && before < list.length && !(dayLog().cheered)) {
+      store.update((s) => { const k = C.dateKey(); s.daily.log[k] = { ...(s.daily.log[k] || {}), cheered: true }; });
+      setTimeout(() => { ui.toast('今日小任務全部完成 🎉 今天也很照顧自己！', 3500); ui.celebrate({ from: at, emojis: ['🎉', '💜', '💧', '✨'] }); }, 120);
+    }
+  }
+  function dailyTasks() {
     const stages = store.stages();
     const tasks = [];
     if (stages.includes('prep') || stages.includes('preg')) {
@@ -84,14 +104,19 @@
     tasks.push({
       id: 'water', icon: '💧', label: '喝水', done: w >= WATER_GOAL, sub: `${w} / ${WATER_GOAL} 杯`, tap: () => setWater(w + 1), minus: w > 0 ? () => setWater(w - 1) : null,
     });
+    return tasks;
+  }
+  function dailyCard() {
+    const tasks = dailyTasks();
     const doneCount = tasks.filter((t) => t.done).length;
+    const justId = lastTapped; lastTapped = null;
     return h('section', { class: 'card daily-card' },
       h('div', { class: 'row between' },
         h('div', { class: 'card-title' }, '今日小任務', h('span', { class: `tag ${doneCount === tasks.length ? 'ok' : 'primary'}` }, `${doneCount}/${tasks.length}`)),
         h('button', { class: 'link-btn tiny daily-brand', onclick: () => App.navigate('brand') },
           h('img', { src: B().logo || 'assets/logo.svg', alt: '' }), `${B().brandName || ''}陪你`)),
-      h('div', { class: 'daily-list' }, tasks.map((t) => h('div', { class: `daily-item${t.done ? ' done' : ''}` },
-        h('button', { class: 'daily-main', onclick: t.tap, 'aria-label': `${t.label}：${t.sub}，點一下記錄` },
+      h('div', { class: 'daily-list' }, tasks.map((t) => h('div', { class: `daily-item${t.done ? ' done' : ''}${t.done && t.id === justId ? ' just' : ''}` },
+        h('button', { class: 'daily-main', onclick: (e) => tapTask(t, e, tasks), 'aria-label': `${t.label}：${t.sub}，點一下記錄` },
           h('span', { class: 'daily-ico' }, t.done ? '✓' : t.icon),
           h('span', { class: 'daily-text' }, h('b', null, t.label), h('span', { class: 'tiny muted' }, t.sub))),
         t.minus ? h('button', { class: 'daily-minus', 'aria-label': `${t.label}減一`, onclick: t.minus }, '−') : null))));

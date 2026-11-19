@@ -193,6 +193,49 @@
   window.addEventListener('hashchange', () => { closeAllSheets(); tagEntry(); });
 
   /* ---------- toast ---------- */
+  /* ---------- celebrate / burst: little moments of joy ----------
+   * Emoji confetti for real milestones (a new skill, 10 kicks, a birth, every daily task done…) and a small puff
+   * for one-tap logging. Drawn in a fixed layer that never takes a tap and removes itself; nothing at all when
+   * the phone asks for reduced motion. Web Animations API: no timers or loops keep running afterwards. */
+  const reducedMotion = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+  const fxLayer = () => {
+    let l = document.querySelector('.fx-layer');
+    if (!l) { l = h('div', { class: 'fx-layer', 'aria-hidden': 'true' }); document.body.appendChild(l); }
+    return l;
+  };
+  const originOf = (from) => {
+    const r = from && (typeof from.getBoundingClientRect === 'function' ? from.getBoundingClientRect() : from);
+    return r && r.width !== undefined ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: window.innerWidth / 2, y: window.innerHeight * 0.38 };
+  };
+  function particles(from, emojis, { count, dist, up, fall, size }) {
+    if (reducedMotion() || !document.body || typeof Element.prototype.animate !== 'function') return 0;
+    const layer = fxLayer();
+    const { x, y } = originOf(from);
+    for (let i = 0; i < count; i += 1) {
+      const p = h('span', { class: 'fx-p' }, emojis[i % emojis.length]);
+      p.style.left = `${x}px`; p.style.top = `${y}px`; p.style.fontSize = `${size * (0.8 + Math.random() * 0.5)}px`;
+      layer.appendChild(p);
+      const ang = up ? -Math.PI / 2 + (Math.random() - 0.5) * 0.9 : Math.random() * Math.PI * 2;
+      const d = dist * (0.55 + Math.random() * 0.6);
+      const dx = Math.cos(ang) * d; const dy = Math.sin(ang) * d;
+      const rot = (Math.random() - 0.5) * (up ? 60 : 540);
+      const a = p.animate([
+        { transform: 'translate(-50%, -50%) scale(.3)', opacity: 0 },
+        { transform: `translate(calc(-50% + ${dx * 0.7}px), calc(-50% + ${dy * 0.7}px)) scale(1.1) rotate(${rot * 0.4}deg)`, opacity: 1, offset: 0.3 },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy + fall}px)) scale(.85) rotate(${rot}deg)`, opacity: 0 },
+      ], { duration: (up ? 750 : 1100) + Math.random() * 500, easing: 'cubic-bezier(.2,.65,.35,1)', fill: 'forwards' });
+      a.onfinish = () => p.remove();
+    }
+    return count;
+  }
+  // a real milestone: a burst around `from` (an element or rect; default upper middle of the screen)
+  function celebrate({ from = null, emojis = ['🎉', '✨', '💜', '⭐'], big = false } = {}) {
+    haptic([14, 70, 18]);
+    return particles(from, emojis, { count: big ? 40 : 24, dist: big ? 230 : 150, up: false, fall: big ? 220 : 150, size: big ? 26 : 22 });
+  }
+  // one-tap logging: a few icons float up from the button
+  const burst = (from, emoji) => particles(from, [emoji], { count: 5, dist: 70, up: true, fall: -10, size: 18 });
+
   // a short buzz when a tap records something (Android phones; iPhone browsers ignore it); off with reduced motion
   function haptic(ms = 12) {
     try {
@@ -324,6 +367,6 @@
   App.h = h;
   App.s = s;
   App.ui = {
-    h, s, append, sheet, toast, haptic, confirm, field, seg, stepper, empty, card, progress, ICONS, icon,
+    h, s, append, sheet, toast, haptic, celebrate, burst, reducedMotion, confirm, field, seg, stepper, empty, card, progress, ICONS, icon,
   };
 }());

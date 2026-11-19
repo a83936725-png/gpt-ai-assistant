@@ -230,7 +230,7 @@ const ok = (name, cond, info = '') => { results.push({ name, pass: !!cond, info 
   await go(p, 'island'); await p.waitForTimeout(600);
   ok('好孕島 renders labels', (await S(p, () => document.querySelectorAll('.isl-label').length)) >= 14);
   await p.screenshot({ path: `${SHOT}island.png` });
-  await p.click('.isl-label >> nth=4'); await p.waitForTimeout(500);
+  await p.click('.isl-label.cur >> nth=0'); await p.waitForTimeout(500); // a stop on the island you are on (the map starts there)
   ok('好孕島: tap a spot opens its sheet', await p.isVisible('.sheet'));
   const opts = p.locator('.sheet .isl-opts button');
   const qn = await S(p, () => document.querySelectorAll('.sheet .isl-q').length);

@@ -267,6 +267,8 @@
           el.append(babyHero(baby));
           const moment = App.share && App.share.momentLine && App.share.momentLine(baby);
           if (moment) el.append(moment);
+          const isle = App.island && App.island.newIslandLine && App.island.newIslandLine();
+          if (isle) el.append(isle);
           const banner = App.babylog.activeBanner();
           if (banner) el.append(banner);
           el.append(quickTiles());

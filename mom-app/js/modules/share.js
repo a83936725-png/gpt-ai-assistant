@@ -160,11 +160,18 @@
       y += 190;
     }
     if (spec.lines && spec.lines.length) {
-      ctx.textAlign = 'left'; ctx.fillStyle = '#3d3442'; ctx.font = `500 34px ${FONT}`;
+      // a titled list (e.g. an island's 注意事項) gets a heading and bigger, roomier lines
+      const big = !!spec.linesTitle && format === 'story';
+      if (spec.linesTitle) {
+        y += 18; ctx.fillStyle = c2; ctx.font = `800 40px ${FONT}`; ctx.fillText(spec.linesTitle, cx, y); y += 70;
+      }
+      ctx.textAlign = 'left'; ctx.fillStyle = '#3d3442'; ctx.font = `${big ? 600 : 500} ${big ? 42 : 34}px ${FONT}`;
       spec.lines.slice(0, format === 'story' ? 5 : 3).forEach((ln) => {
-        wrap(ctx, `• ${ln}`, pw - 140).slice(0, 2).forEach((l2) => { if (y < 300 + panelH - 60) { ctx.fillText(l2, px + 70, y); y += 50; } });
+        if (big) { ctx.fillStyle = soft; roundRect(ctx, px + 56, y - 10, pw - 112, 72, 22); ctx.fill(); ctx.fillStyle = '#3d3442'; }
+        wrap(ctx, `${big ? '' : '• '}${ln}`, pw - 160).slice(0, big ? 1 : 2).forEach((l2) => { if (y < 300 + panelH - 60) { ctx.fillText(l2, px + (big ? 84 : 70), y + (big ? 6 : 0)); y += big ? 86 : 50; } });
       });
       ctx.textAlign = 'center';
+      if (spec.footnote && y < 300 + panelH - 80) { ctx.fillStyle = '#7a6f80'; ctx.font = `500 30px ${FONT}`; ctx.fillText(spec.footnote, cx, y + 14); }
     }
     // footer: QR + invite
     const fy = (format === 'story' ? 300 + 1170 : 240 + 760) + 60;
@@ -555,5 +562,21 @@
     if (!on && islandUI.els.length) clearIslandUI();
   }).observe(document.body, { attributes: true, attributeFilter: ['data-screen'] });
 
-  App.share = { open, link, render, cards, moment, checkMoments, momentLine, button, record, bonus, code: () => ensure(store.state).code, inviteText };
+  // a QR code as an image (for printed pages); '' when the QR library is not available
+  function qr(url, size = 240) {
+    try {
+      const cv = document.createElement('canvas'); cv.width = size; cv.height = size;
+      const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+      return drawQR(ctx, url, 0, 0, size) ? cv.toDataURL('image/png') : '';
+    } catch (e) { return ''; }
+  }
+  // save a generated picture: the phone's share sheet (「儲存影像」, LINE…) when it takes files, otherwise a download
+  async function saveImage(blob, name, title = '') {
+    const file = typeof File === 'function' ? new File([blob], name, { type: 'image/png' }) : null;
+    if (file && navigator.canShare && navigator.share && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title }); return 'shared'; } catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
+    }
+    downloadBlob(blob, name); return 'downloaded';
+  }
+  App.share = { open, link, render, cards, moment, checkMoments, momentLine, qr, saveImage, button, record, bonus, code: () => ensure(store.state).code, inviteText };
 }());

@@ -47,8 +47,8 @@
 }
 @keyframes islHeartFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
 @media (prefers-reduced-motion: reduce) { .isl-heart { animation: none; } }
-.isl-heart-badge, .isl-consult { bottom: calc(var(--tabbar-h) + 74px + env(safe-area-inset-bottom)); }
-@media (min-width: 900px) { .isl-heart-badge, .isl-consult { bottom: 78px; } .isl-heart-badge { left: calc(var(--side-w) + 12px) !important; } }
+.isl-heart-badge, .isl-consult { bottom: calc(var(--tabbar-h) + 112px + env(safe-area-inset-bottom)); } /* above the island strip */
+@media (min-width: 900px) { .isl-heart-badge, .isl-consult { bottom: 112px; } .isl-heart-badge { left: calc(var(--side-w) + 12px) !important; } }
 .isl-heart-badge {
   position: fixed; z-index: 40; left: 12px; padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, .92);
   color: #5a2873; font-weight: 800; font-size: 13px; box-shadow: var(--shadow-1); min-height: 34px; display: flex; align-items: center; gap: 4px;

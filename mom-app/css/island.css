@@ -229,3 +229,159 @@ body[data-screen="island"] #view { padding: 0; max-width: none; }
 .isl-home-line .isl-home-emoji { font-size: 26px; width: 44px; height: 44px; border-radius: 14px; background: var(--c-primary-soft); display: flex; align-items: center; justify-content: center; flex: none; }
 .isl-home-count { font-size: 13px; font-weight: 700; color: var(--c-primary); flex: none; }
 
+
+/* ================= 好孕群島 ================= */
+/* bottom: the island strip sits above the news ticker */
+.isl-strip {
+  position: absolute; left: 10px; right: 10px; bottom: 58px;
+  display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  padding: 2px; touch-action: pan-x;
+}
+.isl-strip::-webkit-scrollbar { display: none; }
+.isl-chip {
+  flex: none; display: inline-flex; align-items: center; gap: 4px; height: 40px; padding: 0 10px;
+  border-radius: 999px; border: 1px solid var(--c-border); color: var(--c-text);
+  background: color-mix(in srgb, var(--c-surface) 94%, transparent); box-shadow: var(--shadow-1);
+  font-size: 13px; font-weight: 700; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.isl-chip-emoji { font-size: 17px; line-height: 1; }
+.isl-chip-name { display: none; white-space: nowrap; }
+.isl-chip.sel .isl-chip-name { display: inline; }
+.isl-chip.sel { border-color: var(--ic); box-shadow: 0 0 0 1.5px var(--ic), var(--shadow-1); }
+.isl-chip.here::after { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--ic); margin-left: 2px; }
+.isl-chip.done .isl-chip-emoji::after { content: '✓'; font-size: 11px; color: var(--c-ok-ink, #1f7a4d); margin-left: 1px; vertical-align: top; }
+.isl-chip.locked { color: var(--c-text-2); background: color-mix(in srgb, var(--c-surface-2, #eee) 92%, transparent); }
+
+/* island name plates, on the water in front of each island */
+.isl-ibanner { cursor: pointer; }
+.isl-ib-pill { fill: #fff; stroke: rgba(60, 30, 70, .16); stroke-width: 1px !important; filter: drop-shadow(0 2px 3px rgba(40, 20, 50, .25)); }
+.isl-ib-dot { stroke: #fff; stroke-width: 2px !important; }
+.isl-ib-no { font-size: 12px; font-weight: 900; fill: #fff; text-anchor: middle; dominant-baseline: central; }
+.isl-ib-name { font-size: 14px; font-weight: 800; fill: #2b2231; dominant-baseline: central; }
+.isl-ib-sub { font-size: 11px; font-weight: 600; fill: #6a5f70; dominant-baseline: central; }
+.isl-ibanner.locked .isl-ib-pill { fill: #f4f1f6; }
+.isl-ibanner.locked .isl-ib-dot { fill: #b3a9ba !important; }
+.isl-ibanner.done .isl-ib-sub { fill: #1f7a4d; }
+.isl-ib-pin { display: none; }
+.isl-ibanner.here .isl-ib-pin { display: inline; }
+.isl-ib-pin rect { fill: #9a4527; stroke: none; }
+.isl-ib-pin-t { font-size: 11px; font-weight: 800; fill: #fff; text-anchor: middle; dominant-baseline: central; }
+.isl-ibanner.here .isl-ib-pill { stroke: var(--c-accent, #ee8b6f); stroke-width: 2px !important; }
+
+/* sea lanes, the ring under the island you are on, clouds over islands still to come */
+.isl-route { fill: none; stroke: #fff; stroke-width: 3px !important; stroke-dasharray: 2 9; stroke-linecap: round; opacity: .55; }
+.isl-route.open { opacity: .9; }
+.isl.night .isl-route { stroke: #9cc0e0; }
+.isl-here-ring { fill: none; stroke: #fff; stroke-width: 3px !important; opacity: .5; }
+.isl-cloud { fill: #fbfbfd; stroke: #fff; stroke-width: 1px !important; opacity: .93; }
+.isl.night .isl-cloud { fill: #c9d2e3; stroke: #c9d2e3; opacity: .9; }
+.isl-fog { cursor: pointer; transition: opacity 1.4s ease; }
+.isl-island.locked { filter: saturate(.55); }
+.isl-flag { stroke: none !important; }
+.isl-clock { stroke: #6e5a50 !important; stroke-width: 1px !important; }
+.isl-hands { stroke: #3a2a2a; stroke-width: 1.2px !important; fill: none; stroke-linecap: round; }
+.isl-tlight { fill: #3a3440; stroke: none !important; }
+.isl.far .isl-label, .isl.far .isl-walker, .isl.far .isl-baby { display: none; }
+.isl-ib-mini { display: none; }
+.isl.far .isl-ibanner-in > :not(.isl-ib-mini) { display: none; }
+.isl.far .isl-ib-mini { display: inline; }
+.isl-ib-mini-c { fill: #fff; stroke-width: 3px !important; filter: drop-shadow(0 1px 2px rgba(40, 20, 50, .3)); }
+.isl-ib-mini-e { font-size: 17px; text-anchor: middle; dominant-baseline: central; }
+.isl-ib-mini-n { font-size: 12px; font-weight: 800; fill: #2b2231; dominant-baseline: central; paint-order: stroke; stroke: #fff; stroke-width: 3px !important; stroke-linejoin: round; }
+.isl-ibanner.locked .isl-ib-mini-c { fill: #f1edf3; stroke: #b3a9ba !important; }
+.isl-ibanner.locked .isl-ib-mini-n { fill: #6a5f70; }
+.isl-ibanner.here .isl-ib-mini-c { stroke-width: 5px !important; }
+@media (prefers-reduced-motion: no-preference) {
+  .isl-cloud { animation: isl-drift 9s ease-in-out infinite alternate; }
+  @keyframes isl-drift { from { transform: translateX(-6px); } to { transform: translateX(6px); } }
+  .isl-here-ring { transform-box: fill-box; transform-origin: center; animation: isl-ring 2.8s ease-out infinite; }
+  @keyframes isl-ring { 0% { transform: scale(.9); opacity: .6; } 100% { transform: scale(1.12); opacity: 0; } }
+  .isl-fog.lifting { animation: isl-lift 1.8s ease-in .5s forwards; }
+  @keyframes isl-lift { to { opacity: 0; transform: translateY(-30px); } }
+}
+@media (prefers-reduced-motion: reduce) { .isl-fog.lifting { display: none; } }
+
+/* first visit: a small card, not a pop-up */
+.isl-coach {
+  position: absolute; left: 10px; top: 72px; z-index: 2; display: flex; align-items: center;
+  border-radius: 999px; background: #9a4527; color: #fff; box-shadow: var(--shadow-2); /* same in dark mode: white text stays readable */
+}
+.isl-coach[hidden] { display: none; }
+.isl-coach button { background: none; border: 0; color: inherit; font: inherit; font-weight: 800; font-size: 13px; min-height: 40px; cursor: pointer; }
+.isl-coach-main { padding: 0 6px 0 14px; }
+.isl-coach-x { width: 40px; opacity: .85; }
+.isl-tour-steps { margin: 0; padding-left: 22px; display: grid; gap: 10px; }
+.isl-tour-steps strong { display: block; font-size: 15px; }
+.isl-tour-steps span { font-size: 13.5px; color: var(--c-text-2); line-height: 1.55; }
+
+/* landscape phones: fewer layers along the bottom */
+@media (orientation: landscape) and (max-height: 520px) {
+  .isl-strip { bottom: 54px; }
+  .isl-chip { height: 34px; }
+  .isl-coach { top: 58px; }
+}
+
+/* island sheet + unlock moment */
+.isl-tag-btn { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.isl-ish-hero { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 16px; background: color-mix(in srgb, var(--ic) 14%, var(--c-surface)); }
+.isl-ish-emoji { width: 58px; height: 58px; border-radius: 18px; background: var(--c-surface); display: flex; align-items: center; justify-content: center; font-size: 32px; flex: none; box-shadow: var(--shadow-1); }
+.isl-ish-name { font-size: 19px; font-weight: 800; }
+.isl-ish-name small { font-size: 13px; font-weight: 600; color: var(--c-text-2); }
+.mt-xs { margin-top: 4px; }
+.isl-notes { display: grid; gap: 8px; }
+.isl-notes .isl-sh-h { margin-bottom: 0; }
+.isl-note { padding: 10px 12px; border-radius: 14px; background: var(--c-surface); border: 1px solid var(--c-border); }
+.isl-note.urgent { border-color: color-mix(in srgb, var(--c-danger, #d0473a) 45%, var(--c-border)); background: color-mix(in srgb, var(--c-danger-soft, #fde8e6) 70%, var(--c-surface)); }
+.isl-note-t { font-weight: 700; font-size: 14px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.isl-note p { margin: 4px 0 0; font-size: 13.5px; color: var(--c-text-2); line-height: 1.6; }
+.isl-urgent-tag { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 6px; background: #a3271c; color: #fff; }
+.isl-steps { margin: 0; padding: 12px 14px 12px 32px; border-radius: 14px; background: var(--c-surface); border: 1px solid var(--c-border); line-height: 1.65; font-size: 14px; }
+.isl-steps li + li { margin-top: 4px; }
+.isl-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin-top: 14px; }
+.isl-actions .btn { min-height: 44px; padding: 0 8px; font-size: 13.5px; }
+.isl-lockbar { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--c-warn-soft); font-size: 13.5px; line-height: 1.55; }
+.isl-jr-row.locked { opacity: .78; }
+.isl-unlock-hero { text-align: center; padding: 18px 12px 14px; border-radius: 20px; background: linear-gradient(160deg, color-mix(in srgb, var(--ic) 26%, var(--c-surface)), var(--c-surface)); }
+.isl-unlock-emoji { font-size: 64px; line-height: 1.1; }
+.isl-unlock-kicker { font-size: 13px; font-weight: 800; color: var(--c-accent-ink); margin-top: 4px; }
+.isl-unlock-name { font-size: 26px; font-weight: 900; margin: 2px 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .isl-unlock-emoji { animation: isl-pop .7s cubic-bezier(.2, 1.6, .4, 1); }
+  @keyframes isl-pop { from { transform: scale(.3) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
+}
+
+/* 首頁: an island that just opened */
+.isl-new-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; padding: 12px 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ic) 18%, var(--c-surface)), var(--c-surface)); border-color: color-mix(in srgb, var(--ic) 40%, var(--c-border)); }
+.isl-new-emoji { font-size: 30px; width: 48px; height: 48px; border-radius: 16px; background: var(--c-surface); display: flex; align-items: center; justify-content: center; flex: none; }
+.isl-new-kicker { color: var(--c-accent-ink); font-weight: 800; }
+
+/* 島嶼手冊 (prints as a handout / PDF) */
+.isl-doc { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 18px; padding: 18px; line-height: 1.65; }
+.isl-doc-head { display: flex; gap: 12px; align-items: center; padding-bottom: 12px; border-bottom: 3px solid var(--ic); }
+.isl-doc-head h2 { margin: 0; font-size: 22px; }
+.isl-doc-logo { width: 46px; height: 46px; object-fit: contain; }
+.isl-doc-kicker { font-size: 12px; font-weight: 700; color: var(--c-text-2); }
+.isl-doc-intro { font-size: 14px; color: var(--c-text-2); }
+.isl-doc-sec { margin-top: 14px; break-inside: avoid; }
+.isl-doc-sec h3 { font-size: 16px; margin: 0 0 6px; }
+.isl-doc-sec ul, .isl-doc-sec ol { margin: 0; padding-left: 20px; font-size: 13.5px; }
+.isl-doc-notes li.urgent { color: var(--c-danger-ink, #a3271c); }
+.isl-doc-checks { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 13px; }
+.isl-doc-foot { display: flex; gap: 14px; align-items: center; margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--c-border); break-inside: avoid; }
+.isl-doc-qr { width: 104px; height: 104px; border-radius: 10px; border: 1px solid var(--c-border); }
+@media print {
+  @page { margin: 12mm; }
+  body[data-screen="island-guide"] .isl-doc { border: 0; padding: 0; background: #fff; color: #222; }
+  body[data-screen="island-guide"] .isl-doc-intro, body[data-screen="island-guide"] .isl-doc-kicker { color: #555; }
+}
+/* 首頁 (育兒): an island that just opened, as one line under the baby */
+.isl-new-line { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin: -4px 0 12px; padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--ic) 40%, var(--c-border)); border-radius: var(--radius, 16px);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ic) 16%, var(--c-surface)), var(--c-surface));
+  color: var(--c-text); font: inherit; text-align: left; cursor: pointer; }
+.isl-new-line-e { font-size: 26px; line-height: 1; flex: none; }
+.isl-new-line strong { font-size: 15px; margin-right: 6px; }
+.isl-new-line-more { font-size: 12.5px; color: var(--c-text-2); white-space: nowrap; }
+.isl-new-line .chev { color: var(--c-text-2); font-size: 20px; flex: none; }
+

@@ -35,7 +35,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     await p.tap('.preset-chips .chip:has-text("120")'); await p.tap('.sheet-footer .btn-primary'); await p.waitForTimeout(350);
     ok(`${name}: tap to log (one-tap diaper + bottle form)`, (await S(p, () => App.store.state.logs.length)) === n0 + 2);
     await p.tap('.tabbar a:has-text("好孕島")'); await p.waitForTimeout(800);
-    await p.tap('.isl-label >> nth=2'); await p.waitForTimeout(600);
+    await p.tap('.isl-label.cur >> nth=1'); await p.waitForTimeout(600);
     ok(`${name}: tap an island spot opens it`, await p.isVisible('.sheet'));
     await p.keyboard.press('Escape'); await p.waitForTimeout(300);
     const overflow = await S(p, () => document.documentElement.scrollWidth - innerWidth);

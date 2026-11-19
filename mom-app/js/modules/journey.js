@@ -173,7 +173,7 @@
       body: h('div', null,
         ui.field('時間', at),
         ui.field('惡露量', amount),
-        ui.field('惡露顏色', colors, '通常：鮮紅（約 3 天）→ 粉褐（到 2 週）→ 黃白（到 4–6 週）'),
+        ui.field('惡露顏色', colors, '通常：鮮紅（約 3 天）→ 粉褐（到 2 週）→ 黃白（約到 4–8 週）'),
         ui.field(h('span', null, '傷口疼痛（0 不痛 – 10 最痛）：', painLabel), pain),
         ui.field('體溫', temp),
         ui.field('心情', mood),
@@ -368,7 +368,7 @@
       if (cur.kind === 'pp') { const nb = newbornChecks(); if (nb) el.append(ui.card({ class: 'mt' }, nb)); }
       el.append(h('div', { class: 'jr-list' }, phases.map((p, i) => phaseCard(p, i, cur))));
       el.append(hotlineCard());
-      el.append(h('p', { class: 'disclaimer' }, '內容依國健署孕婦健康手冊、兒童健康手冊等公開衛教資料整理，不能取代醫師建議；身體不適請直接就醫。'));
+      el.append(h('p', { class: 'disclaimer' }, '內容依國健署孕媽咪健康手冊、兒童健康手冊等公開衛教資料整理，不能取代醫師建議；身體不適請直接就醫。'));
     },
   });
 

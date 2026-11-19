@@ -760,12 +760,12 @@
       const visits = items.filter((x) => x.c.kind === 'visit');
       const cur = items.find((x) => x.st.key === 'now');
       el.append(ui.card({ class: 'soft' },
-        h('div', { class: 'card-title' }, '🩺 公費兒童預防保健 7 次'),
-        h('p', { class: 'small muted', style: { marginBottom: 6 } }, '內容包含身體檢查、生長發育評估與衛教指導，可到健保特約的兒科或家醫科診所。'),
+        h('div', { class: 'card-title' }, `🩺 公費兒童預防保健 ${visits.length} 次`),
+        h('p', { class: 'small muted', style: { marginBottom: 6 } }, '2026 年 7 月起由 7 次增為 9 次（7+2）。內容包含身體檢查、生長發育評估與衛教指導，可到健保特約的兒科或家醫科診所；另有 6 次公費兒童發展篩檢，可一起做。'),
         h('div', { class: 'row between small' },
-          h('span', null, `已完成 ${visits.filter((x) => x.st.key === 'done').length} / 7 次`),
+          h('span', null, `已完成 ${visits.filter((x) => x.st.key === 'done').length} / ${visits.length} 次`),
           cur ? h('span', { class: 'tag warn' }, `現在可做：${cur.c.name.replace('兒童預防保健', '')}`) : null),
-        ui.progress(visits.filter((x) => x.st.key === 'done').length / 7)));
+        ui.progress(visits.filter((x) => x.st.key === 'done').length / visits.length)));
 
       const render = (title, arr) => {
         el.append(h('div', { class: 'section-title' }, title));
@@ -785,7 +785,7 @@
         el.append(list);
       };
       render('新生兒篩檢', items.filter((x) => x.c.kind === 'screen'));
-      render('預防保健 7 次', visits);
+      render(`預防保健 ${visits.length} 次`, visits);
       el.append(h('p', { class: 'disclaimer' }, '時程依國民健康署兒童預防保健服務整理，實際以國健署公告為準。'));
     }),
   });

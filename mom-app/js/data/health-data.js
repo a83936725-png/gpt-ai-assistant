@@ -176,7 +176,7 @@
     { key: 'hepb2', name: 'B型肝炎疫苗', dose: '第 2 劑', months: 1, endMonths: 2, free: true },
     { key: 'dtap1', name: '五合一疫苗（DTaP-Hib-IPV）', dose: '第 1 劑', months: 2, endMonths: 3, free: true },
     { key: 'pcv1', name: '13價結合型肺炎鏈球菌疫苗', dose: '第 1 劑', months: 2, endMonths: 3, free: true },
-    { key: 'rota1', name: '輪狀病毒疫苗（口服）', dose: '第 1 劑', months: 2, endMonths: 3.5, free: false, note: '依廠牌共 2 或 3 劑；部分縣市有補助' },
+    { key: 'rota1', name: '輪狀病毒疫苗（口服）', dose: '第 1 劑', months: 2, endMonths: 3.5, free: false, note: '依廠牌共 2 或 3 劑；2027/1/1 起納入公費（之前部分縣市有補助），最晚 8 個月大前完成' },
     { key: 'dtap2', name: '五合一疫苗（DTaP-Hib-IPV）', dose: '第 2 劑', months: 4, endMonths: 5, free: true },
     { key: 'pcv2', name: '13價結合型肺炎鏈球菌疫苗', dose: '第 2 劑', months: 4, endMonths: 5, free: true },
     { key: 'rota2', name: '輪狀病毒疫苗（口服）', dose: '第 2 劑', months: 4, endMonths: 5.5, free: false },
@@ -186,7 +186,7 @@
     { key: 'rota3', name: '輪狀病毒疫苗（口服）', dose: '第 3 劑（3 劑型）', months: 6, endMonths: 8, free: false, note: '僅 3 劑型廠牌需要' },
     { key: 'flu1', name: '流感疫苗', dose: '首次第 1 劑', months: 6, endMonths: 12, free: true, note: '滿 6 個月起每年接種；首次接種需 2 劑、間隔 4 週' },
     { key: 'flu2', name: '流感疫苗', dose: '首次第 2 劑', months: 7, endMonths: 13, free: true },
-    { key: 'ev71a', name: '腸病毒 71 型疫苗', dose: '第 1 劑', months: 6, endMonths: 24, free: false, note: '自費，依醫師建議' },
+    { key: 'ev71a', name: '腸病毒 71 型疫苗', dose: '第 1 劑', months: 6, endMonths: 24, free: false, note: '自費；滿 2 個月即可接種，時間依醫師建議' },
     { key: 'ev71b', name: '腸病毒 71 型疫苗', dose: '第 2 劑', months: 7, endMonths: 25, free: false },
     { key: 'var', name: '水痘疫苗', dose: '1 劑', months: 12, endMonths: 15, free: true },
     { key: 'mmr1', name: '麻疹腮腺炎德國麻疹混合疫苗（MMR）', dose: '第 1 劑', months: 12, endMonths: 15, free: true },
@@ -200,17 +200,20 @@
     { key: 'mmr2', name: '麻疹腮腺炎德國麻疹混合疫苗（MMR）', dose: '第 2 劑', months: 60, endMonths: 84, free: true, note: '滿 5 歲至入國小前' },
   ];
 
-  /* ---------- 兒童預防保健 (公費 7 次) + 新生兒篩檢 ---------- */
+  /* ---------- 兒童預防保健（2026/7/1 起公費 9 次，「7+2」）+ 新生兒篩檢 ----------
+   * 4–10 個月的一次分成 4–6、6–12 個月；3–7 歲的一次分成 3–5、5–7 歲（keys 不變，舊紀錄照樣算） */
   const CHECKUPS = [
     { key: 'nbs', name: '新生兒先天性代謝異常疾病篩檢', start: 0, end: 0.25, suggest: '出生滿 48 小時後採足跟血', kind: 'screen' },
     { key: 'hearing', name: '新生兒聽力篩檢', start: 0, end: 3, suggest: '出生後儘早，最遲 3 個月內', kind: 'screen' },
     { key: 'v1', name: '第 1 次兒童預防保健', start: 0, end: 2, suggest: '建議 1 個月', kind: 'visit' },
     { key: 'v2', name: '第 2 次兒童預防保健', start: 2, end: 4, suggest: '建議 2 個月', kind: 'visit' },
-    { key: 'v3', name: '第 3 次兒童預防保健', start: 4, end: 10, suggest: '建議 4 個月', kind: 'visit' },
-    { key: 'v4', name: '第 4 次兒童預防保健', start: 10, end: 18, suggest: '建議 1 歲', kind: 'visit' },
-    { key: 'v5', name: '第 5 次兒童預防保健', start: 18, end: 24, suggest: '建議 1 歲半', kind: 'visit' },
-    { key: 'v6', name: '第 6 次兒童預防保健', start: 24, end: 36, suggest: '建議 2 歲', kind: 'visit' },
-    { key: 'v7', name: '第 7 次兒童預防保健', start: 36, end: 84, suggest: '建議 3 歲', kind: 'visit' },
+    { key: 'v3', name: '第 3 次兒童預防保健', start: 4, end: 6, suggest: '建議 4 個月', kind: 'visit' },
+    { key: 'v3b', name: '第 4 次兒童預防保健', start: 6, end: 12, suggest: '建議 6–9 個月', kind: 'visit' },
+    { key: 'v4', name: '第 5 次兒童預防保健', start: 10, end: 18, suggest: '建議 1 歲', kind: 'visit' },
+    { key: 'v5', name: '第 6 次兒童預防保健', start: 18, end: 24, suggest: '建議 1 歲半', kind: 'visit' },
+    { key: 'v6', name: '第 7 次兒童預防保健', start: 24, end: 36, suggest: '建議 2 歲', kind: 'visit' },
+    { key: 'v7', name: '第 8 次兒童預防保健', start: 36, end: 60, suggest: '建議 3 歲', kind: 'visit' },
+    { key: 'v8', name: '第 9 次兒童預防保健', start: 60, end: 84, suggest: '建議 5 歲', kind: 'visit' },
   ];
 
   /* ---------- developmental milestones ---------- */

@@ -153,7 +153,7 @@ const ok = (name, cond, info = '') => { results.push({ name, pass: !!cond, info 
   const vacAll = await S(p, () => (document.documentElement.scrollHeight / (innerHeight - 64)).toFixed(1));
   ok('疫苗 list is short by default, full list on demand', Number(vacLen) < Number(vacAll), `${vacLen} → ${vacAll} screens`);
   await p.click('.seg button:has-text("兒童健檢")'); await p.waitForTimeout(200);
-  ok('預防保健: 兒童健檢 tab', await p.isVisible('text=公費兒童預防保健 7 次'));
+  ok('預防保健: 兒童健檢 tab (9 visits since 2026-07)', await p.isVisible('text=公費兒童預防保健 9 次'));
 
   // growth, milestones, stats → report
   await go(p, 'growth'); await p.click('.appbar-actions .icon-btn'); await p.waitForTimeout(300);

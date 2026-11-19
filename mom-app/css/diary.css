@@ -78,11 +78,11 @@
 .src-foot-t { font-weight: 800; margin-bottom: 4px; }
 .src-foot ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
 .src-foot li { line-height: 1.45; }
-.src-link { color: var(--c-primary); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; word-break: break-word; display: inline-block; min-height: 24px; padding: 2px 0; }
+.src-link { color: var(--c-primary); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; word-break: break-word; display: inline-flex; align-items: center; min-height: 36px; padding: 4px 0; } /* a comfortable tap */
 .src-ext { font-weight: 800; }
 .src-note { display: block; color: var(--c-text-2); font-size: 12px; }
 .src-url { display: none; font-size: 10px; color: #555; word-break: break-all; }
-.src-all { display: inline-block; margin-top: 4px; color: var(--c-primary); font-weight: 700; min-height: 24px; }
+.src-all { display: inline-flex; align-items: center; margin-top: 2px; color: var(--c-primary); font-weight: 700; min-height: 36px; }
 .src-list { display: grid; gap: 10px; }
 .src-item { display: grid; gap: 1px; padding-bottom: 8px; border-bottom: 1px solid var(--c-border); }
 .src-item:last-child { border-bottom: 0; padding-bottom: 0; }

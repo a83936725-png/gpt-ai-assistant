@@ -4,7 +4,7 @@ const ASSETS = [
   './', 'index.html', 'config.js', 'manifest.webmanifest',
   'css/base.css', 'css/modules.css', 'css/island.css', 'css/health.css', 'css/pregnancy.css', 'css/journey.css', 'css/monitor.css', 'css/outing.css', 'css/search.css', 'css/extras.css', 'css/share.css', 'css/account.css', 'css/goods.css', 'css/diary.css', 'css/motion.css',
   'js/core.js', 'js/vendor/qrcode.js', 'js/store.js', 'js/media.js', 'js/ui.js', 'js/app.js',
-  'js/data/log-types.js', 'js/data/island-data.js', 'js/data/health-data.js', 'js/data/pregnancy-data.js', 'js/data/journey-data.js', 'js/data/outing-data.js', 'js/data/faq-data.js', 'js/data/extras-data.js', 'js/data/goods-data.js',
+  'js/data/log-types.js', 'js/data/island-data.js', 'js/data/health-data.js', 'js/data/pregnancy-data.js', 'js/data/journey-data.js', 'js/data/outing-data.js', 'js/data/faq-data.js', 'js/data/extras-data.js', 'js/data/goods-data.js', 'js/data/sources-data.js',
   'js/modules/home.js', 'js/modules/babylog.js', 'js/modules/milk.js', 'js/modules/avatar.js', 'js/modules/island.js', 'js/modules/diary.js',
   'js/modules/health.js', 'js/modules/pregnancy.js', 'js/modules/journey.js', 'js/modules/outing.js', 'js/modules/monitor.js', 'js/modules/search.js', 'js/modules/extras.js', 'js/modules/goods.js', 'js/modules/share.js', 'js/modules/account.js', 'js/modules/brand.js', 'js/modules/me.js', 'js/modules/sources.js',
   'assets/logo.svg', 'assets/logo-full.svg', 'assets/icon.svg', 'assets/icon-192.png', 'assets/icon-512.png',

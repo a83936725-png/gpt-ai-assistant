@@ -1,5 +1,5 @@
 /* 孕產路線圖資料：懷孕初期 → 中期 → 後期 → 足月待產 → 生產 → 產後坐月子。
- * 內容為一般衛教整理（參考國健署孕婦健康手冊、兒童健康手冊、衛福部公開資訊），不能取代醫師建議。
+ * 內容為一般衛教整理（參考國健署孕媽咪健康手冊、兒童健康手冊、衛福部公開資訊），不能取代醫師建議。
  * level: 'urgent' = 請立即就醫（必要時 119）；'soon' = 請盡快聯絡產檢醫院／醫師；'crisis' = 心理危機，提供專線。 */
 (function () {
   const App = window.App = window.App || {};
@@ -10,7 +10,7 @@
       intro: '小生命剛開始，最重要的是確認懷孕、開始產檢、照顧好身體。',
       todo: [
         { id: 'e-confirm', text: '到婦產科確認子宮內懷孕、看到胎心', week: 6 },
-        { id: 'e-handbook', text: '第一次產檢，領取《孕婦健康手冊》', week: 8, tool: 'prenatal' },
+        { id: 'e-handbook', text: '第一次產檢，領取《孕媽咪健康手冊》', week: 8, tool: 'prenatal' },
         { id: 'e-folic', text: '每天補充葉酸（或孕婦維他命）', tool: 'home' },
         { id: 'e-edd', text: '在 App 設定預產期，開始看每週寶寶變化', tool: 'pregnancy' },
         { id: 'e-screen', text: '與醫師討論第一孕期唐氏症篩檢（約 11–14 週，自費或依縣市補助）', week: 11 },
@@ -50,7 +50,7 @@
       todo: [
         { id: 'l-kick', text: '每天固定時間數胎動', tool: 'kick' },
         { id: 'l-gbs', text: '乙型鏈球菌（GBS）篩檢（35–37 週，公費）', week: 35, tool: 'prenatal' },
-        { id: 'l-bag', text: '準備待產包，證件、健保卡、孕婦健康手冊放一起', week: 32, tool: 'hospitalbag' },
+        { id: 'l-bag', text: '準備待產包，證件、健保卡、孕媽咪健康手冊放一起', week: 32, tool: 'hospitalbag' },
         { id: 'l-carseat', text: '安裝嬰兒汽車安全座椅', week: 34, tool: 'goods', params: { item: 'carseat' } },
         { id: 'l-route', text: '確認去醫院的路線、時間與聯絡人', week: 34 },
         { id: 'l-leave', text: '和公司安排產假交接', week: 32 },
@@ -118,7 +118,7 @@
         '乳房紅腫熱痛合併發燒（乳腺炎）',
         '情緒低落超過 2 週，或有傷害自己或寶寶的念頭（立即求助）',
       ],
-      tips: ['惡露通常 4–6 週：鮮紅 → 粉褐 → 黃白', '寶寶睡的時候你也睡', '讓家人分擔：換尿布、洗澡、家事都可以交出去'],
+      tips: ['惡露通常約 4–8 週：鮮紅 → 粉褐 → 黃白', '寶寶睡的時候你也睡', '讓家人分擔：換尿布、洗澡、家事都可以交出去'],
     },
   ];
 

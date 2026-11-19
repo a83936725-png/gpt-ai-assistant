@@ -89,7 +89,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const v1 = await S(() => ({ done: !!App.store.state.preg.prenatal.v1, w: App.store.state.preg.weights.length, notes: App.store.state.preg.visitNotes.v1 }));
   ok('產檢完成＋筆記＋體重同步', v1.done && v1.w === 1 && v1.notes.fhr === 158, JSON.stringify(v1));
   await go('journey');
-  await p.click('.jr-todo:has-text("領取《孕婦健康手冊》") input'); await wait(200);
+  await p.click('.jr-todo:has-text("領取《孕媽咪健康手冊》") input'); await wait(200);
   await shot('孕產路線圖', '路線圖：目前在「懷孕初期」，勾選完成的事；紅色區塊是這階段要就醫的警訊。', { full: true });
   await go('log');
   await shot('孕期紀錄', '「紀錄」分頁：身體狀況、產檢、體重、胎動、宮縮都在同一條時間軸，產檢時直接給醫師看。');

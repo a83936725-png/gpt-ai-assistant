@@ -201,19 +201,20 @@
   ];
 
   /* ---------- 兒童預防保健（2026/7/1 起公費 9 次，「7+2」）+ 新生兒篩檢 ----------
-   * 4–10 個月的一次分成 4–6、6–12 個月；3–7 歲的一次分成 3–5、5–7 歲（keys 不變，舊紀錄照樣算） */
+   * 4–10 個月的一次分成 4–6、6–12 個月；3–7 歲的一次分成 3–5、5–7 歲（keys 不變，舊紀錄照樣算）。
+   * since: a visit added by the new schedule — a child already past its window before that date never had it */
   const CHECKUPS = [
     { key: 'nbs', name: '新生兒先天性代謝異常疾病篩檢', start: 0, end: 0.25, suggest: '出生滿 48 小時後採足跟血', kind: 'screen' },
     { key: 'hearing', name: '新生兒聽力篩檢', start: 0, end: 3, suggest: '出生後儘早，最遲 3 個月內', kind: 'screen' },
     { key: 'v1', name: '第 1 次兒童預防保健', start: 0, end: 2, suggest: '建議 1 個月', kind: 'visit' },
     { key: 'v2', name: '第 2 次兒童預防保健', start: 2, end: 4, suggest: '建議 2 個月', kind: 'visit' },
     { key: 'v3', name: '第 3 次兒童預防保健', start: 4, end: 6, suggest: '建議 4 個月', kind: 'visit' },
-    { key: 'v3b', name: '第 4 次兒童預防保健', start: 6, end: 12, suggest: '建議 6–9 個月', kind: 'visit' },
+    { key: 'v3b', name: '第 4 次兒童預防保健', start: 6, end: 12, suggest: '建議 6–9 個月', kind: 'visit', since: '2026-07-01' },
     { key: 'v4', name: '第 5 次兒童預防保健', start: 10, end: 18, suggest: '建議 1 歲', kind: 'visit' },
     { key: 'v5', name: '第 6 次兒童預防保健', start: 18, end: 24, suggest: '建議 1 歲半', kind: 'visit' },
     { key: 'v6', name: '第 7 次兒童預防保健', start: 24, end: 36, suggest: '建議 2 歲', kind: 'visit' },
     { key: 'v7', name: '第 8 次兒童預防保健', start: 36, end: 60, suggest: '建議 3 歲', kind: 'visit' },
-    { key: 'v8', name: '第 9 次兒童預防保健', start: 60, end: 84, suggest: '建議 5 歲', kind: 'visit' },
+    { key: 'v8', name: '第 9 次兒童預防保健', start: 60, end: 84, suggest: '建議 5 歲', kind: 'visit', since: '2026-07-01' },
   ];
 
   /* ---------- developmental milestones ---------- */

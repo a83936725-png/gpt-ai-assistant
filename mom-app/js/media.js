@@ -89,5 +89,24 @@
     return ids;
   }
 
-  App.media = { put, get, del, keys, url, dataUrl, fromFile, exportAll, importAll, referenced, loadImage, blobToDataUrl };
+  // every photo gone (清除所有資料); photos nothing points at any more (after loading demo data or a full restore)
+  async function clear() { urls.forEach((u) => URL.revokeObjectURL(u)); urls.clear(); try { await run('readwrite', (s) => s.clear()); } catch (e) { /* nothing stored */ } }
+  async function prune(keep = referenced()) {
+    const k = new Set(keep); let n = 0;
+    for (const id of await keys()) if (!k.has(id)) { await del(id); n += 1; }
+    return n;
+  }
+  async function stats() {
+    let count = 0; let bytes = 0;
+    try { const all = await run('readonly', (s) => s.getAll()); (all || []).forEach((b) => { count += 1; bytes += b && b.size ? b.size : 0; }); } catch (e) { /* none */ }
+    return { count, bytes };
+  }
+  // 清除所有資料 = everything, ultrasound photos included (they are private)
+  if (App.store && typeof App.store.reset === 'function' && !App.store.reset.__media) {
+    const reset = App.store.reset;
+    App.store.reset = function (...a) { const r = reset.apply(this, a); clear(); return r; };
+    App.store.reset.__media = true;
+  }
+
+  App.media = { put, get, del, keys, url, dataUrl, fromFile, exportAll, importAll, referenced, loadImage, blobToDataUrl, clear, prune, stats };
 }());

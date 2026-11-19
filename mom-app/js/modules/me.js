@@ -248,6 +248,7 @@
         if (mode.dataset.value === 'replace') {
           if (!(await ui.confirm('用備份檔取代這台裝置上的所有資料？'))) return;
           store.replace({ ...data, share: store.state.share || data.share, auth: store.state.auth }); // keep my own invite code and login
+          if (App.media) await App.media.prune(); // photos of the replaced data go; the backup's own photos stay
         } else mergeState(data);
         sh.close(); ui.toast('匯入完成');
       } catch (e) { ui.toast('檔案格式不正確'); }
@@ -421,6 +422,7 @@
     if (store.state.share) s.share = store.state.share; // keep invite code + who invited me
     if (store.state.auth) s.auth = store.state.auth; // stay logged in
     store.replace(s);
+    if (App.media) App.media.prune(); // the old diary photos belonged to the data that was just replaced
     App.navigate('home');
     App.refresh();
     ui.toast('已載入範例資料，可以隨意點點看！');
@@ -558,7 +560,12 @@
           h('button', { class: 'btn btn-line', onclick: inviteLine, html: `${ui.ICONS.line}<span>LINE 邀請</span>` }),
           h('button', { class: 'btn btn-soft', onclick: exportData }, '⬇️ 匯出備份')),
         h('button', { class: 'btn btn-ghost btn-block mt', onclick: importData }, '⬆️ 匯入／合併家人的備份'),
-        h('p', { class: 'small muted mt storage-line' }, storageLine()),
+        (() => {
+          const line = h('p', { class: 'small muted mt storage-line' }, storageLine());
+          // diary photos live in their own store on the phone: say how many and how much room they take
+          if (App.media) App.media.stats().then(({ count, bytes }) => { if (count) line.textContent = `${storageLine()}・產檢日記照片 ${count} 張（約 ${Math.max(0.1, bytes / 1048576).toFixed(1)} MB）`; });
+          return line;
+        })(),
         needsHomeScreen() ? h('p', { class: 'tiny faint' }, 'iPhone：把 App 加到主畫面（Safari「分享」→「加入主畫面」），7 天沒打開也不會被清掉紀錄。') : null,
         h('p', { class: 'tiny faint mt' }, '紀錄只存在這台手機。家人之間可以「匯出 → 用 LINE 傳檔 → 匯入合併」來同步；全家手機即時同步正在準備中。')));
 
@@ -583,7 +590,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.7.0`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.7.1`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
         h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理（每則都附來源，可點開查看），不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。資料只儲存在你的裝置上。')));
     },

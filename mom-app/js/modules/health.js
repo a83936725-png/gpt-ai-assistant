@@ -124,6 +124,8 @@
     const start = dueFrom(b.birthday, c.start);
     const end = dueFrom(b.birthday, c.end);
     if (done) return { key: 'done', label: '已完成', cls: 'ok', start, end, done };
+    // a visit the new schedule added: if the child was already past it when the schedule started, it never applied
+    if (c.since && C.diffDays(end, C.parseKey(c.since)) > 0) return { key: 'na', label: '新制前已過', cls: '', start, end };
     if (C.diffDays(end, now) > 0) return { key: 'missed', label: '已過期間', cls: 'danger', start, end };
     if (C.diffDays(start, now) >= 0) return { key: 'now', label: '現在可以做', cls: 'warn', start, end };
     return { key: 'upcoming', label: '未到', cls: '', start, end };
@@ -757,10 +759,10 @@
     render: needBaby((el, params, b) => {
       const doneMap = store().state.checkups[b.id] || {};
       const items = H.CHECKUPS.map((c) => ({ c, st: checkupStatus(c, b, doneMap) }));
-      const visits = items.filter((x) => x.c.kind === 'visit');
+      const visits = items.filter((x) => x.c.kind === 'visit' && x.st.key !== 'na'); // visits that apply to this child
       const cur = items.find((x) => x.st.key === 'now');
       el.append(ui.card({ class: 'soft' },
-        h('div', { class: 'card-title' }, `🩺 公費兒童預防保健 ${visits.length} 次`),
+        h('div', { class: 'card-title' }, `🩺 公費兒童預防保健 ${items.filter((x) => x.c.kind === 'visit').length} 次`),
         h('p', { class: 'small muted', style: { marginBottom: 6 } }, '2026 年 7 月起由 7 次增為 9 次（7+2）。內容包含身體檢查、生長發育評估與衛教指導，可到健保特約的兒科或家醫科診所；另有 6 次公費兒童發展篩檢，可一起做。'),
         h('div', { class: 'row between small' },
           h('span', null, `已完成 ${visits.filter((x) => x.st.key === 'done').length} / ${visits.length} 次`),
@@ -785,7 +787,7 @@
         el.append(list);
       };
       render('新生兒篩檢', items.filter((x) => x.c.kind === 'screen'));
-      render(`預防保健 ${visits.length} 次`, visits);
+      render(`預防保健 ${items.filter((x) => x.c.kind === 'visit').length} 次`, items.filter((x) => x.c.kind === 'visit'));
       el.append(h('p', { class: 'disclaimer' }, '時程依國民健康署兒童預防保健服務整理，實際以國健署公告為準。'));
     }),
   });

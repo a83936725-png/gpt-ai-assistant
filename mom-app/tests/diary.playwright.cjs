@@ -139,8 +139,34 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mom-diary-'));
   await p.click('.sheet button:has-text("刪除")').catch(() => {}); await p.waitForTimeout(700);
   ok('deleting a page also deletes its photo from the phone', await S(p, async (pid) => !(await App.media.get(pid)) && !App.store.state.preg.diary.length, custom.photos[0]));
 
+  /* ---------- 4b. no photo is left behind ---------- */
+  const nKeys = () => S(p, async () => (await App.media.keys()).length);
+  let k0 = await nKeys();
+  await S(p, () => App.preg.openVisitSheet(App.PREG_DATA.PRENATAL[4])); await p.waitForTimeout(400);
+  await pickFile(p, '.sheet .dy-add-photo', 'us.jpg'); await p.waitForTimeout(900);
+  await esc(p);
+  ok('a photo picked in the visit form, then the form closed without saving: the photo is removed again', (await nKeys()) === k0, `${k0} → ${await nKeys()}`);
+  await S(p, () => App.diary.openEntry()); await p.waitForTimeout(400);
+  await pickFile(p, '.sheet .dy-add-photo', 'us.jpg'); await p.waitForTimeout(900);
+  await esc(p);
+  ok('…the same for a new diary page that is cancelled', (await nKeys()) === k0);
+  await S(p, () => App.diary.openEntry()); await p.waitForTimeout(400);
+  await p.fill('.sheet input[type=text]', '試一下');
+  await pickFile(p, '.sheet .dy-add-photo', 'us.jpg'); await p.waitForTimeout(900);
+  await p.click('.sheet .dy-thumb-x'); await p.waitForTimeout(300);
+  await p.click('.sheet-footer .btn-primary'); await p.waitForTimeout(500);
+  ok('…and a photo added then removed (✕) before saving does not stay behind', (await nKeys()) === k0);
+  const xSize = await S(p, async () => { App.diary.openEntry(App.store.state.preg.diary.find((d) => d.title === '試一下').id); await new Promise((r) => setTimeout(r, 400)); return document.querySelector('.sheet .dy-thumb-x') ? Math.round(document.querySelector('.sheet .dy-thumb-x').getBoundingClientRect().width) : null; });
+  await esc(p);
+  ok('the ✕ to remove a photo is big enough to tap (≥ 34px)', xSize === null || xSize >= 34, `${xSize}`);
+  await go(p, 'me', null, 900);
+  const line = await S(p, () => (document.querySelector('.storage-line') || {}).textContent || '');
+  ok('我的 says how many diary photos are kept and how much room they take', /產檢日記照片 \d+ 張（約 [\d.]+ MB）/.test(line), line);
+  await S(p, () => App.store.reset()); await p.waitForTimeout(600);
+  ok('清除所有資料 also deletes every ultrasound photo from the phone', (await nKeys()) === 0);
+
   /* ---------- 5. before pregnancy: the diary island waits ---------- */
-  await S(p, () => App.store.update((s) => { s.profile.stage = 'prep'; }));
+  await asPreg(p, 22); await S(p, () => App.store.update((s) => { s.profile.stage = 'prep'; }));
   await go(p, 'island', null, 1200);
   ok('備孕: the diary island is under clouds (🔒 懷孕後開放)', /懷孕後開放/.test(await S(p, () => (document.querySelector('.isl-ibanner[data-island="diary"]') || {}).textContent || '')) && await S(p, () => document.querySelector('.isl-chip[data-island="diary"]').classList.contains('locked')));
   await S(p, () => App.island.openIsland('diary')); await p.waitForTimeout(400);

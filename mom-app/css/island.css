@@ -162,6 +162,8 @@ body[data-screen="island"] #view { padding: 0; max-width: none; }
 }
 .isl-intro { margin: 6px 0 0; color: var(--c-text-2); font-size: 14px; }
 .isl-stage-tag { display: inline-block; padding: 1px 9px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+/* an island's tag: its colour, deepened (light) or lightened (dark) so the words stay readable */
+.isl-tag-c { color: color-mix(in srgb, var(--ic) 50%, var(--c-text)); background: color-mix(in srgb, var(--ic) 16%, transparent); }
 .isl-sh-h { font-size: 15px; margin: 18px 0 8px; }
 .isl-know-list { display: grid; gap: 8px; }
 .isl-know { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 14px; padding: 10px 12px; }

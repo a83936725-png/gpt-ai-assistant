@@ -1170,7 +1170,7 @@
   }
   function islandTag(isl) {
     if (!isl) return null;
-    return h('span', { class: 'isl-stage-tag', style: { background: `${isl.color}22`, color: isl.color } }, `${isl.emoji} ${isl.name}`);
+    return h('span', { class: 'isl-stage-tag isl-tag-c', style: { '--ic': isl.color || '#8b57a8' } }, `${isl.emoji} ${isl.name}`);
   }
   const updIsland = (fn) => store.update((s) => {
     s.island = s.island || {};

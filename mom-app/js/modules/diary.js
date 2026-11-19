@@ -23,13 +23,21 @@
   }
   function photoField(initial = []) {
     const ids = [...initial];
+    const added = []; // new this time: deleted again if the form is closed without saving
     const wrap = h('div', { class: 'dy-photos' });
     const file = h('input', { type: 'file', accept: 'image/*', multiple: true, class: 'hide' });
     const render = () => {
       wrap.innerHTML = '';
       ids.forEach((id) => {
         const t = thumb(id, { size: 72 });
-        const x = h('button', { type: 'button', class: 'dy-thumb-x', 'aria-label': '移除這張照片', onclick: () => { ids.splice(ids.indexOf(id), 1); render(); } }, '✕');
+        const x = h('button', {
+          type: 'button', class: 'dy-thumb-x', 'aria-label': '移除這張照片',
+          onclick: () => {
+            ids.splice(ids.indexOf(id), 1);
+            const k = added.indexOf(id); if (k >= 0) { added.splice(k, 1); App.media.del(id); } // just added: gone at once
+            render();
+          },
+        }, '✕');
         wrap.append(h('div', { class: 'dy-thumb-wrap' }, t, x));
       });
       if (ids.length < 6) wrap.append(h('button', { type: 'button', class: 'dy-add-photo', onclick: () => file.click() }, h('span', null, '＋'), h('small', null, '超音波照片')));
@@ -37,12 +45,17 @@
     file.addEventListener('change', async () => {
       const files = [...(file.files || [])].slice(0, 6 - ids.length);
       for (const f of files) {
-        try { const blob = await App.media.fromFile(f); ids.push(await App.media.put(blob)); } catch (e) { ui.toast('這張照片存不下來'); }
+        try { const blob = await App.media.fromFile(f); const id = await App.media.put(blob); ids.push(id); added.push(id); } catch (e) { ui.toast('這張照片存不下來'); }
       }
       file.value = ''; render();
     });
     render();
-    return { el: h('div', null, wrap, file, h('p', { class: 'tiny faint' }, '🔒 照片只存在這台手機，備份檔會一起帶走。')), ids: () => ids.slice() };
+    return {
+      el: h('div', null, wrap, file, h('p', { class: 'tiny faint' }, '🔒 照片只存在這台手機，備份檔會一起帶走。')),
+      ids: () => ids.slice(),
+      commit: () => { added.length = 0; },
+      discard: () => { added.splice(0).forEach((id) => App.media.del(id)); },
+    };
   }
   const msgInput = (val) => h('textarea', { rows: 2, maxlength: 120, class: 'dy-msg-in', placeholder: '例如：今天第一次聽到你的心跳，好有力！' }, val || '');
 
@@ -69,7 +82,9 @@
     const pf = photoField(e ? e.photos : []);
     const msg = msgInput(e ? e.msg : '');
     const note = h('textarea', { rows: 2, maxlength: 300, placeholder: '想記下的事（選填）' }, e ? e.note || '' : '');
+    let saved = false;
     const sh = ui.sheet({
+      onClose: () => { if (!saved) pf.discard(); },
       title: e ? '編輯這一頁' : '新增一頁日記',
       body: h('div', null,
         ui.field('標題', title), ui.field('日期', date), ui.field('照片', pf.el),
@@ -78,7 +93,7 @@
         e ? h('button', { class: 'btn btn-ghost', 'aria-label': '刪除這一頁', onclick: async () => {
           if (!(await ui.confirm('刪除這一頁日記？照片也會一起刪掉。', { ok: '刪除', danger: true }))) return;
           (e.photos || []).forEach((pid) => App.media.del(pid));
-          store.update((s) => { ensure(s).diary = s.preg.diary.filter((x) => x.id !== e.id); }); sh.close();
+          store.update((s) => { ensure(s).diary = s.preg.diary.filter((x) => x.id !== e.id); }); saved = true; pf.discard(); sh.close();
         } }, ui.icon('trash')) : null,
         h('button', {
           class: 'btn btn-primary grow',
@@ -86,6 +101,7 @@
             const rec = { id: e ? e.id : C.uid(), title: title.value.trim() || '日記', date: date.value || C.dateKey(), photos: pf.ids(), msg: msg.value.trim(), note: note.value.trim() };
             if (e) (e.photos || []).filter((pid) => !rec.photos.includes(pid)).forEach((pid) => App.media.del(pid));
             store.update((s) => { const d = ensure(s); d.diary = d.diary.filter((x) => x.id !== rec.id); d.diary.push(rec); });
+            saved = true; pf.commit();
             sh.close(); ui.toast('已存進產檢日記 💌');
           },
         }, '儲存')),

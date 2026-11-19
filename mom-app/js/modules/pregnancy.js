@@ -588,7 +588,9 @@
     // 產檢日記: ultrasound photos and one sentence to the baby, kept with this visit
     const photos = App.diary ? App.diary.photoField(notes.photos || []) : null;
     const msgIn = App.diary ? App.diary.msgInput(notes.msg) : null;
+    let saved = false;
     const sh = ui.sheet({
+      onClose: () => { if (!saved && photos) photos.discard(); },
       title: `第 ${v.no} 次產檢`,
       body: h('div', null,
         h('p', { class: 'small muted' }, `建議週數：${v.range}（約第 ${v.week} 週）`),
@@ -614,7 +616,8 @@
               weight: wIn.value ? Number(wIn.value) : null, fhr: fhrIn.value ? Number(fhrIn.value) : null,
               sys: sysIn.value ? Number(sysIn.value) : null, dia: diaIn.value ? Number(diaIn.value) : null, note: noteIn.value.trim(),
             };
-            if (photos) { rec.photos = photos.ids(); rec.msg = msgIn.value.trim(); (notes.photos || []).filter((pid) => !rec.photos.includes(pid)).forEach((pid) => App.media.del(pid)); }
+            if (photos) { rec.photos = photos.ids(); rec.msg = msgIn.value.trim(); (notes.photos || []).filter((pid) => !rec.photos.includes(pid)).forEach((pid) => App.media.del(pid)); photos.commit(); }
+            saved = true;
             store.update((st) => {
               ensure(st);
               st.preg.prenatal[v.key] = day;

@@ -395,6 +395,7 @@
       const r = reset.apply(this, a);
       live.people = []; live.me = null; live.look = null;
       if (st.key) call('POST', 'social/leave', { key: st.key }).catch(() => {});
+      if (st.key && st.circle && st.circle.cohort) call('POST', 'circle/leave', { key: st.key, cohort: st.circle.cohort }).catch(() => {});
       (st.walls || []).forEach((w) => { if (w.key) call('POST', `wall/${w.id}/delete`, { key: w.key }).catch(() => {}); });
       return r;
     };

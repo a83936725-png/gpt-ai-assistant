@@ -367,22 +367,33 @@
   setTimeout(() => { if (App.social) App.social.api().then((ok) => { if (ok) checkPending(); }); }, 2500);
   setInterval(checkPending, 60 * 1000);
 
+  // new blessings waiting: near the top (something happened)
   App.homeCard('wall', {
     stages: ['preg', 'baby'],
     order: 7,
     render(el) {
       if (!App.social || App.social.isReady() !== true) return;
-      const walls = S().walls || [];
-      const waiting = walls.find((w) => w.pending);
-      if (waiting) {
-        el.append(h('button', { type: 'button', class: 'card wall-home', onclick: () => App.navigate('wall', { id: waiting.id }) },
-          h('span', { class: 'wall-home-e', 'aria-hidden': 'true' }, '💌'),
-          h('span', { class: 'grow' }, h('strong', null, `${titleOf(waiting)}有 ${waiting.pending} 則新祝福`), h('span', { class: 'small muted' }, '確認後就會出現在牆上')),
-          h('span', { class: 'soc-dot' }, String(waiting.pending))));
-        return;
-      }
-      const k = nudgeFor();
-      if (!k || walls.some((w) => w.occasion === k) || (S().wallSkip || {})[k]) return;
+      const waiting = (S().walls || []).find((w) => w.pending);
+      if (!waiting) return;
+      el.append(h('button', { type: 'button', class: 'card wall-home', onclick: () => App.navigate('wall', { id: waiting.id }) },
+        h('span', { class: 'wall-home-e', 'aria-hidden': 'true' }, '💌'),
+        h('span', { class: 'grow' }, h('strong', null, `${titleOf(waiting)}有 ${waiting.pending} 則新祝福`), h('span', { class: 'small muted' }, '確認後就會出現在牆上')),
+        h('span', { class: 'soc-dot' }, String(waiting.pending))));
+    },
+  });
+  // the occasion to open one (滿月 coming…): an invitation, so below the main cards
+  const nudgeKey = () => {
+    if (!App.social || App.social.isReady() !== true) return null;
+    const walls = S().walls || [];
+    if (walls.some((w) => w.pending)) return null;
+    const k = nudgeFor();
+    return !k || walls.some((w) => w.occasion === k) || (S().wallSkip || {})[k] ? null : k;
+  };
+  App.homeCard('wall-nudge', {
+    stages: ['preg', 'baby'],
+    order: 42,
+    render(el) {
+      const k = nudgeKey(); if (!k) return;
       const o = OCC[k];
       const b = store.baby && store.baby();
       el.append(h('div', { class: 'card wall-home' },
@@ -399,6 +410,6 @@
   });
 
   App.wall = {
-    OCC, titleOf, create, remove, loadAdmin, suggest, nudgeFor,
+    OCC, titleOf, create, remove, loadAdmin, suggest, nudgeFor, nudgeKey,
   };
 }());

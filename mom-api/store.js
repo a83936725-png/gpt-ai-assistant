@@ -152,6 +152,21 @@ export class MemoryStore {
   }
 
   async zcountSince(key, since) { const m = this.zsets.get(key); if (!m) return 0; let n = 0; m.forEach((sc) => { if (sc >= since) n += 1; }); return n; }
+
+  async ztrim(key, before) { const m = this.zsets.get(key); if (m) m.forEach((sc, k) => { if (sc < before) m.delete(k); }); }
+
+  async zscore(key, member) { const m = this.zsets.get(key); return m && m.has(member) ? m.get(member) : null; }
+
+  // a counter inside a hash (poll tallies); read back with hgetAllJson
+  async hincrBy(key, field, by = 1, ttlSec = 0, now = Date.now()) {
+    this.gone(key, now);
+    if (!this.hashes.has(key)) this.hashes.set(key, new Map());
+    const m = this.hashes.get(key);
+    const v = Number(m.has(field) ? JSON.parse(m.get(field)) : 0) + by;
+    m.set(field, JSON.stringify(v));
+    if (ttlSec) this.expire(key, ttlSec, now);
+    return v;
+  }
 }
 
 export class RedisRestStore {
@@ -287,6 +302,16 @@ export class RedisRestStore {
   }
 
   async zcountSince(key, since) { return Number(await this.cmd('ZCOUNT', `mom:x:${key}`, since, '+inf')) || 0; }
+
+  async ztrim(key, before) { await this.cmd('ZREMRANGEBYSCORE', `mom:x:${key}`, '-inf', `(${before}`); }
+
+  async zscore(key, member) { const v = await this.cmd('ZSCORE', `mom:x:${key}`, member); return v === null || v === undefined ? null : Number(v); }
+
+  async hincrBy(key, field, by = 1, ttlSec = 0) {
+    const v = Number(await this.cmd('HINCRBY', `mom:x:${key}`, field, by));
+    if (ttlSec) await this.cmd('EXPIRE', `mom:x:${key}`, ttlSec);
+    return v;
+  }
 }
 
 export function storeFromEnv(env = process.env) {

@@ -578,6 +578,13 @@
             h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '島上的媽媽'), h('div', { class: 'li-sub' }, so.on ? `已開啟・顯示為「${so.name || '匿名媽咪'}」` : '和同階段的媽媽互相揮手、送愛心（未開啟）')),
             h('span', { class: 'li-right', html: ui.ICONS.chevron }));
         })() : null,
+        App.screens.circle ? (() => {
+          const cc = (App.social && App.social.soc().circle) || {};
+          const lb = App.circle && App.circle.label();
+          return h('a', { class: 'list-item', href: '#/circle' }, h('span', { class: 'li-icon' }, '🗳️'),
+            h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '同週好孕圈'), h('div', { class: 'li-sub' }, cc.on && lb ? `已加入・${lb.title}` : '和同週的媽媽一起回答每週小問題、互相打氣')),
+            h('span', { class: 'li-right', html: ui.ICONS.chevron }));
+        })() : null,
         App.screens.wall ? (() => {
           const ws = (App.social && App.social.soc().walls) || [];
           const pend = ws.reduce((n, w) => n + (w.pending || 0), 0);
@@ -603,9 +610,9 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.7.2`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.7.3`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
-        h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理（每則都附來源，可點開查看），不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。紀錄只儲存在你的裝置上；只有你開啟「島上的媽媽」或祝福牆時，才會送出角色樣子、名稱和祝福。')));
+        h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理（每則都附來源，可點開查看），不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。紀錄只儲存在你的裝置上；只有你開啟「島上的媽媽」、同週好孕圈或祝福牆時，才會送出角色樣子、名稱、預產週或出生月份，以及你的回答和祝福。')));
     },
   });
 

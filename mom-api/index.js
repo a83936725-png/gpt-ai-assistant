@@ -10,6 +10,7 @@
  *   POST /presence {sid}         heartbeat from an open app
  *   GET  /stats                  {online (last 2 min), registered, todaySignups}
  *   /social/*, /wall/*           島上的媽媽 (preset reactions) and 祝福牆 — see social.js
+ *   /circle/*                    同週好孕圈 (weekly question, mood, cheers) — see circle.js
  *
  * Health records and pregnancy stage are NOT sent here; they stay on the user's device.
  * Env: MOM_AUTH_SECRET (≥32 chars, required on Vercel/production; shorter ones are ignored), KV_REST_API_URL +
@@ -21,6 +22,7 @@ import crypto from 'crypto';
 import axios from 'axios';
 import { storeFromEnv } from './store.js';
 import { mountSocial } from './social.js';
+import { mountCircle } from './circle.js';
 import {
   hashPassword, verifyPassword, needsRehash, isCommonPassword, DUMMY_HASH, makeSigner, normaliseAccount, cleanText, newId, randomCode, hashKey, ipBucket,
 } from './auth.js';
@@ -297,6 +299,9 @@ export function createMomRouter({
   }));
 
   mountSocial(router, {
+    store, now, secret, over, clientIp, wrap,
+  });
+  mountCircle(router, {
     store, now, secret, over, clientIp, wrap,
   });
 

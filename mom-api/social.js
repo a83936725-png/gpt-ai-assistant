@@ -81,12 +81,30 @@ export function cleanAvatar(av) {
   };
 }
 
-export function mountSocial(router, {
-  store, now, secret, over, clientIp, wrap,
+// one identity for everything social (島上的媽媽, 同週好孕圈): the phone's private key → a public id; a network can
+// bring at most a few new identities an hour, so nobody can stuff a poll or a count with made-up moms
+export function makeIdentity({
+  store, secret, over, clientIp,
 }) {
   const nidOf = (key) => crypto.createHmac('sha256', secret).update(`soc:${key}`).digest('base64').replace(/[^A-Za-z0-9]/g, '')
     .slice(0, 16)
     .padEnd(16, 'x');
+  // false when this network has brought too many new identities lately
+  async function admit(req, nid, t) {
+    if (await store.hasFlag(`socknown:${nid}`, t)) return true;
+    if (await over('soc-new', clientIp(req), LIMITS.newIdentity)) return false;
+    await store.setFlag(`socknown:${nid}`, 60 * DAY, t);
+    return true;
+  }
+  return { nidOf, admit, okKey };
+}
+
+export function mountSocial(router, {
+  store, now, secret, over, clientIp, wrap,
+}) {
+  const { nidOf, admit } = makeIdentity({
+    store, secret, over, clientIp,
+  });
   let countsCache = null;
   async function counts(t) {
     if (countsCache && t - countsCache.at < 15000) return countsCache.counts;
@@ -112,10 +130,7 @@ export function mountSocial(router, {
     const t = now();
     const nid = nidOf(key);
     const prev = await store.getJson(`soc:p:${nid}`, t);
-    if (!prev && !(await store.hasFlag(`socknown:${nid}`, t))) {
-      if (await over('soc-new', clientIp(req), LIMITS.newIdentity)) { res.status(429).json({ error: 'too_many' }); return; }
-      await store.setFlag(`socknown:${nid}`, 60 * DAY, t);
-    }
+    if (!prev && !(await admit(req, nid, t))) { res.status(429).json({ error: 'too_many' }); return; }
     const [hearts, reports] = await Promise.all([store.getNum(`soc:h:${nid}`, t), store.getNum(`soc:rep:${nid}`, t)]);
     const me = {
       nid, island: b.island, av: cleanAvatar(b.av), name: reports >= 3 ? '' : cleanName(b.name), hearts, ts: t,

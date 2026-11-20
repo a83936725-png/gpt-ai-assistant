@@ -12,9 +12,13 @@ const AXE = process.env.AXE_PATH || '';
 const results = []; const errs = [];
 const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: String(info).slice(0, 300) });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let server = null;
+process.on('exit', () => { if (server) server.kill(); }); // never leave the test server running
 
 (async () => {
-  const server = spawn(process.execPath, ['api/index.js'], {
+  // a server already on the port would be an old one with old code: refuse to test against it
+  try { await fetch(`${BASE}api/config`); console.error(`SCRIPT ERROR port ${PORT} is already in use`); process.exit(1); } catch (e) { /* free */ }
+  server = spawn(process.execPath, ['api/index.js'], {
     cwd: path.resolve(__dirname, '../..'),
     env: {
       ...process.env, APP_PORT: PORT, MOM_TRUST_PROXY: '1', MOM_CODE_ECHO: '1', LINE_LOGIN_CHANNEL_ID: '', NODE_ENV: 'development',
@@ -93,7 +97,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('…the sheet starts with her address filled in', (await A.inputValue('.sheet input[aria-label="Email 或手機"]')) === email);
   await A.click('.login-reset-go'); await A.waitForTimeout(900);
   const rHint = await text(A, '.sheet .login-code-hint');
-  ok('寄驗證碼: 「如果 … 有註冊，會收到」 (never says whether it exists)', /如果 m\*\*\*@example\.com 有註冊，會收到 6 位數驗證碼/.test(rHint), rHint);
+  ok('寄驗證碼: 「如果 … 有註冊，會收到」 (never says whether it exists)', /如果 m\*\*\*@example\.com 有註冊，會收到 6 位數驗證碼/.test(rHint), rHint || await text(A, '.sheet'));
   await axe(A, '忘記密碼 sheet');
   await A.fill('.sheet .login-code', await devCode(A, '.sheet .login-code-hint'));
   await A.fill('.sheet input[aria-label="新密碼"]', 'brand-new-pass-7');

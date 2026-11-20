@@ -102,6 +102,7 @@
   const ERR = {
     unauthorized: '請先登入會員',
     need_consent: '請先同意隱私權政策與使用條款',
+    need_verify: '請先驗證你的 Email／手機',
     no_campaign: '這個團購已經結束了',
     in_team: '你已經在這個團購的另一團了',
     full: '這一團剛好滿了，可以自己開一團',
@@ -139,6 +140,7 @@
           go.disabled = false;
           if (e.code === 'in_team' && e.status === 409) { sheet.close(); await load(true); const t = myTeam(c.id); if (t) App.navigate('groupbuy', { team: t.id }); return; }
           if (e.code === 'need_consent' && App.account.ensureConsent) { sheet.close(); App.account.ensureConsent(user()); return; }
+          if (e.code === 'need_verify' && App.account.verifySheet) { sheet.close(); App.account.verifySheet('參加團購前，先驗證你的 Email／手機。'); return; }
           err.textContent = errText(e); err.hidden = false;
         }
       },
@@ -165,6 +167,7 @@
     } catch (e) {
       btn.disabled = false;
       if (e.code === 'need_consent' && App.account.ensureConsent) { App.account.ensureConsent(user()); return; }
+      if (e.code === 'need_verify' && App.account.verifySheet) { App.account.verifySheet('參加團購前，先驗證你的 Email／手機。'); return; }
       ui.toast(errText(e));
       if (['full', 'closed', 'in_team'].includes(e.code)) { teams.delete(team.id); await load(true); App.refresh(); }
     }

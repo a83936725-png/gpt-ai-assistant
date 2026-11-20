@@ -31,7 +31,17 @@
     } finally { clearTimeout(timer); }
   }
   let cfgP = null;
-  const config = () => { if (!cfgP) cfgP = call('GET', 'config').catch(() => null); return cfgP; };
+  let cfgNow = null; // the same, once it has arrived (for things drawn without waiting)
+  const config = () => { if (!cfgP) cfgP = call('GET', 'config').catch(() => null).then((c) => { cfgNow = c; return c; }); return cfgP; };
+  // 驗證碼: which kinds of account (Email / phone) the server can send a code to
+  const kindOf = (account) => (/@/.test(String(account)) ? 'email' : 'phone');
+  const canVerify = (cfg, kind) => !!(cfg && cfg.verify && cfg.verify[kind]);
+  const mask = (account) => {
+    const v = String(account || '').trim();
+    if (/@/.test(v)) { const [n, d] = v.split('@'); return `${n.slice(0, 1)}***@${d}`; }
+    const ph = v.replace(/\D/g, '').replace(/^886/, '0');
+    return ph.length >= 7 ? `${ph.slice(0, 4)}***${ph.slice(-3)}` : v;
+  };
 
   /* ================= live counts ================= */
   App.live = null; // {online, registered, todaySignups, storage}
@@ -223,6 +233,103 @@
     });
   }
 
+  /* ---- 驗證碼 pieces ---- */
+  function codeField(onResend) {
+    const input = h('input', {
+      type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 6, placeholder: '6 位數驗證碼', class: 'input login-code', 'aria-label': '驗證碼',
+    });
+    const hint = h('p', { class: 'tiny muted login-code-hint', role: 'status' });
+    const resend = h('button', { type: 'button', class: 'link-btn small login-resend', onclick: () => onResend() }, '重新寄送');
+    let timer = null;
+    const cool = (sec) => {
+      clearInterval(timer); let left = sec; resend.disabled = true; resend.textContent = `重新寄送（${left}）`;
+      timer = setInterval(() => {
+        left -= 1;
+        if (left <= 0 || !resend.isConnected) { clearInterval(timer); resend.disabled = false; resend.textContent = '重新寄送'; } else resend.textContent = `重新寄送（${left}）`;
+      }, 1000);
+    };
+    const wrapped = (fn) => async () => { try { await fn(); } catch (e) { ui.toast(errText(e)); } };
+    resend.onclick = wrapped(onResend);
+    return { el: h('div', { class: 'login-code-box' }, input, hint, resend), input, hint, cool };
+  }
+  // 忘記密碼: a code to the Email / phone, then a new password (other devices are logged out)
+  function forgotSheet(prefill = '') {
+    const account = h('input', {
+      type: 'text', inputmode: 'email', autocomplete: 'username', value: prefill, placeholder: 'Email 或手機（09xxxxxxxx）', class: 'input', 'aria-label': 'Email 或手機',
+    });
+    const err = h('p', { class: 'login-err', hidden: true, role: 'alert' });
+    const codeUI = codeField(() => send(true));
+    const npw = h('input', {
+      type: 'password', autocomplete: 'new-password', placeholder: '新密碼（至少 8 個字）', class: 'input', 'aria-label': '新密碼',
+    });
+    const step2 = h('div', { class: 'login-step2', hidden: true }, ui.field('驗證碼', codeUI.el), ui.field('新密碼', npw));
+    const go = h('button', { class: 'btn btn-primary btn-block login-reset-go' }, '寄驗證碼');
+    let stage = 1;
+    account.addEventListener('input', () => { if (stage === 2) { stage = 1; step2.hidden = true; go.textContent = '寄驗證碼'; } });
+    async function send(again) {
+      const r = await call('POST', 'auth/code', { account: account.value, purpose: 'reset' });
+      stage = 2; step2.hidden = false; go.textContent = '設定新密碼並登入';
+      codeUI.hint.textContent = `如果 ${mask(account.value)} 有註冊，會收到 6 位數驗證碼（10 分鐘內有效）${r.devCode ? `（測試環境：${r.devCode}）` : ''}`;
+      codeUI.cool(60);
+      if (again) ui.toast('已重新寄送驗證碼'); else codeUI.input.focus();
+    }
+    go.onclick = async () => {
+      err.hidden = true; go.disabled = true;
+      try {
+        if (stage === 1) { await send(false); go.disabled = false; return; }
+        const r = await call('POST', 'auth/reset', { account: account.value, code: codeUI.input.value, password: npw.value });
+        sh.close();
+        setAuth(r.token, r.user);
+        ui.toast('密碼已更新，其他裝置都已登出 💜');
+        goOn();
+      } catch (e) { err.textContent = errText(e); err.hidden = false; go.disabled = false; }
+    };
+    const sh = ui.sheet({
+      title: '忘記密碼',
+      body: h('div', { class: 'stack-sm' }, h('p', { class: 'small muted' }, '輸入註冊用的 Email 或手機，我們會寄驗證碼給你，再設定新的密碼。'), ui.field('帳號', account), step2, err),
+      footer: go,
+    });
+  }
+  // an account that hasn't proved its Email / phone yet (made before codes existed)
+  const needVerify = (u) => !!(u && u.verified === false && canVerify(cfgNow, u.provider));
+  function verifySheet(reason = '') {
+    const u = store.state.auth && store.state.auth.user;
+    if (!u) return;
+    const what = u.provider === 'phone' ? '手機' : 'Email';
+    const err = h('p', { class: 'login-err', hidden: true, role: 'alert' });
+    const codeUI = codeField(() => send(true));
+    const step2 = h('div', { class: 'login-step2', hidden: true }, ui.field('驗證碼', codeUI.el));
+    const go = h('button', { class: 'btn btn-primary btn-block verify-go' }, `寄驗證碼到我的${what}`);
+    let stage = 1;
+    async function send(again) {
+      const r = await call('POST', 'auth/verify/send', {});
+      if (r.already) { sh.close(); ui.toast('已經驗證過了 💜'); refreshMe(); return; }
+      stage = 2; step2.hidden = false; go.textContent = '確認驗證碼';
+      codeUI.hint.textContent = `已寄出 6 位數驗證碼到 ${u.accountHint}（10 分鐘內有效）${r.devCode ? `（測試環境：${r.devCode}）` : ''}`;
+      codeUI.cool(60);
+      if (again) ui.toast('已重新寄送驗證碼'); else codeUI.input.focus();
+    }
+    go.onclick = async () => {
+      err.hidden = true; go.disabled = true;
+      try {
+        if (stage === 1) { await send(false); go.disabled = false; return; }
+        const r = await call('POST', 'auth/verify', { code: codeUI.input.value });
+        store.update((s) => { if (s.auth) s.auth.user = r.user; });
+        sh.close();
+        ui.toast('驗證完成 💜');
+        if (App.gift) App.gift.sync(r.user); // a welcome gift that was waiting for this
+      } catch (e) { err.textContent = errText(e); err.hidden = false; go.disabled = false; }
+    };
+    const sh = ui.sheet({
+      title: `驗證你的${what}`,
+      body: h('div', { class: 'stack-sm' },
+        reason ? h('p', { class: 'small bold' }, reason) : null,
+        h('p', { class: 'small muted' }, `確認 ${u.accountHint} 是你本人的：帳號比較安全，也才能領邀請禮、參加團購。`),
+        step2, err),
+      footer: go,
+    });
+  }
+
   let mode = 'login'; // 登入／註冊 toggle on the login page
   // after logging in: where she was heading (App.afterLogin, e.g. a friend's group-buy team), else 首頁 or setup
   const goOn = () => {
@@ -243,6 +350,14 @@
     line_error: 'LINE 登入失敗，請再試一次',
     line_disabled: '尚未開放 LINE 登入',
     not_configured: '會員服務尚未開放',
+    need_code: '請輸入寄給你的 6 位數驗證碼',
+    bad_code: '驗證碼不正確，請再看一次',
+    code_expired: '驗證碼已過期，請按「重新寄送」',
+    code_too_many: '錯太多次了，請按「重新寄送」拿新的驗證碼',
+    wait: '剛寄過驗證碼，請等 1 分鐘再重新寄送',
+    send_failed: '驗證碼寄不出去，請確認 Email／手機是否正確，稍後再試',
+    need_verify: '請先驗證你的 Email／手機',
+    verify_off: '目前無法寄送驗證碼',
     need_consent: '請先勾選「我已閱讀並同意隱私權政策與使用條款」才能註冊',
     policy_changed: '隱私權政策剛更新，請重新整理頁面後再看一次並同意',
   };
@@ -331,6 +446,22 @@
           const inv = h('input', { type: 'text', value: share.invitedBy || '', placeholder: '邀請碼（選填）', class: 'input', maxlength: 12, 'aria-label': '邀請碼' });
           const err = h('p', { class: 'login-err', hidden: true });
           const submit = h('button', { class: 'btn btn-primary btn-block', type: 'submit' }, mode === 'login' ? '登入' : '註冊並登入');
+          // 驗證碼: first a code to the Email / phone, then the account (only when the server can send one)
+          let sent = null; // the address a sign-up code went to
+          const codeUI = codeField(() => sendSignupCode(true));
+          const codeWrap = h('div', { class: 'login-code-wrap', hidden: true }, ui.field('驗證碼', codeUI.el));
+          acct.addEventListener('input', () => { if (sent && acct.value.trim() !== sent) { sent = null; codeWrap.hidden = true; submit.textContent = '註冊並登入'; } });
+          async function sendSignupCode(again) {
+            const r = await call('POST', 'auth/code', { account: acct.value, purpose: 'register', consent: App.privacy ? App.privacy.VERSION : '' });
+            sent = acct.value.trim();
+            codeWrap.hidden = false;
+            codeUI.hint.textContent = `已寄出 6 位數驗證碼到 ${mask(acct.value)}，10 分鐘內有效${r.devCode ? `（測試環境：${r.devCode}）` : ''}`;
+            codeUI.cool(60);
+            submit.textContent = '確認驗證碼並註冊';
+            if (again) ui.toast('已重新寄送驗證碼'); else codeUI.input.focus();
+          }
+          const forgot = mode === 'login' && (canVerify(cfg, 'email') || canVerify(cfg, 'phone'))
+            ? h('button', { type: 'button', class: 'link-btn small login-forgot', onclick: () => forgotSheet(acct.value) }, '忘記密碼？') : null;
           // 註冊: an unticked box for the policy (required) and a separate one for marketing (optional)
           const agree = mode === 'register' && App.privacy ? App.privacy.box() : null;
           const mkt = mode === 'register' && App.privacy ? App.privacy.box({ label: MKT_LABEL(), required: false }) : null;
@@ -338,20 +469,32 @@
             ui.seg([{ value: 'login', label: '登入' }, { value: 'register', label: '註冊' }], mode, (v) => { mode = v; App.refresh(); }),
             ui.field('帳號', acct),
             ui.field('密碼', h('div', { class: 'login-pw' }, pw, showPw)),
+            forgot,
             mode === 'register' ? ui.field('暱稱', nick) : null,
             mode === 'register' ? ui.field('邀請碼', inv, share.inviterName ? `由「${share.inviterName}」邀請` : '朋友給你的邀請碼（選填）：填了你們都有邀請禮') : null,
             agree ? h('div', { class: 'pv-boxes' }, agree.el, mkt.el) : null,
+            codeWrap,
             err, submit);
           form.addEventListener('submit', async (e) => {
             e.preventDefault();
             err.hidden = true;
             if (agree && !agree.need('請先勾選「我已閱讀並同意隱私權政策與使用條款」才能註冊')) return;
+            const label = submit.textContent;
             submit.disabled = true; submit.textContent = '處理中…';
+            // 註冊 where the server can send a code: send it first (the account is made with the code)
+            if (mode === 'register' && canVerify(cfg, kindOf(acct.value)) && !sent) {
+              try {
+                if (pw.value.length < 8) throw Object.assign(new Error('weak'), { code: 'weak_password' });
+                await sendSignupCode(false);
+              } catch (ex) { err.textContent = errText(ex); err.hidden = false; submit.textContent = label; }
+              submit.disabled = false;
+              return;
+            }
             try {
               const body = mode === 'login'
                 ? { account: acct.value, password: pw.value }
                 : {
-                  account: acct.value, password: pw.value, nickname: nick.value, invitedBy: inv.value, consent: App.privacy ? App.privacy.VERSION : '', marketing: !!(mkt && mkt.checked),
+                  account: acct.value, password: pw.value, nickname: nick.value, invitedBy: inv.value, consent: App.privacy ? App.privacy.VERSION : '', marketing: !!(mkt && mkt.checked), ...(sent ? { code: codeUI.input.value } : {}),
                 };
               const res = await call('POST', mode === 'login' ? 'auth/login' : 'auth/register', body);
               setAuth(res.token, res.user);
@@ -361,12 +504,12 @@
               setTimeout(() => ensureConsent(res.user), 300); // agreed to an older policy: ask again
             } catch (ex) {
               err.textContent = errText(ex); err.hidden = false;
-              submit.disabled = false; submit.textContent = mode === 'login' ? '登入' : '註冊並登入';
+              submit.disabled = false; submit.textContent = label;
             }
           });
           holder.append(form,
             h('button', { class: 'btn btn-ghost btn-block mt', onclick: () => App.navigate(store.state.onboarded ? 'home' : 'onboarding') }, '先不登入，直接使用'),
-            h('p', { class: 'tiny muted center mt' }, '登入只用來辨識帳號、計算邀請人數與社群人數；你的懷孕、寶寶紀錄仍只存在這支手機，不會上傳。'),
+            h('p', { class: 'tiny muted center mt' }, '登入只用來辨識帳號、寄驗證碼、計算邀請人數、團購與社群功能；你的懷孕、寶寶紀錄仍只存在這支手機，不會上傳。'),
             App.privacy ? h('p', { class: 'center pv-standalone' }, App.privacy.link()) : null);
         });
       }
@@ -385,7 +528,10 @@
             h('div', { class: 'grow' },
               h('div', { class: 'card-title' }, `👤 ${u.nickname}`, h('span', { class: 'tag primary' }, { line: 'LINE', email: 'Email', phone: '手機' }[u.provider] || '')),
               h('div', { class: 'small muted' }, `${u.accountHint}・邀請碼 ${u.code}`),
-              h('div', { class: 'small' }, `已成功邀請 ${u.referrals || 0} 位加入`)),
+              h('div', { class: 'small' }, `已成功邀請 ${u.referrals || 0} 位加入`),
+              needVerify(u) ? h('div', { class: 'acct-verify' },
+                h('span', { class: 'small grow' }, `${u.provider === 'phone' ? '手機' : 'Email'}還沒驗證：驗證後才能領邀請禮、參加團購`),
+                h('button', { class: 'btn btn-sm btn-primary acct-verify-go', onclick: () => verifySheet() }, '驗證')) : null),
             h('div', { class: 'stack-sm' },
               h('button', { class: 'btn btn-sm btn-ghost', onclick: () => { logout(); App.refresh(); } }, '登出'),
               h('button', {
@@ -421,6 +567,8 @@
     },
     logout, refreshMe, refreshSoon: () => maybeRefresh(), call, available: async () => !!(await config()), ensureConsent, exportMine,
     config,
+    verifySheet,
+    needVerify,
     // 登入／註冊 page opened on 註冊 (the 見面禮 card)
     openRegister() { mode = 'register'; if (document.body.dataset.screen === 'login') App.refresh(); else App.navigate('login'); },
   };

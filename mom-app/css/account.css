@@ -26,6 +26,15 @@
 .login-pw .input { padding-right: 64px; }
 .login-show { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); min-height: 36px; padding: 0 8px; }
 .login-err { color: var(--c-danger-ink); font-weight: 600; font-size: 14px; }
+/* 驗證碼 */
+.login-code-box { display: grid; gap: 4px; }
+.login-code { letter-spacing: 6px; font-size: 20px; font-weight: 700; text-align: center; }
+.login-code-hint { margin: 0; }
+.login-resend { justify-self: start; min-height: 36px; padding: 0; }
+.login-forgot { display: block; margin: -6px 0 10px auto; min-height: 36px; padding: 0 2px; }
+.login-step2[hidden], .login-code-wrap[hidden] { display: none; }
+.acct-verify { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: var(--c-warn-soft); color: var(--c-warn-ink); }
+.acct-verify-go { flex: none; }
 .login-gift { margin: 0 0 14px; padding: 10px 12px; border-radius: 14px; background: var(--c-primary-soft); color: var(--c-primary); font-size: 14px; font-weight: 600; text-align: center; }
 .acct-card .card-title .tag { margin-left: 4px; }
 .ob-login { margin-top: 10px; }

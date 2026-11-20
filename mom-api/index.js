@@ -220,14 +220,15 @@ export function createMomRouter({
     if (isCommonPassword(password)) { res.status(400).json({ error: 'common_password' }); return; }
     const ip = clientIp(req);
     if (await over('reg', ip, LIMITS.registerIp)) { res.status(429).json({ error: 'too_many' }); return; }
-    if (await store.getUserByAccount(acc.account)) { res.status(409).json({ error: 'exists' }); return; }
-    // with a way to send codes, the address is proved first: nobody can take someone else's Email / phone
+    // with a way to send codes, the address is proved first: nobody can take someone else's Email / phone, and
+    // nobody can learn whether an address already has an account (no code is ever sent for one that has)
     const mustVerify = verify.can(acc.type);
     if (mustVerify) {
       if (!code) { res.status(400).json({ error: 'need_code' }); return; }
       const r = await verify.check('register', acc.account, code, ip);
       if (r !== 'ok') { res.status(400).json({ error: r }); return; }
     }
+    if (await store.getUserByAccount(acc.account)) { res.status(409).json({ error: 'exists' }); return; }
     const user = await createUser({
       account: acc.account, provider: acc.type, nickname, passwordHash: await hashPassword(password), invitedBy, consent: true, marketing: marketing === true, verified: mustVerify,
     });

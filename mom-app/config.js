@@ -28,7 +28,7 @@ window.BRAND = {
   privacy: {
     company: '', // 營運公司全名，例如「〇〇股份有限公司」；留空時顯示品牌名稱
     contact: '', // 個資窗口：Email 或電話，例如 privacy@example.com；留空時請至品牌頁的聯絡方式
-    region: '', // 會員資料存放的主機所在地區，例如「美國（Vercel 與 Upstash 的資料中心）」
-    processors: 'Vercel（網站主機）、Upstash／Vercel KV（會員資料庫）', // 受託處理會員資料的服務商
+    region: '', // 會員資料存放與處理的地區，例如「美國（Vercel、Upstash 的資料中心與寄驗證碼的 Resend／Twilio）」
+    processors: 'Vercel（網站主機）、Upstash／Vercel KV（會員資料庫）、寄送驗證碼的 Email／簡訊服務商', // 受託處理會員資料的服務商（寄驗證碼請寫實際使用的，例如 Resend、Twilio）
   },
 };

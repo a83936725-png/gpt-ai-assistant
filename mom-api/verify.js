@@ -1,6 +1,9 @@
 /* 驗證碼 (used by index.js): an Email / phone sign-up first proves it owns the address, 忘記密碼 resets a password
  * with a code, and an older account can verify itself.
- *   POST /auth/code {account, purpose: 'register', consent}   a sign-up code, before the account exists
+ *   POST /auth/code {account, purpose: 'register', consent}   a sign-up code, before the account exists (an address
+ *                                                               that already has one gets a 「已經註冊過」 notice instead,
+ *                                                               with exactly the same answer here: nobody can test
+ *                                                               whether someone's Email / phone uses a pregnancy app)
  *   POST /auth/code {account, purpose: 'reset'}                a reset code (the same answer whether or not the account
  *                                                               exists, so nobody can test which addresses use the app)
  *   POST /auth/verify/send                 (logged in) a code to my own Email / phone
@@ -11,8 +14,8 @@
  * TWILIO_MESSAGING_SERVICE_SID (SMS via Twilio); or MOM_CODE_WEBHOOK_URL (+ MOM_CODE_WEBHOOK_SECRET to sign it) for
  * any other service (三竹、every8d… through the brand's own system). Without any of them, sign-up works as before and
  * nothing asks for a code. MOM_CODE_ECHO=1 (refused in production) puts the code in the answer, for tests and trials.
- * Codes: 6 digits, kept only as a keyed hash, 10 minutes, 5 tries; a new code at most once a minute and 6 an hour per
- * address, 20 an hour per network. */
+ * Codes: 6 digits, kept only as a keyed hash, 10 minutes, 5 tries; a new code at most once a minute per address and
+ * purpose (sign-up, reset, verify), 6 an hour per address in all, 20 an hour per network. */
 import crypto from 'crypto';
 import { normaliseAccount, safeEqual } from './auth.js';
 import { POLICY_VERSION } from './policy.js';
@@ -34,9 +37,11 @@ export function makeSender(env, http, prodLike, appName = '易家做媽媽') {
   const hook = env.MOM_CODE_WEBHOOK_URL && /^https:\/\//.test(env.MOM_CODE_WEBHOOK_URL) ? env.MOM_CODE_WEBHOOK_URL : '';
   const resend = env.RESEND_API_KEY && env.MOM_MAIL_FROM;
   const twilio = env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && (env.TWILIO_FROM || env.TWILIO_MESSAGING_SERVICE_SID);
-  const text = (code, purpose) => (purpose === 'reset'
-    ? `【${appName}】重設密碼的驗證碼：${code}，10 分鐘內有效。如果不是你本人操作，請忽略，你的密碼不會改變。`
-    : `【${appName}】驗證碼：${code}，10 分鐘內有效。請不要把驗證碼告訴任何人。`);
+  const TEXT = {
+    reset: (code) => `【${appName}】重設密碼的驗證碼：${code}，10 分鐘內有效。如果不是你本人操作，請忽略，你的密碼不會改變。`,
+    exists: () => `【${appName}】這個 Email／手機已經註冊過了，請直接登入；忘記密碼可以在登入頁用驗證碼重設。如果不是你本人操作，請忽略。`,
+  };
+  const text = (code, purpose) => (TEXT[purpose] ? TEXT[purpose](code) : `【${appName}】驗證碼：${code}，10 分鐘內有效。請不要把驗證碼告訴任何人。`);
   async function send(account, code, purpose) {
     const { type, value } = split(account);
     const msg = text(code, purpose);
@@ -50,7 +55,7 @@ export function makeSender(env, http, prodLike, appName = '易家做媽媽') {
     }
     if (type === 'email' && resend) {
       await http.post('https://api.resend.com/emails', {
-        from: env.MOM_MAIL_FROM, to: [value], subject: `${appName} 驗證碼 ${code}`, text: msg,
+        from: env.MOM_MAIL_FROM, to: [value], subject: code ? `${appName} 驗證碼 ${code}` : `${appName} 帳號通知`, text: msg,
       }, { headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, timeout: 8000 });
       return;
     }
@@ -83,7 +88,7 @@ export function makeVerify({
 
   // a fresh code replaces the previous one; 'wait' / 'too_many' when asked too often
   async function issue(purpose, account, ip) {
-    if (await over('code-min', account, LIMITS.addrMinute)) return { error: 'wait' };
+    if (await over('code-min', `${purpose}|${account}`, LIMITS.addrMinute)) return { error: 'wait' };
     if (await over('code-hour', account, LIMITS.addrHour) || await over('code-ip', ip, LIMITS.ip)) return { error: 'too_many' };
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     const t = now();
@@ -104,6 +109,14 @@ export function makeVerify({
     }
     await store.del(key(purpose, account));
     return 'ok';
+  }
+  // a message without a code (「已經註冊過」): the same limits and the same answer as a code
+  async function sendNotice(res, purpose, account, ip) {
+    // counted like a sign-up code for that address (the answer must look the same)
+    if (await over('code-min', `register|${account}`, LIMITS.addrMinute)) { res.status(429).json({ error: 'wait' }); return; }
+    if (await over('code-hour', account, LIMITS.addrHour) || await over('code-ip', ip, LIMITS.ip)) { res.status(429).json({ error: 'too_many' }); return; }
+    try { await sender.send(account, null, purpose); } catch (e) { console.error('[mom-api] sending a notice failed:', e.message); }
+    res.json({ ok: true, ttl: CODE_TTL });
   }
   async function sendCode(res, purpose, account, ip) {
     const r = await issue(purpose, account, ip);
@@ -128,14 +141,14 @@ export function makeVerify({
       const ip = clientIp(req);
       if (body.purpose === 'register') {
         if (body.consent !== POLICY_VERSION) { res.status(400).json({ error: body.consent ? 'policy_changed' : 'need_consent', policy: POLICY_VERSION }); return; }
-        if (await getUserByAccount(acc.account)) { res.status(409).json({ error: 'exists' }); return; }
+        if (await getUserByAccount(acc.account)) { await sendNotice(res, 'exists', acc.account, ip); return; }
         await sendCode(res, 'register', acc.account, ip);
         return;
       }
       if (body.purpose === 'reset') {
         const u = await getUserByAccount(acc.account);
         if (!u || !u.passwordHash) { // nothing to reset: answer exactly like a sent code (only the limits still count)
-          if (await over('code-min', acc.account, LIMITS.addrMinute)) { res.status(429).json({ error: 'wait' }); return; }
+          if (await over('code-min', `reset|${acc.account}`, LIMITS.addrMinute)) { res.status(429).json({ error: 'wait' }); return; }
           res.json({ ok: true, ttl: CODE_TTL });
           return;
         }

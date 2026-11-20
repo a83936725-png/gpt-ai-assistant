@@ -95,10 +95,17 @@ function flows(label, makeStore) {
       }, { headers: { 'X-Forwarded-For': net } });
       expect(r.status).toBe(201);
       expect(r.data.user.verified).toBe(true);
-      // a used code is gone; the address now belongs to an account
-      expect((await code({ account: 'mia@example.com', purpose: 'register', consent: POLICY }, ip())).data.error).toBe('exists');
+      const signedAt = clock;
+      // the address now has an account: asking again looks exactly the same (no code, a 「已經註冊過」 notice instead),
+      // and no guessed code can tell either
+      clock += 61 * 1000;
+      const again = await code({ account: 'mia@example.com', purpose: 'register', consent: POLICY }, ip());
+      expect(again.data).toEqual({ ok: true, ttl: 600 });
+      expect((await api.post(`${base}/auth/register`, {
+        consent: POLICY, account: 'mia@example.com', password: 'baby-sleeps-9', code: '123456',
+      }, { headers: { 'X-Forwarded-For': ip() } })).data.error).toMatch(/^(bad_code|code_expired)$/);
       const exp = (await api.get(`${base}/me/export`, auth(r.data.token))).data;
-      expect(exp.verifiedAt).toBe(new Date(clock).toISOString());
+      expect(exp.verifiedAt).toBe(new Date(signedAt).toISOString());
     });
 
     test('codes: one a minute, 10 minutes long, 5 tries', async () => {
@@ -163,10 +170,13 @@ flows('memory', () => new MemoryStore());
 flows('Redis REST', (now) => new RedisRestStore({ url: 'https://kv.example', token: 't', http: fakeRedis({ now }) }));
 
 describe('what leaves the server', () => {
+  let t = Date.UTC(2026, 10, 20, 4, 0, 0);
   const run = async (env) => {
     const calls = [];
     const http = { post: async (url, body, opts) => { calls.push({ url, body, opts }); return { data: {} }; } };
-    const { server, base } = await serve(createMomRouter({ store: new MemoryStore(), env: { NODE_ENV: 'test', MOM_AUTH_SECRET: STRONG, ...env }, http }));
+    const { server, base } = await serve(createMomRouter({
+      store: new MemoryStore(), env: { NODE_ENV: 'test', MOM_AUTH_SECRET: STRONG, ...env }, http, now: () => t,
+    }));
     return { server, base, calls };
   };
   test('Email through Resend: the address, the code, the API key as a Bearer token; no code in the answer', async () => {
@@ -180,6 +190,17 @@ describe('what leaves the server', () => {
     expect(calls[0].body.text).toMatch(/驗證碼：\d{6}，10 分鐘內有效/);
     // a phone sign-up has no way to get a code here, so it goes on as before
     expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: '0912345678', password: 'baby-sleeps-9' })).status).toBe(201);
+    // the emailed code makes the account; asking again for that address sends a notice (no code), same answer
+    const mailed = calls[0].body.text.match(/(\d{6})/)[1];
+    expect((await api.post(`${base}/auth/register`, {
+      consent: POLICY, account: 'mia@example.com', password: 'baby-sleeps-9', code: mailed,
+    })).status).toBe(201);
+    t += 61 * 1000; // one message a minute per address
+    const again = await api.post(`${base}/auth/code`, { account: 'mia@example.com', purpose: 'register', consent: POLICY }, { headers: { 'X-Forwarded-For': '10.1.1.1' } });
+    expect(again.data).toEqual({ ok: true, ttl: 600 });
+    expect(calls[1].body.subject).toBe('易家做媽媽 帳號通知');
+    expect(calls[1].body.text).toMatch(/已經註冊過了，請直接登入/);
+    expect(calls[1].body.text).not.toMatch(/\d{6}/);
     await close(server);
   });
   test('SMS through Twilio: +886 number, form fields, the account SID and token as Basic auth', async () => {

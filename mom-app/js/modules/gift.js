@@ -79,7 +79,8 @@
     const c = sh().invitedBy || '';
     return c && !(g.failed && g.failed.code === c) ? c : '';
   }
-  const canAutoClaim = (u) => !!(u && u.invite && u.invite.open && consentOk(u) && store.state.onboarded && (u.invite.by || linkCode(u)));
+  const canAutoClaim = (u) => !!(u && u.invite && u.invite.open && consentOk(u) && store.state.onboarded && (u.invite.by || linkCode(u))
+    && !(App.account && App.account.needVerify && App.account.needVerify(u))); // an older account verifies first
 
   function whenFree(fn, tries = 0) { // after any sheet that is open (the consent sheet, say) has closed
     if (!document.body.classList.contains('has-sheet') || tries > 120) { fn(); return; }
@@ -162,6 +163,7 @@
     no_code: '請輸入朋友的邀請碼',
     too_late: '見面禮要在註冊後 14 天內領取',
     need_consent: '請先同意隱私權政策與使用條款',
+    need_verify: '請先驗證你的 Email／手機',
     too_many: '嘗試太多次了，請 10 分鐘後再試',
     login: '請先登入會員',
     busy: '處理中，請稍候',
@@ -172,6 +174,7 @@
     const r = await claim(typed);
     btn.disabled = false;
     if (r && r.error === 'need_consent' && App.account.ensureConsent) App.account.ensureConsent(user());
+    else if (r && r.error === 'need_verify' && App.account.verifySheet) App.account.verifySheet('領見面禮前，先驗證你的 Email／手機。');
     else if (r && r.error) ui.toast(errText(r.error));
     else if (r && r.already) ui.toast('見面禮已經領過囉');
     return r;
@@ -233,7 +236,11 @@
         btn.disabled = true;
         const r = await claim(inp.value);
         btn.disabled = false;
-        if (r && r.error) { err.textContent = errText(r.error); err.hidden = false; if (r.error === 'need_consent' && App.account.ensureConsent) App.account.ensureConsent(user()); }
+        if (r && r.error) {
+          err.textContent = errText(r.error); err.hidden = false;
+          if (r.error === 'need_consent' && App.account.ensureConsent) App.account.ensureConsent(user());
+          if (r.error === 'need_verify' && App.account.verifySheet) App.account.verifySheet('領見面禮前，先驗證你的 Email／手機。');
+        }
       },
     }, '領取');
     // folded: most people who see it are inviting, not invited

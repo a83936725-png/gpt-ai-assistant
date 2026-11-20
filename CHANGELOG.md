@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.12.0 (2026-11-20)
+
+See [docs/IKIGAI-WEB.zh-TW.md](docs/IKIGAI-WEB.zh-TW.md) for how to use it.
+
+### New Features
+
+- Add the IKIGAI web page at `/ikigai`: four circles (love, good at, world needs, paid for), a match table, a clickable Venn diagram, and copy/export/import/print. Progress is kept in the browser
+- Add `POST /ikigai/analyze`: an AI reading of the four lists in Traditional Chinese, with input limits, optional moderation and a per-IP hourly limit
+- New settings: `IKIGAI_ENABLED`, `IKIGAI_AI_ENABLED`, `IKIGAI_MAX_TOKENS`, `IKIGAI_RATE_LIMIT`
+
 ## 4.11.0 (2026-11-15)
 
 ### New Features

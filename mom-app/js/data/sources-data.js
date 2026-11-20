@@ -2,7 +2,7 @@
  * 網址皆取自搜尋結果的實際頁面，最後確認：2026-11。內容如有更新，以來源網站最新公告為準。 */
 (function () {
   const App = window.App = window.App || {};
-  // key: { org, title, url, kind: 'gov' | 'intl' | 'society', note }
+  // key: { org, title, url, kind: 'gov' | 'intl' | 'society' | 'media', note }
   const SOURCES = {
     'aap-shoes': { org: 'American Academy of Pediatrics（HealthyChildren.org）', title: 'Shoes for Active Toddlers', url: 'https://www.healthychildren.org/English/ages-stages/toddler/Pages/Shoes-for-Active-Toddlers.aspx', kind: 'intl', note: '學步期光腳與第一雙鞋' },
     'aap-sleep-howto': { org: 'American Academy of Pediatrics（HealthyChildren.org）', title: 'Getting Your Baby to Sleep', url: 'https://www.healthychildren.org/English/ages-stages/baby/sleep/Pages/getting-your-baby-to-sleep.aspx', kind: 'intl', note: '想睡時放上床、建立睡前習慣' },
@@ -139,6 +139,18 @@
     'bli-birth': { org: '勞動部勞工保險局', title: '生育給付的請領資格及給付標準各如何？', url: 'https://www.bli.gov.tw/0017641.html', kind: 'gov', note: '勞保生育給付的請領資格與標準' },
     'bli-parental': { org: '勞動部勞工保險局', title: '育嬰留職停薪津貼的請領資格及給付標準各如何？', url: 'https://www.bli.gov.tw/0020785.html', kind: 'gov', note: '育嬰留職停薪津貼的資格與標準' },
     'sfaa-raise': { org: '衛生福利部社會及家庭署', title: '育兒津貼及托育準公共專區', url: 'https://www.sfaa.gov.tw/SFAA/Pages/VDetail.aspx?nodeid=1057&pid=10779', kind: 'gov', note: '育兒津貼與托育補助申請資訊' },
+    // 福利（2026-11 搜尋確認）
+    'mohw-daycare': { org: '衛生福利部', title: '公共化及準公共托育補助說明', url: 'https://www.mohw.gov.tw/fp-5130-58003-1.html', kind: 'gov', note: '113年1月起公托每月7,000元起、準公共13,000元起' },
+    'bw-raise-2026': { org: '商業周刊', title: '2026 育兒津貼、托育補助整理', url: 'https://www.businessweekly.com.tw/focus/blog/3020986', kind: 'media', note: '未滿2歲育兒津貼第1、2、3名每月5,000／6,000／7,000元' },
+    'kcg-raise-60d': { org: '高雄市政府', title: '未滿2歲育兒津貼宣導單', url: 'https://orgws.kcg.gov.tw/001/KcgOrgUploadFiles/237/relfile/15465/187076/82554743-0207-4f3d-8024-a3085831d3b5.pdf', kind: 'gov', note: '出生60日內登記並申請，追溯自出生月份' },
+    'tpe-raise-60d': { org: '臺北市法規查詢系統', title: '育兒津貼追溯發給之解釋令', url: 'https://laws.gov.taipei/law/Interpretation/Content/FE349458', kind: 'gov', note: '60日內完成出生登記並申請者追溯自出生月份' },
+    'ntpc-25-faq': { org: '新北市板橋區公所', title: '2歲以上未滿5歲育兒津貼及就學補助問答', url: 'https://www.banqiao.ntpc.gov.tw/userfiles/3010500/files/20251016-FQA.pdf', kind: 'gov', note: '2至未滿5歲育兒津貼與學費減免擇一、滿2歲可申請' },
+    'mol-parental-day': { org: '勞動部', title: '育嬰留職停薪以日申請新制', url: 'https://www.mol.gov.tw/1607/1632/1633/96538/post', kind: 'gov', note: '115年1月1日起可以日申請，合計不超過30日；投保薪資8成' },
+    'mol-nursing': { org: '勞動部', title: '哺（集）乳時間常見問答', url: 'https://www.mol.gov.tw/1607/28690/2282/2284/2294/', kind: 'gov', note: '親自哺乳不限母乳，男性受僱者也可請' },
+    '104-nursing': { org: '104人力銀行 職場力', title: '哺乳時間怎麼請', url: 'https://blog.104.com.tw/breast-feeding-time', kind: 'media', note: '子女未滿2歲，每日另給哺（集）乳時間60分鐘' },
+    'udn-nbs-2026': { org: '聯合新聞網', title: '新生兒篩檢7月全額公費 納入SMA', url: 'https://udn.com/news/story/7266/9498884', kind: 'media', note: '代謝異常篩檢改全額公費，擴增為22項' },
+    'mohw-flu-2026': { org: '衛生福利部', title: '公費流感及新冠疫苗10月1日開打', url: 'https://www.mohw.gov.tw/cp-16-88084-1.html', kind: 'gov', note: '公費對象包括孕婦；可用VAX MAP或1922查詢' },
+    'cna-tax-2026': { org: '中央通訊社', title: '財部：未成年子女免稅額增加50%', url: 'https://cna.com.tw/news/afe/202608210277.aspx', kind: 'media', note: '6歲以下第1名15萬元、第2名以上22.5萬元幼兒學前特別扣除額' },
     'ris-birth': { org: '內政部戶政司', title: '出生登記', url: 'https://www.ris.gov.tw/documents/html/2/3/1/379.html', kind: 'gov', note: '出生 60 日內辦理出生登記與應備文件' },
     'nhi-newborn': { org: '衛生福利部中央健康保險署', title: '新生兒', url: 'https://www.nhi.gov.tw/ch/cp-4963-899d7-2669-1.html', kind: 'gov', note: '新生兒健保投保與健保卡申辦' },
   };
@@ -564,8 +576,16 @@
     'benefit:birth-pay': [{ s: 'bli-birth', n: '勞保局：生育給付請領資格' }],
     'benefit:register': [{ s: 'ris-birth', n: '戶政司：出生60日內申請登記' }],
     'benefit:nhi': [{ s: 'nhi-newborn', n: '健保署：新生兒投保與健保卡' }],
-    'benefit:parental': [{ s: 'bli-parental', n: '勞保局：育嬰留職停薪津貼' }],
-    'benefit:raise': [{ s: 'sfaa-raise', n: '社家署：育兒津貼與托育補助' }],
+    'benefit:parental': [{ s: 'bli-parental', n: '勞保局：育嬰留職停薪津貼' }, { s: 'mol-parental-day', n: '勞動部：115年起可按日申請、薪資8成' }],
+    'benefit:allowance-02': [{ s: 'sfaa-raise', n: '社家署：育兒津貼申請資訊' }, { s: 'bw-raise-2026', n: '商周：第1、2、3名每月5,000／6,000／7,000元' }, { s: 'kcg-raise-60d', n: '高雄市：60日內申請追溯出生月' }, { s: 'tpe-raise-60d', n: '臺北市：60日內申請追溯出生月' }],
+    'benefit:daycare-02': [{ s: 'mohw-daycare', n: '衛福部：公托7,000、準公共13,000元起' }, { s: 'sfaa-raise', n: '社家署：托育準公共專區' }],
+    'benefit:allowance-25': [{ s: 'ntpc-25-faq', n: '新北市：2–5歲育兒津貼與學費減免擇一' }],
+    'benefit:nursing': [{ s: 'mol-nursing', n: '勞動部：哺乳時間不限母乳、爸爸也可請' }, { s: '104-nursing', n: '104：每日60分鐘哺（集）乳時間' }],
+    'benefit:tax-preschool': [{ s: 'cna-tax-2026', n: '財政部：第1名15萬、第2名以上22.5萬' }],
+    'benefit:flu-preg': [{ s: 'mohw-flu-2026', n: '衛福部：公費流感疫苗對象包括孕婦' }, { s: 'cdc-preg-flu', n: '疾管署：孕婦任何孕期可接種' }],
+    'benefit:tdap-preg': [{ s: 'cdc-preg-tdap', n: '疾管署：孕期接種一劑百日咳疫苗' }],
+    'benefit:nbs-free': [{ s: 'hpa-nbs', n: '國健署：出生48小時後足跟血篩檢' }, { s: 'udn-nbs-2026', n: '聯合報：7月起全額公費、納入SMA' }],
+    'benefit:hearing': [{ s: 'hpa-hearing', n: '國健署：新生兒聽力篩檢' }],
     'benefit:child-check': [{ s: 'hpa-child-checkup', n: '國健署：115年7月起改為9次' }, { s: 'cdc-schedule', n: '疾管署：幼兒常規公費疫苗' }],
     'benefit:fluoride': [{ s: 'hpa-fluoride', n: '國健署：未滿6歲每半年塗氟' }],
   };

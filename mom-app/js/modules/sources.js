@@ -9,7 +9,9 @@
   const { h } = App;
   const SOURCES = () => App.SOURCES || {};
   const MAP = () => App.SOURCE_MAP || {};
-  const KIND = { gov: '政府機關', intl: '國際組織', society: '專業學會' };
+  const KIND = {
+    gov: '政府機關', intl: '國際組織', society: '專業學會', media: '新聞與整理（補充最新金額，以主管機關公告為準）',
+  };
 
   // [{ s: key, n: note, src }] for a content key ('' keys and unknown sources are dropped)
   function refs(key) {

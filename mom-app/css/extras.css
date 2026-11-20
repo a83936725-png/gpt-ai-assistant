@@ -50,3 +50,17 @@
 .ex-watch { background: var(--c-primary-soft); border-color: transparent; }
 .ex-ok { background: var(--c-ok-soft); border-color: transparent; }
 .ex-ok .ex-result-title { color: var(--c-ok-ink); }
+
+/* 補助福利：金額、時機與首頁「現在可以申請的福利」 */
+.bn-pill { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--c-accent-soft); color: var(--c-accent-ink); font-size: 12px; font-weight: 700; vertical-align: 1px; white-space: nowrap; }
+.bn-amount { font-size: 22px; font-weight: 900; color: var(--c-accent-ink); margin: 0 0 6px; }
+.bn-when { font-weight: 600; }
+.bn-home .card-title { margin: 0; }
+.bn-home-x { flex: none; }
+.bn-rows { display: grid; gap: 6px; margin-top: 8px; }
+.bn-row { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 52px; padding: 8px 12px; border: 0; border-radius: 14px; background: var(--c-surface-2); color: var(--c-text); font: inherit; text-align: left; cursor: pointer; }
+.bn-row .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bn-row-sub { display: block; }
+.bn-left { color: var(--c-danger-ink); font-weight: 700; }
+.bn-row .chev { color: var(--c-text-2); font-size: 20px; flex: none; }
+.bn-all { display: block; margin: 8px 0 0 auto; min-height: 36px; }

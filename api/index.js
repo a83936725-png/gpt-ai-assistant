@@ -1,5 +1,6 @@
 import express from 'express';
 import { handleEvents, printPrompts } from '../app/index.js';
+import { exportKnowledge } from '../app/knowledge/index.js';
 import config from '../config/index.js';
 import { validateLineSignature } from '../middleware/index.js';
 import storage from '../storage/index.js';
@@ -17,6 +18,14 @@ app.get('/images/:name', (req, res) => {
   res.set('Content-Type', image.contentType);
   res.set('Cache-Control', 'public, max-age=3600');
   res.send(image.buffer);
+});
+
+// The customer service knowledge base, for the staff Q&A page on the expo SOP site. It holds only
+// what the bot already tells customers, so any site may read it.
+app.get('/knowledge.json', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json(exportKnowledge());
 });
 
 app.use(express.json({

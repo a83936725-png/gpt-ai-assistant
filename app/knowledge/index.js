@@ -200,6 +200,20 @@ const getKnowledgeBase = () => {
 };
 
 /**
+ * The knowledge base as plain data for other sites, such as the staff Q&A page on the expo SOP
+ * site. Only what customers can already get from the bot is in here.
+ * @param {KnowledgeBase} [base]
+ * @returns {{sections: Array<Section>}}
+ */
+const exportKnowledge = (base = getKnowledgeBase()) => ({
+  sections: base.sections.map(({
+    source, title, heading, text,
+  }) => ({
+    source, title, heading, text,
+  })),
+});
+
+/**
  * Replaces the cached knowledge base, e.g. with one read from another directory in tests.
  * @param {KnowledgeBase} [base] Omit to re-read the knowledge directory on next use.
  */
@@ -209,6 +223,7 @@ const setKnowledgeBase = (base) => {
 
 export {
   KnowledgeBase,
+  exportKnowledge,
   getKnowledgeBase,
   setKnowledgeBase,
   loadSections,

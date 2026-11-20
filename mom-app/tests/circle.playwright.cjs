@@ -54,7 +54,9 @@ const WEEKS = 12 + Math.floor(Math.random() * 20); // a random circle each run, 
 
   /* ---------- joining ---------- */
   const A = await mk('A'); await preg(A, WEEKS);
-  await go(A, 'home', 2500);
+  await go(A, 'home', 1000);
+  // the card shows once the member service has answered: wait for it rather than a fixed time (slower under load)
+  await A.waitForSelector('.cc-home', { timeout: 8000 }).catch(() => {});
   const nudge = await S(A, () => (document.querySelector('.cc-home') || {}).textContent || '');
   ok('首頁 invites to 同週好孕圈 with her own circle (預產期 m/d–m/d 的媽媽)', /同週好孕圈/.test(nudge) && /預產期 \d+\/\d+–\d+\/\d+ 的媽媽/.test(nudge), nudge);
   ok('nothing is sent before joining', !A.sent.length, A.sent.map((r) => r.url).join(','));

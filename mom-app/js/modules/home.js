@@ -272,6 +272,8 @@
           if (moment) el.append(moment);
           const isle = App.island && App.island.newIslandLine && App.island.newIslandLine();
           if (isle) el.append(isle);
+          const gift = App.gift && App.gift.line(); // 雙向邀請禮: a friend's welcome gift waiting
+          if (gift) el.append(gift);
           const banner = App.babylog.activeBanner();
           if (banner) el.append(banner);
           el.append(quickTiles());

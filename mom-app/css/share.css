@@ -58,6 +58,38 @@
   background: var(--c-accent-ink); color: var(--c-surface); font-weight: 800; box-shadow: 0 6px 18px rgba(0, 0, 0, .2);
 }
 
+/* 雙向邀請禮 */
+.gift-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0 8px; }
+.gift-side { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 8px; border-radius: 16px; background: var(--c-primary-soft); text-align: center; }
+.gift-side-e { font-size: 26px; line-height: 1.2; }
+.gift-side b { font-size: 17px; color: var(--c-primary); }
+.gift-count { font-weight: 700; margin: 10px 0 2px; }
+.gift-mine { margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: var(--c-surface-2); }
+.gift-mine .link-btn { min-height: 36px; padding: 0; }
+.gift-mine-go { flex: none; min-height: 40px; }
+.gift-code { margin-top: 12px; padding: 0 12px; border-radius: 14px; border: 1px dashed var(--c-border); }
+.gift-code summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; color: var(--c-primary); }
+.gift-code[open] { padding-bottom: 12px; }
+.gift-code p { margin: 0 0 8px; }
+.gift-code .input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 2px; }
+.gift-code-go { flex: none; min-height: 44px; }
+/* the line under the baby on 首頁 (育兒中) */
+.gift-line { display: flex; align-items: center; gap: 2px; width: 100%; min-height: 48px; margin: -4px 0 12px; padding: 0 4px 0 0;
+  border-radius: var(--radius, 16px); background: linear-gradient(135deg, var(--c-primary-soft), var(--c-accent-soft)); }
+.gift-line-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; min-height: 48px; padding: 8px 4px 8px 12px;
+  border: 0; background: none; color: var(--c-text); font: inherit; text-align: left; cursor: pointer; }
+.gift-line-main .grow { min-width: 0; }
+.gift-line-e { font-size: 26px; line-height: 1; flex: none; }
+.gift-line strong { color: var(--c-primary); font-size: 15px; margin-right: 6px; }
+.gift-line-more { font-size: 12.5px; color: var(--c-text-2); white-space: nowrap; }
+.gift-line .chev { color: var(--c-text-2); font-size: 20px; flex: none; }
+.gift-line-x { flex: none; }
+.gift-home .gift-home-ico { font-size: 28px; }
+.gift-home .gift-home-x { flex: none; }
+.gift-sheet { display: grid; gap: 10px; text-align: center; }
+.gift-sheet p { margin: 0; }
+.gift-unlock { font-weight: 800; color: var(--c-primary); }
+
 /* 家族週報 */
 .wk-nav { margin-top: 0; }
 .wk-preview { display: flex; justify-content: center; margin: 4px 0 14px; }

@@ -224,6 +224,9 @@ input.switch:checked::after { transform: translateX(20px); }
 /* ---------- onboarding ---------- */
 .onboard { padding: 10px 4px 30px; }
 .ob-hero { padding-top: 22px; }
+.ob-invited { text-align: center; font-weight: 700; color: var(--c-primary); margin: 0 0 14px; }
+.ob-gift { display: block; margin-top: 4px; font-size: 13.5px; font-weight: 600; color: var(--c-text-2); }
+.ob-gift[hidden] { display: none; }
 .ob-brand { display: flex; align-items: center; justify-content: center; gap: 12px; }
 .ob-icon { width: 60px; height: 60px; border-radius: 18px; background: var(--c-primary-soft); padding: 8px; flex: none; }
 .ob-title { font-size: 28px; color: var(--c-primary); line-height: 1.15; margin: 0; }

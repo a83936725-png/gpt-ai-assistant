@@ -12,6 +12,8 @@ window.BRAND = {
   phone: '',
   // 分享與邀請：正式網址（部署後填，例如 https://mom.example.com/）；留空就用目前網址
   appUrl: '',
+  // 雙向邀請禮：朋友用你的連結或邀請碼加入、完成設定並註冊會員時，兩邊各得的好孕點數（friend 見面禮、inviter 每位朋友）
+  inviteGift: { friend: 30, inviter: 50 },
   // 分享獎勵：好孕點數達到 points 時顯示的優惠（code 留空 = 先不提供）
   shareReward: { points: 100, title: '易家滴雞精會員好禮', code: '', note: '請到官網結帳時輸入優惠碼，或出示給門市人員。' },
   // 即時人數：數字達到門檻才顯示（數字永遠是真實的，只是太小時先不顯示）

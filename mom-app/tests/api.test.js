@@ -90,9 +90,14 @@ describe('member API', () => {
     const ok = await api.post(`${base}/auth/login`, { account: 'alice@example.com', password: 'password-123' });
     expect(ok.status).toBe(200);
   });
-  test('referral: registering with an invite code counts for the inviter', async () => {
+  test('referral: the friend joins with an invite code; her inviter counts when she claims her welcome gift', async () => {
     const r = await api.post(`${base}/auth/register`, { consent: POLICY, account: '0912345678', password: 'password-456', invitedBy: alice.user.code.toLowerCase() });
     expect(r.status).toBe(201);
+    expect(r.data.user.invite).toEqual({ by: alice.user.code, gift: false, open: true });
+    expect((await api.get(`${base}/me`, auth(alice.token))).data.user.referrals).toBe(0); // not at sign-up any more
+    const claim = await api.post(`${base}/invite/claim`, {}, auth(r.data.token));
+    expect(claim.data).toMatchObject({ gift: true, counted: true });
+    expect(claim.data.user.invite).toEqual({ by: alice.user.code, gift: true, open: false });
     expect((await api.get(`${base}/me`, auth(alice.token))).data.user.referrals).toBe(1);
   });
   test('me requires a valid token; tampered tokens fail', async () => {
@@ -128,6 +133,11 @@ describe('member API', () => {
     expect(lineCalls[0][1]).toBe('https://api.line.me/oauth2/v2.1/token');
     const me = await api.get(`${base}/me`, auth(data.token));
     expect(me.data.user).toMatchObject({ provider: 'line', nickname: 'LINE 媽咪', accountHint: 'LINE' });
+    // a new LINE account agrees to the policy in the app first; only then does the gift (and alice's count) happen
+    expect((await api.post(`${base}/invite/claim`, {}, auth(data.token))).status).toBe(403);
+    expect((await api.get(`${base}/me`, auth(alice.token))).data.user.referrals).toBe(1);
+    await api.post(`${base}/me`, { consent: POLICY }, auth(data.token));
+    expect((await api.post(`${base}/invite/claim`, {}, auth(data.token))).data).toMatchObject({ gift: true, counted: true });
     expect((await api.get(`${base}/me`, auth(alice.token))).data.user.referrals).toBe(2);
   });
   test('LINE callback: forged or malformed state is rejected without crashing', async () => {
@@ -220,7 +230,9 @@ describe('member API on the Redis REST store', () => {
     const a = await api.post(`${base}/auth/register`, { consent: POLICY, account: 'kv@example.com', password: 'password-1' });
     expect(a.status).toBe(201);
     expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'kv@example.com', password: 'password-1' })).status).toBe(409);
-    expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: '0922333444', password: 'password-2', invitedBy: a.data.user.code })).status).toBe(201);
+    const friend = await api.post(`${base}/auth/register`, { consent: POLICY, account: '0922333444', password: 'password-2', invitedBy: a.data.user.code });
+    expect(friend.status).toBe(201);
+    expect((await api.post(`${base}/invite/claim`, {}, { headers: { Authorization: `Bearer ${friend.data.token}` } })).data).toMatchObject({ gift: true, counted: true });
     const login = await api.post(`${base}/auth/login`, { account: 'kv@example.com', password: 'password-1' });
     expect(login.data.user.referrals).toBe(1);
     await api.post(`${base}/presence`, { sid: 'kv-tab-0001' });
@@ -310,8 +322,14 @@ describe('security hardening', () => {
   test('invites: one network counts at most 3 times per code per day', async () => {
     const { server, base } = await start({ env: { MOM_TRUST_PROXY: '1' } });
     const inviter = await api.post(`${base}/auth/register`, { consent: POLICY, account: 'host@example.com', password: 'baby-sleeps-9' }, from('10.3.0.1'));
-    for (let i = 0; i < 6; i += 1) await api.post(`${base}/auth/register`, { consent: POLICY, account: `friend${i}@example.com`, password: 'baby-sleeps-9', invitedBy: inviter.data.user.code }, from('10.3.0.2')); // eslint-disable-line no-await-in-loop
-    await api.post(`${base}/auth/register`, { consent: POLICY, account: 'real-friend@example.com', password: 'baby-sleeps-9', invitedBy: inviter.data.user.code }, from('10.3.0.3'));
+    const join = async (account, ip) => {
+      const f = await api.post(`${base}/auth/register`, { consent: POLICY, account, password: 'baby-sleeps-9', invitedBy: inviter.data.user.code }, from(ip));
+      return (await api.post(`${base}/invite/claim`, {}, { headers: { ...bearer(f.data.token).headers, ...from(ip).headers } })).data;
+    };
+    const counted = [];
+    for (let i = 0; i < 6; i += 1) counted.push((await join(`friend${i}@example.com`, '10.3.0.2')).counted); // eslint-disable-line no-await-in-loop
+    expect(counted).toEqual([true, true, true, false, false, false]); // each still gets her own welcome gift
+    expect((await join('real-friend@example.com', '10.3.0.3')).counted).toBe(true);
     expect((await api.get(`${base}/me`, bearer(inviter.data.token))).data.user.referrals).toBe(4);
     await close(server);
   });

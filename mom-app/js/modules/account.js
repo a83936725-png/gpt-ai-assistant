@@ -81,7 +81,8 @@
   };
   setTimeout(tick, 400);
   setInterval(tick, 60 * 1000);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') tick(); });
+  // back in the app (after sending an invite on LINE, say): fresh counts, and friends who joined meanwhile
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { tick(); maybeRefresh(); } });
 
   /* ================= session ================= */
   function setAuth(tok, user) {
@@ -91,6 +92,7 @@
       if (user && user.nickname && !s.profile.momName) s.profile.momName = user.nickname;
     });
     setTimeout(tick, 100); // show the new registered count right away
+    if (App.gift && user) App.gift.sync(user); // 雙向邀請禮: her welcome gift (once set up and agreed), friends who joined
   }
   let lastRefresh = 0;
   async function refreshMe() {
@@ -101,6 +103,7 @@
       const before = JSON.stringify(store.state.auth && store.state.auth.user);
       if (JSON.stringify(user) !== before) store.update((s) => { s.auth.user = user; }); // re-renders 我的／邀請好友
       ensureConsent(user);
+      if (App.gift) App.gift.sync(user);
     } catch (e) {
       if (e.status === 401) { store.update((s) => { delete s.auth; }); ui.toast('登入已過期，請重新登入'); }
     }
@@ -140,6 +143,7 @@
               const r = await call('POST', 'me', { consent: App.privacy.VERSION, marketing: mkt.checked });
               store.update((s) => { if (s.auth) s.auth.user = r.user; });
               done = true; sh.close(); ui.toast('謝謝你 💜');
+              if (App.gift) App.gift.sync(r.user); // a friend's welcome gift waits for this
             } catch (err) { btn.disabled = false; ui.toast(errText(err)); }
           },
         }, '同意並繼續')),
@@ -300,6 +304,11 @@
             return;
           }
           const share = store.state.share || {};
+          const giftPts = App.gift ? App.gift.PTS() : null;
+          // 雙向邀請禮: someone who came with a link sees what joining brings to both
+          if (mode === 'register' && giftPts && share.invitedBy) {
+            holder.append(h('p', { class: 'login-gift' }, `🎁 註冊後你會拿到 ${giftPts.friend} 點見面禮，${share.inviterName ? `「${share.inviterName}」` : '邀請你的朋友'}也會收到邀請禮`));
+          }
           if (cfg.providers.line) {
             holder.append(h('button', {
               class: 'btn btn-block login-line', html: `${ui.ICONS.line}<span>用 LINE 登入</span>`,
@@ -325,7 +334,7 @@
             ui.field('帳號', acct),
             ui.field('密碼', h('div', { class: 'login-pw' }, pw, showPw)),
             mode === 'register' ? ui.field('暱稱', nick) : null,
-            mode === 'register' ? ui.field('邀請碼', inv, share.inviterName ? `由「${share.inviterName}」邀請` : '朋友給你的邀請碼，可以不填') : null,
+            mode === 'register' ? ui.field('邀請碼', inv, share.inviterName ? `由「${share.inviterName}」邀請` : '朋友給你的邀請碼（選填）：填了你們都有邀請禮') : null,
             agree ? h('div', { class: 'pv-boxes' }, agree.el, mkt.el) : null,
             err, submit);
           form.addEventListener('submit', async (e) => {
@@ -406,5 +415,8 @@
         App.livePill('acct-live'));
     },
     logout, refreshMe, refreshSoon: () => maybeRefresh(), call, available: async () => !!(await config()), ensureConsent, exportMine,
+    config,
+    // 登入／註冊 page opened on 註冊 (the 見面禮 card)
+    openRegister() { mode = 'register'; if (document.body.dataset.screen === 'login') App.refresh(); else App.navigate('login'); },
   };
 }());

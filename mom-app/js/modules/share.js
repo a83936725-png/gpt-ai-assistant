@@ -3,7 +3,7 @@
  *   App.share.card(kind)       品牌分享卡（1080×1920，含邀請碼 QR）
  *   App.share.moment(id, ...)  關鍵時刻提醒分享（每天最多一次、可關閉）
  *   App.share.button(...)      各頁面的分享按鈕
- *   邀請碼（?ref=）、好孕點數、邀請好友頁 'invite'
+ *   邀請碼（?ref=）、好孕點數、邀請好友頁 'invite'（雙向邀請禮的卡片在 gift.js）
  * 寶寶照片預設不放上分享卡；醫療紀錄不做成公開分享卡。 */
 (function () {
   const App = window.App;
@@ -67,8 +67,9 @@
     store.update((s) => {
       const sh = ensure(s);
       const today = C.dateKey();
-      const todayPts = sh.events.filter((e) => e.at.slice(0, 10) === today).reduce((n, e) => n + (e.pts || 0), 0);
-      gained = Math.max(0, Math.min(POINTS[channel] || 5, 60 - todayPts)); // 每天最多 60 點
+      // 每天最多 60 點 from sharing; gifts (邀請禮、見面禮) and island hearts are not shares and don't use it up
+      const todayPts = sh.events.filter((e) => e.at.slice(0, 10) === today && e.channel !== 'bonus').reduce((n, e) => n + (e.pts || 0), 0);
+      gained = Math.max(0, Math.min(POINTS[channel] || 5, 60 - todayPts));
       sh.events.push({ at: new Date().toISOString(), channel, campaign, pts: gained });
       if (sh.events.length > 300) sh.events = sh.events.slice(-300);
       sh.points += gained;
@@ -458,7 +459,9 @@
   /* ================= 邀請好友 screen ================= */
   function inviteText() {
     const name = store.state.profile.momName;
-    return `${name ? `${name}邀請你` : '推薦你'}一起用「${B().appName || '易家做媽媽'}」💜\n從備孕、懷孕到育兒：餵奶尿布一鍵記錄、孕產路線圖、好孕島衛教，全部免費！\n我的邀請碼：${ensure(store.state).code}`;
+    // 雙向邀請禮: the friend learns what joining brings (only where the member service can give it)
+    const gift = App.gift && App.gift.ready() ? `\n用我的連結加入、註冊會員，你會拿到 ${App.gift.PTS().friend} 點見面禮 🎁` : '';
+    return `${name ? `${name}邀請你` : '推薦你'}一起用「${B().appName || '易家做媽媽'}」💜\n從備孕、懷孕到育兒：餵奶尿布一鍵記錄、孕產路線圖、好孕島衛教，全部免費！${gift}\n我的邀請碼：${ensure(store.state).code}`;
   }
   App.screen('invite', {
     title: '邀請好友',
@@ -480,14 +483,10 @@
           h('button', { class: 'btn btn-line', onclick: () => { openUrl(`https://line.me/R/share?text=${enc(`${inviteText()}\n${link({ path: 'home', channel: 'line', campaign: 'invite' })}`)}`); thanks(record('invite', 'invite')); }, html: `${ui.ICONS.line}<span>LINE 邀請</span>` }),
           h('button', { class: 'btn jr-hero-btn', onclick: () => open({ title: '邀請你一起用', text: inviteText(), campaign: 'invite', spec: { emoji: '💌', kicker: '邀請你一起用', title: B().appName || '易家做媽媽', subtitle: '備孕・懷孕・育兒 一個 App 陪你', lines: ['餵奶尿布睡眠 一鍵記錄＋預測', '孕產路線圖：該做的事＋注意事項', '好孕島：邊逛邊學的衛教小島'], theme: 'purple' } }) }, '📤 其他方式'))));
       if (App.account) App.account.refreshSoon();
-      const au = store.state.auth && store.state.auth.user;
-      el.append(ui.card({ class: 'mt' },
-        h('div', { class: 'card-title' }, '👥 一起做媽媽的人'),
-        App.livePill ? App.livePill('inv-live') : null,
-        au ? h('p', { class: 'small mt' }, `你已成功邀請 ${au.referrals || 0} 位加入（以註冊時填你的邀請碼計算）`)
-          : h('div', { class: 'row gap mt' }, h('p', { class: 'small muted grow' }, '登入後，朋友用你的邀請碼註冊就會計入「成功邀請人數」。'),
-            App.screens.login ? h('button', { class: 'btn btn-sm btn-primary', onclick: () => App.navigate('login') }, '登入') : null)));
-      if (sh.invitedBy) el.append(ui.card({ class: 'soft mt' }, h('div', { class: 'small' }, `你是由${sh.inviterName ? `「${sh.inviterName}」` : '朋友'}邀請加入的（邀請碼 ${sh.invitedBy}）💜`)));
+      // 雙向邀請禮: what each side gets, my friends who joined, my own welcome gift (gift.js; hidden without the member service)
+      const gift = App.gift ? App.gift.section() : null;
+      if (gift) el.append(gift);
+      else if (sh.invitedBy) el.append(ui.card({ class: 'soft mt' }, h('div', { class: 'small' }, `你是由${sh.inviterName ? `「${sh.inviterName}」` : '朋友'}邀請加入的（邀請碼 ${sh.invitedBy}）💜`)));
       // points + rewards
       const rewards = REWARDS();
       const next = rewards.find((r) => sh.points < r.points);
@@ -502,7 +501,7 @@
             h('div', { class: 'grow' }, h('div', { class: 'bold small' }, r.title), h('div', { class: 'tiny muted' }, `${r.points} 點${r.brand && got ? (code ? `・優惠碼 ${code}` : '・品牌設定中，敬請期待') : ''}`),
               code ? h('div', { class: 'tiny muted' }, B().shareReward.note || '') : null));
         })),
-        h('p', { class: 'tiny faint mt' }, `分享到 LINE／Facebook／Threads +10、IG 分享卡 +20、邀請連結 +15（每天最多 60 點）。點數記錄在這支手機。`)));
+        h('p', { class: 'tiny faint mt' }, `分享到 LINE／Facebook／Threads +10、IG 分享卡 +20、邀請連結 +15（每天最多 60 點）${App.gift && App.gift.ready() ? `；朋友加入：見面禮 +${App.gift.PTS().friend}、邀請禮 +${App.gift.PTS().inviter}（不算在每天上限裡）` : ''}。點數記錄在這支手機。`)));
       // card gallery
       const list = cards();
       el.append(h('div', { class: 'section-title' }, '📸 製作分享卡（IG 限時動態尺寸）'));
@@ -515,9 +514,10 @@
           h('span', { class: 'inv-card-emoji' }, c.spec.emoji), h('span', { class: 'bold small' }, c.label), h('span', { class: 'tiny muted' }, c.spec.title)))));
       }
       // stats
-      const byCh = C.groupBy(sh.events, (e) => e.channel);
+      const shares = sh.events.filter((e) => e.channel !== 'bonus'); // gifts and island hearts are not shares
+      const byCh = C.groupBy(shares, (e) => e.channel);
       const names = { line: 'LINE', ig: 'Instagram', fb: 'Facebook', threads: 'Threads', copy: '複製連結', more: '其他', invite: '邀請連結' };
-      if (sh.events.length) {
+      if (shares.length) {
         el.append(h('div', { class: 'section-title' }, '我的分享'));
         el.append(h('div', { class: 'chips' }, Object.entries(byCh).map(([k, v]) => h('span', { class: 'chip' }, `${names[k] || k} ${v.length} 次`))));
       }
@@ -535,7 +535,8 @@
       const sh = ensure(store.state);
       el.append(ui.card({ class: 'inv-home tap', onclick: () => App.navigate('invite') },
         h('div', { class: 'row gap' }, h('span', { class: 'inv-home-ico' }, '💌'),
-          h('div', { class: 'grow' }, h('div', { class: 'bold' }, '邀請媽咪朋友一起用'), h('div', { class: 'tiny muted' }, `好孕點數 ${sh.points}・分享卡、邀請碼 ${sh.code}`)),
+          h('div', { class: 'grow' }, h('div', { class: 'bold' }, '邀請媽咪朋友一起用'),
+            h('div', { class: 'tiny muted' }, App.gift && App.gift.ready() ? `朋友加入，你們都有邀請禮・好孕點數 ${sh.points}` : `好孕點數 ${sh.points}・分享卡、邀請碼 ${sh.code}`)),
           h('span', { class: 'ic faint', html: ui.ICONS.chevron }))));
     },
   });
@@ -611,7 +612,7 @@
   }
   App.share = {
     open, link, render, cards, moment, checkMoments, momentLine, qr, saveImage, button, record, bonus, code: () => ensure(store.state).code, inviteText,
-    copyText, downloadBlob, CUSTOMS,
+    copyText, downloadBlob, CUSTOMS, REWARDS,
     // drawing pieces for cards with their own layout (家族週報)
     draw: {
       FONT, THEMES, loadImg, wrap, fitLine, roundRect, paintFrame, paintFooter,

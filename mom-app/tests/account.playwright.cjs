@@ -1,4 +1,4 @@
-// 會員與即時人數（需要後端）：註冊、登入、邀請碼計數、在線／註冊人數、錯誤訊息、離線隱藏。
+// 會員與即時人數（需要後端）：註冊、登入、邀請碼計數（朋友設定好、領見面禮時計入）、在線／註冊人數、錯誤訊息、離線隱藏。
 // Usage: (repo root) APP_PORT=8790 node api/index.js      then   node mom-app/tests/account.playwright.cjs
 //        BASE=http://localhost:8790/mom-app/  STATIC_BASE=<optional static-only host to check the offline state>
 const { chromium } = require('playwright');
@@ -61,6 +61,10 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   await Bp.click('.login-form button[type=submit]'); await Bp.waitForTimeout(900);
   ok('phone registration works (account masked)', /^09\d{2}\*\*\*\d{3}$/.test(await S(Bp, () => App.store.state.auth.user.accountHint)));
   ok('ticking marketing is kept as a yes', (await S(Bp, () => App.store.state.auth.user.marketing)) === true);
+  // 雙向邀請禮: Amy is counted once the friend has set the app up (here: sample data) and claimed her welcome gift
+  await S(Bp, () => App.demo.seed()); await Bp.waitForTimeout(2000);
+  ok('…once set up, the invited friend gets her welcome gift', /見面禮 \+30/.test(await S(Bp, () => [...document.querySelectorAll('.sheet')].pop()?.innerText || '')) && (await S(Bp, () => App.store.state.share.points)) === 30);
+  await Bp.keyboard.press('Escape'); await Bp.waitForTimeout(400);
 
   const after = await stats(A);
   ok('registered count went up by 2', after.registered === before.registered + 2, `${before.registered} → ${after.registered}`);

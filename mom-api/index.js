@@ -6,8 +6,10 @@
  *   POST /auth/logout-all        revoke every session of this account
  *   GET  /auth/line/start?nonce  → LINE Login (needs LINE_LOGIN_CHANNEL_ID / LINE_LOGIN_CHANNEL_SECRET)
  *   GET  /auth/line/callback     → back to the app with {token, nonce}
- *   GET  /me, POST /me           profile (+ how many people registered with my invite code); POST also records
- *                                consent to the privacy policy and the marketing choice
+ *   GET  /me, POST /me           profile (+ how many friends joined with my invite code, and my own invite status);
+ *                                POST also records consent to the privacy policy and the marketing choice
+ *   POST /invite/claim {code?}   雙向邀請禮: the welcome gift for a friend who joined, and her inviter is counted —
+ *                                see invite.js
  *   GET  /me/export              everything stored about me (個資法 §3: a copy of my data)
  *   POST /auth/delete {password} delete my account (§3: deletion); password accounts must re-enter the password
  *   POST /presence {sid}         heartbeat from an open app
@@ -28,6 +30,7 @@ import axios from 'axios';
 import { storeFromEnv } from './store.js';
 import { mountSocial } from './social.js';
 import { mountCircle } from './circle.js';
+import { mountInvite, inviteInfo, normCode } from './invite.js';
 import { POLICY_VERSION } from './policy.js';
 import {
   hashPassword, verifyPassword, needsRehash, isCommonPassword, DUMMY_HASH, makeSigner, normaliseAccount, cleanText, newId, randomCode, hashKey, ipBucket,
@@ -45,7 +48,7 @@ const LIMITS = {
   // nobody can lock the owner out by failing on purpose (they would only lock out unknown networks)
   loginAccount: [50, 600],
   registerIp: [10, 3600], // 10 sign-ups / hour per network (invalid input does not count)
-  referralDay: [30, 86400], // at most 30 counted referrals / day per invite code
+  referralDay: [30, 86400], // at most 30 counted referrals / day per invite code (counted when the friend claims her gift)
   referralIp: [3, 86400], // …and at most 3 of them from the same network
   presenceNew: [6, 600], // a network may bring at most 6 new "online" sessions every 10 min (a family's phones)
   presenceSid: [30, 600], // heartbeats per session (the app sends one a minute)
@@ -128,6 +131,7 @@ export function createMomRouter({
     accountHint: hint(u),
     consent: (u.consent && u.consent.version) || null,
     marketing: !!(u.marketing && u.marketing.on),
+    invite: inviteInfo(u, now()),
     ...extra,
   });
   // tv (token version) lets 「登出所有裝置」 revoke every issued session; it is kept apart from the user record
@@ -147,7 +151,7 @@ export function createMomRouter({
     return `${randomCode()}${randomCode()}`;
   }
   async function createUser({
-    account, provider, nickname, passwordHash = null, invitedBy, ip = '', consent = false, marketing = false,
+    account, provider, nickname, passwordHash = null, invitedBy, consent = false, marketing = false,
   }) {
     const t = now();
     const user = {
@@ -165,14 +169,13 @@ export function createMomRouter({
       marketing: { on: !!marketing, at: t },
     };
     if (invitedBy) {
-      const inviter = await store.getUserByCode(String(invitedBy).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16));
-      if (inviter) user.invitedBy = inviter.code;
+      const inviter = await store.getUserByCode(normCode(invitedBy));
+      // her inviter is counted later, when she has agreed to the policy and set the app up (POST /invite/claim),
+      // within the daily caps per code and per (code, network). (A real fix needs a verified email / phone — see
+      // docs/GROWTH.md.)
+      if (inviter) { user.invitedBy = inviter.code; user.refPending = true; }
     }
     if (!(await store.createUser(user))) return null;
-    // counted only within the daily cap per code and per (code, network): throwaway sign-ups from one place can't
-    // pile up invites. (A real fix needs a verified email / phone — see docs/GROWTH.md.)
-    if (user.invitedBy && !(await over('ref-ip', `${user.invitedBy}|${ip}`, LIMITS.referralIp))
-      && !(await over('ref', user.invitedBy, LIMITS.referralDay))) await store.addReferral(user.invitedBy);
     return user;
   }
   const wrap = (fn) => (req, res) => Promise.resolve().then(() => fn(req, res)).catch((e) => {
@@ -202,7 +205,7 @@ export function createMomRouter({
     if (await over('reg', ip, LIMITS.registerIp)) { res.status(429).json({ error: 'too_many' }); return; }
     if (await store.getUserByAccount(acc.account)) { res.status(409).json({ error: 'exists' }); return; }
     const user = await createUser({
-      account: acc.account, provider: acc.type, nickname, passwordHash: await hashPassword(password), invitedBy, ip, consent: true, marketing: marketing === true,
+      account: acc.account, provider: acc.type, nickname, passwordHash: await hashPassword(password), invitedBy, consent: true, marketing: marketing === true,
     });
     if (!user) { res.status(409).json({ error: 'exists' }); return; }
     statsCache = null;
@@ -276,6 +279,7 @@ export function createMomRouter({
       nickname: user.nickname,
       inviteCode: user.code,
       invitedBy: user.invitedBy,
+      welcomeGiftAt: iso(user.giftAt),
       createdAt: iso(user.createdAt),
       lastLoginAt: iso(user.lastLoginAt),
       consent: user.consent ? { version: user.consent.version, at: iso(user.consent.at) } : null,
@@ -366,7 +370,11 @@ export function createMomRouter({
       if (!profile || !/^U[0-9a-f]{32}$/.test(String(profile.userId))) throw new Error('unexpected LINE user id');
       const account = `line:${profile.userId}`;
       let user = await store.getUserByAccount(account);
-      if (!user) user = (await createUser({ account, provider: 'line', nickname: profile.displayName, invitedBy: st.ref, ip: clientIp(req) })) || await store.getUserByAccount(account);
+      if (!user) {
+        user = (await createUser({
+          account, provider: 'line', nickname: profile.displayName, invitedBy: st.ref,
+        })) || await store.getUserByAccount(account);
+      }
       await store.updateUser(user.id, { lastLoginAt: now() });
       backToApp(req, res, { token: await session(user), nonce: st.n });
     } catch (e) {
@@ -380,6 +388,16 @@ export function createMomRouter({
   });
   mountCircle(router, {
     store, now, secret, over, clientIp, wrap,
+  });
+  mountInvite(router, {
+    store,
+    now,
+    over,
+    clientIp,
+    wrap,
+    currentUser,
+    userOut: async (u) => publicUser(u, { referrals: await store.countReferrals(u.code) }),
+    referralLimits: { ip: LIMITS.referralIp, day: LIMITS.referralDay },
   });
 
   return router;

@@ -26,6 +26,7 @@
 .login-pw .input { padding-right: 64px; }
 .login-show { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); min-height: 36px; padding: 0 8px; }
 .login-err { color: var(--c-danger-ink); font-weight: 600; font-size: 14px; }
+.login-gift { margin: 0 0 14px; padding: 10px 12px; border-radius: 14px; background: var(--c-primary-soft); color: var(--c-primary); font-size: 14px; font-weight: 600; text-align: center; }
 .acct-card .card-title .tag { margin-left: 4px; }
 .ob-login { margin-top: 10px; }
 /* a narrow phone: the sign-out buttons go under the name instead of squeezing it */

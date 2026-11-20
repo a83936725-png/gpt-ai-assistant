@@ -38,11 +38,11 @@ test('COMMAND_SYS_VERSION', async () => {
   const isLatest = !isNewerVersion(latest, current);
   expect(getPrompt(MOCK_USER_01).messages.length).toEqual(3);
   const replies = results.map(({ messages }) => messages.map(({ text }) => text));
-  expect(replies).toEqual(
-    [
-      [t('__COMMAND_SYS_VERSION_REPLY')(current, isLatest)],
-    ],
-  );
+  // The latest version is read from main on GitHub, so a branch that is behind main is told a newer
+  // version exists; expect that second line instead of assuming the branch is up to date.
+  const expected = [t('__COMMAND_SYS_VERSION_REPLY')(current, isLatest)];
+  if (!isLatest) expected.push(t('__MESSAGE_NEW_VERSION_AVAILABLE')(latest));
+  expect(replies).toEqual([expected]);
 }, TIMEOUT);
 
 test('isNewerVersion compares version numbers, not strings', () => {

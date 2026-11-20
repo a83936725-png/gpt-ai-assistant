@@ -1,3 +1,4 @@
+import config from '../config/index.js';
 import { replyMessage } from '../utils/index.js';
 import {
   activateHandler,
@@ -17,7 +18,9 @@ import {
   reportHandler,
   retryHandler,
   searchHandler,
+  serviceHandler,
   talkHandler,
+  trainerHandler,
   uiHandler,
   versionHandler,
 } from './handlers/index.js';
@@ -29,8 +32,10 @@ import Event from './models/event.js';
  * @returns {Promise<Context>}
  */
 const handleContext = async (context) => (
+  // Staff practising the expo reception script: their messages go to the practice first.
+  trainerHandler(context)
   // 「畫介面」「畫圖示」「畫動畫」 must run before the draw handler, whose alias 「畫」 would match them too.
-  uiHandler(context)
+  || uiHandler(context)
   || mediaHandler(context)
   || activateHandler(context)
   || commandHandler(context)
@@ -54,6 +59,19 @@ const handleContext = async (context) => (
 );
 
 /**
+ * Customer service mode: one-to-one chats get answers from the knowledge base only, so customers
+ * cannot reach drawing, search or other commands. Groups get no reply.
+ * @param {Context} context
+ * @returns {Promise<Context>}
+ */
+const handleServiceContext = async (context) => (
+  idHandler(context)
+  || trainerHandler(context)
+  || serviceHandler(context)
+  || context
+);
+
+/**
  * A source that is not on the allowlist can only ask for its ID.
  * @param {Context} context
  * @returns {Promise<Context>}
@@ -68,8 +86,12 @@ const handleBlockedContext = async (context) => (
  * @returns {Promise<Context>}
  */
 const routeContext = (context) => {
+  // While customer service is tested on the real official account, customers who are not on the
+  // allowlist must not get a reply at all; staff answer them by hand as usual.
+  if (context.isBlocked && config.SERVICE_MODE_ENABLED) return idHandler(context) || context;
   if (context.isBlocked) return handleBlockedContext(context);
   if (context.error || context.isFlagged) return context;
+  if (config.SERVICE_MODE_ENABLED) return handleServiceContext(context);
   return handleContext(context);
 };
 
@@ -90,5 +112,10 @@ const handleEvents = async (events = []) => (
       .map((context) => replyMessage(context)),
   ))
 );
+
+export {
+  handleServiceContext,
+  routeContext,
+};
 
 export default handleEvents;

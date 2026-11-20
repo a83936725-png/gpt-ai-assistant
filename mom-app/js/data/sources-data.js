@@ -150,7 +150,7 @@
     '104-nursing': { org: '104人力銀行 職場力', title: '哺乳時間怎麼請', url: 'https://blog.104.com.tw/breast-feeding-time', kind: 'media', note: '子女未滿2歲，每日另給哺（集）乳時間60分鐘' },
     'udn-nbs-2026': { org: '聯合新聞網', title: '新生兒篩檢7月全額公費 納入SMA', url: 'https://udn.com/news/story/7266/9498884', kind: 'media', note: '代謝異常篩檢改全額公費，擴增為22項' },
     'mohw-flu-2026': { org: '衛生福利部', title: '公費流感及新冠疫苗10月1日開打', url: 'https://www.mohw.gov.tw/cp-16-88084-1.html', kind: 'gov', note: '公費對象包括孕婦；可用VAX MAP或1922查詢' },
-    'cna-tax-2026': { org: '中央通訊社', title: '財部：未成年子女免稅額增加50%', url: 'https://cna.com.tw/news/afe/202608210277.aspx', kind: 'media', note: '6歲以下第1名15萬元、第2名以上22.5萬元幼兒學前特別扣除額' },
+    'mof-preschool': { org: '財政部', title: '提高幼兒學前特別扣除額，打造友善育兒賦稅環境', url: 'https://www.mof.gov.tw/singlehtml/384fb3077bb349ea973e7fc6f13b6974?cntId=b9f32044b5254406a78f91a9937e0bc4', kind: 'gov', note: '113年度起6歲以下第1名15萬元、第2名以上22.5萬元，取消排富' },
     'ris-birth': { org: '內政部戶政司', title: '出生登記', url: 'https://www.ris.gov.tw/documents/html/2/3/1/379.html', kind: 'gov', note: '出生 60 日內辦理出生登記與應備文件' },
     'nhi-newborn': { org: '衛生福利部中央健康保險署', title: '新生兒', url: 'https://www.nhi.gov.tw/ch/cp-4963-899d7-2669-1.html', kind: 'gov', note: '新生兒健保投保與健保卡申辦' },
   };
@@ -581,7 +581,7 @@
     'benefit:daycare-02': [{ s: 'mohw-daycare', n: '衛福部：公托7,000、準公共13,000元起' }, { s: 'sfaa-raise', n: '社家署：托育準公共專區' }],
     'benefit:allowance-25': [{ s: 'ntpc-25-faq', n: '新北市：2–5歲育兒津貼與學費減免擇一' }],
     'benefit:nursing': [{ s: 'mol-nursing', n: '勞動部：哺乳時間不限母乳、爸爸也可請' }, { s: '104-nursing', n: '104：每日60分鐘哺（集）乳時間' }],
-    'benefit:tax-preschool': [{ s: 'cna-tax-2026', n: '財政部：第1名15萬、第2名以上22.5萬' }],
+    'benefit:tax-preschool': [{ s: 'mof-preschool', n: '第1名15萬、第2名以上22.5萬，不排富' }],
     'benefit:flu-preg': [{ s: 'mohw-flu-2026', n: '衛福部：公費流感疫苗對象包括孕婦' }, { s: 'cdc-preg-flu', n: '疾管署：孕婦任何孕期可接種' }],
     'benefit:tdap-preg': [{ s: 'cdc-preg-tdap', n: '疾管署：孕期接種一劑百日咳疫苗' }],
     'benefit:nbs-free': [{ s: 'hpa-nbs', n: '國健署：出生48小時後足跟血篩檢' }, { s: 'udn-nbs-2026', n: '聯合報：7月起全額公費、納入SMA' }],

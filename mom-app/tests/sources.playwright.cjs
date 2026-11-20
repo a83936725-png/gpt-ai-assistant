@@ -6,7 +6,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/';
 const results = [];
 const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info });
 // official and professional domains only (anything else would be a sign of a made-up link)
-const OFFICIAL = /^https:\/\/([a-z0-9-]+\.)*(gov\.tw|who\.int|cdc\.gov|healthychildren\.org|aap\.org|acog\.org|org\.tw|nih\.gov|nhs\.uk|unicef\.org|edu\.tw)(\/|$)/i;
+const OFFICIAL = /^https:\/\/([a-z0-9-]+\.)*(gov\.tw|gov\.taipei|who\.int|cdc\.gov|healthychildren\.org|aap\.org|acog\.org|org\.tw|nih\.gov|nhs\.uk|unicef\.org|edu\.tw)(\/|$)/i;
 
 (async () => {
   const browser = await chromium.launch();
@@ -25,7 +25,10 @@ const OFFICIAL = /^https:\/\/([a-z0-9-]+\.)*(gov\.tw|who\.int|cdc\.gov|healthych
     const A = window.App; const src = Object.entries(A.SOURCES);
     const used = new Set(Object.values(A.SOURCE_MAP).flat().map((x) => (typeof x === 'string' ? x : x.s)));
     return {
-      n: src.length, urls: src.map(([, s]) => s.url), noTitle: src.filter(([, s]) => !s.title || !s.org).map(([k]) => k),
+      n: src.length, urls: src.filter(([, s]) => s.kind !== 'media').map(([, s]) => s.url), noTitle: src.filter(([, s]) => !s.title || !s.org).map(([k]) => k),
+      news: src.filter(([, s]) => s.kind === 'media').map(([, s]) => s.url),
+      // news and summaries add the latest amounts; something official is always cited with them
+      newsOnly: Object.entries(A.SOURCE_MAP).filter(([, v]) => v.length && v.every((x) => (A.SOURCES[typeof x === 'string' ? x : x.s] || {}).kind === 'media')).map(([k]) => k),
       unused: src.filter(([k]) => !used.has(k)).map(([k]) => k),
       dangling: Object.entries(A.SOURCE_MAP).filter(([, v]) => !v.length || v.some((x) => !A.SOURCES[typeof x === 'string' ? x : x.s])).map(([k]) => k),
       longNotes: Object.values(A.SOURCE_MAP).flat().filter((x) => x.n && x.n.length > 30).map((x) => x.n),
@@ -34,6 +37,7 @@ const OFFICIAL = /^https:\/\/([a-z0-9-]+\.)*(gov\.tw|who\.int|cdc\.gov|healthych
   ok(`${reg.n} sources, each with an organisation and a title`, reg.n >= 15 && !reg.noTitle.length, reg.noTitle.join(','));
   const bad = reg.urls.filter((u) => !OFFICIAL.test(u));
   ok('every link is https on an official or professional site (政府、WHO、CDC、AAP、ACOG、學會)', !bad.length, bad.join(' '));
+  ok('news and summaries (新聞與整理) are https, and never the only source for anything', reg.news.every((u) => /^https:\/\//.test(u)) && !reg.newsOnly.length, reg.newsOnly.join(','));
   ok('every source is used, and every citation points at a real source', !reg.unused.length && !reg.dangling.length, `unused ${reg.unused.join(',')} dangling ${reg.dangling.join(',')}`);
   ok('the small notes stay small (≤ 30 字)', !reg.longNotes.length, reg.longNotes.slice(0, 3).join(' | '));
 

@@ -80,6 +80,10 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   const found = await S(P, () => ['育兒津貼', '生育補助', '育嬰假', '報稅', '哺乳時間'].map((q) => (App.search.query(q).groups.tool[0] || { d: { tool: {} } }).d.tool.id));
   ok('search 育兒津貼／生育補助／育嬰假／報稅／哺乳時間 → 補助福利清單', found.every((x) => x === 'benefits'), found.join(','));
 
+  const links = await S(P, () => App.EXTRAS.BENEFITS.filter((b) => b.url).map((b) => [b.id, b.url]));
+  const notGov = links.filter(([, u]) => !/^https:\/\/([a-z0-9-]+\.)*gov\.tw(\/|$)/i.test(u));
+  ok('every 「開啟官方網站」 goes to a government site (news is only ever an extra source)', links.length >= 24 && !notGov.length, notGov.map((x) => x.join(' ')).join(', '));
+
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   results.forEach((r) => console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${r.name}${r.info && !r.pass ? `   [${r.info}]` : ''}`));
   console.log(`\n${results.filter((r) => r.pass).length}/${results.length} passed`);

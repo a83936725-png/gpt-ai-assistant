@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.12.1 (2026-11-20)
+
+### Bug Fixes
+
+- IKIGAI: show why AI analysis failed (invalid key, quota, unknown model, timeout, ...) instead of a generic error, without exposing the provider's raw message. See the troubleshooting table in [docs/IKIGAI-WEB.zh-TW.md](docs/IKIGAI-WEB.zh-TW.md)
+- IKIGAI: wait up to `IKIGAI_TIMEOUT` (default 50 seconds) for the AI reply, so a short `APP_API_TIMEOUT`/`OPENAI_TIMEOUT` no longer cuts off the longer IKIGAI answer
+- IKIGAI: incomplete forms no longer count toward the hourly limit
+
 ## 4.12.0 (2026-11-20)
 
 See [docs/IKIGAI-WEB.zh-TW.md](docs/IKIGAI-WEB.zh-TW.md) for how to use it.

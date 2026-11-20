@@ -109,6 +109,7 @@ const createChatCompletion = ({
   maxTokens,
   frequencyPenalty = config.OPENAI_COMPLETION_FREQUENCY_PENALTY,
   presencePenalty = config.OPENAI_COMPLETION_PRESENCE_PENALTY,
+  timeout,
 }) => {
   const body = buildChatCompletionBody({
     model: hasImage({ messages }) ? config.OPENAI_VISION_MODEL : model,
@@ -122,7 +123,8 @@ const createChatCompletion = ({
       || (IS_OFFICIAL_OPENAI ? REASONING_EFFORT_NONE : null),
     isOpenAI: IS_OFFICIAL_OPENAI,
   });
-  return completionClient.post('/v1/chat/completions', body);
+  // A per-call timeout lets longer answers (e.g. the IKIGAI reading) wait past OPENAI_TIMEOUT.
+  return completionClient.post('/v1/chat/completions', body, timeout ? { timeout } : undefined);
 };
 
 const isGptImageModel = (model) => model.startsWith('gpt-image');

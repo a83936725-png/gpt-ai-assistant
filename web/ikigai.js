@@ -2,7 +2,9 @@ import express from 'express';
 import { readFileSync } from 'fs';
 import path from 'path';
 import config from '../config/index.js';
-import analyzeIkigai, { IkigaiInputError, IKIGAI_CIRCLES } from '../utils/analyze-ikigai.js';
+import analyzeIkigai, {
+  describeIkigaiError, IkigaiInputError, IKIGAI_CIRCLES, normalizeIkigai,
+} from '../utils/analyze-ikigai.js';
 import moderateContent from '../utils/moderate-content.js';
 
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
@@ -55,33 +57,45 @@ router.get('/status', (req, res) => {
 
 router.post('/analyze', async (req, res) => {
   if (!config.IKIGAI_AI_ENABLED) {
-    res.status(403).json({ error: 'AI 分析未開啟' });
+    res.status(403).json({ code: 'disabled', error: 'AI 分析未開啟（IKIGAI_AI_ENABLED=false）' });
     return;
   }
+  let ikigai;
+  try {
+    ikigai = normalizeIkigai(req.body);
+  } catch (err) {
+    if (!(err instanceof IkigaiInputError)) throw err;
+    res.status(400).json({ code: 'invalid_input', error: err.message });
+    return;
+  }
+  // Checked after validation so incomplete forms do not use up the hourly allowance.
   if (isRateLimited(getClientIp(req))) {
-    res.status(429).json({ error: '分析次數太多，請一小時後再試' });
+    res.status(429).json({ code: 'too_many_requests', error: `分析次數太多（每小時上限 ${config.IKIGAI_RATE_LIMIT} 次），請一小時後再試` });
     return;
   }
+  let stage = 'moderation';
   try {
     const text = IKIGAI_CIRCLES
-      .flatMap(({ key }) => (Array.isArray(req.body?.[key]) ? req.body[key] : []))
-      .concat(req.body?.note || [])
-      .filter((item) => typeof item === 'string')
-      .join('\n')
-      .slice(0, 4000);
+      .flatMap(({ key }) => ikigai[key])
+      .concat(ikigai.note || [])
+      .join('\n');
     if (await moderateContent({ text })) {
-      res.status(400).json({ error: '內容未通過安全檢查，請修改後再試' });
+      res.status(400).json({ code: 'flagged', error: '內容未通過安全檢查，請修改後再試' });
       return;
     }
-    const { text: result } = await analyzeIkigai(req.body);
+    stage = 'completion';
+    const { text: result } = await analyzeIkigai(ikigai);
     res.json({ text: result });
   } catch (err) {
-    if (err instanceof IkigaiInputError) {
-      res.status(400).json({ error: err.message });
-      return;
+    const reason = describeIkigaiError(err);
+    if (stage === 'moderation') {
+      // Model-specific reasons name the chat model, which is not the one moderation uses.
+      const shared = ['timeout', 'network', 'invalid_api_key', 'insufficient_quota'].includes(reason.code);
+      const status = err.response?.status ? `（狀態碼 ${err.response.status}）` : '';
+      reason.error = `安全檢查失敗：${shared ? reason.error : `OpenAI moderation 回傳錯誤${status}`}。可先把 OPENAI_MODERATION_ENABLED 設為 false`;
     }
-    console.error(err.message);
-    res.status(500).json({ error: 'AI 分析失敗，請稍後再試' });
+    console.error(`[ikigai] ${stage} ${reason.code}: ${err.response?.status || err.code || ''} ${err.message}`);
+    res.status(502).json(reason);
   }
 });
 

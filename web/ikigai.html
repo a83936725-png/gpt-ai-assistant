@@ -491,6 +491,14 @@
   const apiBase = () => location.pathname.replace(/\/+$/, '');
   const payload = () => ({ ...Object.fromEntries(KEYS.map((k) => [k, inCircle(k).map((it) => it.text)])), note: state.note });
 
+  // Responses without our JSON body come from the hosting platform, e.g. Vercel's own timeout page.
+  function serverError(code) {
+    if (code === 504) return '伺服器執行超過時間上限（504）。請稍後再試，或把 IKIGAI_MAX_TOKENS 調低';
+    if (code === 404) return '找不到分析服務（404），可能是 IKIGAI_ENABLED 被設為 false';
+    if (code === 413) return '送出的內容太大（413），請減少項目';
+    return `伺服器錯誤（狀態碼 ${code}），請查看 Vercel Logs`;
+  }
+
   async function runAi() {
     const btn = document.getElementById('aiBtn');
     const status = document.getElementById('aiStatus');
@@ -502,7 +510,7 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload()),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `伺服器錯誤（${res.status}）`);
+      if (!res.ok) throw new Error(data.error || serverError(res.status));
       state.ai = data.text;
       save();
       document.getElementById('aiOut').innerHTML = mdToHtml(state.ai);
@@ -510,7 +518,8 @@
       btn.textContent = '重新分析';
     } catch (err) {
       status.className = 'status error';
-      status.textContent = err.message || 'AI 分析失敗';
+      // fetch() rejects with a TypeError when the request never reached the server.
+      status.textContent = err instanceof TypeError ? '連不到伺服器，請檢查網路後再試' : (err.message || 'AI 分析失敗');
     } finally {
       btn.disabled = false;
     }

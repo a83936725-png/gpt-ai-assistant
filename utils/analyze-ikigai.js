@@ -76,6 +76,55 @@ export const buildIkigaiMessages = (ikigai) => {
   ];
 };
 
+const NETWORK_ERROR_CODES = ['ENOTFOUND', 'ECONNREFUSED', 'ECONNRESET', 'EAI_AGAIN', 'ERR_NETWORK'];
+
+/**
+ * Turns a failed AI call into a reason the page can show. It never repeats the provider's raw message,
+ * which can include part of the API key.
+ * @param {Error & { code?: string, response?: { status: number, data?: Object } }} err
+ * @returns {{ code: string, error: string }}
+ */
+export const describeIkigaiError = (err) => {
+  const status = err?.response?.status;
+  const detail = err?.response?.data?.error || {};
+  const model = config.OPENAI_COMPLETION_MODEL;
+  if (err?.code === 'ECONNABORTED' || err?.code === 'ETIMEDOUT' || /timeout/i.test(err?.message || '')) {
+    return { code: 'timeout', error: 'AI 回應逾時。請稍後再試，或把 IKIGAI_TIMEOUT 調高、IKIGAI_MAX_TOKENS 調低' };
+  }
+  if (!status && NETWORK_ERROR_CODES.includes(err?.code)) {
+    return { code: 'network', error: '伺服器連不到 AI 服務，請檢查 OPENAI_COMPLETION_BASE_URL（或 OPENAI_BASE_URL）' };
+  }
+  if (status === 401) {
+    return { code: 'invalid_api_key', error: 'OpenAI API 金鑰無效或已失效，請檢查 OPENAI_API_KEY（或 OPENAI_COMPLETION_API_KEY）' };
+  }
+  if (status === 403) {
+    return { code: 'forbidden', error: `這把 API 金鑰沒有權限使用模型「${model}」，或所在地區不支援` };
+  }
+  if (status === 404 || detail.code === 'model_not_found') {
+    return { code: 'model_not_found', error: `找不到模型「${model}」，請檢查 OPENAI_COMPLETION_MODEL` };
+  }
+  if (status === 429 && (detail.code === 'insufficient_quota' || detail.type === 'insufficient_quota')) {
+    return { code: 'insufficient_quota', error: 'OpenAI 額度用完了，請到 OpenAI 後台的 Billing 儲值或提高上限' };
+  }
+  if (status === 429) {
+    return { code: 'rate_limited', error: 'OpenAI 目前請求太頻繁，請過一分鐘再試' };
+  }
+  if (status === 400) {
+    const param = detail.param ? `（參數 ${detail.param}）` : '';
+    return { code: 'bad_request', error: `OpenAI 拒絕了這次請求${param}，可能是模型「${model}」不支援目前的設定` };
+  }
+  if (status >= 500) {
+    return { code: 'upstream_error', error: `AI 服務暫時異常（狀態碼 ${status}），請稍後再試` };
+  }
+  if (status) {
+    return { code: 'upstream_error', error: `AI 服務回傳錯誤（狀態碼 ${status}）` };
+  }
+  if (err?.code === 'empty_response') {
+    return { code: 'empty_response', error: 'AI 沒有回傳內容，請再試一次' };
+  }
+  return { code: 'unknown', error: 'AI 分析失敗，原因不明，請查看 Vercel Logs' };
+};
+
 /**
  * Asks the chat model for an IKIGAI reading of the four lists.
  * @param {Object} body Raw request body from the web page.
@@ -87,9 +136,15 @@ const analyzeIkigai = async (body) => {
   const { data } = await createChatCompletion({
     messages: buildIkigaiMessages(ikigai),
     maxTokens: Math.max(config.OPENAI_COMPLETION_MAX_TOKENS, config.IKIGAI_MAX_TOKENS),
+    timeout: config.IKIGAI_TIMEOUT,
   });
-  const [choice] = data.choices;
-  return { text: choice.message.content.trim(), ikigai };
+  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!text) {
+    const err = new Error('Empty completion');
+    err.code = 'empty_response';
+    throw err;
+  }
+  return { text, ikigai };
 };
 
 export default analyzeIkigai;

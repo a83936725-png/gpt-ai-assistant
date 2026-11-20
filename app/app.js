@@ -20,6 +20,7 @@ import {
   searchHandler,
   serviceHandler,
   talkHandler,
+  trainerHandler,
   uiHandler,
   versionHandler,
 } from './handlers/index.js';
@@ -31,8 +32,10 @@ import Event from './models/event.js';
  * @returns {Promise<Context>}
  */
 const handleContext = async (context) => (
+  // Staff practising the expo reception script: their messages go to the practice first.
+  trainerHandler(context)
   // 「畫介面」「畫圖示」「畫動畫」 must run before the draw handler, whose alias 「畫」 would match them too.
-  uiHandler(context)
+  || uiHandler(context)
   || mediaHandler(context)
   || activateHandler(context)
   || commandHandler(context)
@@ -63,6 +66,7 @@ const handleContext = async (context) => (
  */
 const handleServiceContext = async (context) => (
   idHandler(context)
+  || trainerHandler(context)
   || serviceHandler(context)
   || context
 );

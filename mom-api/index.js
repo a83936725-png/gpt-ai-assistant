@@ -221,7 +221,8 @@ export function createMomRouter({
     const ip = clientIp(req);
     if (await over('reg', ip, LIMITS.registerIp)) { res.status(429).json({ error: 'too_many' }); return; }
     // with a way to send codes, the address is proved first: nobody can take someone else's Email / phone, and
-    // nobody can learn whether an address already has an account (no code is ever sent for one that has)
+    // nobody can learn whether an address already has an account (one that has is never sent a code, and a guessed
+    // code fails there just as it does for a new address)
     const mustVerify = verify.can(acc.type);
     if (mustVerify) {
       if (!code) { res.status(400).json({ error: 'need_code' }); return; }

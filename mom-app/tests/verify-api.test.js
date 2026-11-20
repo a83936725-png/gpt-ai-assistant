@@ -102,8 +102,8 @@ function flows(label, makeStore) {
       const again = await code({ account: 'mia@example.com', purpose: 'register', consent: POLICY }, ip());
       expect(again.data).toEqual({ ok: true, ttl: 600 });
       expect((await api.post(`${base}/auth/register`, {
-        consent: POLICY, account: 'mia@example.com', password: 'baby-sleeps-9', code: '123456',
-      }, { headers: { 'X-Forwarded-For': ip() } })).data.error).toMatch(/^(bad_code|code_expired)$/);
+        consent: POLICY, account: 'mia@example.com', password: 'baby-sleeps-9', code: '12345', // can never be right
+      }, { headers: { 'X-Forwarded-For': ip() } })).data.error).toBe('bad_code');
       const exp = (await api.get(`${base}/me/export`, auth(r.data.token))).data;
       expect(exp.verifiedAt).toBe(new Date(signedAt).toISOString());
     });
@@ -145,6 +145,56 @@ function flows(label, makeStore) {
       expect((await api.post(`${base}/auth/login`, { account: 'reset@example.com', password: 'baby-sleeps-9' })).status).toBe(401);
       expect((await api.post(`${base}/auth/login`, { account: 'reset@example.com', password: 'new-baby-sleeps-1' })).status).toBe(200);
       expect((await api.post(`${base}/auth/reset`, { account: 'reset@example.com', code: c.data.devCode, password: 'another-pass-22' })).data.error).toBe('code_expired'); // used once
+    });
+
+    test('nothing tells whether an address has an account: the answer, a guessed code, the limits', async () => {
+      const guesses = async (path, account) => {
+        const out = [];
+        for (let i = 0; i < 5; i += 1) { // eslint-disable-next-line no-await-in-loop
+          out.push((await api.post(`${base}${path}`, {
+            consent: POLICY, account, password: 'new-baby-sleeps-1', code: '12345', // can never be right
+          }, { headers: { 'X-Forwarded-For': ip() } })).data.error);
+        }
+        return out;
+      };
+      const plain = ({ ok, ttl }) => ({ ok, ttl }); // (the test-only echo adds the code when one was really sent)
+      await signUp('has-account@example.com');
+      const seen = [];
+      for (const account of ['has-account@example.com', 'no-account@example.com']) { // eslint-disable-line no-restricted-syntax
+        later();
+        const net = ip();
+        /* eslint-disable no-await-in-loop */
+        const reg = plain((await code({ account, purpose: 'register', consent: POLICY }, net)).data);
+        const regTries = await guesses('/auth/register', account);
+        const reset = plain((await code({ account, purpose: 'reset' }, net)).data);
+        const resetTries = await guesses('/auth/reset', account);
+        /* eslint-enable no-await-in-loop */
+        seen.push({
+          reg, regTries, reset, resetTries,
+        });
+      }
+      const five = ['bad_code', 'bad_code', 'bad_code', 'bad_code', 'code_too_many'];
+      expect(seen[0]).toEqual({
+        reg: { ok: true, ttl: 600 }, regTries: five, reset: { ok: true, ttl: 600 }, resetTries: five,
+      });
+      expect(seen[1]).toEqual(seen[0]);
+      // 6 codes an hour per address, counted the same way with or without an account
+      await signUp('has-account-2@example.com');
+      await code({ account: 'no-account-2@example.com', purpose: 'register', consent: POLICY }, ip());
+      const hourly = [];
+      for (const account of ['has-account-2@example.com', 'no-account-2@example.com']) { // eslint-disable-line no-restricted-syntax
+        const out = [];
+        for (let i = 0; i < 6; i += 1) { later(); out.push((await code({ account, purpose: 'reset' }, ip())).status); } // eslint-disable-line no-await-in-loop
+        hourly.push(out);
+      }
+      expect(hourly[0]).toEqual([200, 200, 200, 200, 200, 429]);
+      expect(hourly[1]).toEqual(hourly[0]);
+      // 20 an hour per network, and addresses without an account count too
+      const net = ip();
+      const fromOneNet = [];
+      for (let i = 0; i < 20; i += 1) fromOneNet.push((await code({ account: `nobody-${i}@example.com`, purpose: 'reset' }, net)).status); // eslint-disable-line no-await-in-loop
+      expect(fromOneNet.every((s) => s === 200)).toBe(true);
+      expect((await code({ account: 'has-account@example.com', purpose: 'reset' }, net)).data.error).toBe('too_many');
     });
 
     test('an older account that never confirmed: rewards wait until it does', async () => {
@@ -225,14 +275,46 @@ describe('what leaves the server', () => {
     expect(calls[0].opts.headers['X-Mom-Signature']).toBe(`sha256=${sig}`);
     await close(server);
   });
-  test('a failed send says so (and leaves no code behind)', async () => {
-    const http = { post: async () => { throw new Error('provider down'); } };
-    const { server, base } = await serve(createMomRouter({ store: new MemoryStore(), env: { NODE_ENV: 'test', MOM_AUTH_SECRET: STRONG, RESEND_API_KEY: 'k', MOM_MAIL_FROM: 'a@b.example' }, http }));
+  test('a failed send says so, whether or not the address has an account', async () => {
+    let down = false; const sent = [];
+    const http = { post: async (url, body) => { if (down) throw new Error('provider down'); sent.push(body); return { data: {} }; } };
+    const { server, base } = await serve(createMomRouter({
+      store: new MemoryStore(), env: { NODE_ENV: 'test', MOM_AUTH_SECRET: STRONG, MOM_TRUST_PROXY: '1', RESEND_API_KEY: 'k', MOM_MAIL_FROM: 'a@b.example' }, http, now: () => t,
+    }));
+    const net = (n) => ({ headers: { 'X-Forwarded-For': `10.9.${n}.1` } });
+    await api.post(`${base}/auth/code`, { account: 'mia@example.com', purpose: 'register', consent: POLICY }, net(1));
+    expect((await api.post(`${base}/auth/register`, {
+      consent: POLICY, account: 'mia@example.com', password: 'baby-sleeps-9', code: sent[0].text.match(/(\d{6})/)[1],
+    }, net(1))).status).toBe(201);
+    down = true;
+    t += 61 * 1000; // a minute later (one message a minute per address)
     const errs = console.error; console.error = () => {};
-    const r = await api.post(`${base}/auth/code`, { account: 'mia@example.com', purpose: 'register', consent: POLICY });
+    const sign = await Promise.all(['mia@example.com', 'new@example.com'].map((account, i) => api.post(`${base}/auth/code`, { account, purpose: 'register', consent: POLICY }, net(2 + i))));
+    // 忘記密碼 answers the same either way (only an account would have been sent anything)
+    const reset = await Promise.all(['mia@example.com', 'nobody@example.com'].map((account, i) => api.post(`${base}/auth/code`, { account, purpose: 'reset' }, net(4 + i))));
     console.error = errs;
-    expect(r.status).toBe(502);
-    expect(r.data.error).toBe('send_failed');
+    expect(sign.map((r) => [r.status, r.data.error])).toEqual([[502, 'send_failed'], [502, 'send_failed']]);
+    expect(reset.map((r) => [r.status, r.data])).toEqual([[200, { ok: true, ttl: 600 }], [200, { ok: true, ttl: 600 }]]);
+    await close(server);
+  });
+  test('忘記密碼 for an address without an account takes about as long as a real send', async () => {
+    const sent = [];
+    const http = { post: async (url, body) => { await new Promise((r) => { setTimeout(r, 150); }); sent.push(body); return { data: {} }; } };
+    const { server, base } = await serve(createMomRouter({
+      store: new MemoryStore(), env: { NODE_ENV: 'test', MOM_AUTH_SECRET: STRONG, MOM_TRUST_PROXY: '1', RESEND_API_KEY: 'k', MOM_MAIL_FROM: 'a@b.example' }, http, now: () => t,
+    }));
+    const net = (n) => ({ headers: { 'X-Forwarded-For': `10.8.${n}.1` } });
+    await api.post(`${base}/auth/code`, { account: 'mia@example.com', purpose: 'register', consent: POLICY }, net(1));
+    await api.post(`${base}/auth/register`, {
+      consent: POLICY, account: 'mia@example.com', password: 'baby-sleeps-9', code: sent[0].text.match(/(\d{6})/)[1],
+    }, net(1));
+    const timed = async (account, n) => { const t0 = Date.now(); const r = await api.post(`${base}/auth/code`, { account, purpose: 'reset' }, net(n)); return { ms: Date.now() - t0, data: r.data }; };
+    const real = await timed('mia@example.com', 2);
+    const none = await timed('nobody@example.com', 3);
+    expect(sent).toHaveLength(2); // the sign-up code and mia's reset code; nothing for nobody@
+    expect(none.data).toEqual(real.data);
+    expect(real.ms).toBeGreaterThanOrEqual(140);
+    expect(none.ms).toBeGreaterThanOrEqual(100);
     await close(server);
   });
 });

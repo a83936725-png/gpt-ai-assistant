@@ -1,15 +1,15 @@
 /* 驗證碼 (used by index.js): an Email / phone sign-up first proves it owns the address, 忘記密碼 resets a password
  * with a code, and an older account can verify itself.
  *   POST /auth/code {account, purpose: 'register', consent}   a sign-up code, before the account exists (an address
- *                                                               that already has one gets a 「已經註冊過」 notice instead,
- *                                                               with exactly the same answer here: nobody can test
- *                                                               whether someone's Email / phone uses a pregnancy app)
- *   POST /auth/code {account, purpose: 'reset'}                a reset code (the same answer whether or not the account
- *                                                               exists, so nobody can test which addresses use the app)
+ *                                                               that already has one gets a 「已經註冊過」 notice instead)
+ *   POST /auth/code {account, purpose: 'reset'}                a reset code (only an account with a password is sent one)
  *   POST /auth/verify/send                 (logged in) a code to my own Email / phone
  *   POST /auth/verify {code}               (logged in) confirm it
  *   POST /auth/reset {account, code, password}   new password: logged in here, every other device logged out
  *   /auth/register takes {code} whenever that kind of account (Email / phone) can be verified.
+ * Nobody can test whether someone's Email / phone uses a pregnancy app: for an address with or without an account,
+ * /auth/code gives the same answer, uses up the same limits and takes about as long, and a guessed code fails the same
+ * way (an address that is sent nothing still gets a code stored that nobody is told).
  * Sending: RESEND_API_KEY + MOM_MAIL_FROM (Email via Resend); TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM or
  * TWILIO_MESSAGING_SERVICE_SID (SMS via Twilio); or MOM_CODE_WEBHOOK_URL (+ MOM_CODE_WEBHOOK_SECRET to sign it) for
  * any other service (三竹、every8d… through the brand's own system). Without any of them, sign-up works as before and
@@ -86,14 +86,19 @@ export function makeVerify({
   // an account that can prove its address but hasn't yet (LINE accounts are verified by LINE)
   const needVerify = (u) => !!u && u.provider !== 'line' && !u.verifiedAt && can(split(u.account).type);
 
-  // a fresh code replaces the previous one; 'wait' / 'too_many' when asked too often
-  async function issue(purpose, account, ip) {
-    if (await over('code-min', `${purpose}|${account}`, LIMITS.addrMinute)) return { error: 'wait' };
-    if (await over('code-hour', account, LIMITS.addrHour) || await over('code-ip', ip, LIMITS.ip)) return { error: 'too_many' };
+  // the same allowances are used up whatever happens next, so they never tell whether an address has an account
+  async function limited(purpose, account, ip) {
+    if (await over('code-min', `${purpose}|${account}`, LIMITS.addrMinute)) return 'wait';
+    if (await over('code-hour', account, LIMITS.addrHour) || await over('code-ip', ip, LIMITS.ip)) return 'too_many';
+    return '';
+  }
+  // a fresh code replaces the previous one. It is stored even when nobody is sent it (the address already has an
+  // account, or has none to reset), so a guessed code fails there exactly as it does anywhere else.
+  async function issue(purpose, account) {
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     const t = now();
     await store.setJson(key(purpose, account), { h: hash(purpose, account, code), tries: 0, exp: t + CODE_TTL * 1000 }, CODE_TTL, t);
-    return { code };
+    return code;
   }
   // 'ok' (the code is used up) | 'bad_code' | 'code_expired' | 'code_too_many'
   async function check(purpose, account, code, ip) {
@@ -110,24 +115,23 @@ export function makeVerify({
     await store.del(key(purpose, account));
     return 'ok';
   }
-  // a message without a code (「已經註冊過」): the same limits and the same answer as a code
-  async function sendNotice(res, purpose, account, ip) {
-    // counted like a sign-up code for that address (the answer must look the same)
-    if (await over('code-min', `register|${account}`, LIMITS.addrMinute)) { res.status(429).json({ error: 'wait' }); return; }
-    if (await over('code-hour', account, LIMITS.addrHour) || await over('code-ip', ip, LIMITS.ip)) { res.status(429).json({ error: 'too_many' }); return; }
-    try { await sender.send(account, null, purpose); } catch (e) { console.error('[mom-api] sending a notice failed:', e.message); }
-    res.json({ ok: true, ttl: CODE_TTL });
+  // how long a message takes to go out (a moving average): an answer that sends nothing waits about as long
+  let sendMs = sender.echo ? 0 : 400;
+  const pause = () => new Promise((r) => { setTimeout(r, Math.min(3000, sendMs * (0.75 + Math.random() * 0.5))); });
+  // false when it could not be sent (nobody has that code; it simply runs out)
+  async function deliver(account, code, purpose) {
+    const t0 = Date.now();
+    try { await sender.send(account, code, purpose); return true; } catch (e) {
+      console.error(`[mom-api] sending ${code ? 'a code' : 'a notice'} failed:`, e.message);
+      return false;
+    } finally { sendMs = sendMs * 0.8 + (Date.now() - t0) * 0.2; }
   }
   async function sendCode(res, purpose, account, ip) {
-    const r = await issue(purpose, account, ip);
-    if (r.error) { res.status(429).json({ error: r.error }); return; }
-    try { await sender.send(account, r.code, purpose); } catch (e) {
-      console.error('[mom-api] sending a code failed:', e.message);
-      await store.del(key(purpose, account));
-      res.status(502).json({ error: 'send_failed' });
-      return;
-    }
-    res.json({ ok: true, ttl: CODE_TTL, ...(sender.echo ? { devCode: r.code } : {}) });
+    const limit = await limited(purpose, account, ip);
+    if (limit) { res.status(429).json({ error: limit }); return; }
+    const code = await issue(purpose, account);
+    if (!(await deliver(account, code, purpose))) { res.status(502).json({ error: 'send_failed' }); return; }
+    res.json({ ok: true, ttl: CODE_TTL, ...(sender.echo ? { devCode: code } : {}) });
   }
 
   function mount(router, {
@@ -138,24 +142,24 @@ export function makeVerify({
       const acc = normaliseAccount(body.account);
       if (!acc) { res.status(400).json({ error: 'bad_account' }); return; }
       if (!can(acc.type)) { res.status(404).json({ error: 'verify_off' }); return; }
-      const ip = clientIp(req);
-      if (body.purpose === 'register') {
-        if (body.consent !== POLICY_VERSION) { res.status(400).json({ error: body.consent ? 'policy_changed' : 'need_consent', policy: POLICY_VERSION }); return; }
-        if (await getUserByAccount(acc.account)) { await sendNotice(res, 'exists', acc.account, ip); return; }
-        await sendCode(res, 'register', acc.account, ip);
+      const { purpose } = body;
+      if (purpose !== 'register' && purpose !== 'reset') { res.status(400).json({ error: 'bad_request' }); return; }
+      if (purpose === 'register' && body.consent !== POLICY_VERSION) { res.status(400).json({ error: body.consent ? 'policy_changed' : 'need_consent', policy: POLICY_VERSION }); return; }
+      const limit = await limited(purpose, acc.account, clientIp(req));
+      if (limit) { res.status(429).json({ error: limit }); return; }
+      const u = await getUserByAccount(acc.account);
+      const code = await issue(purpose, acc.account);
+      if (purpose === 'register') {
+        // an address that already has an account is told so instead of getting a code: both wait for a message to go
+        // out, and both fail the same way when it can't
+        if (!(await deliver(acc.account, u ? null : code, u ? 'exists' : 'register'))) { res.status(502).json({ error: 'send_failed' }); return; }
+        res.json({ ok: true, ttl: CODE_TTL, ...(sender.echo && !u ? { devCode: code } : {}) });
         return;
       }
-      if (body.purpose === 'reset') {
-        const u = await getUserByAccount(acc.account);
-        if (!u || !u.passwordHash) { // nothing to reset: answer exactly like a sent code (only the limits still count)
-          if (await over('code-min', `reset|${acc.account}`, LIMITS.addrMinute)) { res.status(429).json({ error: 'wait' }); return; }
-          res.json({ ok: true, ttl: CODE_TTL });
-          return;
-        }
-        await sendCode(res, 'reset', acc.account, ip);
-        return;
-      }
-      res.status(400).json({ error: 'bad_request' });
+      // 忘記密碼: only an account with a password is sent a code; any other address gets nothing, after about as long
+      const real = !!(u && u.passwordHash);
+      if (real) await deliver(acc.account, code, 'reset'); else await pause();
+      res.json({ ok: true, ttl: CODE_TTL, ...(sender.echo && real ? { devCode: code } : {}) });
     }));
 
     router.post('/auth/verify/send', wrap(async (req, res) => {

@@ -10,7 +10,8 @@ const results = []; const errors = [];
 const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: String(info).slice(0, 300) });
 const S = (p, f, a) => p.evaluate(f, a);
 const ip = () => `10.${1 + Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${1 + Math.floor(Math.random() * 250)}`;
-const WEEKS = 12 + Math.floor(Math.random() * 20); // a random circle each run, so earlier runs rarely share it
+// a random circle each run, so earlier runs rarely share it; before week 24, when 首頁 invites to a 好孕加油牆 first
+const WEEKS = 12 + Math.floor(Math.random() * 12);
 
 (async () => {
   const b = await chromium.launch();
@@ -130,6 +131,16 @@ const WEEKS = 12 + Math.floor(Math.random() * 20); // a random circle each run, 
   await S(N, () => App.store.update((s) => { s.profile.lmp = Core.dateKey(Core.addDays(new Date(), -70)); s.profile.edd = ''; }));
   await go(N, 'circle', 1200);
   ok('only the last period entered: the due date is worked out, and she can join', /^p:\d{4}-W\d{2}$/.test(await S(N, () => App.circle.cohort())) && await N.isVisible('button:has-text("加入同週好孕圈")'));
+
+  /* ---------- one invitation at a time on 首頁 ---------- */
+  const W = await mk('W'); await preg(W, 30);
+  await go(W, 'home', 1000);
+  await W.waitForSelector('.wall-home', { timeout: 8000 }).catch(() => {});
+  ok('from week 24 the 祝福牆 invitation comes first (one invitation at a time)', await W.isVisible('.wall-home') && !(await W.isVisible('.cc-home')));
+  await W.click('.wall-home .icon-btn');
+  await W.waitForSelector('.cc-home', { timeout: 8000 }).catch(() => {});
+  ok('…✕ on it, and the 同週好孕圈 invitation takes its place', await W.isVisible('.cc-home') && !(await W.isVisible('.wall-home')));
+  await W.context().close();
 
   /* ---------- dark mode + small phone ---------- */
   const SE = await mk('SE', { scheme: 'dark', device: 'iPhone SE' }); await preg(SE, WEEKS); await S(SE, () => App.circle.join());

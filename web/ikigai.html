@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IKIGAI 生き甲斐</title>
+<meta name="description" content="用四個圈找出你的 IKIGAI：熱愛、擅長、世界需要、可以獲得報酬。">
+<style>
+  :root {
+    --bg: #f7f5f1;
+    --surface: #ffffff;
+    --surface-2: #f0ede7;
+    --text: #1f1d1a;
+    --muted: #6b665e;
+    --border: #e2ddd4;
+    --accent: #1f1d1a;
+    --accent-text: #ffffff;
+    --love: #e0546b;
+    --good: #e39a2d;
+    --need: #2a9d8f;
+    --paid: #5165d8;
+    --danger: #b3261e;
+    --blend: multiply;
+    --radius: 14px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151413;
+      --surface: #1f1e1c;
+      --surface-2: #2a2826;
+      --text: #f1eee9;
+      --muted: #a39d93;
+      --border: #3a3734;
+      --accent: #f1eee9;
+      --accent-text: #151413;
+      --love: #f07a8d;
+      --good: #f0b24f;
+      --need: #4cc2b3;
+      --paid: #8293f0;
+      --danger: #f2b8b5;
+      --blend: screen;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
+  header h1 { margin: 0; font-size: 28px; letter-spacing: .02em; }
+  header h1 small { font-weight: 400; color: var(--muted); font-size: 18px; margin-left: 6px; }
+  header p { margin: 6px 0 0; color: var(--muted); }
+
+  nav.steps { display: flex; gap: 6px; margin: 20px 0; overflow-x: auto; padding-bottom: 4px; }
+  nav.steps button {
+    flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer;
+  }
+  nav.steps button[aria-current="step"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  nav.steps .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .card + .card { margin-top: 16px; }
+  .card h2 { margin: 0 0 4px; font-size: 22px; }
+  .card h3 { margin: 18px 0 6px; font-size: 17px; }
+  .hint { color: var(--muted); margin: 0 0 14px; }
+
+  .add-row { display: flex; gap: 8px; }
+  input[type="text"], textarea {
+    flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+  }
+  textarea { width: 100%; min-height: 80px; resize: vertical; }
+  input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--paid); outline-offset: 2px; }
+
+  .btn {
+    font: inherit; border-radius: 10px; padding: 9px 16px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-text);
+  }
+  .btn.ghost { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn.danger { background: transparent; color: var(--danger); border-color: var(--border); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 999px;
+    background: color-mix(in srgb, var(--c) 16%, transparent); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  }
+  .tag button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 50%; }
+  .tag button:hover { color: var(--danger); }
+  .empty { color: var(--muted); font-size: 14px; margin-top: 12px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+  .chips span { color: var(--muted); font-size: 14px; margin-right: 4px; align-self: center; }
+  .chip { font: inherit; font-size: 14px; border: 1px dashed var(--border); background: transparent; color: var(--text); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+  .chip:hover { border-style: solid; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin-top: 20px; }
+  .actions .right { display: flex; gap: 8px; margin-left: auto; }
+
+  .matrix-wrap { overflow-x: auto; }
+  table.matrix { width: 100%; border-collapse: collapse; font-size: 15px; }
+  table.matrix th, table.matrix td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: center; }
+  table.matrix th:first-child, table.matrix td:first-child { text-align: left; min-width: 6em; }
+  table.matrix th { font-weight: 600; font-size: 13px; color: var(--muted); white-space: nowrap; }
+  table.matrix input { width: 20px; height: 20px; cursor: pointer; }
+  table.matrix td.count { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .result-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 720px) { .result-grid { grid-template-columns: 1fr; } }
+  svg.venn { width: 100%; height: auto; display: block; max-width: 420px; margin: 0 auto; }
+  svg.venn circle { mix-blend-mode: var(--blend); }
+  svg.venn text { fill: var(--text); font-size: 13px; text-anchor: middle; pointer-events: none; }
+  svg.venn text.circle-label { font-size: 14px; font-weight: 600; }
+  svg.venn text.n { font-size: 12px; fill: var(--muted); }
+  svg.venn .hit { fill: transparent; cursor: pointer; }
+  svg.venn .hit:hover, svg.venn .hit.on { fill: color-mix(in srgb, var(--text) 10%, transparent); }
+
+  .region { border-left: 4px solid var(--border); padding: 4px 0 4px 12px; margin: 0 0 14px; }
+  .region h4 { margin: 0; font-size: 15px; }
+  .region p { margin: 2px 0 6px; color: var(--muted); font-size: 14px; }
+  .region.center { border-color: var(--text); }
+  .region .tags { margin-top: 4px; }
+  .filter-note { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
+  .filter-note button { font: inherit; font-size: 14px; background: none; border: 0; color: var(--paid); cursor: pointer; padding: 0; }
+
+  .ai-out { margin-top: 12px; }
+  .ai-out h3 { font-size: 17px; margin: 16px 0 4px; }
+  .ai-out ul, .ai-out ol { padding-left: 22px; margin: 4px 0; }
+  .ai-out p { margin: 6px 0; }
+  .status { font-size: 14px; color: var(--muted); }
+  .status.error { color: var(--danger); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 13px; text-align: center; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  @media print {
+    nav.steps, .actions, .toolbar, .no-print, footer { display: none !important; }
+    body { background: #fff; color: #000; }
+    .card { border: 0; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>IKIGAI <small>生き甲斐</small></h1>
+    <p>寫下四個圈，找出它們的交集：你熱愛的、你擅長的、世界需要的、可以獲得報酬的。</p>
+  </header>
+
+  <nav class="steps" id="steps" aria-label="步驟"></nav>
+  <main id="view"></main>
+
+  <footer>內容只存在這台裝置的瀏覽器。只有按下「AI 分析」時，清單才會送到伺服器。</footer>
+</div>
+
+<input type="file" id="importFile" accept="application/json,.json" class="sr-only" aria-hidden="true" tabindex="-1">
+
+<script>
+(() => {
+  const CIRCLES = [
+    { key: 'love', label: '你熱愛的', short: '熱愛', color: 'var(--love)',
+      hint: '做什麼事會讓你忘記時間？小時候喜歡什麼？就算沒有錢也想做的事。',
+      examples: ['寫作', '學習新知', '和人聊天', '設計', '運動', '音樂', '料理', '旅行', '照顧動物', '解決難題'] },
+    { key: 'good', label: '你擅長的', short: '擅長', color: 'var(--good)',
+      hint: '別人常找你幫忙什麼？你學得比別人快的是什麼？包含技能與特質。',
+      examples: ['溝通表達', '數據分析', '寫程式', '組織規劃', '教學', '攝影', '傾聽', '銷售', '研究', '手作'] },
+    { key: 'need', label: '世界需要的', short: '世界需要', color: 'var(--need)',
+      hint: '你在意哪些問題？身邊的人、社區或社會缺少什麼？',
+      examples: ['心理健康支持', '環境永續', '教育資源', '長期照顧', '數位能力', '在地社區', '食品安全', '資訊辨識'] },
+    { key: 'paid', label: '可以獲得報酬的', short: '報酬', color: 'var(--paid)',
+      hint: '有人願意為哪些事付錢？你現在或過去靠什麼賺錢？市場上有哪些職缺或服務？',
+      examples: ['顧問', '軟體開發', '內容創作', '課程講師', '行銷企劃', '設計接案', '業務', '翻譯'] },
+  ];
+  const KEYS = CIRCLES.map((c) => c.key);
+  const BY_KEY = Object.fromEntries(CIRCLES.map((c) => [c.key, c]));
+
+  const PAIRS = [
+    { keys: ['love', 'good'], name: '熱情 Passion', desc: '熱愛 × 擅長：做起來開心又做得好。' },
+    { keys: ['love', 'need'], name: '使命 Mission', desc: '熱愛 × 世界需要：讓你覺得有意義的事。' },
+    { keys: ['good', 'paid'], name: '專業 Profession', desc: '擅長 × 報酬：能穩定賺錢的能力。' },
+    { keys: ['need', 'paid'], name: '天職 Vocation', desc: '世界需要 × 報酬：市場願意付錢解決的問題。' },
+    { keys: ['love', 'paid'], name: '熱愛 × 報酬', desc: '喜歡、也有人付錢，但還需要練到夠好、找到意義。' },
+    { keys: ['good', 'need'], name: '擅長 × 世界需要', desc: '能幫上忙的能力，想想怎麼讓它有收入、也讓你投入。' },
+  ];
+  const TRIPLES = [
+    { missing: 'need', desc: '滿足，但覺得自己沒那麼有用。想想誰需要它。' },
+    { missing: 'paid', desc: '喜悅又充實，但還不富裕。想想誰願意付錢。' },
+    { missing: 'good', desc: '興奮，但能力還不確定。需要刻意練習。' },
+    { missing: 'love', desc: '舒適，但可能感到空虛。找找讓自己投入的部分。' },
+  ];
+
+  const STORE_KEY = 'ikigai:v1';
+  const STEP_LIST = [...CIRCLES.map((c) => ({ id: c.key, label: c.short, color: c.color })),
+    { id: 'match', label: '交集對照' }, { id: 'result', label: '結果' }];
+
+  const blank = () => ({ items: [], note: '', step: 'love', ai: '' });
+  let state = load();
+  let filter = null;
+  let aiAvailable = true;
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) return sanitize(JSON.parse(raw));
+    } catch (e) { /* storage unavailable */ }
+    return blank();
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
+  }
+  function sanitize(data) {
+    const s = blank();
+    if (data && Array.isArray(data.items)) {
+      data.items.forEach((it) => {
+        if (!it || typeof it.text !== 'string') return;
+        const text = it.text.trim().slice(0, 60);
+        if (!text) return;
+        const c = {};
+        KEYS.forEach((k) => { c[k] = Boolean(it.c && it.c[k]); });
+        if (!s.items.some((x) => x.text === text)) s.items.push({ id: it.id || uid(), text, c });
+      });
+    }
+    if (typeof data?.note === 'string') s.note = data.note.slice(0, 300);
+    if (typeof data?.ai === 'string') s.ai = data.ai;
+    if (STEP_LIST.some((st) => st.id === data?.step)) s.step = data.step;
+    return s;
+  }
+  function uid() { return Math.random().toString(36).slice(2, 10); }
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const inCircle = (k) => state.items.filter((it) => it.c[k]);
+  const hasAll = (it, keys) => keys.every((k) => it.c[k]);
+  const exact = (it, keys) => KEYS.every((k) => it.c[k] === keys.includes(k));
+
+  function addItem(key, text) {
+    text = text.replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!text) return false;
+    const found = state.items.find((it) => it.text.toLowerCase() === text.toLowerCase());
+    if (found) {
+      if (found.c[key]) return false;
+      found.c[key] = true;
+    } else {
+      if (inCircle(key).length >= 20) { alert('每個圈最多 20 項'); return false; }
+      const c = Object.fromEntries(KEYS.map((k) => [k, k === key]));
+      state.items.push({ id: uid(), text, c });
+    }
+    state.ai = '';
+    save();
+    return true;
+  }
+  function removeFromCircle(id, key) {
+    const it = state.items.find((x) => x.id === id);
+    if (!it) return;
+    it.c[key] = false;
+    if (!KEYS.some((k) => it.c[k])) state.items = state.items.filter((x) => x.id !== id);
+    state.ai = '';
+    save();
+  }
+
+  function go(step) {
+    state.step = step;
+    save();
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function renderSteps() {
+    const nav = document.getElementById('steps');
+    nav.innerHTML = STEP_LIST.map((st, i) => {
+      const n = KEYS.includes(st.id) ? ` (${inCircle(st.id).length})` : '';
+      const dot = st.color ? `<span class="dot" style="background:${st.color}"></span>` : '';
+      return `<button type="button" data-step="${st.id}" ${state.step === st.id ? 'aria-current="step"' : ''}>${dot}${i + 1}. ${st.label}${n}</button>`;
+    }).join('');
+    nav.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => go(b.dataset.step)));
+    const current = nav.querySelector('[aria-current]');
+    if (current) nav.scrollLeft = current.offsetLeft - nav.clientWidth / 2 + current.offsetWidth / 2;
+  }
+
+  function tagHtml(it, key, color) {
+    const btn = key ? `<button type="button" data-remove="${it.id}" data-key="${key}" aria-label="移除 ${esc(it.text)}">×</button>` : '';
+    return `<li class="tag" style="--c:${color || 'var(--muted)'}">${esc(it.text)}${btn}</li>`;
+  }
+
+  function renderCircle(key) {
+    const c = BY_KEY[key];
+    const idx = KEYS.indexOf(key);
+    const items = inCircle(key);
+    const others = state.items.filter((it) => !it.c[key]);
+    const view = document.getElementById('view');
+    view.innerHTML = `
+      <section class="card" style="border-top:4px solid ${c.color}">
+        <h2>${idx + 1}. ${c.label}</h2>
+        <p class="hint">${c.hint}</p>
+        <form class="add-row" id="addForm">
+          <label class="sr-only" for="addInput">新增${c.label}</label>
+          <input type="text" id="addInput" maxlength="60" placeholder="輸入後按 Enter，可一次貼上多項（用逗號或換行分隔）" autocomplete="off">
+          <button class="btn" type="submit">新增</button>
+        </form>
+        ${items.length ? `<ul class="tags">${items.map((it) => tagHtml(it, key, c.color)).join('')}</ul>` : '<p class="empty">還沒有項目，先寫 3 到 8 項就很好。</p>'}
+        <div class="chips"><span>靈感：</span>${c.examples.map((e) => `<button type="button" class="chip" data-chip="${esc(e)}">+ ${esc(e)}</button>`).join('')}</div>
+        ${others.length ? `<div class="chips"><span>其他圈已寫過的：</span>${others.map((it) => `<button type="button" class="chip" data-chip="${esc(it.text)}">+ ${esc(it.text)}</button>`).join('')}</div>` : ''}
+        <div class="actions">
+          ${idx > 0 ? `<button class="btn ghost" type="button" data-go="${KEYS[idx - 1]}">← 上一步</button>` : '<span></span>'}
+          <div class="right"><button class="btn" type="button" data-go="${idx < 3 ? KEYS[idx + 1] : 'match'}">下一步 →</button></div>
+        </div>
+      </section>`;
+    const input = document.getElementById('addInput');
+    document.getElementById('addForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      input.value.split(/[,，、\n]/).forEach((t) => addItem(key, t));
+      input.value = '';
+      render();
+      document.getElementById('addInput').focus();
+    });
+    input.addEventListener('paste', (e) => {
+      const t = e.clipboardData.getData('text');
+      if (/[\n]/.test(t)) {
+        e.preventDefault();
+        t.split(/[,，、\n]/).forEach((x) => addItem(key, x));
+        render();
+      }
+    });
+  }
+
+  function renderMatch() {
+    const view = document.getElementById('view');
+    const rows = state.items.map((it) => {
+      const count = KEYS.filter((k) => it.c[k]).length;
+      return `<tr><td>${esc(it.text)}</td>${KEYS.map((k) => `<td><input type="checkbox" data-id="${it.id}" data-key="${k}" ${it.c[k] ? 'checked' : ''} aria-label="${esc(it.text)} 屬於${BY_KEY[k].label}"></td>`).join('')}<td class="count">${count}/4</td></tr>`;
+    }).join('');
+    view.innerHTML = `
+      <section class="card">
+        <h2>5. 交集對照</h2>
+        <p class="hint">逐項檢查：這件事是否也屬於其他圈？例如「寫作」是你熱愛的，也可能是你擅長的。勾越多圈，越靠近中心。</p>
+        ${state.items.length ? `<div class="matrix-wrap"><table class="matrix">
+          <thead><tr><th>項目</th>${CIRCLES.map((c) => `<th><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:4px"></span>${c.short}</th>`).join('')}<th>圈數</th></tr></thead>
+          <tbody>${rows}</tbody></table></div>` : '<p class="empty">還沒有任何項目，請先回到前面四步填寫。</p>'}
+        <h3>補充說明（選填）</h3>
+        <label class="sr-only" for="note">補充說明</label>
+        <textarea id="note" maxlength="300" placeholder="例如：目前職業、年資、想轉換的方向、時間或經濟限制。AI 分析時會參考。">${esc(state.note)}</textarea>
+        <div class="actions">
+          <button class="btn ghost" type="button" data-go="paid">← 上一步</button>
+          <div class="right"><button class="btn" type="button" data-go="result">看結果 →</button></div>
+        </div>
+      </section>`;
+    view.querySelectorAll('input[type=checkbox]').forEach((cb) => cb.addEventListener('change', () => {
+      const it = state.items.find((x) => x.id === cb.dataset.id);
+      it.c[cb.dataset.key] = cb.checked;
+      if (!KEYS.some((k) => it.c[k])) state.items = state.items.filter((x) => x.id !== it.id);
+      state.ai = '';
+      save();
+      renderSteps();
+      renderMatch();
+    }));
+    document.getElementById('note').addEventListener('input', (e) => { state.note = e.target.value; state.ai = ''; save(); });
+  }
+
+  function vennSvg() {
+    const count = (keys) => state.items.filter((it) => hasAll(it, keys)).length;
+    const pos = { love: [200, 128], good: [128, 200], need: [272, 200], paid: [200, 272] };
+    const labelPos = { love: [200, 34], good: [44, 196], need: [356, 196], paid: [200, 372] };
+    const pairPos = [
+      { keys: ['love', 'good'], xy: [138, 138], name: '熱情' },
+      { keys: ['love', 'need'], xy: [262, 138], name: '使命' },
+      { keys: ['good', 'paid'], xy: [138, 262], name: '專業' },
+      { keys: ['need', 'paid'], xy: [262, 262], name: '天職' },
+    ];
+    const isOn = (keys) => filter && filter.length === keys.length && keys.every((k) => filter.includes(k));
+    const circles = CIRCLES.map((c) => `<circle cx="${pos[c.key][0]}" cy="${pos[c.key][1]}" r="104" fill="${c.color}" fill-opacity=".28" stroke="${c.color}" stroke-width="1.5"/>`).join('');
+    const labels = CIRCLES.map((c) => {
+      const [x, y] = labelPos[c.key];
+      return `<circle class="hit ${isOn([c.key]) ? 'on' : ''}" data-filter="${c.key}" cx="${x}" cy="${y + 6}" r="30"><title>${c.label}</title></circle>
+        <text class="circle-label" x="${x}" y="${y}">${c.short}</text><text class="n" x="${x}" y="${y + 18}">${inCircle(c.key).length} 項</text>`;
+    }).join('');
+    const pairs = pairPos.map((p) => `<circle class="hit ${isOn(p.keys) ? 'on' : ''}" data-filter="${p.keys.join(',')}" cx="${p.xy[0]}" cy="${p.xy[1] + 4}" r="24"><title>${p.name}</title></circle>
+      <text x="${p.xy[0]}" y="${p.xy[1]}">${p.name}</text><text class="n" x="${p.xy[0]}" y="${p.xy[1] + 16}">${count(p.keys)}</text>`).join('');
+    const center = `<circle class="hit ${isOn(KEYS) ? 'on' : ''}" data-filter="${KEYS.join(',')}" cx="200" cy="204" r="24"><title>IKIGAI</title></circle>
+      <text class="circle-label" x="200" y="200">IKIGAI</text><text class="n" x="200" y="216">${count(KEYS)}</text>`;
+    return `<svg class="venn" viewBox="0 0 400 400" role="img" aria-label="IKIGAI 四圈圖，點選區域可篩選">${circles}${labels}${pairs}${center}</svg>`;
+  }
+
+  function regionHtml(title, desc, items, extraClass, colorOf) {
+    if (!items.length) return '';
+    return `<div class="region ${extraClass || ''}"><h4>${title}（${items.length}）</h4><p>${desc}</p>
+      <ul class="tags">${items.map((it) => tagHtml(it, null, colorOf ? colorOf(it) : 'var(--muted)')).join('')}</ul></div>`;
+  }
+
+  function regionsHtml() {
+    const pool = filter ? state.items.filter((it) => hasAll(it, filter)) : state.items;
+    const parts = [];
+    const center = pool.filter((it) => hasAll(it, KEYS));
+    parts.push(regionHtml('IKIGAI 中心', '同時落在四個圈。這是最值得投入的方向。', center, 'center', () => 'var(--text)'));
+    TRIPLES.forEach((t) => {
+      const keys = KEYS.filter((k) => k !== t.missing);
+      parts.push(regionHtml(`差一圈：缺「${BY_KEY[t.missing].short}」`, `${keys.map((k) => BY_KEY[k].short).join(' × ')}。${t.desc}`, pool.filter((it) => exact(it, keys)), '', () => BY_KEY[t.missing].color));
+    });
+    PAIRS.forEach((p) => {
+      parts.push(regionHtml(p.name, p.desc, pool.filter((it) => exact(it, p.keys)), '', () => BY_KEY[p.keys[0]].color));
+    });
+    CIRCLES.forEach((c) => {
+      parts.push(regionHtml(`只在「${c.short}」`, '目前只屬於一個圈，回到交集對照看看能不能多勾一圈。', pool.filter((it) => exact(it, [c.key])), '', () => c.color));
+    });
+    const html = parts.filter(Boolean).join('');
+    const note = filter ? `<p class="filter-note">只顯示包含「${filter.map((k) => BY_KEY[k].short).join(' × ')}」的項目。<button type="button" id="clearFilter">顯示全部</button></p>` : '';
+    return note + (html || '<p class="empty">還沒有項目。</p>');
+  }
+
+  function mdToHtml(md) {
+    const lines = esc(md).split('\n');
+    let html = '';
+    let list = null;
+    const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    const close = () => { if (list) { html += `</${list}>`; list = null; } };
+    lines.forEach((raw) => {
+      const line = raw.trim();
+      let m;
+      if (!line) { close(); return; }
+      if ((m = line.match(/^#{1,6}\s+(.*)$/))) { close(); html += `<h3>${inline(m[1])}</h3>`; return; }
+      if ((m = line.match(/^[-*•]\s+(.*)$/))) { if (list !== 'ul') { close(); html += '<ul>'; list = 'ul'; } html += `<li>${inline(m[1])}</li>`; return; }
+      if ((m = line.match(/^\d+[.)、]\s*(.*)$/))) { if (list !== 'ol') { close(); html += '<ol>'; list = 'ol'; } html += `<li>${inline(m[1])}</li>`; return; }
+      close();
+      html += `<p>${inline(line)}</p>`;
+    });
+    close();
+    return html;
+  }
+
+  function renderResult() {
+    const view = document.getElementById('view');
+    const filled = KEYS.filter((k) => inCircle(k).length).length;
+    view.innerHTML = `
+      <section class="card">
+        <h2>6. 你的 IKIGAI</h2>
+        <p class="hint">點圖上的區域可以篩選右側清單。想調整，回到「交集對照」勾選。</p>
+        <div class="result-grid">
+          <div>${vennSvg()}</div>
+          <div id="regions">${regionsHtml()}</div>
+        </div>
+      </section>
+      <section class="card no-print-if-empty">
+        <h2>AI 分析</h2>
+        <p class="hint">把四個圈的清單交給 AI，產生交集觀察、可能的 IKIGAI 方向、缺口與 30 天行動。</p>
+        <div class="toolbar no-print">
+          <button class="btn" type="button" id="aiBtn" ${filled < 2 || !aiAvailable ? 'disabled' : ''}>${state.ai ? '重新分析' : 'AI 分析'}</button>
+          <span class="status" id="aiStatus" role="status">${!aiAvailable ? '這個網站沒有開啟 AI 分析。' : filled < 2 ? '至少填兩個圈才能分析。' : ''}</span>
+        </div>
+        <div class="ai-out" id="aiOut">${state.ai ? mdToHtml(state.ai) : ''}</div>
+      </section>
+      <section class="card no-print">
+        <h2>存檔與分享</h2>
+        <div class="toolbar">
+          <button class="btn ghost" type="button" id="copyBtn">複製文字</button>
+          <button class="btn ghost" type="button" id="exportBtn">匯出 JSON</button>
+          <button class="btn ghost" type="button" id="importBtn">匯入 JSON</button>
+          <button class="btn ghost" type="button" onclick="window.print()">列印 / 存成 PDF</button>
+          <button class="btn danger" type="button" id="resetBtn">全部清除</button>
+        </div>
+        <p class="status" id="ioStatus" role="status"></p>
+        <div class="actions"><button class="btn ghost" type="button" data-go="match">← 回交集對照</button></div>
+      </section>`;
+    bindResult();
+  }
+
+  function bindResult() {
+    document.querySelectorAll('svg.venn .hit').forEach((h) => h.addEventListener('click', () => {
+      const keys = h.dataset.filter.split(',');
+      filter = filter && filter.join() === keys.join() ? null : keys;
+      renderResult();
+    }));
+    const clear = document.getElementById('clearFilter');
+    if (clear) clear.addEventListener('click', () => { filter = null; renderResult(); });
+    document.getElementById('aiBtn').addEventListener('click', runAi);
+    document.getElementById('copyBtn').addEventListener('click', copyText);
+    document.getElementById('exportBtn').addEventListener('click', exportJson);
+    document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (!confirm('確定清除全部內容？此動作無法復原。')) return;
+      state = blank();
+      filter = null;
+      save();
+      render();
+    });
+  }
+
+  const apiBase = () => location.pathname.replace(/\/+$/, '');
+  const payload = () => ({ ...Object.fromEntries(KEYS.map((k) => [k, inCircle(k).map((it) => it.text)])), note: state.note });
+
+  // Responses without our JSON body come from the hosting platform, e.g. Vercel's own timeout page.
+  function serverError(code) {
+    if (code === 504) return '伺服器執行超過時間上限（504）。請稍後再試，或把 IKIGAI_MAX_TOKENS 調低';
+    if (code === 404) return '找不到分析服務（404），可能是 IKIGAI_ENABLED 被設為 false';
+    if (code === 413) return '送出的內容太大（413），請減少項目';
+    return `伺服器錯誤（狀態碼 ${code}），請查看 Vercel Logs`;
+  }
+
+  async function runAi() {
+    const btn = document.getElementById('aiBtn');
+    const status = document.getElementById('aiStatus');
+    btn.disabled = true;
+    status.className = 'status';
+    status.textContent = 'AI 分析中，約需 10 到 30 秒…';
+    try {
+      const res = await fetch(`${apiBase()}/analyze`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload()),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || serverError(res.status));
+      state.ai = data.text;
+      save();
+      document.getElementById('aiOut').innerHTML = mdToHtml(state.ai);
+      status.textContent = '完成。';
+      btn.textContent = '重新分析';
+    } catch (err) {
+      status.className = 'status error';
+      // fetch() rejects with a TypeError when the request never reached the server.
+      status.textContent = err instanceof TypeError ? '連不到伺服器，請檢查網路後再試' : (err.message || 'AI 分析失敗');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function asText() {
+    const lines = ['我的 IKIGAI', ''];
+    CIRCLES.forEach((c) => lines.push(`【${c.label}】${inCircle(c.key).map((it) => it.text).join('、') || '（未填）'}`));
+    lines.push('');
+    PAIRS.slice(0, 4).forEach((p) => lines.push(`${p.name}：${state.items.filter((it) => hasAll(it, p.keys)).map((it) => it.text).join('、') || '—'}`));
+    lines.push(`IKIGAI 中心：${state.items.filter((it) => hasAll(it, KEYS)).map((it) => it.text).join('、') || '—'}`);
+    if (state.note) lines.push('', `補充：${state.note}`);
+    if (state.ai) lines.push('', '— AI 分析 —', state.ai);
+    return lines.join('\n');
+  }
+  async function copyText() {
+    const status = document.getElementById('ioStatus');
+    try {
+      await navigator.clipboard.writeText(asText());
+      status.textContent = '已複製到剪貼簿。';
+    } catch (e) {
+      status.textContent = '無法存取剪貼簿，請改用匯出。';
+    }
+  }
+  function exportJson() {
+    const blob = new Blob([JSON.stringify({ version: 1, ...state }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `ikigai-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  document.getElementById('importFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      state = sanitize(JSON.parse(await file.text()));
+      state.step = 'result';
+      filter = null;
+      save();
+      render();
+      document.getElementById('ioStatus').textContent = `已匯入 ${state.items.length} 項。`;
+    } catch (err) {
+      alert('檔案格式不正確，請選擇從這裡匯出的 JSON。');
+    }
+  });
+
+  function render() {
+    renderSteps();
+    if (KEYS.includes(state.step)) renderCircle(state.step);
+    else if (state.step === 'match') renderMatch();
+    else renderResult();
+  }
+
+  document.getElementById('view').addEventListener('click', (e) => {
+    const t = e.target.closest('button');
+    if (!t) return;
+    if (t.dataset.go) go(t.dataset.go);
+    else if (t.dataset.remove) { removeFromCircle(t.dataset.remove, t.dataset.key); render(); }
+    else if (t.dataset.chip) { addItem(state.step, t.dataset.chip); render(); }
+  });
+
+  fetch(`${apiBase()}/status`).then((r) => r.json()).then((d) => {
+    aiAvailable = Boolean(d.ai);
+    if (state.step === 'result') renderResult();
+  }).catch(() => {});
+
+  render();
+})();
+</script>
+</body>
+</html>

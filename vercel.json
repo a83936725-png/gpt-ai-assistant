@@ -8,7 +8,7 @@
   "functions": {
     "api/**/*": {
       "maxDuration": 60,
-      "includeFiles": "knowledge/**"
+      "includeFiles": "{knowledge,web}/**"
     }
   }
 }

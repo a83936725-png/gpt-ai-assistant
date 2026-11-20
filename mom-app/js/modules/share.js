@@ -117,24 +117,41 @@
     green: ['#1f6b4a', '#4fa77a', '#e3f4ec'],
     night: ['#1d1a3a', '#4b3f8a', '#ece8ff'],
   };
+  // every card shares this frame: the theme's background and the logo header (y 72–180)
+  async function paintFrame(ctx, W, H, theme) {
+    const [c1, c2] = THEMES[theme] || THEMES.purple;
+    const g = ctx.createLinearGradient(0, 0, W * 0.4, H); g.addColorStop(0, c1); g.addColorStop(1, c2);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 0.09; ctx.fillStyle = '#fff';
+    [[900, 260, 260], [140, 720, 200], [980, 1300, 320], [120, 1650, 150]].forEach(([x, y, r]) => { ctx.beginPath(); ctx.arc(x, y * (H / 1920), r, 0, Math.PI * 2); ctx.fill(); });
+    ctx.globalAlpha = 1;
+    const logo = await loadImg(B().logo || 'assets/logo.svg');
+    ctx.fillStyle = '#fff'; roundRect(ctx, 64, 72, 108, 108, 30); ctx.fill();
+    if (logo) ctx.drawImage(logo, 78, 82, 80, 88);
+    ctx.fillStyle = '#fff'; ctx.font = `800 46px ${FONT}`; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+    ctx.fillText(B().appName || '易家做媽媽', 196, 84);
+    ctx.globalAlpha = 0.85; ctx.font = `500 30px ${FONT}`; ctx.fillText(B().tagline || '', 196, 142); ctx.globalAlpha = 1;
+  }
+  // …and this footer at y = fy: a QR code of the invite link (size qs), the invite code and the hashtags
+  function paintFooter(ctx, W, fy, qs, spec) {
+    const url = link({ path: spec.path || 'home', params: spec.params, channel: 'qr', campaign: spec.campaign || 'card' });
+    const hasQR = drawQR(ctx, url, 64, fy, qs);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = '#fff';
+    const tx = hasQR ? 64 + qs + 44 : 64;
+    ctx.font = `800 44px ${FONT}`; ctx.fillText('掃描一起用・免費', tx, fy + 20);
+    ctx.font = `600 34px ${FONT}`; ctx.globalAlpha = 0.92;
+    ctx.fillText(`邀請碼 ${ensure(store.state).code}`, tx, fy + 88);
+    ctx.font = `500 28px ${FONT}`;
+    wrap(ctx, tags(), W - tx - 64).slice(0, 2).forEach((ln, i) => ctx.fillText(ln, tx, fy + 146 + i * 40));
+    ctx.globalAlpha = 1;
+  }
   // spec: {emoji, kicker, title, subtitle, stats:[{v,l}], lines:[], theme, photo, campaign, path, params}
   async function render(spec, { format = 'story' } = {}) {
     const W = 1080; const H = format === 'story' ? 1920 : 1350;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
     const [c1, c2, soft] = THEMES[spec.theme] || THEMES.purple;
-    const g = ctx.createLinearGradient(0, 0, W * 0.4, H); g.addColorStop(0, c1); g.addColorStop(1, c2);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    ctx.globalAlpha = 0.09; ctx.fillStyle = '#fff';
-    [[900, 260, 260], [140, 720, 200], [980, 1300, 320], [120, 1650, 150]].forEach(([x, y, r]) => { ctx.beginPath(); ctx.arc(x, y * (H / 1920), r, 0, Math.PI * 2); ctx.fill(); });
-    ctx.globalAlpha = 1;
-    // header: logo + app name
-    const logo = await loadImg(B().logo || 'assets/logo.svg');
-    ctx.fillStyle = '#fff'; roundRect(ctx, 64, 72, 108, 108, 30); ctx.fill();
-    if (logo) ctx.drawImage(logo, 78, 82, 80, 88);
-    ctx.fillStyle = '#fff'; ctx.font = `800 46px ${FONT}`; ctx.textBaseline = 'top';
-    ctx.fillText(B().appName || '易家做媽媽', 196, 84);
-    ctx.globalAlpha = 0.85; ctx.font = `500 30px ${FONT}`; ctx.fillText(B().tagline || '', 196, 142); ctx.globalAlpha = 1;
+    await paintFrame(ctx, W, H, spec.theme);
     // main panel
     const px = 64; const pw = W - 128; let y = format === 'story' ? 300 : 240;
     const panelH = format === 'story' ? 1170 : 760;
@@ -194,18 +211,7 @@
       if (spec.footnote && y < 300 + panelH - 80) { ctx.fillStyle = '#7a6f80'; ctx.font = `500 30px ${FONT}`; ctx.fillText(spec.footnote, cx, y + 14); }
     }
     // footer: QR + invite
-    const fy = (format === 'story' ? 300 + 1170 : 240 + 760) + 60;
-    const url = link({ path: spec.path || 'home', params: spec.params, channel: 'qr', campaign: spec.campaign || 'card' });
-    const qs = format === 'story' ? 300 : 230;
-    const hasQR = drawQR(ctx, url, 64, fy, qs);
-    ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
-    const tx = hasQR ? 64 + qs + 44 : 64;
-    ctx.font = `800 44px ${FONT}`; ctx.fillText('掃描一起用・免費', tx, fy + 20);
-    ctx.font = `600 34px ${FONT}`; ctx.globalAlpha = 0.92;
-    ctx.fillText(`邀請碼 ${ensure(store.state).code}`, tx, fy + 88);
-    ctx.font = `500 28px ${FONT}`;
-    wrap(ctx, tags(), W - tx - 64).slice(0, 2).forEach((ln, i) => ctx.fillText(ln, tx, fy + 146 + i * 40));
-    ctx.globalAlpha = 1;
+    paintFooter(ctx, W, (format === 'story' ? 300 + 1170 : 240 + 760) + 60, format === 'story' ? 300 : 230, spec);
     return new Promise((res) => cv.toBlob((b) => res(b), 'image/png'));
   }
 
@@ -500,9 +506,14 @@
       // card gallery
       const list = cards();
       el.append(h('div', { class: 'section-title' }, '📸 製作分享卡（IG 限時動態尺寸）'));
-      if (!list.length) el.append(ui.empty('🖼️', '開始記錄後，這裡會出現孕週卡、寶寶成長卡、里程碑卡等可以分享的卡片。'));
-      else el.append(h('div', { class: 'inv-cards' }, list.map((c) => h('button', { class: 'inv-card', onclick: () => open({ kind: c.kind, text: c.text, campaign: c.campaign, path: c.path }) },
-        h('span', { class: 'inv-card-emoji' }, c.spec.emoji), h('span', { class: 'bold small' }, c.label), h('span', { class: 'tiny muted' }, c.spec.title)))));
+      // 家族週報 has its own screen (the week, a line for the family, LINE)
+      const weekly = App.weekly && App.weekly.kindNow() ? h('button', { class: 'inv-card inv-weekly', onclick: () => App.navigate('weekly') },
+        h('span', { class: 'inv-card-emoji' }, '📮'), h('span', { class: 'bold small' }, '家族週報'), h('span', { class: 'tiny muted' }, '每週一張，傳到家族群組')) : null;
+      if (!list.length && !weekly) el.append(ui.empty('🖼️', '開始記錄後，這裡會出現孕週卡、寶寶成長卡、里程碑卡等可以分享的卡片。'));
+      else {
+        el.append(h('div', { class: 'inv-cards' }, weekly, list.map((c) => h('button', { class: 'inv-card', onclick: () => open({ kind: c.kind, text: c.text, campaign: c.campaign, path: c.path }) },
+          h('span', { class: 'inv-card-emoji' }, c.spec.emoji), h('span', { class: 'bold small' }, c.label), h('span', { class: 'tiny muted' }, c.spec.title)))));
+      }
       // stats
       const byCh = C.groupBy(sh.events, (e) => e.channel);
       const names = { line: 'LINE', ig: 'Instagram', fb: 'Facebook', threads: 'Threads', copy: '複製連結', more: '其他', invite: '邀請連結' };
@@ -598,5 +609,12 @@
     }
     downloadBlob(blob, name); return 'downloaded';
   }
-  App.share = { open, link, render, cards, moment, checkMoments, momentLine, qr, saveImage, button, record, bonus, code: () => ensure(store.state).code, inviteText };
+  App.share = {
+    open, link, render, cards, moment, checkMoments, momentLine, qr, saveImage, button, record, bonus, code: () => ensure(store.state).code, inviteText,
+    copyText, downloadBlob, CUSTOMS,
+    // drawing pieces for cards with their own layout (家族週報)
+    draw: {
+      FONT, THEMES, loadImg, wrap, fitLine, roundRect, paintFrame, paintFooter,
+    },
+  };
 }());

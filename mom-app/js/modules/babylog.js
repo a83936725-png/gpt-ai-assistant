@@ -569,6 +569,7 @@
         h('div', { class: 'card flat center' }, h('div', { class: 'bold num' }, Math.round(mlSum / recDays)), h('div', { class: 'tiny muted' }, '平均瓶餵 ml／天')),
         h('div', { class: 'card flat center' }, h('div', { class: 'bold num' }, (sleepSum / recDays / C.HOUR).toFixed(1)), h('div', { class: 'tiny muted' }, '平均睡眠 小時／天'))));
     }
+    if (App.screens.weekly) el.append(h('button', { class: 'btn btn-soft btn-block mt', onclick: () => App.navigate('weekly', { baby: baby.id }) }, '📮 家族週報：每週一張卡，傳到家族群組'));
     el.append(h('button', { class: 'fab', 'aria-label': '新增紀錄', html: ui.ICONS.plus, onclick: typePicker }));
   }
 

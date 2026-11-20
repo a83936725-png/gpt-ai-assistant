@@ -57,3 +57,28 @@
   position: fixed; z-index: 40; right: 12px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 0;
   background: var(--c-accent-ink); color: var(--c-surface); font-weight: 800; box-shadow: 0 6px 18px rgba(0, 0, 0, .2);
 }
+
+/* 家族週報 */
+.wk-nav { margin-top: 0; }
+.wk-preview { display: flex; justify-content: center; margin: 4px 0 14px; }
+/* small on a short phone, so 「傳到家族群組」 stays in view without scrolling; tap to see it full size */
+.wk-ph, .wk-img { width: min(270px, 70vw, calc((100vh - 340px) * .5625)); min-width: 168px; }
+.wk-ph { aspect-ratio: 9 / 16; border-radius: 22px; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; color: var(--c-text-2); font-size: 13px; }
+.wk-img { display: block; height: auto; border-radius: 22px; box-shadow: var(--shadow-2); }
+.wk-zoom { padding: 0; border: 0; background: none; border-radius: 22px; }
+.wk-img-full { display: block; width: 100%; max-width: 420px; margin: 0 auto; border-radius: 18px; }
+.wk-actions { display: grid; gap: 10px; }
+.wk-send { min-height: 52px; font-size: 16px; }
+.wk-hint { margin: -4px 0 0; }
+.wk-status { margin: 0; color: var(--c-ok-ink); font-weight: 700; min-height: 1em; }
+.wk-status:empty { display: none; }
+.wk-note { width: 100%; margin-top: 8px; }
+.wk-mt-sm { margin-top: 8px; }
+.wk-opt-label { margin: 2px 0 6px; }
+.wk-checks { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; }
+.wk-checks .check-row { min-height: 44px; }
+.wk-text summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+.wk-text-pre { white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: 13.5px; line-height: 1.6; margin: 10px 0 0; color: var(--c-text-2); }
+.wk-remind { min-height: 44px; }
+.wk-home .wk-home-ico { font-size: 28px; }
+.wk-home .wk-home-x { flex: none; }

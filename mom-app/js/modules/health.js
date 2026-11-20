@@ -917,6 +917,7 @@
     actions: () => h('button', { class: 'icon-btn', 'aria-label': '照護報告（PDF）', html: ui.ICONS.print, onclick: () => App.navigate('report') }),
     render: needBaby((el, params, b) => {
       el.append(h('button', { class: 'btn btn-soft btn-block mb', onclick: () => App.navigate('report') }, '📄 產生照護報告（列印／存成 PDF 給醫師）'));
+      if (App.screens.weekly) el.append(h('button', { class: 'btn btn-soft btn-block mb', onclick: () => App.navigate('weekly', { baby: b.id }) }, '📮 家族週報：這週做成一張卡，傳到家族群組'));
       const wk = weekCompare(b);
       if (wk) el.append(wk);
       el.append(h('div', { class: 'row stats-filter' },

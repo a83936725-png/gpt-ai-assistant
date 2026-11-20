@@ -556,6 +556,7 @@
         h('button', { class: 'chip', onclick: () => App.navigate('kick') }, '👣 胎動'),
         h('button', { class: 'chip', onclick: () => App.navigate('pregweight') }, '⚖️ 體重'),
         h('button', { class: 'chip', onclick: () => App.navigate('journey') }, '🗺️ 路線圖'),
+        App.screens.weekly ? h('button', { class: 'chip', onclick: () => App.navigate('weekly') }, '📮 週報給家人') : null,
         h('button', { class: 'chip', onclick: () => App.navigate('health') }, '🧰 全部孕期工具')),
       h('button', {
         class: 'btn btn-accent btn-block mt-lg',

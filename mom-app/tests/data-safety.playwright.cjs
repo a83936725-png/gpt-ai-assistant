@@ -279,6 +279,32 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     ok('nothing recorded yet: no reminders at all', (await card(fresh)) === null);
   }
 
+  /* ---- 載入範例資料 over her own records: a clear warning, 復原, and her photos kept until then ---- */
+  {
+    const p = await open(); await boot(p);
+    const photo = await S(p, async () => {
+      const s = App.store.defaults(); s.onboarded = true; s.profile.stage = 'preg'; s.settings.a2hsDismissed = '1';
+      s.profile.lmp = Core.dateKey(Core.addDays(new Date(), -150)); s.profile.edd = Core.eddFromLmp(s.profile.lmp);
+      const id = await App.media.put(new Blob([new Uint8Array([137, 80, 78, 71])], { type: 'image/png' }));
+      s.preg.diary = [{ id: 'd1', date: Core.dateKey(), title: '第一次聽到心跳', text: '好感動', photos: [id] }];
+      s.preg.visitNotes = { v1: { weight: 52, note: '一切正常' } };
+      App.store.replace(s);
+      return id;
+    });
+    await settle(p);
+    await S(p, () => App.navigate('me')); await p.waitForTimeout(700);
+    await p.click('#view button:has-text("載入範例資料")'); await p.waitForTimeout(500);
+    const ask = await S(p, () => (document.querySelector('.sheet-backdrop.open .sheet') || {}).innerText || '');
+    ok('載入範例資料 over her own records: says how many records and photos it replaces, suggests 匯出備份, red 取代', /取代你目前的 2 筆紀錄和照片/.test(ask) && /匯出備份/.test(ask) && await p.isVisible('.sheet-backdrop.open button.btn-danger:has-text("取代")'), ask.slice(0, 120));
+    await p.click('.sheet-backdrop.open button.btn-danger:has-text("取代")'); await p.waitForTimeout(1500);
+    const mid = await S(p, async (id) => ({ demo: App.store.state.profile.momName, photo: !!(await App.media.get(id)) }), photo);
+    ok('…取代: the sample data is in, a 「復原」 button, and her photo is still kept', mid.demo === '小美' && mid.photo && await p.isVisible('.toast-action:has-text("復原")'), JSON.stringify(mid));
+    await p.click('.toast-action:has-text("復原")'); await p.waitForTimeout(800);
+    await p.waitForTimeout(9000); // past the moment unreferenced photos would be cleared
+    const back = await S(p, async (id) => ({ diary: (App.store.state.preg.diary || []).length, visit: !!App.store.state.preg.visitNotes.v1, photo: !!(await App.media.get(id)), stage: App.store.state.profile.stage }), photo);
+    ok('…復原: her diary, prenatal visit and photo are all back', back.diary === 1 && back.visit && back.photo && back.stage === 'preg', JSON.stringify(back));
+  }
+
   ok('no page errors anywhere', !errors.length, errors.slice(0, 4).join(' | '));
   console.log('\n=== 資料安全 ===');
   results.forEach((r) => console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${r.name}${r.info && !r.pass ? `   [${r.info}]` : ''}`));

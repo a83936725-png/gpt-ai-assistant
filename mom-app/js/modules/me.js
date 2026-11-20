@@ -384,7 +384,11 @@
   });
 
   /* ================= demo data ================= */
-  function seedDemo() {
+  // what she has written herself (records, babies, growth, diary, prenatal visits): sample data must never take it by surprise
+  const ownRecords = (st = store.state) => (st.logs || []).length + (st.babies || []).length + (st.growth || []).length
+    + ((st.preg && st.preg.diary) || []).length + Object.keys((st.preg && st.preg.visitNotes) || {}).length;
+  function seedDemo({ undo = false } = {}) {
+    const prev = undo && ownRecords() ? JSON.stringify(store.state) : null; // kept for 「復原」 for a few seconds
     const s = store.defaults();
     const now = new Date();
     const birthday = C.dateKey(C.addDays(now, -75));
@@ -431,11 +435,17 @@
     if (store.state.auth) s.auth = store.state.auth; // stay logged in
     if (store.state.social) s.social = store.state.social; // keep 島上的媽媽／好孕圈 and the keys of my 祝福牆
     store.replace(s);
-    if (App.media) App.media.prune(); // the old diary photos belonged to the data that was just replaced
     App.navigate('home');
     App.refresh();
-    ui.toast('已載入範例資料，可以隨意點點看！');
     if (App.gift) setTimeout(() => App.gift.sync(), 500);
+    if (!prev) { if (App.media) App.media.prune(); ui.toast('已載入範例資料，可以隨意點點看！'); return; }
+    // her own data was replaced: 復原 brings it back (photos too), and its photos are only cleared once that chance is over
+    let undone = false;
+    ui.toast('已載入範例資料，可以隨意點點看！', {
+      action: '復原', ms: 8000,
+      onAction: () => { undone = true; store.replace(JSON.parse(prev)); App.navigate('home'); App.refresh(); ui.toast('已復原你的資料'); },
+    });
+    setTimeout(() => { if (!undone && App.media) App.media.prune(); }, 9000);
   }
   App.demo = { seed: seedDemo };
 
@@ -627,7 +637,14 @@
 
       el.append(h('div', { class: 'section-title' }, '資料'));
       el.append(h('div', { class: 'grid-2' },
-        h('button', { class: 'btn btn-ghost', onclick: async () => { if (await ui.confirm('載入範例資料會取代目前所有資料，確定嗎？')) seedDemo(); } }, '載入範例資料'),
+        h('button', {
+          class: 'btn btn-ghost',
+          onclick: async () => {
+            const n = ownRecords();
+            const ask = n ? `範例資料會取代你目前的 ${n} 筆紀錄和照片。想留著的話，請先按上面的「匯出備份」。` : '載入範例資料會取代目前所有資料，確定嗎？';
+            if (await ui.confirm(ask, n ? { ok: '取代', danger: true } : {})) seedDemo({ undo: true });
+          },
+        }, '載入範例資料'),
         h('button', { class: 'btn btn-ghost danger-text', onclick: async () => { if (await ui.confirm('清除這台裝置上的所有資料？建議先匯出備份。', { ok: '清除', danger: true })) { store.reset(); App.navigate('onboarding'); } } }, '清除所有資料')));
 
       el.append(h('section', { class: 'card flat mt-lg about' },

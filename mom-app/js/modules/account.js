@@ -224,6 +224,11 @@
   }
 
   let mode = 'login'; // 登入／註冊 toggle on the login page
+  // after logging in: where she was heading (App.afterLogin, e.g. a friend's group-buy team), else 首頁 or setup
+  const goOn = () => {
+    const next = App.afterLogin && App.afterLogin();
+    if (next) App.navigate(next.id, next.params); else App.navigate(store.state.onboarded ? 'home' : 'onboarding');
+  };
   const ERR = {
     bad_account: '請輸入正確的 Email 或手機號碼（09 開頭 10 碼）',
     weak_password: '密碼至少 8 個字',
@@ -272,7 +277,7 @@
         call('GET', 'me').then(({ user }) => {
           setAuth(params.token, user);
           ui.toast(`歡迎，${user.nickname} 💜`);
-          App.navigate(store.state.onboarded ? 'home' : 'onboarding');
+          goOn();
           setTimeout(() => ensureConsent(user), 300); // a new LINE account agrees before anything else
         }).catch((e) => { store.update((s) => { delete s.auth; }); box.innerHTML = ''; box.append(h('p', { class: 'login-err' }, errText(e))); drawForm(); });
         return;
@@ -352,7 +357,7 @@
               setAuth(res.token, res.user);
               ui.toast(mode === 'login' ? `歡迎回來，${res.user.nickname} 💜` : `註冊成功！歡迎 ${res.user.nickname} 💜`);
               mode = 'login';
-              App.navigate(store.state.onboarded ? 'home' : 'onboarding');
+              goOn();
               setTimeout(() => ensureConsent(res.user), 300); // agreed to an older policy: ask again
             } catch (ex) {
               err.textContent = errText(ex); err.hidden = false;

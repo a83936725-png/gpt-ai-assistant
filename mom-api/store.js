@@ -31,6 +31,8 @@ export class MemoryStore {
 
   async hasFlag(key, now = Date.now()) { const exp = this.flags.get(key); return !!exp && exp > now; }
 
+  async clearFlag(key) { this.flags.delete(key); }
+
   // true only the first time a key is claimed within ttl
   async claimOnce(key, ttlSec, now = Date.now()) {
     if (await this.hasFlag(key, now)) return false;
@@ -262,6 +264,8 @@ export class RedisRestStore {
   async hasFlag(key) { return !!(await this.cmd('EXISTS', `mom:flag:${key}`)); }
 
   async claimOnce(key, ttlSec) { return (await this.cmd('SET', `mom:flag:${key}`, '1', 'EX', ttlSec, 'NX')) === 'OK'; }
+
+  async clearFlag(key) { await this.cmd('DEL', `mom:flag:${key}`); }
 
   async hasPresence(sid) { return (await this.cmd('ZSCORE', 'mom:presence', sid)) !== null; }
 

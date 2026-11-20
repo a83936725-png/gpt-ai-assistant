@@ -1,0 +1,29 @@
+/* 團購揪團 */
+.gb-hero p { margin: 6px 0 0; }
+.gb-card-top { align-items: flex-start; }
+.gb-emoji { font-size: 34px; line-height: 1; width: 52px; height: 52px; border-radius: 16px; background: var(--c-accent-soft); display: flex; align-items: center; justify-content: center; flex: none; }
+.gb-img { width: 52px; height: 52px; border-radius: 16px; object-fit: cover; flex: none; background: var(--c-surface-2); }
+.gb-card .card-title .tag, .gb-team .tag, .gb-home .tag, .gb-brand .tag { margin-left: 6px; vertical-align: middle; }
+.gb-price { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
+.gb-price-now { font-size: 24px; font-weight: 900; color: var(--c-accent-ink); }
+.gb-price-was { font-size: 13px; color: var(--c-text-2); }
+.gb-meta { margin: 0 0 12px; }
+.gb-start { min-height: 48px; }
+.gb-mine { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 10px 12px; margin-top: 4px; border: 0; border-radius: 14px;
+  background: var(--c-primary-soft); color: var(--c-text); font: inherit; text-align: left; cursor: pointer; }
+.gb-mine .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gb-mine .chev { color: var(--c-text-2); font-size: 20px; flex: none; }
+.gb-progress { display: grid; gap: 6px; margin-top: 10px; }
+.gb-count { font-size: 17px; }
+.gb-actions { display: grid; gap: 10px; }
+.gb-actions p { margin: 0; }
+.gb-join, .gb-line { min-height: 52px; font-size: 16px; }
+.gb-leave { justify-self: center; min-height: 40px; color: var(--c-text-2); }
+.gb-done { font-weight: 800; font-size: 17px; color: var(--c-primary); }
+.gb-code-box { display: grid; gap: 4px; padding: 14px; border-radius: 16px; border: 2px dashed var(--c-primary); background: var(--c-primary-soft); text-align: center; }
+.gb-code-box p { margin: 6px 0 0; }
+.gb-code { font-size: 26px; font-weight: 900; letter-spacing: 3px; color: var(--c-primary); user-select: all; -webkit-user-select: all; word-break: break-all; }
+.gb-copy, .gb-shop { min-height: 44px; }
+.gb-steps { margin: 6px 0 0; padding-left: 22px; display: grid; gap: 6px; }
+.gb-home .bold { line-height: 1.35; }
+.gb-home-x { flex: none; }

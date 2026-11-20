@@ -16,6 +16,8 @@
  *   GET  /stats                  {online (last 2 min), registered, todaySignups}
  *   /social/*, /wall/*           島上的媽媽 (preset reactions) and 祝福牆 — see social.js
  *   /circle/*                    同週好孕圈 (weekly question, mood, cheers) — see circle.js
+ *   /groupbuy/*                  團購揪團 stage 1: teams for the brand's group-buys, a discount code once full — see
+ *                                groupbuy.js (no payment, no address)
  *
  * Health records and pregnancy stage are NOT sent here; they stay on the user's device.
  * Sign-up needs the current privacy policy version in `consent` (個資法 §7: the collector must be able to show
@@ -31,6 +33,7 @@ import { storeFromEnv } from './store.js';
 import { mountSocial } from './social.js';
 import { mountCircle } from './circle.js';
 import { mountInvite, inviteInfo, normCode } from './invite.js';
+import { mountGroupbuy } from './groupbuy.js';
 import { POLICY_VERSION } from './policy.js';
 import {
   hashPassword, verifyPassword, needsRehash, isCommonPassword, DUMMY_HASH, makeSigner, normaliseAccount, cleanText, newId, randomCode, hashKey, ipBucket,
@@ -183,6 +186,7 @@ export function createMomRouter({
     if (!res.headersSent) res.status(500).json({ error: 'server_error' });
   });
   let statsCache = null; // /stats is cached briefly to save database calls; a new sign-up clears it
+  let groupbuy = null; // set when the group-buy routes are mounted (below): its teams are part of my data
   const needAuth = (res) => { if (!authOn) { res.status(503).json({ error: 'not_configured' }); return true; } return false; };
 
   router.get('/config', (req, res) => res.json({
@@ -285,6 +289,7 @@ export function createMomRouter({
       consent: user.consent ? { version: user.consent.version, at: iso(user.consent.at) } : null,
       marketing: user.marketing ? { on: !!user.marketing.on, at: iso(user.marketing.at) } : { on: false, at: null },
       referrals: await store.countReferrals(user.code),
+      groupBuys: groupbuy ? await groupbuy.exportFor(user) : [],
       note: '懷孕、寶寶與健康紀錄只存在你的手機，伺服器沒有這些資料。',
     });
   }));
@@ -299,6 +304,7 @@ export function createMomRouter({
       const pw = String((req.body && req.body.password) || '').slice(0, 128);
       if (!(await verifyPassword(pw, user.passwordHash))) { res.status(401).json({ error: 'invalid' }); return; }
     }
+    if (groupbuy) await groupbuy.forget(user); // first: if this fails, the account is still there to try again
     await store.deleteUser(user);
     statsCache = null;
     res.json({ ok: true });
@@ -398,6 +404,9 @@ export function createMomRouter({
     currentUser,
     userOut: async (u) => publicUser(u, { referrals: await store.countReferrals(u.code) }),
     referralLimits: { ip: LIMITS.referralIp, day: LIMITS.referralDay },
+  });
+  groupbuy = mountGroupbuy(router, {
+    store, now, over, clientIp, wrap, currentUser, env,
   });
 
   return router;

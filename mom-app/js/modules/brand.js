@@ -152,6 +152,8 @@
         h('img', { src: b.logoFull || b.logo, alt: b.brandName || '', class: 'brand-hero-logo' }),
         h('p', { class: 'brand-story' }, b.story || '')));
       el.append(checkinCard());
+      const gb = App.groupbuy && App.groupbuy.brandCard(); // 團購揪團, while one is on
+      if (gb) el.append(gb);
       if (App.share) {
         el.append(h('div', { class: 'grid-2 mt' },
           h('button', { class: 'btn btn-soft', onclick: () => (streak() >= 3 ? App.share.open({ kind: 'streak', sheetTitle: '分享打卡成就' }) : App.share.open({ title: `${B().brandName || ''}陪我照顧自己`, text: `我在用「${B().appName || '易家做媽媽'}」每天留一點時間給自己 💜`, campaign: 'brand', emoji: '💜', kicker: B().brandName || '', theme: 'purple' })) }, '📤 分享打卡'),

@@ -5,7 +5,7 @@ import app from '../api/index.js';
 import config from '../config/index.js';
 import { MOCK_TEXT_OK } from '../constants/mock.js';
 import analyzeIkigai, {
-  buildIkigaiMessages, IkigaiInputError, IKIGAI_MAX_ITEMS, normalizeIkigai,
+  buildIkigaiMessages, describeIkigaiError, IkigaiInputError, IKIGAI_MAX_ITEMS, normalizeIkigai,
 } from '../utils/analyze-ikigai.js';
 import { isRateLimited, resetRateLimit } from '../web/ikigai.js';
 
@@ -101,5 +101,45 @@ test('POST /ikigai/analyze rejects incomplete input', async () => {
     body: JSON.stringify({ love: ['寫作'] }),
   });
   expect(res.status).toEqual(400);
-  expect((await res.json()).error).toContain('至少填寫兩個圈');
+  const data = await res.json();
+  expect(data.code).toEqual('invalid_input');
+  expect(data.error).toContain('至少填寫兩個圈');
+});
+
+test('POST /ikigai/analyze does not count incomplete input toward the hourly limit', async () => {
+  const post = (body) => fetch(`${base}/ikigai/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  for (let i = 0; i < config.IKIGAI_RATE_LIMIT + 2; i += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    expect((await post({ love: ['寫作'] })).status).toEqual(400);
+  }
+  expect((await post(SAMPLE)).status).toEqual(200);
+});
+
+const httpError = (status, error = {}) => Object.assign(new Error('provider message with sk-...abcd'), {
+  response: { status, data: { error } },
+});
+
+test.each([
+  [httpError(401), 'invalid_api_key', 'OPENAI_API_KEY'],
+  [httpError(403), 'forbidden', config.OPENAI_COMPLETION_MODEL],
+  [httpError(404), 'model_not_found', 'OPENAI_COMPLETION_MODEL'],
+  [httpError(400, { code: 'model_not_found' }), 'model_not_found', 'OPENAI_COMPLETION_MODEL'],
+  [httpError(429, { code: 'insufficient_quota' }), 'insufficient_quota', 'Billing'],
+  [httpError(429, { type: 'insufficient_quota' }), 'insufficient_quota', 'Billing'],
+  [httpError(429), 'rate_limited', '太頻繁'],
+  [httpError(400, { param: 'temperature' }), 'bad_request', 'temperature'],
+  [httpError(503), 'upstream_error', '503'],
+  [Object.assign(new Error('timeout of 50000ms exceeded'), { code: 'ECONNABORTED' }), 'timeout', 'IKIGAI_TIMEOUT'],
+  [Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' }), 'network', 'OPENAI_COMPLETION_BASE_URL'],
+  [Object.assign(new Error('Empty completion'), { code: 'empty_response' }), 'empty_response', '沒有回傳內容'],
+  [new Error('boom'), 'unknown', 'Vercel Logs'],
+])('describeIkigaiError maps %p to %s', (err, code, text) => {
+  const reason = describeIkigaiError(err);
+  expect(reason.code).toEqual(code);
+  expect(reason.error).toContain(text);
+  expect(reason.error).not.toContain('sk-');
 });

@@ -101,6 +101,7 @@ IKIGAI（生き甲斐）是用四個圈找出人生方向的方法：**你熱愛
 | `IKIGAI_AI_ENABLED` | `true` | 設 `false` 會關閉 AI 分析，網頁仍可使用，按鈕會停用 |
 | `IKIGAI_MAX_TOKENS` | `1200` | AI 回覆的長度上限，實際會取它和 `OPENAI_COMPLETION_MAX_TOKENS` 中較大的值 |
 | `IKIGAI_RATE_LIMIT` | `10` | 每個 IP 每小時最多分析幾次 |
+| `IKIGAI_TIMEOUT` | `50000` | 等 AI 回覆的時間上限（毫秒），不受 `OPENAI_TIMEOUT` 影響。要小於 Vercel 的 60 秒上限 |
 
 AI 分析沿用 LINE Bot 的聊天模型設定：`OPENAI_API_KEY`、`OPENAI_COMPLETION_MODEL`，或是 `OPENAI_COMPLETION_BASE_URL` 加上 `OPENAI_COMPLETION_API_KEY`。如果沒有設定 API 金鑰，AI 分析按鈕會停用。
 
@@ -149,14 +150,38 @@ npx jest tests/ikigai.test.js
 回應：
 
 - `200 { "text": "## 1. 四個交集 ..." }`：Markdown 格式的分析。
-- `400 { "error": "..." }`：填寫不到兩個圈、某一圈超過 20 項，或內容未通過安全檢查。
-- `403`：AI 分析已關閉。
-- `429`：超過每小時次數上限。
-- `500`：AI 服務錯誤。
+- 失敗時回傳 `{ "code": "...", "error": "給使用者看的原因" }`：
+  - `400`：`invalid_input`（填寫不到兩個圈、某一圈超過 20 項）、`flagged`（未通過安全檢查）
+  - `403`：`disabled`（AI 分析已關閉）
+  - `429`：`too_many_requests`（超過每小時次數上限。填寫不完整的請求不計入）
+  - `502`：呼叫 AI 失敗，`code` 的意思見下方「疑難排解」
 
 ---
 
-## 四、檔案位置
+## 四、疑難排解：AI 分析的錯誤訊息
+
+AI 分析失敗時，按鈕旁邊會用紅字直接顯示原因。畫面不會顯示 OpenAI 回傳的原文，因為原文可能含有部分金鑰；完整原文會記在 Vercel Logs，開頭是 `[ikigai]`。
+
+| 畫面訊息 | `code` | 處理方式 |
+| --- | --- | --- |
+| OpenAI API 金鑰無效或已失效 | `invalid_api_key` | 到 OpenAI 後台重新產生金鑰，更新 Vercel 的 `OPENAI_API_KEY`，再重新部署 |
+| OpenAI 額度用完了 | `insufficient_quota` | 到 OpenAI 後台的 Billing 儲值或提高上限 |
+| OpenAI 目前請求太頻繁 | `rate_limited` | 過一分鐘再試 |
+| 找不到模型「…」 | `model_not_found` | 檢查 `OPENAI_COMPLETION_MODEL` 拼字，或確認帳號能用這個模型 |
+| 沒有權限使用模型「…」 | `forbidden` | 帳號或專案沒有開通該模型，或所在地區不支援 |
+| OpenAI 拒絕了這次請求（參數 …） | `bad_request` | 模型不支援某個設定，例如 temperature，請依括號內的參數名稱調整對應的環境變數 |
+| AI 服務暫時異常（狀態碼 5xx） | `upstream_error` | OpenAI 端的問題，稍後再試 |
+| AI 回應逾時 | `timeout` | 把 `IKIGAI_TIMEOUT` 調高，或把 `IKIGAI_MAX_TOKENS` 調低 |
+| 伺服器連不到 AI 服務 | `network` | 檢查 `OPENAI_COMPLETION_BASE_URL`／`OPENAI_BASE_URL` 網址 |
+| AI 沒有回傳內容 | `empty_response` | 再試一次；一直發生的話，換一個模型 |
+| 安全檢查失敗：… | （同上） | 安全檢查（moderation）呼叫失敗。可以先把 `OPENAI_MODERATION_ENABLED` 設為 `false` |
+| 伺服器執行超過時間上限（504） | — | Vercel Function 超過 60 秒，請調低 `IKIGAI_MAX_TOKENS` |
+| 分析次數太多 | `too_many_requests` | 等一小時，或調高 `IKIGAI_RATE_LIMIT` |
+| 連不到伺服器 | — | 使用者端網路問題 |
+
+---
+
+## 五、檔案位置
 
 | 檔案 | 內容 |
 | --- | --- |

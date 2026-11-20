@@ -1,7 +1,9 @@
 /* Member API for the 易家做媽媽 web app, mounted at /mom-app/api by api/index.js (before the global JSON parser).
  *
  *   GET  /config                 enabled login providers + storage kind
- *   POST /auth/register          {account (Email or 09xxxxxxxx), password, nickname?, invitedBy?}
+ *   POST /auth/register          {account (Email or 09xxxxxxxx), password, nickname?, invitedBy?, code?}
+ *   POST /auth/code, /auth/verify/send, /auth/verify, /auth/reset   驗證碼 and 忘記密碼 — see verify.js (a sign-up
+ *                                needs the code whenever that kind of account can be verified)
  *   POST /auth/login             {account, password}
  *   POST /auth/logout-all        revoke every session of this account
  *   GET  /auth/line/start?nonce  → LINE Login (needs LINE_LOGIN_CHANNEL_ID / LINE_LOGIN_CHANNEL_SECRET)
@@ -34,6 +36,7 @@ import { mountSocial } from './social.js';
 import { mountCircle } from './circle.js';
 import { mountInvite, inviteInfo, normCode } from './invite.js';
 import { mountGroupbuy } from './groupbuy.js';
+import { makeSender, makeVerify } from './verify.js';
 import { POLICY_VERSION } from './policy.js';
 import {
   hashPassword, verifyPassword, needsRehash, isCommonPassword, DUMMY_HASH, makeSigner, normaliseAccount, cleanText, newId, randomCode, hashKey, ipBucket,
@@ -118,6 +121,10 @@ export function createMomRouter({
   // stored keys can't be turned back into addresses (an unkeyed hash of an IPv4 address can be brute-forced)
   const keyed = (s) => crypto.createHmac('sha256', `${secret}:keys`).update(String(s)).digest('hex').slice(0, 32);
   const over = async (name, id, [max, windowSec]) => (await store.hit(`${name}:${keyed(id)}`, windowSec, now())) > max;
+  // 驗證碼: Email (Resend), SMS (Twilio) or the brand's own webhook; without one, nothing asks for a code
+  const verify = makeVerify({
+    store, now, over, clientIp, keyed, secret, sender: makeSender(env, http, prodLike),
+  });
 
   const hint = (u) => {
     const [type, value] = String(u.account).split(/:(.+)/);
@@ -134,6 +141,7 @@ export function createMomRouter({
     accountHint: hint(u),
     consent: (u.consent && u.consent.version) || null,
     marketing: !!(u.marketing && u.marketing.on),
+    verified: u.provider === 'line' || !!u.verifiedAt, // owns the Email / phone (LINE accounts: LINE checked)
     invite: inviteInfo(u, now()),
     ...extra,
   });
@@ -154,7 +162,7 @@ export function createMomRouter({
     return `${randomCode()}${randomCode()}`;
   }
   async function createUser({
-    account, provider, nickname, passwordHash = null, invitedBy, consent = false, marketing = false,
+    account, provider, nickname, passwordHash = null, invitedBy, consent = false, marketing = false, verified = false,
   }) {
     const t = now();
     const user = {
@@ -170,6 +178,7 @@ export function createMomRouter({
       // LINE sign-ups agree in the app right after (the app asks before anything else); null until then
       consent: consent ? { version: POLICY_VERSION, at: t } : null,
       marketing: { on: !!marketing, at: t },
+      verifiedAt: verified ? t : null, // proved with a code that the Email / phone is hers
     };
     if (invitedBy) {
       const inviter = await store.getUserByCode(normCode(invitedBy));
@@ -190,13 +199,17 @@ export function createMomRouter({
   const needAuth = (res) => { if (!authOn) { res.status(503).json({ error: 'not_configured' }); return true; } return false; };
 
   router.get('/config', (req, res) => res.json({
-    providers: { password: authOn, line: lineOn }, storage: store.kind, social: true, policy: POLICY_VERSION,
+    providers: { password: authOn, line: lineOn },
+    storage: store.kind,
+    social: true,
+    policy: POLICY_VERSION,
+    verify: authOn ? verify.config() : { email: false, phone: false }, // which kinds of account confirm a code
   }));
 
   router.post('/auth/register', wrap(async (req, res) => {
     if (needAuth(res)) return;
     const {
-      account: raw, password, nickname, invitedBy, consent, marketing,
+      account: raw, password, nickname, invitedBy, consent, marketing, code,
     } = req.body || {};
     // input is checked first, so mistakes (and junk) never use up a network's sign-up allowance
     const acc = normaliseAccount(raw);
@@ -208,8 +221,15 @@ export function createMomRouter({
     const ip = clientIp(req);
     if (await over('reg', ip, LIMITS.registerIp)) { res.status(429).json({ error: 'too_many' }); return; }
     if (await store.getUserByAccount(acc.account)) { res.status(409).json({ error: 'exists' }); return; }
+    // with a way to send codes, the address is proved first: nobody can take someone else's Email / phone
+    const mustVerify = verify.can(acc.type);
+    if (mustVerify) {
+      if (!code) { res.status(400).json({ error: 'need_code' }); return; }
+      const r = await verify.check('register', acc.account, code, ip);
+      if (r !== 'ok') { res.status(400).json({ error: r }); return; }
+    }
     const user = await createUser({
-      account: acc.account, provider: acc.type, nickname, passwordHash: await hashPassword(password), invitedBy, consent: true, marketing: marketing === true,
+      account: acc.account, provider: acc.type, nickname, passwordHash: await hashPassword(password), invitedBy, consent: true, marketing: marketing === true, verified: mustVerify,
     });
     if (!user) { res.status(409).json({ error: 'exists' }); return; }
     statsCache = null;
@@ -284,6 +304,7 @@ export function createMomRouter({
       inviteCode: user.code,
       invitedBy: user.invitedBy,
       welcomeGiftAt: iso(user.giftAt),
+      verifiedAt: iso(user.verifiedAt),
       createdAt: iso(user.createdAt),
       lastLoginAt: iso(user.lastLoginAt),
       consent: user.consent ? { version: user.consent.version, at: iso(user.consent.at) } : null,
@@ -389,6 +410,26 @@ export function createMomRouter({
     }
   }));
 
+  verify.mount(router, {
+    wrap,
+    currentUser,
+    publicUserOut: async (u) => publicUser(u, { referrals: await store.countReferrals(u.code) }),
+    getUserByAccount: (a) => store.getUserByAccount(a),
+    setPassword: {
+      check: async (pw) => {
+        if (typeof pw !== 'string' || pw.length < 8 || pw.length > 128) return 'weak_password';
+        return isCommonPassword(pw) ? 'common_password' : null;
+      },
+      // 忘記密碼: the new password, every other device logged out, and logged in here (the code proved the address)
+      apply: async (user, pw, req) => {
+        await store.updateUser(user.id, { passwordHash: await hashPassword(pw), verifiedAt: user.verifiedAt || now() });
+        await store.bumpTokenVersion(user.id, user.tv || 0);
+        const fresh = await store.getUser(user.id);
+        await store.setFlag(`trust:${keyed(`${fresh.account}|${clientIp(req)}`)}`, TRUSTED_DEVICE_SEC, now());
+        return { token: await session(fresh), user: publicUser(fresh, { referrals: await store.countReferrals(fresh.code) }) };
+      },
+    },
+  });
   mountSocial(router, {
     store, now, secret, over, clientIp, wrap,
   });
@@ -404,9 +445,10 @@ export function createMomRouter({
     currentUser,
     userOut: async (u) => publicUser(u, { referrals: await store.countReferrals(u.code) }),
     referralLimits: { ip: LIMITS.referralIp, day: LIMITS.referralDay },
+    needVerify: verify.needVerify,
   });
   groupbuy = mountGroupbuy(router, {
-    store, now, over, clientIp, wrap, currentUser, env,
+    store, now, over, clientIp, wrap, currentUser, env, needVerify: verify.needVerify,
   });
 
   return router;

@@ -31,7 +31,7 @@ export const inviteInfo = (u, t) => ({
 });
 
 export function mountInvite(router, {
-  store, now, over, clientIp, wrap, currentUser, userOut, referralLimits,
+  store, now, over, clientIp, wrap, currentUser, userOut, referralLimits, needVerify = () => false,
 }) {
   const fail = (res, status, error) => res.status(status).json({ error });
   const already = async (res, user) => res.json({
@@ -43,6 +43,8 @@ export function mountInvite(router, {
     if (!user) { fail(res, 401, 'unauthorized'); return; }
     if (await over('claim', user.id, LIMITS.claimUser)) { fail(res, 429, 'too_many'); return; }
     if (!user.consent || user.consent.version !== POLICY_VERSION) { fail(res, 403, 'need_consent'); return; }
+    // with codes available, a gift is for an account that proved its Email / phone (no throwaway sign-ups)
+    if (needVerify(user)) { fail(res, 403, 'need_verify'); return; }
     const t = now();
     if (user.giftAt) { await already(res, user); return; }
     if (!inviteInfo(user, t).open) { fail(res, 400, 'too_late'); return; }

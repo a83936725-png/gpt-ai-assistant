@@ -1,6 +1,12 @@
-/* A tiny Redis emulator for the member API tests: just the commands the store uses (no expiry). */
-export function fakeRedis() {
+/* A tiny Redis emulator for the member API tests: just the commands the store uses. Keys expire only when a test
+ * clock is given (fakeRedis({ now: () => clock })); without one, nothing ever expires. */
+export function fakeRedis({ now } = {}) {
   const kv = new Map(); const sets = new Map(); const zsets = new Map(); const hashes = new Map(); const lists = new Map(); const ttl = new Map();
+  const expAt = new Map();
+  const sweep = (k) => {
+    if (now && expAt.has(k) && expAt.get(k) <= now()) { kv.delete(k); hashes.delete(k); lists.delete(k); zsets.delete(k); sets.delete(k); ttl.delete(k); expAt.delete(k); }
+  };
+  const setExp = (k, sec) => { ttl.set(k, sec); if (now) expAt.set(k, now() + sec * 1000); };
   const z = (k) => { if (!zsets.has(k)) zsets.set(k, new Map()); return zsets.get(k); };
   const hm = (k) => { if (!hashes.has(k)) hashes.set(k, new Map()); return hashes.get(k); };
   const bound = (v) => {
@@ -15,26 +21,27 @@ export function fakeRedis() {
     return (lx ? sc > l : sc >= l) && (hx ? sc < h : sc <= h);
   };
   const run = ([cmd, ...a]) => {
+    sweep(cmd === 'EVAL' ? a[2] : a[0]);
     switch (cmd) {
       case 'GET': return kv.has(a[0]) ? kv.get(a[0]) : null;
       case 'SET': {
         const opts = a.slice(2).map(String);
         if (opts.includes('NX') && kv.has(a[0])) return null;
         kv.set(a[0], String(a[1]));
-        const ex = opts.indexOf('EX'); if (ex >= 0) ttl.set(a[0], Number(opts[ex + 1]));
+        const ex = opts.indexOf('EX'); if (ex >= 0) setExp(a[0], Number(opts[ex + 1])); else { ttl.delete(a[0]); expAt.delete(a[0]); }
         return 'OK';
       }
-      case 'DEL': kv.delete(a[0]); hashes.delete(a[0]); lists.delete(a[0]); zsets.delete(a[0]); return 1;
+      case 'DEL': kv.delete(a[0]); hashes.delete(a[0]); lists.delete(a[0]); zsets.delete(a[0]); ttl.delete(a[0]); expAt.delete(a[0]); return 1;
       case 'INCR': { const v = Number(kv.get(a[0]) || 0) + 1; kv.set(a[0], String(v)); return v; }
       case 'INCRBY': { const v = Number(kv.get(a[0]) || 0) + Number(a[1]); kv.set(a[0], String(v)); return v; }
-      case 'EXPIRE': ttl.set(a[0], Number(a[1])); return 1;
+      case 'EXPIRE': setExp(a[0], Number(a[1])); return 1;
       case 'EXISTS': return kv.has(a[0]) ? 1 : 0;
       case 'TTL': return ttl.has(a[0]) ? ttl.get(a[0]) : -1;
       case 'EVAL': {
         const [script, , key, ...args] = a;
-        if (script.includes("redis.call('INCR'")) { const v = Number(kv.get(key) || 0) + 1; kv.set(key, String(v)); if (!ttl.has(key)) ttl.set(key, Number(args[0])); return v; }
+        if (script.includes("redis.call('INCR'")) { const v = Number(kv.get(key) || 0) + 1; kv.set(key, String(v)); if (!ttl.has(key)) setExp(key, Number(args[0])); return v; }
         if (script.includes("redis.call('LPUSH'")) {
-          const l = lists.get(key) || []; l.unshift(String(args[0])); l.length = Math.min(l.length, Number(args[1])); lists.set(key, l); ttl.set(key, Number(args[2])); return 1;
+          const l = lists.get(key) || []; l.unshift(String(args[0])); l.length = Math.min(l.length, Number(args[1])); lists.set(key, l); setExp(key, Number(args[2])); return 1;
         }
         if (script.includes("redis.call('LRANGE'")) { const l = lists.get(key) || []; lists.delete(key); return l; }
         throw new Error(`unexpected script ${script}`);

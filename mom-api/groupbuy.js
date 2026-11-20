@@ -96,7 +96,7 @@ const publicCampaign = ({
 }) => c;
 
 export function mountGroupbuy(router, {
-  store, now, over, clientIp, wrap, currentUser, env,
+  store, now, over, clientIp, wrap, currentUser, env, needVerify = () => false,
 }) {
   const campaigns = loadCampaigns(env, now());
   const byId = new Map(campaigns.map((c) => [c.id, c]));
@@ -187,6 +187,7 @@ export function mountGroupbuy(router, {
     const user = await currentUser(req);
     if (!user) { fail(res, 401, 'unauthorized'); return; }
     if (!agreed(user)) { fail(res, 403, 'need_consent'); return; }
+    if (needVerify(user)) { fail(res, 403, 'need_verify'); return; } // a discount code is for an account that proved its address
     const t = now();
     const c = byId.get(String((req.body && req.body.campaign) || ''));
     if (!active(c, t)) { fail(res, 404, 'no_campaign'); return; }
@@ -216,6 +217,7 @@ export function mountGroupbuy(router, {
     const user = await currentUser(req);
     if (!user) { fail(res, 401, 'unauthorized'); return; }
     if (!agreed(user)) { fail(res, 403, 'need_consent'); return; }
+    if (needVerify(user)) { fail(res, 403, 'need_verify'); return; } // a discount code is for an account that proved its address
     if (await over('gb-join', user.id, LIMITS.join)) { fail(res, 429, 'too_many'); return; }
     const t = now();
     const team = await getTeam(req.params.id, t);

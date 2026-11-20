@@ -369,6 +369,13 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: t
   await S(p2, () => App.store.update((s) => { s.outing.plans = []; }));
   await wait(p2, 200);
   ok('Friday without plans → home card with 找活動', await p2.isVisible('[data-card="outing"] button:has-text("找活動")'));
+  // 坐月子 (a baby under 30 days): no 「週末想帶寶寶出門嗎？」, but her own plans still show
+  await S(p2, () => App.store.update((s) => { s.babies[0].birthday = Core.dateKey(Core.addDays(new Date(), -10)); }));
+  await wait(p2, 200);
+  ok('坐月子 (10 days old), Friday without plans → no outing card', !(await p2.isVisible('[data-card="outing"]')));
+  await S(p2, () => App.store.update((s) => { s.outing.plans.push({ id: 'n', title: '回診（測試）', date: '2026-11-23', time: '' }); }));
+  await wait(p2, 200);
+  ok('…her own plan (in 3 days) still shows', await p2.isVisible('[data-card="outing"]:has-text("回診")'));
   await p2.context().close();
 
   /* ================= 7. dark mode, 320px, touch targets ================= */

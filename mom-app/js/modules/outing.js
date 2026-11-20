@@ -488,11 +488,15 @@
   }
 
   function shouldShowHome(now = new Date()) {
-    if (!store.baby()) return false;
+    const b = store.baby();
+    if (!b) return false;
     const dow = now.getDay();
-    if (dow === 5 || dow === 6 || dow === 0) return true;
+    const weekend = dow === 5 || dow === 6 || dow === 0;
     const next = upcoming(now)[0];
-    return !!next && C.diffDays(now, next.date) <= 3;
+    if (next && C.diffDays(now, next.date) <= (weekend ? 7 : 3)) return true; // her own plans
+    if (!weekend) return false;
+    // 「週末想帶寶寶出門嗎？」 waits until 坐月子 is over (the first 30 days)
+    return !(b.birthday && C.diffDays(b.birthday, now) < 30);
   }
 
   /* ================= UI state ================= */

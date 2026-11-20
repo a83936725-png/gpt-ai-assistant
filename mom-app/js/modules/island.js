@@ -1650,11 +1650,14 @@
       const k = Math.max(view.k, nearK * 1.15);
       animateTo({ k, tx: W / 2 - cx * k, ty: H * 0.3 - cy * k });
     };
+    // the spot's sheet opens once the map has moved there; leaving the island first cancels it (see cleanup)
+    let spotTimer = 0;
     const goSpot = (id) => {
       const spot = SPOT[id];
-      if (spot && built.infos[id] && built.infos[id].open) { focusSpot(id); setTimeout(() => openSpot(id), reduceMotion() ? 0 : 260); return; }
+      clearTimeout(spotTimer);
+      if (spot && built.infos[id] && built.infos[id].open) { focusSpot(id); spotTimer = setTimeout(() => openSpot(id), reduceMotion() ? 0 : 260); return; }
       if (spot && spot.island) flyTo(spot.island);
-      setTimeout(() => openSpot(id), reduceMotion() ? 0 : 300);
+      spotTimer = setTimeout(() => openSpot(id), reduceMotion() ? 0 : 300);
     };
     goSpotHook = goSpot; flyHook = flyTo;
 
@@ -1995,7 +1998,7 @@
     }, fresh.length ? 650 : 200);
 
     cleanup = () => {
-      clearInterval(tipTimer); clearTimeout(bubbleTimer); clearTimeout(afterTimer); cancelAnimationFrame(anim); cancelAnimationFrame(raf);
+      clearInterval(tipTimer); clearTimeout(bubbleTimer); clearTimeout(afterTimer); clearTimeout(spotTimer); cancelAnimationFrame(anim); cancelAnimationFrame(raf);
       if (ro) ro.disconnect();
       if (offSocial) offSocial();
       onStampChange = () => {};

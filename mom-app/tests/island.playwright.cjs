@@ -184,6 +184,26 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     await ctx.close();
   }
 
+  /* ---------- 首頁「下一站」, then straight back: the spot's sheet must not follow her ---------- */
+  {
+    const { p: q, ctx } = await open();
+    await asPrep(q); await S(q, () => App.store.update((s) => { s.island = { ...(s.island || {}), toured: '2026-01-01', seen: { prep: '2026-01-01' } }; }));
+    await go(q, 'home', null, 900);
+    await q.click('[data-card="island-progress"] button, [data-card="island-progress"] [role=button]');
+    // leave while the map is still moving to the spot (its sheet is due a moment later)
+    await q.waitForFunction(() => document.body.dataset.screen === 'island', null, { timeout: 3000 });
+    await q.waitForTimeout(260);
+    await S(q, () => App.navigate('home', { n: 'back' }));
+    await q.waitForTimeout(1200);
+    const after = await S(q, () => ({ screen: document.body.dataset.screen, sheet: document.body.classList.contains('has-sheet') }));
+    ok('首頁「下一站」 then straight back to 首頁: no island sheet pops up there', after.screen === 'home' && !after.sheet, JSON.stringify(after));
+    await go(q, 'home', null, 600);
+    await q.click('[data-card="island-progress"] button, [data-card="island-progress"] [role=button]');
+    await q.waitForTimeout(1500);
+    ok('…and staying on the island, the spot opens as before', /葉酸果園/.test(await sheetText(q)));
+    await ctx.close();
+  }
+
   ok('no page errors anywhere', !errors.length, errors.slice(0, 4).join(' | '));
   console.log('\n=== 好孕群島 ===');
   results.forEach((r) => console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${r.name}${r.info && !r.pass ? `   [${r.info}]` : ''}`));

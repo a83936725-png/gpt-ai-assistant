@@ -169,6 +169,10 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   ok('…and no home line nagging about it', !(await F.isVisible('.gift-line')));
   await F.context().close();
 
+  /* ---- search: 「邀請碼」「見面禮」 lead to 邀請好友 ---- */
+  const found = await S(A, () => ['邀請碼', '見面禮', '好孕點數'].map((q) => (App.search.query(q).groups.tool[0] || { d: { tool: {} } }).d.tool.id));
+  ok('search 「邀請碼」「見面禮」「好孕點數」 → 邀請好友 first', found.every((x) => x === 'invite'), found.join(','));
+
   /* ---- a small phone: the line fits ---- */
   const G = await mk({ width: 320, height: 568 });
   await G.goto(link); await G.waitForTimeout(1000);

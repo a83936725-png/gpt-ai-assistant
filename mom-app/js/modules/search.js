@@ -120,6 +120,8 @@
   const EXTRA_DEST = [
     { id: 'log', title: '寶寶紀錄', icon: '📝', desc: '餵奶、尿布、睡眠、體溫一鍵記錄', screen: 'log', stages: ['baby'], tags: ['餵奶', '尿布', '睡眠', '體溫', '紀錄', '便便', '洗澡'] },
     { id: 'island', title: '好孕島', icon: '🏝️', desc: '一站一站學孕產知識、蓋章', screen: 'island', stages: ALL_STAGES, tags: ['知識', '小測驗', '蓋章'] },
+    // 雙向邀請禮: 「用我的邀請碼」 → where to type it, and where to invite
+    { id: 'invite', title: '邀請好友', icon: '💌', desc: '邀請碼、雙向邀請禮、好孕點數、分享卡', screen: 'invite', stages: ALL_STAGES, tags: ['邀請', '邀請碼', '邀請禮', '見面禮', '好孕點數', '點數', '推薦'] },
   ];
 
   let INDEX = null;

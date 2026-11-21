@@ -231,6 +231,7 @@
   // a real milestone: a burst around `from` (an element or rect; default upper middle of the screen)
   function celebrate({ from = null, emojis = ['🎉', '✨', '💜', '⭐'], big = false } = {}) {
     haptic([14, 70, 18]);
+    if (big && window.App && window.App.mascot) window.App.mascot.cheer(); // 小滴 hops up by the corner
     return particles(from, emojis, { count: big ? 40 : 24, dist: big ? 230 : 150, up: false, fall: big ? 220 : 150, size: big ? 26 : 22 });
   }
   // one-tap logging: a few icons float up from the button
@@ -321,8 +322,13 @@
     return wrap;
   }
 
-  const empty = (icon, text, action) => h('div', { class: 'empty' },
-    h('div', { class: 'empty-icon' }, icon), h('p', null, text), action || null);
+  // an empty page: 小滴 (js/modules/qban.js) holding up the page's emoji in a bubble; just the emoji without her
+  const empty = (icon, text, action) => {
+    const M = window.App && window.App.mascot;
+    return h('div', { class: 'empty' },
+      M ? M.el({ mood: M.moodFor(icon), size: 64, badge: icon }) : h('div', { class: 'empty-icon' }, icon),
+      h('p', null, text), action || null);
+  };
 
   const card = (attrs, ...children) => h('section', { ...attrs, class: `card ${attrs?.class || ''}` }, ...children);
 

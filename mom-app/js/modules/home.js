@@ -49,12 +49,13 @@
   function babyHero(baby) {
     const age = C.babyAge(baby.birthday);
     const g = latestGrowth(baby);
-    const avatar = baby.photo
-      ? h('img', { src: baby.photo, alt: '', class: 'hero-avatar' })
-      : h('span', { class: 'hero-avatar emoji', 'aria-hidden': 'true' }, baby.avatar || '👶');
-    // the baby shows what is happening right now: z z z while asleep, hearts while feeding (css/motion.css)
+    // the baby shows what is happening right now: z z z while asleep, hearts while feeding (css/motion.css); the
+    // Q版 baby also closes its eyes or smiles (js/modules/qban.js)
     const asleep = App.timers && App.timers.get('sleep', baby.id);
     const feeding = App.timers && App.timers.get('breast', baby.id);
+    const avatar = App.qbaby ? App.qbaby.face(baby, { size: 56, state: asleep ? 'sleep' : feeding ? 'feed' : 'awake', cls: 'hero-avatar' })
+      : baby.photo ? h('img', { src: baby.photo, alt: '', class: 'hero-avatar' })
+        : h('span', { class: 'hero-avatar emoji', 'aria-hidden': 'true' }, baby.avatar || '👶');
     const fx = asleep ? h('span', { class: 'hero-fx sleep', 'aria-hidden': 'true' }, h('i', null, 'z'), h('i', null, 'z'), h('i', null, 'Z'))
       : feeding ? h('span', { class: 'hero-fx feed', 'aria-hidden': 'true' }, h('i', null, '💗'), h('i', null, '💕'), h('i', null, '💗')) : null;
     return h('section', { class: 'baby-hero' },
@@ -75,7 +76,7 @@
       title: '切換寶寶',
       body: h('div', { class: 'list' }, store.state.babies.map((b) => h('button', {
         class: 'list-item', onclick: () => { store.update((s) => { s.activeBabyId = b.id; }); sh.close(); },
-      }, h('span', { class: 'li-icon' }, b.avatar || '👶'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, b.name), h('div', { class: 'li-sub' }, C.babyAge(b.birthday)?.text || '')),
+      }, App.qbaby ? App.qbaby.icon(b) : h('span', { class: 'li-icon' }, b.avatar || '👶'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, b.name), h('div', { class: 'li-sub' }, C.babyAge(b.birthday)?.text || '')),
       b.id === store.baby()?.id ? h('span', { class: 'tag primary' }, '目前') : null))),
     });
   }
@@ -172,7 +173,10 @@
             // logged (not a form that opened instead): a little puff from the button, and today's count pops
             if (!document.body.classList.contains('has-sheet')) {
               ui.burst(at, def.icon);
-              if (store.logsOn(new Date()).length > n0) requestAnimationFrame(() => { const b = document.querySelector(`.quick-tile[data-type="${q.type}"] .qt-badge`); if (b) b.classList.add('pop'); });
+              if (store.logsOn(new Date()).length > n0) {
+                requestAnimationFrame(() => { const b = document.querySelector(`.quick-tile[data-type="${q.type}"] .qt-badge`); if (b) b.classList.add('pop'); });
+                if (App.qbaby) requestAnimationFrame(App.qbaby.hop); // the Q版 baby hops
+              }
             }
           },
         }, running ? [h('span', { class: 'qt-plus-sign', 'aria-hidden': 'true' }, '✓'), '完成']
@@ -287,7 +291,8 @@
       el.append(h('div', { class: 'greet row between' },
         h('div', { class: 'row' },
           myHead ? h('button', { class: 'greet-av', 'aria-label': '我的 Q 版角色', onclick: () => App.navigate('avatar') }, myHead) : null,
-          h('div', null, h('div', { class: 'greet-hi' }, `${greet}${name ? `，${name}` : ''} `, h('span', { class: 'beat' }, '💜')), h('div', { class: 'tiny muted' }, C.fmtDateLong(new Date())))),
+          h('div', null, h('div', { class: 'greet-hi' }, `${greet}${name ? `，${name}` : ''} `,
+            App.mascot && App.mascot.night() ? App.mascot.el({ mood: 'sleepy', size: 30, cls: 'greet-md' }) : h('span', { class: 'beat' }, '💜')), h('div', { class: 'tiny muted' }, C.fmtDateLong(new Date())))),
         h('a', { class: 'stage-pill', href: '#/me', title: '到「我的」切換階段' }, `${stageLabel.icon} ${stageLabel.label}${store.state.profile.pregnantToo && stage === 'baby' ? '＋懷孕' : ''}`)));
       if (App.livePill) el.append(App.livePill('home-live'));
       // a save that could not be kept: the warning goes right under the greeting, above everything else
@@ -297,7 +302,7 @@
       if (stage === 'baby') {
         const baby = store.baby();
         if (!baby) {
-          el.append(ui.card({ class: 'soft center' }, h('div', { class: 'empty-icon' }, '👶'), h('p', null, '新增寶寶資料，開始記錄每天的照護。'),
+          el.append(ui.card({ class: 'soft center' }, App.qbaby ? App.qbaby.face({ avatar: '👶' }, { size: 72, cls: 'qb-hello' }) : h('div', { class: 'empty-icon' }, '👶'), h('p', null, '新增寶寶資料，開始記錄每天的照護。'),
             h('button', { class: 'btn btn-primary', onclick: () => App.me && App.me.editBaby() }, '新增寶寶')));
         } else {
           el.append(babyHero(baby));

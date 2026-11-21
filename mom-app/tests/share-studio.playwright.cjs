@@ -126,7 +126,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   await D.waitForTimeout(700); // (a new screen closes any open sheet: open it once 首頁 is there)
   await S(D, () => App.share.open({ kind: 'preg-week', sheetTitle: '分享孕週卡' }));
   await settled(D);
-  ok('孕週卡 (no list): no item list; 內容與文字 folded with 加一句話 and QR inside', !(await D.isVisible('.sh-items')) && (await D.getAttribute('.sh-toggle', 'aria-expanded')) === 'false' && (await S(D, () => !!document.querySelector('.sh-content .sh-note'))));
+  ok('孕週卡 (no list): no item list; 內容與文字 folded with 加一句話 and QR inside', !(await D.isVisible('.sh-items')) && (await D.getAttribute('.sh-toggle', 'aria-expanded')) === 'false' && (await S(D, () => !!document.querySelector('.sh-content .sh-note'))) && !(await D.isVisible('.sh-note')));
   await D.click('.sh-toggle'); await D.waitForTimeout(300);
   ok('…tap: it opens', await D.isVisible('.sh-note'));
   await axe(D, '分享工作室 (dark)');

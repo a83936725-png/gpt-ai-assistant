@@ -610,7 +610,7 @@
     if (parts.length) { box.append(...parts); return R.total; }
 
     box.append(h('div', { class: 'sr-empty' },
-      h('div', { class: 'empty-icon', 'aria-hidden': 'true' }, '🔍'),
+      App.mascot ? App.mascot.el({ mood: 'think', size: 60, cls: 'sr-md' }) : h('div', { class: 'empty-icon', 'aria-hidden': 'true' }, '🔍'),
       h('p', { class: 'bold' }, `找不到「${q.trim()}」的答案`),
       h('p', { class: 'small muted' }, '試試換個說法，或用更短的關鍵字，例如：'),
       h('div', { class: 'chips sr-empty-chips' }, suggestions().slice(0, 6).map((x) => chip(x, () => setQuery(x, { save: true })))),

@@ -168,7 +168,40 @@
     post: { H: 1350, py: 240, ph: 760, r: 96, block: 228, maxLines: 4, rowH: 62, step: 72, fs: 36, qs: 230, title: [72, 52], gap: 60 },
     square: { H: 1080, py: 220, ph: 600, r: 72, block: 176, maxLines: 3, rowH: 58, step: 66, fs: 34, qs: 190, title: [62, 46], gap: 40 },
   };
-  async function render(spec, { format = 'story', qr = true, note = '' } = {}) {
+  // a Q版 sticker on the panel's top-right corner, cut out with a white edge like a real sticker. Drawings only: her
+  // Q 版角色 is always the drawn one (never her photo face), the baby is the Q版 baby (never the baby's photo)
+  const STICKER_W = { story: 236, post: 204, square: 172 };
+  function stickerSrc(kind, w) {
+    if (kind === 'mascot' && App.mascot) return App.mascot.dataUrl({ mood: 'wave', size: w, ground: false });
+    const av = App.avatar && App.avatar.current && App.avatar.current();
+    if (kind === 'me' && av) return App.avatar.dataUrl({ ...av, mode: 'draw', face: null }, { size: w, ground: false });
+    const b = store.baby && store.baby();
+    if (kind === 'baby' && App.qbaby && b) return App.qbaby.dataUrl({ ...b, photo: null, avatar: '👶' }, { size: w, ground: false });
+    return null;
+  }
+  async function paintSticker(ctx, W, format, py, kind) {
+    const base = STICKER_W[format] || STICKER_W.story;
+    const w = Math.round(kind === 'me' ? base * 0.84 : base);
+    const src = stickerSrc(kind, w); if (!src) return false;
+    const im = await loadImg(src); if (!im) return false;
+    const ih = Math.round(w * ((im.naturalHeight / im.naturalWidth) || 1));
+    const pad = Math.round(w * 0.06); const cw = w + pad * 2; const ch = ih + pad * 2;
+    const sil = document.createElement('canvas'); sil.width = cw; sil.height = ch; // her outline in white…
+    const sx = sil.getContext('2d'); sx.drawImage(im, pad, pad, w, ih);
+    sx.globalCompositeOperation = 'source-in'; sx.fillStyle = '#fff'; sx.fillRect(0, 0, cw, ch);
+    const cut = document.createElement('canvas'); cut.width = cw; cut.height = ch; // …stamped around for the white edge
+    const cc = cut.getContext('2d');
+    for (let i = 0; i < 16; i += 1) { const a = (i / 16) * Math.PI * 2; cc.drawImage(sil, Math.cos(a) * pad * 0.85, Math.sin(a) * pad * 0.85); }
+    cc.drawImage(im, pad, pad, w, ih);
+    const right = W - 44; const bottom = py + (format === 'square' ? 30 : 44);
+    ctx.save();
+    ctx.translate(right - cw / 2, bottom - ch / 2); ctx.rotate(0.12);
+    ctx.shadowColor = 'rgba(40,20,50,.28)'; ctx.shadowBlur = 22; ctx.shadowOffsetY = 8;
+    ctx.drawImage(cut, -cw / 2, -ch / 2);
+    ctx.restore();
+    return true;
+  }
+  async function render(spec, { format = 'story', qr = true, note = '', sticker = 'none' } = {}) {
     const L = LAYOUT[format] || LAYOUT.story;
     const W = 1080; const H = L.H;
     let drawn = 0; // list rows that fitted (blob.lines)
@@ -199,8 +232,10 @@
     } else if (!inlineEmoji) {
       const R = listMode ? Math.round(L.r * 0.66) : L.r;
       const photo = spec.photo ? await loadImg(spec.photo) : null;
+      const art = !photo && spec.art ? await loadImg(spec.art) : null; // a drawing (the Q版 baby)
       ctx.fillStyle = soft; ctx.beginPath(); ctx.arc(cx, y + R, R, 0, Math.PI * 2); ctx.fill();
       if (photo) { ctx.save(); ctx.beginPath(); ctx.arc(cx, y + R, R - 8, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(photo, cx - R + 8, y + 8, (R - 8) * 2, (R - 8) * 2); ctx.restore(); }
+      else if (art) { const s = R * 1.62; ctx.drawImage(art, cx - s / 2, y + R - s / 2 + R * 0.04, s, s); }
       else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${Math.round(R * 1.15)}px ${FONT}`; ctx.fillText(spec.emoji || '💜', cx, y + R + 8); }
       y += listMode ? R * 2 + 40 : L.block;
     }
@@ -272,6 +307,7 @@
       ctx.textAlign = 'center'; ctx.fillStyle = c2; ctx.font = `700 ${format === 'square' ? 34 : 40}px ${FONT}`;
       noteRows.forEach((ln) => { ctx.fillText(ln, cx, ny); ny += format === 'square' ? 46 : 54; });
     }
+    if (sticker && sticker !== 'none') await paintSticker(ctx, W, format, py, sticker);
     // footer: QR + invite
     paintFooter(ctx, W, bottom + L.gap, L.qs, spec, { qr });
     return new Promise((res) => cv.toBlob((b) => { if (b) b.lines = drawn; res(b); }, 'image/png'));
@@ -289,6 +325,8 @@
     const a = babyAgeInfo(b); if (!a) return null;
     return CUSTOMS.find((c) => (c.day ? a.days + 1 >= c.day && a.days + 1 <= c.day + 6 : a.months === c.month && a.remDays <= 6)) || null;
   }
+  // the Q版 baby as the picture of a card, where no photo is shown and the baby's picture is the default 👶
+  const qArt = (b, shownPhoto) => (App.qbaby && !shownPhoto && App.qbaby.isQ({ ...b, photo: null }) ? App.qbaby.dataUrl({ ...b, photo: null }, { size: 320, ground: false }) : null);
   function cards() {
     const s = store.state; const out = [];
     const priv = ensure(s).privacy;
@@ -313,7 +351,7 @@
       if (g || b.birthWeight) stats.push({ v: `${(g && g.weight) || b.birthWeight}`, l: '公斤' });
       const gl = s.growth.filter((x) => x.babyId === b.id && x.length).sort((x, y) => (x.date < y.date ? 1 : -1))[0];
       if (gl || b.birthLength) stats.push({ v: `${(gl && gl.length) || b.birthLength}`, l: '公分' });
-      out.push({ kind: 'baby-age', label: '成長卡', campaign: 'baby-age', spec: { emoji: b.avatar || '👶', photo: photo(b), kicker: '寶寶成長日記', title: `${bname(b)} ${a ? a.text : ''}`, subtitle: '每天都在長大一點點', stats, theme: 'peach' }, text: `${bname(b)} ${a ? a.text : ''}了，每天都在長大一點點 💕` });
+      out.push({ kind: 'baby-age', label: '成長卡', campaign: 'baby-age', spec: { emoji: b.avatar || '👶', photo: photo(b), art: qArt(b, photo(b)), kicker: '寶寶成長日記', title: `${bname(b)} ${a ? a.text : ''}`, subtitle: '每天都在長大一點點', stats, theme: 'peach' }, text: `${bname(b)} ${a ? a.text : ''}了，每天都在長大一點點 💕` });
       const cu = customFor(b);
       if (cu) out.push({ kind: `custom-${cu.id}`, label: cu.title.replace('！', ''), campaign: `custom-${cu.id}`, spec: { emoji: cu.emoji, photo: photo(b), kicker: bname(b), title: cu.title, subtitle: cu.sub, theme: 'peach' }, text: `${bname(b)} ${cu.title}${cu.sub}` });
       if (a && a.days <= 60) {
@@ -374,6 +412,16 @@
     { value: 'square', label: '方形', hint: '1:1', max: 3, ratio: '1 / 1' },
   ];
   const cardPrefs = () => { const x = ensure(store.state); x.cardPrefs = x.cardPrefs || {}; return x.cardPrefs; };
+  // 貼紙 she can put on the card: 小滴, her Q 版角色 (when she made one), the Q版 baby (when there is a baby)
+  function stickerChoices() {
+    const out = [{ value: 'none', label: '不加', pic: () => h('span', { class: 'sh-stk-none' }, '✕') }];
+    if (App.mascot) out.push({ value: 'mascot', label: '小滴', pic: () => App.mascot.el({ mood: 'wave', size: 32 }) });
+    const av = App.avatar && App.avatar.current && App.avatar.current();
+    if (av) out.push({ value: 'me', label: '我的 Q 版', pic: () => App.avatar.head(36, { ...av, mode: 'draw', face: null }) });
+    const b = store.baby && store.baby();
+    if (App.qbaby && b) out.push({ value: 'baby', label: '寶寶 Q 版', pic: () => App.qbaby.face({ ...b, photo: null, avatar: '👶' }, { size: 36, cls: 'sh-stk-qb' }) });
+    return out;
+  }
 
   // payload: {title, text, path, params, campaign, spec (card spec) | kind, items:[{text, done?, warn?, extra?}], sheetTitle}
   function open(payload = {}) {
@@ -385,6 +433,7 @@
 
     /* ---- her choices ---- */
     const pf = cardPrefs();
+    const stk = stickerChoices();
     const items = (p.items || (p.spec && p.spec.lines) || []).map((x) => (typeof x === 'string' ? { text: x } : x));
     const hasDone = items.some((x) => typeof x.done === 'boolean');
     const opt = {
@@ -393,13 +442,14 @@
       qr: pf.qr !== false,
       checks: hasDone,
       note: '',
+      sticker: stk.some((x) => x.value === pf.sticker) ? pf.sticker : stk.some((x) => x.value === 'mascot') ? 'mascot' : 'none',
     };
     const fmt = () => FORMATS.find((f) => f.value === opt.format);
     const maxN = () => Math.max(1, fmt().max - (opt.note ? 1 : 0));
     let picked = items.map((x, i) => i).filter((i) => !items[i].extra).slice(0, maxN());
     let ownPick = false; // until she picks items herself, the default settles on what fits the card
     const fit = () => { picked = picked.slice(0, maxN()); };
-    const remember = () => { Object.assign(pf, { format: opt.format, theme: opt.theme, qr: opt.qr }); store.save(); };
+    const remember = () => { Object.assign(pf, { format: opt.format, theme: opt.theme, qr: opt.qr, sticker: opt.sticker }); store.save(); };
     const specNow = () => p.spec && {
       ...p.spec, theme: opt.theme, checks: opt.checks, lines: items.length ? picked.slice().sort((a, b) => a - b).map((i) => items[i]) : p.spec.lines,
     };
@@ -407,7 +457,7 @@
     /* ---- the preview: the same picture that will be sent; a new choice fades the next one in ---- */
     const cache = new Map();
     const key = () => JSON.stringify([opt, picked]);
-    const getBlob = () => { const k = key(); if (!cache.has(k)) cache.set(k, render(specNow(), { format: opt.format, qr: opt.qr, note: opt.note })); return cache.get(k); };
+    const getBlob = () => { const k = key(); if (!cache.has(k)) cache.set(k, render(specNow(), { format: opt.format, qr: opt.qr, note: opt.note, sticker: opt.sticker })); return cache.get(k); };
     const img = h('img', { alt: '分享卡預覽', class: 'sh-img' });
     const frame = h('div', { class: 'sh-frame' }, img, h('span', { class: 'sh-wait', 'aria-hidden': 'true' }));
     const preview = h('div', { class: 'sh-preview busy', 'aria-live': 'polite' }, frame);
@@ -417,7 +467,7 @@
       const n = ++seq; // eslint-disable-line no-plusplus
       preview.classList.add('busy');
       frame.style.aspectRatio = fmt().ratio;
-      Object.assign(preview.dataset, { format: opt.format, theme: opt.theme, items: String(items.length ? picked.length : 0), qr: String(opt.qr), checks: String(opt.checks), note: opt.note });
+      Object.assign(preview.dataset, { format: opt.format, theme: opt.theme, items: String(items.length ? picked.length : 0), qr: String(opt.qr), checks: String(opt.checks), note: opt.note, sticker: opt.sticker });
       getBlob().then((blob) => {
         if (!blob || n !== seq) return;
         let left = items.length ? picked.length - (blob.lines || 0) : 0;
@@ -442,6 +492,17 @@
           refresh();
         },
       }, h('span', { class: 'sh-sw-dot', 'aria-hidden': 'true' }), h('span', { class: 'sh-sw-name' }, THEME_NAMES[t]))));
+
+    /* ---- 貼紙 ---- */
+    const stickerRow = h('div', { class: 'sh-stickers', role: 'radiogroup', 'aria-label': '貼紙' },
+      stk.map((x) => h('button', {
+        type: 'button', class: 'sh-stk', role: 'radio', 'aria-checked': String(x.value === opt.sticker), dataset: { sticker: x.value },
+        onclick: () => {
+          opt.sticker = x.value; remember();
+          stickerRow.querySelectorAll('.sh-stk').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.sticker === x.value)));
+          refresh();
+        },
+      }, h('span', { class: 'sh-stk-pic', 'aria-hidden': 'true' }, x.pic()), h('span', { class: 'sh-stk-name' }, x.label))));
 
     /* ---- 格式 ---- */
     const formatSeg = ui.seg(FORMATS.map((f) => ({ value: f.value, label: `${f.label} ${f.hint}` })), opt.format, (v) => { opt.format = v; remember(); fit(); drawItems(); refresh(); }, { small: true });
@@ -530,6 +591,7 @@
     const studio = p.spec ? h('div', { class: 'sh-studio' },
       h('div', { class: 'sh-sec' }, h('div', { class: 'sh-sec-head' }, h('span', { class: 'bold small' }, '樣式')), swatches),
       h('div', { class: 'sh-sec' }, h('div', { class: 'sh-sec-head' }, h('span', { class: 'bold small' }, '格式')), formatSeg),
+      h('div', { class: 'sh-sec' }, h('div', { class: 'sh-sec-head' }, h('span', { class: 'bold small' }, 'Q 版貼紙'), h('span', { class: 'tiny muted' }, '都是畫的，不會用到照片')), stickerRow),
       h('div', { class: 'sh-sec' }, contentBtn, content)) : null;
     const sendRow = h('div', { class: 'sh-grid sh-send', role: 'group', 'aria-label': '傳到' },
       chBtn('line', 'LINE', ui.ICONS.line, 'sh-line'),

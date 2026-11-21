@@ -90,6 +90,7 @@
     if (all) {
       ui.toast(`🎉 新手任務全部完成！好孕點數 +${fresh.length * PTS() + BONUS()}`, 3500);
       if (ui.celebrate) ui.celebrate({ emojis: ['🌱', '🎉', '💜', '⭐'] });
+      if (App.mascot) App.mascot.cheer({ text: '全部完成！' });
     } else ui.toast(`🌱 新手任務：${fresh.map((t) => t.title).join('、')}　好孕點數 +${fresh.length * PTS()}`, 3000);
   }
   // after every change (a record, a stamp, signing up…), once the app has finished what it was doing
@@ -116,8 +117,11 @@
           h('div', { class: 'row between' },
             h('div', { class: 'card-title' }, '🎉 新手任務完成了'),
             h('button', { class: 'icon-btn st-x', 'aria-label': '收起來', onclick: () => { store.update((x) => { ensure(x).off = C.dateKey(); }); } }, '✕')),
-          h('p', { class: 'small muted' }, `${tasks.length} 件都做到了，好孕點數一共 +${tasks.length * PTS() + BONUS()}。`),
-          h('button', { class: 'link-btn small', onclick: () => App.navigate('invite') }, '看我的好孕點數 ›')));
+          h('div', { class: 'row gap st-done-body' },
+            App.mascot ? App.mascot.el({ mood: 'cheer', size: 50 }) : null,
+            h('div', { class: 'grow' },
+              h('p', { class: 'small muted' }, `${tasks.length} 件都做到了，好孕點數一共 +${tasks.length * PTS() + BONUS()}。`),
+              h('button', { class: 'link-btn small', onclick: () => App.navigate('invite') }, '看我的好孕點數 ›')))));
         return;
       }
       el.append(ui.card({ class: 'st-home' },

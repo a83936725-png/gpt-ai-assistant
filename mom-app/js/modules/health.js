@@ -459,7 +459,7 @@
       const age = C.babyAge(b.birthday);
       return ui.card({ class: 'soft health-stage' },
         h('div', { class: 'row gap' },
-          h('div', { class: 'health-avatar' }, b.avatar && b.avatar.length <= 4 ? b.avatar : '👶'),
+          App.qbaby && App.qbaby.isQ(b) ? App.qbaby.face(b, { size: 46, cls: 'health-avatar' }) : h('div', { class: 'health-avatar' }, b.avatar && b.avatar.length <= 4 ? b.avatar : '👶'),
           h('div', { class: 'grow' },
             h('div', { class: 'bold' }, b.name || '寶寶'),
             h('div', { class: 'small muted' }, [b.sex === 'boy' ? '男孩' : '女孩', age && age.text, age && age.dayText].filter(Boolean).join('・')))));

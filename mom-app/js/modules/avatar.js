@@ -25,14 +25,14 @@
 
   /* ---------- the chibi, as SVG (viewBox 120 × 150) ---------- */
   let seq = 0;
-  function svg(avIn, { pose = null, size = 120 } = {}) {
+  function svg(avIn, { pose = null, size = 120, ground = true } = {}) {
     const av = { ...DEFAULT, ...(avIn || {}) };
     const skin = safe(av.skin, DEFAULT.skin); const hair = safe(av.hair, DEFAULT.hair); const outfit = safe(av.outfit, DEFAULT.outfit);
     const line = '#3b2a35'; const hairD = mix(hair, '#000000', 0.25); const skinD = mix(skin, '#8a4a3a', 0.25); const outfitD = mix(outfit, '#000000', 0.22); const outfitL = mix(outfit, '#ffffff', 0.22);
     const p = pose || (store && store.stage === 'preg' ? 'preg' : store && store.stage === 'baby' && store.baby && store.baby() ? 'baby' : 'plain');
     const id = `av${(seq += 1)}${Math.random().toString(36).slice(2, 6)}`;
     const o = [];
-    o.push(`<ellipse cx="60" cy="146" rx="28" ry="4" fill="rgba(40,20,50,.16)"/>`);
+    if (ground) o.push(`<ellipse cx="60" cy="146" rx="28" ry="4" fill="rgba(40,20,50,.16)"/>`); // (not on a sticker)
     // legs + shoes
     o.push(`<rect x="49" y="128" width="9" height="13" rx="4" fill="${skin}" stroke="${skinD}" stroke-width="1"/><rect x="62" y="128" width="9" height="13" rx="4" fill="${skin}" stroke="${skinD}" stroke-width="1"/>`);
     o.push(`<ellipse cx="53" cy="142" rx="7" ry="3.6" fill="#5b4a52"/><ellipse cx="67" cy="142" rx="7" ry="3.6" fill="#5b4a52"/>`);

@@ -39,10 +39,36 @@
     const bl = h('input', { type: 'number', inputmode: 'decimal', step: '0.1', value: b.birthLength || '', placeholder: '50' });
     let photo = b.photo || null;
     let avatar = b.avatar || '👶';
+    // 👶 is the Q版 baby (js/modules/qban.js): its outfit colour and one small accessory are chosen right here
+    const Q = App.qbaby;
+    const q = Q ? Q.qOf(b) : {};
+    const cur = () => ({ ...b, avatar, photo, q });
     const preview = h('div', { class: 'avatar-preview' });
-    const drawPreview = () => { preview.innerHTML = ''; preview.append(photo ? h('img', { src: photo, alt: '' }) : h('span', null, avatar)); };
+    const picker = h('div', { class: 'avatar-picker' }, AVATARS.map((a) => h('button', {
+      type: 'button', class: 'av-btn', dataset: { av: a }, 'aria-pressed': 'false', 'aria-label': a === '👶' && Q ? 'Q 版寶寶' : null,
+      onclick: () => { avatar = a; photo = null; drawPreview(); },
+    }, a)));
+    const qBtn = (cls, data, label, on, extra = {}) => h('button', { type: 'button', class: cls, role: 'radio', 'aria-checked': String(on), dataset: data, onclick: extra.onclick, style: extra.style, 'aria-label': extra.aria || null, title: extra.aria || null }, extra.aria ? null : label);
+    const wearBtns = Q ? Q.WEARS.map(([k, label, hex]) => qBtn('qb-wear', { wear: k }, label, q.wear === k, { aria: label, style: { '--w': hex }, onclick: () => { q.wear = k; drawPreview(); } })) : [];
+    const accBtns = Q ? Q.ACCS.map(([k, label]) => qBtn('chip qb-acc', { acc: k }, label, q.acc === k, { onclick: () => { q.acc = k; drawPreview(); } })) : [];
+    const qBox = h('div', { class: 'qb-opts', hidden: true },
+      h('div', { class: 'qb-row' }, h('span', { class: 'qb-label small bold', 'aria-hidden': 'true' }, '衣服'), h('div', { class: 'qb-wears', role: 'radiogroup', 'aria-label': 'Q 版寶寶的衣服顏色' }, wearBtns)),
+      h('div', { class: 'qb-row' }, h('span', { class: 'qb-label small bold', 'aria-hidden': 'true' }, '配件'), h('div', { class: 'qb-accs', role: 'radiogroup', 'aria-label': 'Q 版寶寶的小配件' }, accBtns)));
+    function drawPreview() {
+      const c = cur();
+      const isQ = !!(Q && Q.isQ(c));
+      preview.innerHTML = '';
+      preview.append(photo ? h('img', { src: photo, alt: '' }) : isQ ? Q.face(c, { size: 84 }) : h('span', null, avatar));
+      picker.querySelectorAll('.av-btn').forEach((x) => {
+        const on = !photo && x.dataset.av === avatar;
+        x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on));
+        if (Q && x.dataset.av === '👶') { x.innerHTML = ''; x.append(Q.face({ avatar: '👶', q }, { size: 30, cls: 'av-q' })); }
+      });
+      wearBtns.forEach((x) => x.setAttribute('aria-checked', String(x.dataset.wear === q.wear)));
+      accBtns.forEach((x) => x.setAttribute('aria-checked', String(x.dataset.acc === q.acc)));
+      qBox.hidden = !isQ;
+    }
     drawPreview();
-    const picker = h('div', { class: 'avatar-picker' }, AVATARS.map((a) => h('button', { type: 'button', class: 'av-btn', onclick: () => { avatar = a; photo = null; drawPreview(); } }, a)));
     const file = h('input', { type: 'file', accept: 'image/*', class: 'hide' });
     file.addEventListener('change', async () => {
       if (!file.files[0]) return;
@@ -53,6 +79,7 @@
       body: h('div', null,
         h('div', { class: 'row gap mb' }, preview, h('div', { class: 'grow' }, picker,
           h('button', { type: 'button', class: 'btn btn-sm btn-ghost mt', onclick: () => file.click() }, '📷 用照片'), file)),
+        qBox,
         ui.field('名字／小名', name), ui.field('性別（用於生長曲線）', sex),
         h('div', { class: 'grid-2' }, ui.field('生日', bday), ui.field('出生時間', btime)),
         h('div', { class: 'grid-2' }, ui.field('出生體重（kg）', bw), ui.field('出生身長（cm）', bl))),
@@ -77,6 +104,7 @@
             const patch = {
               name: name.value.trim() || '寶寶', sex: sex.dataset.value, birthday: bday.value, birthTime: btime.value,
               birthWeight: bw.value ? Number(bw.value) : '', birthLength: bl.value ? Number(bl.value) : '', avatar, photo,
+              ...(Q ? { q: { wear: q.wear, acc: q.acc } } : {}),
             };
             if (isEdit) store.update((s) => { Object.assign(s.babies.find((x) => x.id === baby.id), patch); });
             else { store.addBaby(patch); store.update((s) => { s.profile.stage = 'baby'; }); }
@@ -398,7 +426,7 @@
     const babyId = 'demo-baby';
     s.onboarded = true;
     s.profile = { ...s.profile, momName: '小美', stage: 'baby', heightCm: 160, prePregWeight: 52, lmp: C.dateKey(C.addDays(now, -75 - 275)), edd: C.dateKey(C.addDays(now, -70)) };
-    s.babies = [{ id: babyId, name: '小乖', sex: 'girl', birthday, birthTime: '08:12', birthWeight: 3.12, birthLength: 49.5, avatar: '👧' }];
+    s.babies = [{ id: babyId, name: '小乖', sex: 'girl', birthday, birthTime: '08:12', birthWeight: 3.12, birthLength: 49.5, avatar: '👶', q: { wear: 'pink', acc: 'bow' } }]; // the Q版 baby
     s.activeBabyId = babyId;
     const add = (type, start, extra = {}) => s.logs.push({ id: C.uid(), babyId, type, start: new Date(start).toISOString(), end: null, data: {}, note: '', by: Math.random() < 0.3 ? '爸爸' : '媽媽', createdAt: new Date(start).toISOString(), ...extra });
     // 3 days of logs, every ~3h a feed, diapers, naps
@@ -479,7 +507,8 @@
               App.gift ? h('span', { class: 'ob-gift needs-member', hidden: App.gift.ready() !== true }, '🎁 註冊會員，你們都有邀請禮') : null) : null,
             h('div', { class: 'ob-brand' },
               h('img', { src: B().logo, alt: '', class: 'ob-icon' }),
-              h('div', null, h('h1', { class: 'ob-title' }, B().appName || '易家做媽媽'), h('div', { class: 'ob-by' }, `by ${B().brandName || '易家滴雞精'}`))),
+              h('div', null, h('h1', { class: 'ob-title' }, B().appName || '易家做媽媽'), h('div', { class: 'ob-by' }, `by ${B().brandName || '易家滴雞精'}`)),
+              App.mascot ? App.mascot.el({ mood: 'wave', size: 50, cls: 'ob-md' }) : null),
             h('p', { class: 'ob-tagline' }, '從備孕、懷孕到育兒，陪你記下每一步。'),
             h('ul', { class: 'ob-feats' },
               h('li', null, h('span', { class: 'ob-feat-ico', 'aria-hidden': 'true' }, '🍼'), h('span', null, h('b', null, '一鍵記錄'), '餵奶、尿布、睡眠，算好下一餐')),
@@ -590,7 +619,7 @@
       el.append(h('div', { class: 'section-title jump-target', id: 'me-babies' }, h('span', null, '寶寶'), h('button', { onclick: () => editBaby() }, '＋ 新增')));
       if (s.babies.length) {
         el.append(h('div', { class: 'list' }, s.babies.map((b) => h('button', { class: 'list-item', onclick: () => editBaby(b) },
-          b.photo ? h('img', { src: b.photo, alt: '', class: 'li-icon li-photo' }) : h('span', { class: 'li-icon' }, b.avatar || '👶'),
+          App.qbaby ? App.qbaby.icon(b) : b.photo ? h('img', { src: b.photo, alt: '', class: 'li-icon li-photo' }) : h('span', { class: 'li-icon' }, b.avatar || '👶'),
           h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, b.name, b.id === store.baby()?.id ? h('span', { class: 'tag primary' }, '目前') : null),
             h('div', { class: 'li-sub' }, `${b.sex === 'boy' ? '男孩' : '女孩'}・${C.fmtDateLong(b.birthday)}・${C.babyAge(b.birthday)?.text || ''}`)),
           h('span', { class: 'li-right', html: ui.ICONS.chevron })))));
@@ -668,7 +697,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.8.2`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.8.3`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
         App.screens.privacy ? h('button', { class: 'btn btn-ghost btn-sm center-btn', onclick: () => App.navigate('privacy') }, '🔒 隱私權政策與使用條款') : null,
         h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理（每則都附來源，可點開查看），不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。紀錄只儲存在你的裝置上；只有你開啟「島上的媽媽」、同週好孕圈或祝福牆時，才會送出角色樣子、名稱、預產週或出生月份，以及你的回答和祝福。')));

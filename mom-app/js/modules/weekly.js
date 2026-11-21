@@ -276,9 +276,12 @@
       const born = r.age && r.age.days >= 0;
       out.theme = 'peach';
       out.kicker = `📮 家族週報・${rangeText(r.wk)}`;
+      const shown = privacy().showPhoto && b.photo ? b.photo : null;
       out.hero = {
-        photo: privacy().showPhoto && b.photo ? b.photo : null,
+        photo: shown,
         emoji: b.avatar || '👶',
+        // the Q版 baby (js/modules/qban.js) when no photo is shown and the baby's picture is the default 👶
+        art: App.qbaby && !shown && App.qbaby.isQ({ ...b, photo: null }) ? App.qbaby.dataUrl({ ...b, photo: null }, { size: 240, ground: false }) : null,
         title: `${babyName(b)} 這週`,
         sub: born ? r.age.text : '',
         sub2: born ? r.age.dayText : '',
@@ -394,7 +397,8 @@
         const hr = sp.hero; const r = 84; const ccx = ix + r; const ccy = y + 88;
         ctx.fillStyle = soft; ctx.beginPath(); ctx.arc(ccx, ccy, r, 0, Math.PI * 2); ctx.fill();
         const photo = hr.photo ? await D.loadImg(hr.photo) : null; // eslint-disable-line no-await-in-loop
-        if (photo) {
+        const art = !photo && hr.art ? await D.loadImg(hr.art) : null; // eslint-disable-line no-await-in-loop
+        if (art) { const s = r * 1.62; ctx.drawImage(art, ccx - s / 2, ccy - s / 2 + r * 0.04, s, s); } else if (photo) {
           const k = Math.max((2 * r - 12) / photo.naturalWidth, (2 * r - 12) / photo.naturalHeight);
           ctx.save(); ctx.beginPath(); ctx.arc(ccx, ccy, r - 6, 0, Math.PI * 2); ctx.clip();
           ctx.drawImage(photo, ccx - (photo.naturalWidth * k) / 2, ccy - (photo.naturalHeight * k) / 2, photo.naturalWidth * k, photo.naturalHeight * k);

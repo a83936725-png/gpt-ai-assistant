@@ -24,6 +24,8 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const uniq = Date.now().toString(36);
   const lastSheet = (p) => S(p, () => [...document.querySelectorAll('.sheet')].pop()?.innerText || '');
   const pts = (p) => S(p, () => App.store.state.share.points || 0);
+  // the welcome gift alone (新手任務 may add its own points for signing up)
+  const welcomePts = (p) => S(p, () => ((App.store.state.share || {}).events || []).filter((e) => e.campaign === 'invite-welcome').reduce((n, e) => n + (e.pts || 0), 0));
   const register = async (p, who, { fromWelcome = false } = {}) => {
     if (fromWelcome) await p.click('text=已有帳號？登入／註冊');
     else await p.goto(`${BASE}#/login`);
@@ -131,7 +133,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   await E.click('text=開始使用'); await E.waitForTimeout(300);
   await E.click('.ob-choice >> nth=0'); await E.waitForTimeout(300);
   await E.click('text=完成，開始使用'); await E.waitForTimeout(2200);
-  ok('…set up: the welcome gift arrives', /見面禮 \+30/.test(await lastSheet(E)) && (await pts(E)) === 30);
+  ok('…set up: the welcome gift arrives (+30; 新手任務 adds its own +5 for 註冊會員)', /見面禮 \+30/.test(await lastSheet(E)) && (await welcomePts(E)) === 30 && (await pts(E)) === 35, `${await welcomePts(E)} / ${await pts(E)}`);
   await E.context().close();
 
   /* ---- C: joined without a link, types the code on 邀請好友 ---- */

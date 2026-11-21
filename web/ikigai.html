@@ -402,7 +402,7 @@
   <nav class="progress" id="progress" aria-label="步驟"></nav>
   <main id="view"></main>
 
-  <footer>內容只存在這台裝置的瀏覽器。只有按下「AI 分析」時，清單才會送到伺服器。</footer>
+  <footer>內容只存在這台裝置的瀏覽器。只有按下「深度解析」或「產生建議計畫」時，清單才會送到伺服器進行分析。</footer>
 </div>
 
 <div class="nav" id="nav" hidden><div class="nav-inner" id="navInner"></div></div>
@@ -882,7 +882,7 @@
             </div>`).join('') || '<p class="empty">沒有符合的項目。</p>'}</div>` : '<p class="empty">還沒有任何項目，請先回到前面四步填寫。</p>'}
           <h3>補充說明（選填）</h3>
           <label class="sr-only" for="note">補充說明</label>
-          <textarea id="note" maxlength="300" placeholder="例如：目前職業、年資、想轉換的方向、時間或經濟限制。AI 分析時會參考。">${esc(state.note)}</textarea>
+          <textarea id="note" maxlength="300" placeholder="例如：目前職業、年資、想轉換的方向、時間或經濟限制。深度解析時會參考。">${esc(state.note)}</textarea>
         </div>
       </section>`;
     let noteTimer;
@@ -952,16 +952,15 @@
   function aiBlock() {
     const filled = KEYS.filter((k) => inCircle(k).length).length;
     let status = '';
-    if (!aiAvailable) status = '這個網站沒有開啟 AI 分析。可以按「複製提示詞」貼到其他 AI 助理。';
+    if (!aiAvailable) status = '深度解析目前暫停服務。';
     else if (filled < 2) status = '至少填兩個圈才能分析。';
     else if (!state.ai && !aiBusy) status = '約需 10 到 30 秒。';
     const err = aiError ? `<div class="alert" role="alert"><p>${esc(aiError)}</p>
-        <div class="row"><button class="btn small" type="button" id="aiRetry">重試</button><button class="btn ghost small" type="button" id="aiCopy2">複製提示詞，改貼到其他 AI 助理</button></div></div>` : '';
+        <div class="row"><button class="btn small" type="button" id="aiRetry">重試</button></div></div>` : '';
     const body = aiBusy ? '<div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i></div>' : (state.ai ? mdToHtml(state.ai) : '');
     return `
       <div class="ai-head">
-        <button class="btn" type="button" id="aiBtn" ${filled < 2 || !aiAvailable || aiBusy ? 'disabled' : ''}>${aiBusy ? '分析中…' : state.ai ? '重新分析' : 'AI 分析'}</button>
-        <button class="btn ghost" type="button" id="aiCopy" ${filled < 2 ? 'disabled' : ''}>複製提示詞</button>
+        <button class="btn" type="button" id="aiBtn" ${filled < 2 || !aiAvailable || aiBusy ? 'disabled' : ''}>${aiBusy ? '解析中…' : state.ai ? '重新解析' : '深度解析'}</button>
         <span class="status" id="aiStatus" role="status">${status}</span>
       </div>
       ${err}
@@ -994,8 +993,8 @@
           <p class="next-tip">${nextTip()}</p>
         </div>
         <div class="card" id="aiCard">
-          <h2>AI 分析</h2>
-          <p class="hint">產生四個交集的觀察、可能的 IKIGAI 方向、最弱的圈，和接下來 30 天的行動。</p>
+          <h2>深度解析</h2>
+          <p class="hint">依你的四個圈，整理四個交集的觀察、可能的 IKIGAI 方向、最弱的圈，和接下來 30 天的行動。</p>
           <div id="aiBox">${aiBlock()}</div>
         </div>
         ${shareCardHtml()}
@@ -1022,9 +1021,7 @@
   function refreshAi() { if (!$('aiBox')) return; $('aiBox').innerHTML = aiBlock(); bindAi(); }
   function bindAi() {
     $('aiBtn').addEventListener('click', runAi);
-    $('aiCopy').addEventListener('click', () => copy(buildPrompt(), '已複製提示詞，貼到 ChatGPT、Claude 或其他 AI 助理即可'));
     if ($('aiRetry')) $('aiRetry').addEventListener('click', runAi);
-    if ($('aiCopy2')) $('aiCopy2').addEventListener('click', () => copy(buildPrompt(), '已複製提示詞，貼到 ChatGPT、Claude 或其他 AI 助理即可'));
   }
   function bindVennFilter() {
     document.querySelectorAll('svg.venn .hit').forEach((h) => {
@@ -1079,12 +1076,11 @@
   function planBlock() {
     const dir = mainDir();
     const err = planError ? `<div class="alert" role="alert"><p>${esc(planError)}</p>
-      <div class="row"><button class="btn small" type="button" id="planRetry">重試</button><button class="btn ghost small" type="button" id="planCopy2">複製提示詞，改貼到其他 AI 助理</button></div></div>` : '';
+      <div class="row"><button class="btn small" type="button" id="planRetry">重試</button></div></div>` : '';
     return `
       <div class="ai-head">
-        <button class="btn" type="button" id="planAi" ${!dir || !aiAvailable || planBusy ? 'disabled' : ''}>${planBusy ? '排計畫中…' : '請 AI 排計畫'}</button>
-        <button class="btn ghost" type="button" id="planCopy" ${!dir ? 'disabled' : ''}>複製提示詞</button>
-        <span class="status">${!dir ? '先在上面選一個主要方向。' : planBusy ? 'AI 正在依你的四個圈排計畫…' : 'AI 會填入空白的目標，並加入行動清單。'}</span>
+        <button class="btn" type="button" id="planAi" ${!dir || !aiAvailable || planBusy ? 'disabled' : ''}>${planBusy ? '產生中…' : '產生建議計畫'}</button>
+        <span class="status">${!dir ? '先在上面選一個主要方向。' : planBusy ? '正在依你的四個圈整理計畫…' : '會依你的四個圈填入空白的目標，並建議行動清單。'}</span>
       </div>${err}${planBusy ? '<div class="skeleton" aria-hidden="true"><i></i><i></i><i></i></div>' : ''}`;
   }
 
@@ -1157,9 +1153,7 @@
   }
   function bindPlanAi() {
     $('planAi').addEventListener('click', runPlan);
-    $('planCopy').addEventListener('click', () => copy(buildPlanPrompt(), '已複製提示詞，貼到 ChatGPT、Claude 或其他 AI 助理即可'));
     if ($('planRetry')) $('planRetry').addEventListener('click', runPlan);
-    if ($('planCopy2')) $('planCopy2').addEventListener('click', () => copy(buildPlanPrompt(), '已複製提示詞，貼到 ChatGPT、Claude 或其他 AI 助理即可'));
   }
   function addAction(text, h, done = false) {
     text = text.replace(/\s+/g, ' ').trim().slice(0, 80);
@@ -1242,7 +1236,7 @@
           <div class="opts">
             <label for="shareName">顯示名稱</label>
             <input type="text" id="shareName" maxlength="20" placeholder="選填，例如：小安" value="${esc(state.name)}">
-            <label><input type="checkbox" id="shareAi" ${state.ai ? 'checked' : 'disabled'}> 包含 AI 分析</label>
+            <label><input type="checkbox" id="shareAi" ${state.ai ? 'checked' : 'disabled'}> 包含深度解析</label>
             <label><input type="checkbox" id="sharePlan" ${hasPlan ? 'checked' : 'disabled'}> 包含生涯規劃</label>
           </div>
           <div class="toolbar" style="margin-top:10px"><button class="btn" type="button" id="makeLink">產生分享連結</button></div>
@@ -1595,7 +1589,7 @@
     $('linkBox').innerHTML = `
       <div class="link-row"><label class="sr-only" for="shareUrl">分享連結</label><input type="text" id="shareUrl" readonly value="${esc(url)}">
       <button class="btn" type="button" id="copyLink">複製</button>${navigator.share ? '<button class="btn ghost" type="button" id="shareLink">分享</button>' : ''}</div>
-      <p class="fine">連結長度 ${url.length} 字元。${url.length > 2000 ? '連結很長，有些聊天軟體可能會截斷；可以取消「包含 AI 分析」縮短。' : ''}</p>`;
+      <p class="fine">連結長度 ${url.length} 字元。${url.length > 2000 ? '連結很長，有些聊天軟體可能會截斷；可以取消「包含深度解析」縮短。' : ''}</p>`;
     $('shareUrl').addEventListener('focus', (e) => e.target.select());
     $('copyLink').addEventListener('click', () => copy(url, '已複製分享連結'));
     if ($('shareLink')) $('shareLink').addEventListener('click', () => navigator.share({ title: `${owner()} IKIGAI`, url }).catch(() => {}));
@@ -1633,7 +1627,7 @@
           ${resultSummaryHtml(true)}
         </div>
         ${planReadHtml()}
-        ${state.ai ? `<div class="card"><h2>AI 分析</h2><div class="ai-out">${mdToHtml(state.ai)}</div></div>` : ''}
+        ${state.ai ? `<div class="card"><h2>深度解析</h2><div class="ai-out">${mdToHtml(state.ai)}</div></div>` : ''}
         ${shareCardHtml(true)}
       </section>`;
     countUp($('view'));
@@ -1703,7 +1697,7 @@
         ${HORIZONS.map((h) => (state.plan.goals[h.key] ? `<tr><th>${h.label}目標</th><td>${esc(state.plan.goals[h.key])}</td></tr>` : '')).join('')}</table>
         ${state.plan.actions.length ? `<h3>行動清單</h3><table>${HORIZONS.map((h) => state.plan.actions.filter((a) => a.h === h.key).map((a) => `<tr><th>${h.label}</th><td>${a.done ? '☑' : '☐'} ${esc(a.text)}</td></tr>`).join('')).join('')}</table>` : ''}
       </section>` : ''}
-      ${state.ai ? `<section class="ai"><h2>AI 分析</h2>${mdToHtml(state.ai)}</section>` : ''}
+      ${state.ai ? `<section class="ai"><h2>深度解析</h2>${mdToHtml(state.ai)}</section>` : ''}
       <p class="foot">IKIGAI 生き甲斐 · 用四個圈找出人生方向</p>`;
     setTimeout(() => window.print(), 50);
   }
@@ -1712,12 +1706,9 @@
   const apiBase = () => location.pathname.replace(/\/+$/, '');
   const payload = () => ({ ...Object.fromEntries(KEYS.map((k) => [k, inCircle(k).map((it) => it.text)])), note: state.note });
 
-  function serverError(code) {
-    if (code === 504) return '伺服器執行超過時間上限（504）。請稍後再試，或把 IKIGAI_MAX_TOKENS 調低';
-    if (code === 404) return '找不到分析服務（404），可能是 IKIGAI_ENABLED 被設為 false';
-    if (code === 413) return '送出的內容太大（413），請減少項目';
-    return `伺服器錯誤（狀態碼 ${code}），請查看 Vercel Logs`;
-  }
+  // Visitors see a plain sentence; the short code tells the site owner what happened (see docs/IKIGAI-WEB.zh-TW.md).
+  const CLIENT_SAFE = ['invalid_input', 'too_many_requests', 'flagged'];
+  const busyMessage = (code) => `目前無法完成，請稍後再試。（代碼 ${code}）`;
   async function postJson(path, body) {
     let res;
     try {
@@ -1726,7 +1717,7 @@
       throw new Error('連不到伺服器，請檢查網路後再試');
     }
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || serverError(res.status));
+    if (!res.ok) throw new Error(CLIENT_SAFE.includes(data.code) && data.error ? data.error : busyMessage(data.code || res.status));
     return data;
   }
 
@@ -1742,9 +1733,9 @@
       const data = await postJson('analyze', payload());
       state.ai = data.text;
       save();
-      toast('AI 分析完成');
+      toast('深度解析完成');
     } catch (err) {
-      aiError = err.message || 'AI 分析失敗';
+      aiError = err.message || '目前無法完成，請稍後再試';
     } finally {
       clearInterval(ticker);
       aiBusy = false;
@@ -1768,39 +1759,11 @@
       save();
       toast(`已填入 ${filled} 個目標、加入 ${added} 項行動`);
     } catch (err) {
-      planError = err.message || 'AI 排計畫失敗';
+      planError = err.message || '目前無法完成，請稍後再試';
     } finally {
       planBusy = false;
       if (state.step === 'plan') renderPlan();
     }
-  }
-
-  function buildPrompt() {
-    const p = payload();
-    const lists = CIRCLES.map((c) => `【${c.label}】${p[c.key].length ? p[c.key].join('、') : '（未填）'}`).join('\n');
-    return [
-      '你是一位溫暖、務實的生涯教練，熟悉 IKIGAI（生き甲斐）四圈模型。請用繁體中文回答，使用標題與條列，約 500 到 800 字。不要捏造我沒提到的經歷。',
-      '', '以下是我的 IKIGAI 四圈清單：', lists + (state.note ? `\n【補充說明】${state.note}` : ''), '',
-      '請依序回答：',
-      '1. 四個交集：熱情（熱愛×擅長）、使命（熱愛×世界需要）、天職（世界需要×報酬）、專業（擅長×報酬）各 1 到 2 句觀察。',
-      '2. 可能的 IKIGAI：2 到 3 個同時落在四圈的具體方向，說明對應到哪些項目。',
-      '3. 缺口：哪個圈最薄弱，以及補強建議。',
-      '4. 接下來 30 天：3 個可以立刻開始的小行動。',
-    ].join('\n');
-  }
-  function buildPlanPrompt() {
-    const p = payload();
-    const dir = mainDir();
-    const lists = CIRCLES.map((c) => `【${c.label}】${p[c.key].length ? p[c.key].join('、') : '（未填）'}`).join('\n');
-    return [
-      '你是一位務實的生涯教練，熟悉 IKIGAI（生き甲斐）四圈模型。請用繁體中文回答。',
-      '', '以下是我的 IKIGAI 四圈清單：', lists + (state.note ? `\n【補充說明】${state.note}` : ''), '',
-      `我選定的生涯方向：「${dir ? dir.title : ''}」`, '',
-      '請幫我排一份可以執行的計畫：',
-      '1. 30 天、90 天、1 年各一個具體、可衡量的目標。',
-      '2. 6 到 9 個具體行動（20 字以內、動詞開頭），標出各屬於 30 天、90 天或 1 年。',
-      '行動要從我熱愛、擅長的項目出發，並補強最薄弱的圈。',
-    ].join('\n');
   }
 
   async function copy(text, okMsg) {
@@ -1835,7 +1798,7 @@
       HORIZONS.forEach((h) => { if (state.plan.goals[h.key]) lines.push(`${h.label}目標：${state.plan.goals[h.key]}`); });
       state.plan.actions.forEach((a) => lines.push(`${a.done ? '☑' : '☐'} [${HORIZONS.find((h) => h.key === a.h).label}] ${a.text}`));
     }
-    if (state.ai) lines.push('', '— AI 分析 —', state.ai);
+    if (state.ai) lines.push('', '— 深度解析 —', state.ai);
     return lines.join('\n');
   }
   function exportJson() {

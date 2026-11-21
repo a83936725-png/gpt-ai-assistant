@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.13.1 (2026-11-21)
+
+### Changes
+
+- IKIGAI: visitors no longer see AI or vendor wording. The buttons are now 「深度解析」 and 「產生建議計畫」, the copy-prompt buttons are removed, and failures show a plain message with a short code (see the troubleshooting table in [docs/IKIGAI-WEB.zh-TW.md](docs/IKIGAI-WEB.zh-TW.md))
+
 ## 4.13.0 (2026-11-21)
 
 ### New Features

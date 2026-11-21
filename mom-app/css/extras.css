@@ -64,3 +64,4 @@
 .bn-left { color: var(--c-danger-ink); font-weight: 700; }
 .bn-row .chev { color: var(--c-text-2); font-size: 20px; flex: none; }
 .bn-all { display: block; margin: 8px 0 0 auto; min-height: 36px; }
+.bn-local { color: var(--c-text-2); }

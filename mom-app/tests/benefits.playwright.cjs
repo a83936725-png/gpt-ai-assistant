@@ -31,7 +31,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   const card = await text(P, '.bn-home');
   ok('首頁 (10 days old): 出生登記 first with 還剩 50 天, then 育兒津貼 (same deadline), at most 3 rows', /^💰 現在可以申請的福利/.test(card) && (await S(P, () => document.querySelectorAll('.bn-row').length)) === 3
     && (await text(P, '.bn-row')).startsWith('出生登記') && /出生登記\s*還剩 50 天/.test(card) && /未滿 2 歲育兒津貼\s*還剩 50 天・每月 5,000–7,000 元/.test(card), card);
-  ok('…and a way to the whole list', /看全部福利（25 項）/.test(card));
+  ok('…and a way to the whole list', /看全部福利（29 項）/.test(card));
   await P.click('.bn-row >> nth=0'); await P.waitForTimeout(400);
   ok('a row opens the item: when (with days left), what to bring, official site, progress', /⏰ 出生後 60 天內（還剩 50 天）/.test(await text(P, '.sheet')) && await P.isVisible('.sheet a:has-text("開啟官方網站")'));
   await P.click('.sheet .seg button:has-text("完成")'); await P.click('.sheet-footer .btn-primary'); await P.waitForTimeout(600);
@@ -74,7 +74,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   const list = await text(P, '.list');
   ok('育兒 list: amounts as pills, when to apply', await S(P, () => document.querySelectorAll('.bn-pill').length >= 6) && /⏰ 子女滿 3 歲前/.test(list) && /每天 60 分鐘/.test(list), list.slice(0, 200));
   ok('…public services marked 免申請', /免申請/.test(list));
-  ok('…25 items in all, with sources at the bottom (news marked as news)', /完成 \d+\/25/.test(await text(P, '#view')) && /商業周刊|中央通訊社/.test(await text(P, '.src-foot')));
+  ok('…29 items in all, with sources at the bottom (news marked as news)', /完成 \d+\/29/.test(await text(P, '#view')) && /商業周刊|中央通訊社/.test(await text(P, '.src-foot')));
   await go(P, 'sources');
   ok('資料來源: a separate 「新聞與整理」 group', /新聞與整理/.test(await text(P, '#view')));
   const found = await S(P, () => ['育兒津貼', '生育補助', '育嬰假', '報稅', '哺乳時間'].map((q) => (App.search.query(q).groups.tool[0] || { d: { tool: {} } }).d.tool.id));

@@ -15,11 +15,11 @@
 .ot-group { margin: 12px 0 0; }
 .ot-group .field-label { margin-bottom: 8px; }
 .ot-chips { gap: 8px; }
-.ot-chip {
+.ot-chip, .ot-visit {
   min-height: 44px; padding: 6px 14px; font-size: 14px; font-weight: 600;
   color: var(--c-text); justify-content: center;
 }
-.ot-chip[aria-pressed="true"] { background: var(--c-primary); color: var(--c-primary-ink); border-color: var(--c-primary); }
+.ot-chip[aria-pressed="true"], .ot-visit[aria-pressed="true"] { background: var(--c-primary); color: var(--c-primary-ink); border-color: var(--c-primary); }
 .ot-icon { width: 44px; height: 44px; color: var(--c-text-2); flex: none; }
 .ot-src { margin-top: 4px; font-weight: 600; }
 .ot-line-ic svg { width: 18px; height: 18px; color: #06c755; }

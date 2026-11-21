@@ -121,9 +121,9 @@
     {
       group: '媽媽',
       items: [
-        { id: 'pad', label: '產褥墊、產後衛生棉' },
+        { id: 'pad', label: '產褥墊、產後衛生棉', hint: '安睡褲或產褥墊建議 3–5 包；先問醫院有沒有提供' },
         { id: 'pants', label: '免洗內褲或產褥內褲' },
-        { id: 'bra', label: '哺乳內衣、溢乳墊' },
+        { id: 'bra', label: '哺乳內衣、溢乳墊', hint: '哺乳內衣 2–3 件' },
         { id: 'toiletry', label: '盥洗用品、毛巾' },
         { id: 'warm', label: '保暖外套、襪子、室內拖鞋' },
         { id: 'cup', label: '吸管杯、保溫瓶' },
@@ -135,10 +135,17 @@
     {
       group: '寶寶',
       items: [
-        { id: 'swaddle', label: '包巾、紗布巾' },
+        { id: 'swaddle', label: '包巾、紗布巾', hint: '紗布巾 2–3 條' },
         { id: 'babyoutfit', label: '出院穿的衣服、帽子、襪子' },
         { id: 'diaper', label: '新生兒尿布、濕紙巾' },
         { id: 'carseat', label: '汽車安全座椅（開車出院必備）' },
+      ],
+    },
+    {
+      group: '剖腹產再加',
+      items: [
+        { id: 'cs_binder', label: '束腹帶', hint: '什麼時候可以用，先問醫護人員' },
+        { id: 'cs_helper', label: '安排一位家人全程陪同', hint: '術後頭幾天起身、拿東西都需要人幫忙' },
       ],
     },
     {
@@ -152,7 +159,41 @@
     },
   ];
 
+  // 月子中心：入住前問清楚、出月中前確認（整理自易家懶人包，改寫成中性的清單，不放商品）
+  const CONFINEMENT = [
+    {
+      group: '入住前問清楚（10 題）',
+      items: [
+        { id: 'cf_docs', label: '入住當天要帶哪些文件？' },
+        { id: 'cf_dates', label: '提早或延後生產，房間怎麼安排？' },
+        { id: 'cf_baby', label: '尿布、濕紙巾、奶粉有沒有提供？有沒有品牌限制？' },
+        { id: 'cf_mom', label: '媽媽用品提供到什麼程度？' },
+        { id: 'cf_pump', label: '擠乳器、奶瓶、消毒用品有沒有提供？' },
+        { id: 'cf_stay', label: '伴侶能不能陪住？大寶能不能探訪？' },
+        { id: 'cf_visit', label: '訪客和送東西的規定是什麼？' },
+        { id: 'cf_meal', label: '月子餐能不能調整口味、避開不吃的食材？' },
+        { id: 'cf_out', label: '退房的時間和流程？' },
+        { id: 'cf_teach', label: '出月中前會不會教寶寶照護、怎麼銜接回家？' },
+      ],
+    },
+    {
+      group: '出月中前一週確認',
+      items: [
+        { id: 'cf_feed', label: '寶寶的餵奶方式與奶量' },
+        { id: 'cf_routine', label: '寶寶的作息紀錄', hint: '可以記在 App 的紀錄裡，回家接著用' },
+        { id: 'cf_care', label: '學會洗澡、拍嗝、臍帶照護' },
+        { id: 'cf_supply', label: '回家的尿布、濕紙巾、奶粉夠用' },
+        { id: 'cf_gear', label: '嬰兒床、奶瓶、消毒用品準備好' },
+        { id: 'cf_momcheck', label: '媽媽產後回診的時間' },
+        { id: 'cf_babycheck', label: '寶寶回診或打疫苗的時間' },
+        { id: 'cf_ride', label: '回家的交通和汽車安全座椅' },
+        { id: 'cf_pay', label: '剩下的物品、文件、付款整理好' },
+        { id: 'cf_ask', label: '把還不懂的問題問護理師' },
+      ],
+    },
+  ];
+
   App.PREG_DATA = {
-    WEEKS, PRENATAL, PREP_CHECKLIST, HOSPITAL_BAG,
+    WEEKS, PRENATAL, PREP_CHECKLIST, HOSPITAL_BAG, CONFINEMENT,
   };
 }());

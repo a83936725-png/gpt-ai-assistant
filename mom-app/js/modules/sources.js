@@ -62,6 +62,7 @@
     pregnancy: () => ['weeks'],
     prepcheck: () => ['prep'],
     hospitalbag: () => ['hospitalbag'],
+    confinement: () => ['confinement'],
     kick: () => ['card:kickpark:0', 'card:kickpark:1', 'note:preg3:0', 'guide:preg3'],
     contraction: () => ['note:preg3:1', 'card:lighthouse:0', 'card:lighthouse:1'],
     journey: () => allKeys('phase:'),

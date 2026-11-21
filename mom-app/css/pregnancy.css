@@ -202,3 +202,7 @@
 /* larger touch targets (UX pass) */
 .pg-hero-edit { min-height: 36px; min-width: 52px; }
 .pg-slider { height: 36px; }
+/* 待產包: when to pack; 月子中心 link */
+.pg-bag-steps { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.pg-bag-steps b { color: var(--c-primary); }
+.pg-cf-link { align-items: center; }

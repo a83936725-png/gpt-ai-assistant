@@ -10,7 +10,7 @@
  *   plans: [{ id, title, date:'YYYY-MM-DD', time:'HH:MM', place, url, indoor:'indoor'|'outdoor'|'',
  *             fee:'free'|'paid'|'', needSignup, signupBy:'YYYY-MM-DD', ageMin:months|null, ageMax:months|null,
  *             notes, createdAt, updatedAt }]
- *   bag:   { hours: 1|2|4|6|8|'night', nights, transport:'car'|'transit', weather:{hot,cold,rain},
+ *   bag:   { hours: 1|2|4|6|8|'night', nights, transport:'car'|'transit', weather:{hot,cold,rain}, visit (回診／打疫苗),
  *            checked:{ itemId:true }, custom:[{id,label}], doneAt }
  *
  * 不抓取任何網站、不內建任何真實活動或場館。 */
@@ -41,6 +41,7 @@
     b.nights = C.clamp(Number(b.nights) || 1, 1, 7);
     if (!['car', 'transit'].includes(b.transport)) b.transport = 'car';
     if (!b.weather || typeof b.weather !== 'object') b.weather = {};
+    b.visit = b.visit === true;
     if (!b.checked || typeof b.checked !== 'object') b.checked = {};
     if (!Array.isArray(b.custom)) b.custom = [];
     return o;
@@ -244,6 +245,11 @@
     }
     if (A.fever) add('health', 'thermo', '體溫計', { src: 'rec', note: '最近 14 天有體溫偏高的紀錄' });
     add('health', 'sanitizer', '乾洗手／酒精');
+    if (opts.visit) { // 回診／打疫苗 (from 易家外出包懶人包)
+      add('health', 'appt', '預約單／掛號號碼');
+      add('health', 'records', '疫苗與用藥紀錄', { note: '也可以打開 App 的健康頁給醫師看' });
+      add('health', 'questions', '想問醫師的問題', { note: '先寫在手機裡，看診時才不會忘' });
+    }
 
     /* 移動 */
     if (car) {
@@ -308,6 +314,7 @@
     if (b.weather.hot) opts.push('炎熱');
     if (b.weather.cold) opts.push('寒冷');
     if (b.weather.rain) opts.push('下雨');
+    if (b.visit) opts.push('回診／打疫苗');
     return opts.join('・');
   };
 
@@ -562,6 +569,10 @@
         });
       },
     }, h('span', { 'aria-hidden': 'true' }, x.icon), x.label)));
+    const visit = h('div', { class: 'chips' }, h('button', {
+      type: 'button', class: 'chip ot-visit', 'aria-pressed': String(!!b.visit),
+      onclick: () => { refocus = '.ot-visit'; save((o) => { o.bag.visit = !o.bag.visit; }); },
+    }, h('span', { 'aria-hidden': 'true' }, '🩺'), '回診／打疫苗'));
 
     el.append(ui.card({ class: 'ot-opts' },
       h('div', { class: 'card-title' }, `🎒 帶${baby.name}出門`),
@@ -569,7 +580,8 @@
       group('外出多久', hours),
       b.hours === 'night' ? group('住幾晚', nights) : null,
       group('交通', transport),
-      group('天氣（可複選）', wx)));
+      group('天氣（可複選）', wx),
+      group('這趟要', visit)));
 
     el.append(ui.card({ class: 'ot-est' },
       h('div', { class: 'card-title' }, '📏 估算結果', h('span', { class: 'tiny muted ot-est-h' }, durationLabel(b))),

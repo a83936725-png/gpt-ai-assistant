@@ -26,6 +26,7 @@
     s0.active = s0.active || {};
     s0.prepChecklist = s0.prepChecklist || {};
     s0.hospitalBag = s0.hospitalBag || {};
+    s0.confinementCheck = s0.confinementCheck || {};
     return s0;
   };
   ensure(store.state);
@@ -1063,13 +1064,43 @@
     title: '待產包清單',
     tab: 'health',
     render: (el) => {
+      // when to pack (from the 易家待產包懶人包 and 孕產兒網)
+      add(el, ui.card({ class: 'pg-bag-when' },
+        h('div', { class: 'card-title' }, '🗓️ 什麼時候準備'),
+        h('ul', { class: 'small pg-bag-steps' },
+          h('li', null, h('b', null, '32–34 週'), '：先問醫院和月子中心會提供哪些，再列自己的清單'),
+          h('li', null, h('b', null, '34–36 週'), '：打包完成，放在門口或車上'),
+          h('li', null, h('b', null, '最後一週'), '：只做確認，證件放在最上面'))));
       renderChecklist(el, { groups: D.HOSPITAL_BAG, stateKey: 'hospitalBag', intro: '待產包準備進度', doneText: '🎒 全部準備好了！放在門口隨時出發。' });
+      add(el, ui.card({ class: 'pg-alert-danger pg-go-now mt' },
+        h('div', { class: 'bold' }, '🚨 這些情況直接去醫院'),
+        h('p', { class: 'small' }, '破水（不論有沒有宮縮）、大量出血、胎動明顯變少、持續劇烈腹痛。規律宮縮：第一胎約每 5 分鐘一次、每次 1 分鐘、持續 1 小時（5-1-1）就可以出發。'),
+        h('button', { class: 'btn btn-sm btn-ghost mt', onclick: () => App.navigate('contraction') }, '⏱️ 宮縮計時')));
+      add(el, h('button', { type: 'button', class: 'list-item card pg-cf-link mt', onclick: () => App.navigate('confinement') },
+        h('span', { class: 'li-icon', 'aria-hidden': 'true' }, '🏠'),
+        h('span', { class: 'li-body' }, h('span', { class: 'li-title', style: { display: 'block' } }, '要住月子中心？'), h('span', { class: 'li-sub', style: { display: 'block' } }, '入住前必問 10 題、出月中前一週確認')),
+        h('span', { class: 'li-right', 'aria-hidden': 'true' }, '›')));
       if (App.screens.goods) {
         add(el, h('button', { type: 'button', class: 'list-item card gd-link mt-lg', onclick: () => App.navigate('goods') },
           h('span', { class: 'li-icon', 'aria-hidden': 'true' }, '🛍️'),
           h('span', { class: 'li-body' }, h('span', { class: 'li-title', style: { display: 'block' } }, '其他寶寶用品：常見好物'), h('span', { class: 'li-sub', style: { display: 'block' } }, '汽座、嬰兒床、奶瓶怎麼挑，哪些先別買')),
           h('span', { class: 'li-right', 'aria-hidden': 'true' }, '›')));
       }
+    },
+  });
+
+  App.screen('confinement', {
+    title: '月子中心清單',
+    tab: 'health',
+    render: (el) => {
+      add(el, ui.card({ class: 'soft' },
+        h('div', { class: 'card-title' }, '🏠 住月子中心'),
+        h('p', { class: 'small' }, '入住前問清楚、住的時候學起來、出月中前把回家銜接好。每間的規定不一樣：有提供的用品，也要問品牌、數量和怎麼補。')));
+      renderChecklist(el, { groups: D.CONFINEMENT, stateKey: 'confinementCheck', intro: '月子中心清單', doneText: '🏠 都確認好了，回家也接得上。' });
+      add(el, ui.card({ class: 'pg-alert-danger mt' },
+        h('div', { class: 'bold' }, '🚨 住的時候也要留意自己'),
+        h('p', { class: 'small' }, '發燒、傷口紅腫或越來越痛、惡露突然變多、乳房紅腫有硬塊又發燒、情緒持續低落或一直想哭：馬上告訴護理人員或就醫，不用等到出月中。'),
+        App.screens.postpartum ? h('button', { class: 'btn btn-sm btn-ghost mt', onclick: () => App.navigate('postpartum') }, '產後恢復與警訊 ›') : null));
     },
   });
 
@@ -1082,6 +1113,7 @@
     { id: 'contraction', title: '宮縮計時', icon: '⏱️', desc: '判斷產兆 5-1-1／4-1-1', stages: ['preg'], screen: 'contraction', order: 40, group: '孕期' },
     { id: 'pregweight', title: '孕期體重', icon: '⚖️', desc: '建議增重範圍', stages: ['preg'], screen: 'pregweight', order: 50, group: '孕期' },
     { id: 'hospitalbag', title: '待產包', icon: '🎒', desc: '清單一次備齊', stages: ['preg'], screen: 'hospitalbag', order: 60, group: '孕期' },
+    { id: 'confinement', title: '月子中心清單', icon: '🏠', desc: '入住前必問・出月中前確認', stages: ['preg', 'baby'], screen: 'confinement', order: 61, group: '媽媽' },
   ].forEach((t) => App.tool(t));
 
   /* ---------- home cards ---------- */

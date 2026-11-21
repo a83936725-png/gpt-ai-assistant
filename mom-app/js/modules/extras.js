@@ -120,12 +120,19 @@
   const STATUS = [{ value: 'todo', label: '還沒辦' }, { value: 'applied', label: '已申請' }, { value: 'done', label: '完成' }];
   let bFilter = null;
   const defaultFilter = () => (store.stage === 'baby' ? (store.inStage(['preg']) ? 'preg' : 'baby') : store.stage);
-  // days left until a deadline counted from the baby's birth (null when there is none, or it has passed)
+  // days left until a deadline: counted from the baby's birth (due), or this year's last day (ends); the sooner one.
+  // null when there is none, or it has passed
   const daysLeft = (b, baby, today = new Date()) => {
-    if (!b.due || !baby || !baby.birthday) return null;
-    const left = b.due - C.diffDays(baby.birthday, today);
+    const lefts = [];
+    if (b.due && baby && baby.birthday) lefts.push(b.due - C.diffDays(baby.birthday, today));
+    if (b.ends) lefts.push(C.diffDays(today, b.ends));
+    if (!lefts.length) return null;
+    const left = Math.min(...lefts);
     return left >= 0 ? left : null;
   };
+  const ended = (b, today = new Date()) => !!b.ends && C.diffDays(today, b.ends) < 0; // this year's round is over
+  const whenText = (b, left, today) => `⏰ ${b.when}${left !== null ? `（還剩 ${left} 天）` : ended(b, today) ? '（今年度已截止，請看最新公告）' : ''}`;
+  const titleOf = (b) => (b.cond ? `${b.title}（${b.cond}）` : b.title);
   function openBenefit(b) {
     ensure(store.state);
     const cur = store.state.benefits[b.id] || { status: 'todo' };
@@ -134,10 +141,11 @@
     const note = h('textarea', { rows: 2, placeholder: '例如：送件編號、要補的文件' }, cur.note || '');
     const left = daysLeft(b, store.stage === 'baby' ? store.baby() : null);
     const sh = ui.sheet({
-      title: b.title,
+      title: titleOf(b),
       body: h('div', { class: 'bn-sheet' },
         b.amount ? h('div', { class: 'bn-amount' }, b.amount) : null,
-        b.when ? h('p', { class: 'small bn-when' }, `⏰ ${b.when}${left !== null ? `（還剩 ${left} 天）` : ''}`) : null,
+        b.when ? h('p', { class: 'small bn-when' }, whenText(b, left)) : null,
+        b.local ? h('p', { class: 'small bn-local' }, '📍 只有部分縣市有，請以戶籍地的公告為準') : null,
         h('p', { class: 'small' }, b.desc),
         h('p', { class: 'small muted' }, `承辦：${b.where}`),
         b.url ? h('a', { class: 'btn btn-sm btn-ghost mb', href: b.url, target: '_blank', rel: 'noopener' }, '開啟官方網站 ↗') : null,
@@ -178,8 +186,8 @@
         return h('button', { class: 'list-item bn-item', onclick: () => openBenefit(b) },
           h('span', { class: 'li-icon' }, st === 'done' ? '✅' : st === 'applied' ? '📨' : '📄'),
           h('span', { class: 'li-body' },
-            h('span', { class: 'li-title', style: { display: 'block' } }, b.title, b.amount ? h('span', { class: 'bn-pill' }, b.amount) : null),
-            h('span', { class: 'li-sub', style: { display: 'block' } }, b.when ? `⏰ ${b.when}${left !== null ? `（還剩 ${left} 天）` : ''}` : `${b.where}・${b.desc}`)),
+            h('span', { class: 'li-title', style: { display: 'block' } }, titleOf(b), b.amount ? h('span', { class: 'bn-pill' }, b.amount) : null),
+            h('span', { class: 'li-sub', style: { display: 'block' } }, b.when ? whenText(b, left) : `${b.where}・${b.desc}`)),
           h('span', { class: 'li-right' }, h('span', { class: `tag ${st === 'done' ? 'ok' : st === 'applied' ? 'warn' : ''}` }, b.auto && st === 'todo' ? '免申請' : STATUS.find((x) => x.value === st).label)));
       })));
       el.append(h('p', { class: 'disclaimer' }, '整理自政府公開資訊與新聞（2026 年 11 月）；各項資格、金額與流程以主管機關最新公告為準。標「免申請」的是到院所就有的公費服務。'));
@@ -187,7 +195,8 @@
   });
   App.tool({
     id: 'benefits', title: '補助福利清單', icon: '🏛️', desc: '生育補助 10 萬、育兒津貼、育嬰留停 8 成薪…', stages: ['prep', 'preg', 'baby'], screen: 'benefits', order: 80, group: '福利',
-    tags: ['福利', '補助', '津貼', '育兒津貼', '生育補助', '生育給付', '育嬰假', '育嬰留停', '托育', '托育補助', '產假', '產檢假', '陪產假', '哺乳時間', '報稅', '扣除額', '流感疫苗', '新生兒篩檢', '出生登記'],
+    tags: ['福利', '補助', '津貼', '育兒津貼', '生育補助', '生育給付', '育嬰假', '育嬰留停', '托育', '托育補助', '產假', '產檢假', '陪產假', '哺乳時間', '報稅', '扣除額', '流感疫苗', '新生兒篩檢', '出生登記',
+      '租金補貼', '租屋', '羊膜穿刺', '產前遺傳診斷', '唐氏症篩檢', 'NIPT', '好孕專車', '試管嬰兒', '塗氟'],
   });
 
   /* ================= 首頁：現在可以申請的福利 =================
@@ -196,7 +205,8 @@
   function nowItems(today = new Date()) {
     ensure(store.state);
     const st = store.state.benefits;
-    const pending = (b) => !b.auto && !['done', 'applied'].includes((st[b.id] || {}).status) && (!b.months || b.months.includes(today.getMonth() + 1));
+    // (county-only items and ones whose round is over are never suggested)
+    const pending = (b) => !b.auto && !b.local && !ended(b, today) && !['done', 'applied'].includes((st[b.id] || {}).status) && (!b.months || b.months.includes(today.getMonth() + 1));
     let list = [];
     if (store.inStage(['preg'])) list = X().BENEFITS.filter((b) => b.stage === 'preg' && pending(b)).map((b) => ({ b, left: null }));
     const baby = store.stage === 'baby' ? store.baby() : null;
@@ -204,7 +214,8 @@
       const age = C.diffDays(baby.birthday, today);
       list = list.concat(X().BENEFITS.filter((b) => b.ages && age >= b.ages[0] && age <= b.ages[1] && pending(b)).map((b) => ({ b, left: daysLeft(b, baby, today) })));
     }
-    return list.sort((x, y) => (x.left ?? 1e9) - (y.left ?? 1e9)); // deadlines first, soonest first
+    // for every family first (deadlines first, soonest first); things for some families (租屋族) after those
+    return list.sort((x, y) => (x.b.cond ? 1 : 0) - (y.b.cond ? 1 : 0) || (x.left ?? 1e9) - (y.left ?? 1e9));
   }
   App.homeCard('benefits-now', {
     stages: ['preg', 'baby'],
@@ -222,7 +233,7 @@
             onclick: () => { store.update((s) => { s.benefitsHomeOff = C.dateKey(); }); ui.toast('兩週內不提醒；福利清單隨時在「健康 → 補助福利清單」'); },
           }, '✕')),
         h('div', { class: 'bn-rows' }, items.slice(0, 3).map(({ b, left }) => h('button', { class: 'bn-row', onclick: () => openBenefit(b) },
-          h('span', { class: 'grow' }, h('b', null, b.title),
+          h('span', { class: 'grow' }, h('b', null, titleOf(b)),
             h('span', { class: 'small muted bn-row-sub' }, left !== null ? h('span', { class: 'bn-left' }, `還剩 ${left} 天`) : null, left !== null && b.amount ? '・' : null, b.amount || (left === null ? b.when || '' : ''))),
           h('span', { class: 'chev', 'aria-hidden': 'true' }, '›')))),
         h('button', { class: 'link-btn small bn-all', onclick: () => App.navigate('benefits') }, `看全部福利（${X().BENEFITS.length} 項）›`)));

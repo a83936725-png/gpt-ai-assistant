@@ -193,3 +193,15 @@ test('POST /ikigai/plan rejects a missing direction', async () => {
   expect(res.status).toEqual(400);
   expect((await res.json()).code).toEqual('invalid_input');
 });
+
+test('GET / shows the IKIGAI page to browsers', async () => {
+  const res = await fetch(`${base}/`, { headers: { Accept: 'text/html,application/xhtml+xml,*/*;q=0.8' } });
+  expect(res.status).toEqual(200);
+  expect(await res.text()).toContain('<title>IKIGAI 生き甲斐</title>');
+});
+
+test('GET / keeps the JSON status for other clients', async () => {
+  const res = await fetch(`${base}/`, { headers: { Accept: 'application/json' } });
+  expect(res.headers.get('content-type')).toContain('application/json');
+  expect((await res.json()).status).toEqual('OK');
+});

@@ -45,11 +45,19 @@ router.use((req, res, next) => {
   next();
 });
 
-router.get('/', (req, res) => {
+const sendPage = (req, res) => {
   res.set('Content-Type', 'text/html; charset=utf-8');
   res.set('Cache-Control', 'public, max-age=300');
   res.send(getPage());
-});
+};
+
+router.get('/', sendPage);
+
+/**
+ * Lets the site root show the IKIGAI page to people opening it in a browser,
+ * so the address can be just the domain. Other clients keep the JSON status.
+ */
+const servesHome = (req) => config.IKIGAI_ENABLED && !config.APP_URL && req.accepts(['json', 'html']) === 'html';
 
 router.get('/status', (req, res) => {
   res.json({ ai: config.IKIGAI_AI_ENABLED && Boolean(config.OPENAI_COMPLETION_API_KEY || config.APP_ENV !== 'production') });
@@ -107,6 +115,8 @@ router.post('/analyze', aiRoute(normalizeIkigai, async (input) => {
 router.post('/plan', aiRoute(normalizePlanInput, (input) => planIkigai(input)));
 
 export {
+  sendPage,
+  servesHome,
   isRateLimited,
   resetRateLimit,
 };

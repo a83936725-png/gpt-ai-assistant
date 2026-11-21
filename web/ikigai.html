@@ -1703,7 +1703,7 @@
   }
 
   // ---------- AI ----------
-  const apiBase = () => location.pathname.replace(/\/+$/, '');
+  const apiBase = () => '/ikigai';
   const payload = () => ({ ...Object.fromEntries(KEYS.map((k) => [k, inCircle(k).map((it) => it.text)])), note: state.note });
 
   // Visitors see a plain sentence; the short code tells the site owner what happened (see docs/IKIGAI-WEB.zh-TW.md).

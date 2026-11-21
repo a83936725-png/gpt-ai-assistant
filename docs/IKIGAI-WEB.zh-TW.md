@@ -4,7 +4,10 @@ IKIGAI（生き甲斐）是用四個圈找出人生方向的方法：**你熱愛
 
 這個網頁版做在 LINE Bot 同一個專案裡，部署到 Vercel 後就能用瀏覽器開啟，不需要另外架站。
 
-- 網址：`https://<你的-vercel-網域>/ikigai`
+- 網址：`https://<你的網域>/`（首頁）或 `https://<你的網域>/ikigai`
+  - 用瀏覽器打開首頁就會顯示 IKIGAI；LINE Bot 的 Webhook 和其他程式呼叫首頁仍會拿到原本的 JSON 狀態。
+  - 有設定 `APP_URL` 時，首頁會照舊轉址到 `APP_URL`，這時請用 `/ikigai`。
+  - 要給客戶的網址，建議在 Vercel 專案的 **Settings → Domains** 新增一個不含 `gpt`、`ai-assistant` 的網域（例如 `ikigai-compass.vercel.app` 或自己的網域），並在 **Settings → Deployment Protection** 關閉 **Vercel Authentication**。
 - 本機：`http://localhost:3000/ikigai`
 
 ![IKIGAI 網頁版操作示範](images/ikigai-demo.gif)

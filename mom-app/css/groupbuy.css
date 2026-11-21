@@ -24,7 +24,6 @@
 .gb-code-box p { margin: 6px 0 0; }
 .gb-code { font-size: 26px; font-weight: 900; letter-spacing: 3px; color: var(--c-primary); user-select: all; -webkit-user-select: all; word-break: break-all; }
 .gb-copy, .gb-shop { min-height: 44px; }
-.gb-steps { margin: 6px 0 0; padding-left: 22px; display: grid; gap: 6px; }
 .gb-home .bold { line-height: 1.35; }
 .gb-home-x { flex: none; }
 
@@ -33,8 +32,8 @@
 .gb-steps li { counter-increment: gbs; position: relative; padding: 2px 0 14px 38px; min-height: 28px; }
 .gb-steps li::before {
   content: counter(gbs); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--c-primary-soft); color: var(--c-primary); font-weight: 700; font-size: 13px;
+  background: var(--c-surface); color: var(--c-primary); box-shadow: inset 0 0 0 2px var(--c-primary); font-weight: 700; font-size: 13px;
 }
-.gb-steps li:not(:last-child)::after { content: ''; position: absolute; left: 12px; top: 28px; bottom: 2px; width: 2px; border-radius: 1px; background: var(--c-border); }
+.gb-steps li:not(:last-child)::after { content: ''; position: absolute; left: 12px; top: 27px; bottom: -1px; width: 2px; border-radius: 1px; background: var(--c-primary); opacity: .35; }
 .gb-steps-now { margin-top: 14px; }
 .gb-steps-now .steps { margin-bottom: 0; }

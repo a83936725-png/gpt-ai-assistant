@@ -34,6 +34,7 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mom-diary-'));
   const top = (p) => S(p, () => { const all = document.querySelectorAll('.sheet'); return (all[all.length - 1] || {}).innerText || ''; });
   const esc = async (p) => { for (let i = 0; i < 3; i += 1) { if (!(await S(p, () => document.body.classList.contains('has-sheet')))) break; await p.keyboard.press('Escape'); await p.waitForTimeout(350); } };
   const asPreg = (p, weeks) => S(p, (w) => { const s = App.store.defaults(); s.onboarded = true; s.onboardedAt = '2026-01-01'; s.profile.stage = 'preg'; s.profile.momName = '小美'; s.settings.a2hsDismissed = '1'; s.island = { stamps: {}, quiz: {}, visited: {}, seen: { prep: 1, preg1: 1, preg2: 1 }, toured: '1' }; s.profile.lmp = Core.dateKey(Core.addDays(new Date(), -(w * 7))); s.profile.edd = Core.eddFromLmp(s.profile.lmp); App.store.replace(s); }, weeks);
+  const ADD = '.sheet :is(.dy-drop, .dy-add-photo)'; // the 上傳區 while there are no photos, then the small ＋
   const pickFile = async (p, clickSel, file) => { const [fc] = await Promise.all([p.waitForEvent('filechooser'), p.click(clickSel)]); await fc.setFiles(path.join(TMP, file)); };
 
   const { p, ctx } = await open();
@@ -80,8 +81,9 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mom-diary-'));
   ok('an empty diary explains itself', /放一張超音波照片、寫一句想對寶寶說的話/.test(await S(p, () => document.body.innerText)));
   // a prenatal visit, with an ultrasound picture and a sentence
   await S(p, () => App.preg.openVisitSheet(App.PREG_DATA.PRENATAL[2])); await p.waitForTimeout(500);
-  ok('the prenatal visit form now has 「放進產檢日記」: ultrasound photos + one sentence to the baby', /放進產檢日記/.test(await top(p)) && await S(p, () => !!document.querySelector('.sheet .dy-add-photo') && !!document.querySelector('.sheet .dy-msg-in')));
-  await pickFile(p, '.sheet .dy-add-photo', 'us.jpg'); await p.waitForTimeout(1200);
+  ok('the prenatal visit form now has 「放進產檢日記」: ultrasound photos (a wide 上傳區 while there are none) + one sentence to the baby', /放進產檢日記/.test(await top(p)) && await S(p, () => /加入超音波或產檢照片/.test((document.querySelector('.sheet .dy-drop') || {}).textContent || '') && !!document.querySelector('.sheet .dy-msg-in')));
+  await pickFile(p, ADD, 'us.jpg'); await p.waitForTimeout(1200);
+  ok('…with one photo in: the picture, and a small ＋ for the next one', await S(p, () => !document.querySelector('.sheet .dy-drop') && !!document.querySelector('.sheet .dy-thumb-img') && !!document.querySelector('.sheet .dy-add-photo')));
   await p.fill('.sheet .dy-msg-in', '今天第一次聽到你的心跳，好有力！');
   await p.click('.sheet-footer .btn-primary'); await p.waitForTimeout(700);
   const saved = await S(p, async () => { const n = App.store.state.preg.visitNotes[App.PREG_DATA.PRENATAL[2].key]; const b = await App.media.get(n.photos[0]); return { msg: n.msg, photos: n.photos.length, bytes: b ? b.size : 0, type: b ? b.type : '', stateLen: JSON.stringify(App.store.state).length }; });
@@ -92,7 +94,7 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mom-diary-'));
   // a page of her own
   await p.click('button:has-text("新增一頁")'); await p.waitForTimeout(500);
   await p.fill('.sheet input[type=text]', '第一次感覺到胎動');
-  await pickFile(p, '.sheet .dy-add-photo', 'us.jpg'); await p.waitForTimeout(1000);
+  await pickFile(p, ADD, 'us.jpg'); await p.waitForTimeout(1000);
   await p.fill('.sheet .dy-msg-in', '你在肚子裡翻身了！');
   await p.click('.sheet-footer .btn-primary'); await p.waitForTimeout(800);
   ok('「＋ 新增一頁」: her own page (第一次感覺到胎動) joins the diary', (await S(p, () => document.querySelectorAll('.dy-page').length)) === 2 && /第一次感覺到胎動/.test(await S(p, () => document.body.innerText)));
@@ -143,16 +145,16 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mom-diary-'));
   const nKeys = () => S(p, async () => (await App.media.keys()).length);
   let k0 = await nKeys();
   await S(p, () => App.preg.openVisitSheet(App.PREG_DATA.PRENATAL[4])); await p.waitForTimeout(400);
-  await pickFile(p, '.sheet .dy-add-photo', 'us.jpg'); await p.waitForTimeout(900);
+  await pickFile(p, ADD, 'us.jpg'); await p.waitForTimeout(900);
   await esc(p);
   ok('a photo picked in the visit form, then the form closed without saving: the photo is removed again', (await nKeys()) === k0, `${k0} → ${await nKeys()}`);
   await S(p, () => App.diary.openEntry()); await p.waitForTimeout(400);
-  await pickFile(p, '.sheet .dy-add-photo', 'us.jpg'); await p.waitForTimeout(900);
+  await pickFile(p, ADD, 'us.jpg'); await p.waitForTimeout(900);
   await esc(p);
   ok('…the same for a new diary page that is cancelled', (await nKeys()) === k0);
   await S(p, () => App.diary.openEntry()); await p.waitForTimeout(400);
   await p.fill('.sheet input[type=text]', '試一下');
-  await pickFile(p, '.sheet .dy-add-photo', 'us.jpg'); await p.waitForTimeout(900);
+  await pickFile(p, ADD, 'us.jpg'); await p.waitForTimeout(900);
   await p.click('.sheet .dy-thumb-x'); await p.waitForTimeout(300);
   await p.click('.sheet-footer .btn-primary'); await p.waitForTimeout(500);
   ok('…and a photo added then removed (✕) before saving does not stay behind', (await nKeys()) === k0);

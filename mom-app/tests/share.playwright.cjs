@@ -22,7 +22,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   ok('demo data keeps the referral', (await S(() => App.store.state.share.invitedBy)) === 'ABC234');
   const myCode = await S(() => App.store.state.share.code);
   await p.click('.hero-share'); await p.waitForTimeout(1200);
-  ok('share sheet: 6 channels + card preview', (await S(() => document.querySelectorAll('.sh-ch').length)) === 6 && await p.isVisible('.sh-img'));
+  ok('share sheet: 7 channels (6 apps + 存圖片) + card preview', (await S(() => document.querySelectorAll('.sh-ch').length)) === 7 && !!(await S(() => document.querySelector('.sh-ch[aria-label="存圖片"]'))) && await p.isVisible('.sh-img'));
   await p.click('.sh-line'); await p.waitForTimeout(300);
   const line = decodeURIComponent(opened[opened.length - 1] || '');
   ok('LINE link carries invite code + utm', line.startsWith('https://line.me/R/share?text=') && line.includes(`ref=${myCode}`) && line.includes('utm_source=line') && line.includes('#易家做媽媽'));

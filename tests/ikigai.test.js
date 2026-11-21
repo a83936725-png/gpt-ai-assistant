@@ -5,7 +5,8 @@ import app from '../api/index.js';
 import config from '../config/index.js';
 import { MOCK_TEXT_OK } from '../constants/mock.js';
 import analyzeIkigai, {
-  buildIkigaiMessages, describeIkigaiError, IkigaiInputError, IKIGAI_MAX_ITEMS, normalizeIkigai,
+  buildIkigaiMessages, buildPlanMessages, describeIkigaiError, IkigaiInputError, IKIGAI_MAX_ITEMS,
+  normalizeIkigai, normalizePlanInput, parsePlan, PLAN_HORIZONS,
 } from '../utils/analyze-ikigai.js';
 import { isRateLimited, resetRateLimit } from '../web/ikigai.js';
 
@@ -142,4 +143,53 @@ test.each([
   expect(reason.code).toEqual(code);
   expect(reason.error).toContain(text);
   expect(reason.error).not.toContain('sk-');
+});
+
+test('parsePlan keeps valid goals and actions from a reply with extra text', () => {
+  const reply = '好的，計畫如下：\n{"goals":{"d30":"寫 4 篇文章","d90":"開一門小課","y1":"穩定接案"},"actions":[{"text":"訪談 3 個人","horizon":"d30"},{"text":"架設作品集","horizon":"later"},{"text":"","horizon":"d90"}]}';
+  const plan = parsePlan(reply);
+  expect(plan.goals).toEqual({ d30: '寫 4 篇文章', d90: '開一門小課', y1: '穩定接案' });
+  expect(plan.actions).toEqual([
+    { text: '訪談 3 個人', horizon: 'd30' },
+    { text: '架設作品集', horizon: 'd30' },
+  ]);
+});
+
+test('parsePlan rejects a reply without a usable plan', () => {
+  expect(() => parsePlan('抱歉，我無法回答')).toThrow(expect.objectContaining({ code: 'bad_format' }));
+  expect(describeIkigaiError({ code: 'bad_format' }).code).toEqual('bad_format');
+});
+
+test('normalizePlanInput requires a direction', () => {
+  expect(() => normalizePlanInput({ love: ['寫作'], good: ['教學'] })).toThrow(IkigaiInputError);
+  expect(normalizePlanInput({ love: ['寫作'], good: ['教學'], direction: '  技術寫作  ' }).direction).toEqual('技術寫作');
+});
+
+test('buildPlanMessages names the direction and asks for JSON', () => {
+  const [system, human] = buildPlanMessages(normalizePlanInput({ ...SAMPLE, direction: '技術寫作' }));
+  expect(system.content).toContain('JSON');
+  expect(human.content).toContain('「技術寫作」');
+});
+
+test('POST /ikigai/plan returns goals and actions', async () => {
+  const res = await fetch(`${base}/ikigai/plan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...SAMPLE, direction: '技術寫作' }),
+  });
+  expect(res.status).toEqual(200);
+  const data = await res.json();
+  expect(Object.keys(data.goals)).toEqual(PLAN_HORIZONS);
+  expect(data.actions.length).toBeGreaterThan(0);
+  expect(data.goals.d30).toContain('技術寫作');
+});
+
+test('POST /ikigai/plan rejects a missing direction', async () => {
+  const res = await fetch(`${base}/ikigai/plan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(SAMPLE),
+  });
+  expect(res.status).toEqual(400);
+  expect((await res.json()).code).toEqual('invalid_input');
 });

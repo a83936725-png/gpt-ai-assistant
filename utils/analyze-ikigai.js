@@ -122,6 +122,9 @@ export const describeIkigaiError = (err) => {
   if (err?.code === 'empty_response') {
     return { code: 'empty_response', error: 'AI 沒有回傳內容，請再試一次' };
   }
+  if (err?.code === 'bad_format') {
+    return { code: 'bad_format', error: 'AI 回覆的格式不正確，請再試一次' };
+  }
   return { code: 'unknown', error: 'AI 分析失敗，原因不明，請查看 Vercel Logs' };
 };
 
@@ -145,6 +148,119 @@ const analyzeIkigai = async (body) => {
     throw err;
   }
   return { text, ikigai };
+};
+
+export const PLAN_HORIZONS = Object.freeze(['d30', 'd90', 'y1']);
+const PLAN_MAX_ACTIONS = 12;
+
+/**
+ * @param {Object} body Raw request body: the four lists plus `direction`.
+ * @returns {ReturnType<typeof normalizeIkigai> & { direction: string }}
+ */
+export const normalizePlanInput = (body) => {
+  const ikigai = normalizeIkigai(body);
+  const direction = typeof body.direction === 'string' ? body.direction.replace(/\s+/g, ' ').trim().slice(0, IKIGAI_MAX_ITEM_LENGTH) : '';
+  if (!direction) throw new IkigaiInputError('請先選一個生涯方向');
+  return { ...ikigai, direction };
+};
+
+/**
+ * @param {ReturnType<typeof normalizePlanInput>} input
+ * @returns {Array<{ role: string, content: string }>}
+ */
+export const buildPlanMessages = (input) => {
+  const lists = IKIGAI_CIRCLES
+    .map(({ key, label }) => `【${label}】${input[key].length ? input[key].join('、') : '（未填）'}`)
+    .join('\n');
+  const note = input.note ? `\n【補充說明】${input.note}` : '';
+  return [
+    {
+      role: ROLE_SYSTEM,
+      content: [
+        '你是一位務實的生涯教練，熟悉 IKIGAI（生き甲斐）四圈模型。',
+        '一律使用繁體中文（台灣用語）。只輸出一個 JSON 物件，不要加任何說明文字或 Markdown。',
+      ].join('\n'),
+    },
+    {
+      role: ROLE_HUMAN,
+      content: [
+        '以下是我的 IKIGAI 四圈清單：',
+        lists + note,
+        '',
+        `我選定的生涯方向：「${input.direction}」`,
+        '',
+        '請幫我排一份可以執行的計畫，輸出格式：',
+        '{"goals":{"d30":"30 天內要達成的具體目標","d90":"90 天目標","y1":"1 年目標"},',
+        ' "actions":[{"text":"具體行動，20 字以內，用動詞開頭","horizon":"d30"}]}',
+        '規則：goals 每項一句話、可衡量；actions 共 6 到 9 項，horizon 只能是 d30、d90 或 y1，d30 至少 3 項；',
+        '行動要能從我清單裡的熱愛、擅長的項目出發，補強最薄弱的圈。',
+      ].join('\n'),
+    },
+  ];
+};
+
+/**
+ * Pulls the first JSON object out of a model reply and keeps only well-formed goals and actions.
+ * @param {string} text
+ * @returns {{ goals: { d30: string, d90: string, y1: string }, actions: Array<{ text: string, horizon: string }> }}
+ */
+export const parsePlan = (text) => {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  let raw;
+  try {
+    raw = JSON.parse(text.slice(start, end + 1));
+  } catch {
+    raw = null;
+  }
+  const clean = (v, max) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
+  const goals = Object.fromEntries(PLAN_HORIZONS.map((h) => [h, clean(raw?.goals?.[h], 200)]));
+  const actions = (Array.isArray(raw?.actions) ? raw.actions : [])
+    .map((a) => ({ text: clean(a?.text, 80), horizon: PLAN_HORIZONS.includes(a?.horizon) ? a.horizon : 'd30' }))
+    .filter((a) => a.text)
+    .slice(0, PLAN_MAX_ACTIONS);
+  if (!actions.length && !PLAN_HORIZONS.some((h) => goals[h])) {
+    const err = new Error('Plan reply is not JSON');
+    err.code = 'bad_format';
+    throw err;
+  }
+  return { goals, actions };
+};
+
+const mockPlan = (direction) => ({
+  goals: {
+    d30: `確認「${direction}」是不是自己真正想要的方向`,
+    d90: `完成一個和「${direction}」有關的小作品並取得回饋`,
+    y1: `讓「${direction}」開始帶來穩定收入`,
+  },
+  actions: [
+    { text: '訪談 3 位已經在做這件事的人', horizon: 'd30' },
+    { text: '每週寫一篇學習筆記', horizon: 'd30' },
+    { text: '列出需要補強的 3 項能力', horizon: 'd30' },
+    { text: '完成第一個作品並公開', horizon: 'd90' },
+    { text: '找到第一位付費對象', horizon: 'y1' },
+  ],
+});
+
+/**
+ * Asks the chat model for 30-day, 90-day and 1-year goals plus actions for one career direction.
+ * @param {Object} body Raw request body from the web page.
+ */
+export const planIkigai = async (body) => {
+  const input = normalizePlanInput(body);
+  if (config.APP_ENV !== 'production') return mockPlan(input.direction);
+  const { data } = await createChatCompletion({
+    messages: buildPlanMessages(input),
+    maxTokens: Math.max(config.OPENAI_COMPLETION_MAX_TOKENS, config.IKIGAI_MAX_TOKENS),
+    timeout: config.IKIGAI_TIMEOUT,
+  });
+  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!text) {
+    const err = new Error('Empty completion');
+    err.code = 'empty_response';
+    throw err;
+  }
+  return parsePlan(text);
 };
 
 export default analyzeIkigai;

@@ -45,7 +45,7 @@ const replies = async (text, userId = MOCK_USER_01, groupId = undefined) => {
 test('starts a practice for staff and relays what they say', async () => {
   expect(await replies('練習接待')).toEqual(['start:']);
   expect(calls[0]).toEqual({
-    url: 'https://expo.test/api/rpc', fn: 'api_trainerLine', args: ['test-secret', 'start', MOCK_USER_01, ''],
+    url: 'https://expo.test/api/rpc', fn: 'api_trainerLine', args: ['test-secret', 'start', MOCK_USER_01, '', 'user'],
   });
   expect(await replies('媽咪辛苦了，先坐一下')).toEqual(['say:媽咪辛苦了，先坐一下']);
   expect(await replies('結束練習！')).toEqual(['end:']);

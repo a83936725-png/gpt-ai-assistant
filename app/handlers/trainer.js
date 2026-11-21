@@ -1,4 +1,5 @@
 import config from '../../config/index.js';
+import { t } from '../../locales/index.js';
 import Context from '../context.js';
 
 /**
@@ -79,13 +80,16 @@ const check = (context) => isEnabled()
  * @param {string} param.op start, say, end, resume or quit.
  * @param {string} param.userId
  * @param {string} param.text
+ * @param {string} param.name LINE display name, so the manager can see who practised.
  * @returns {Promise<{active: boolean, text: string}>}
  */
-const callTrainer = async ({ op, userId, text }) => {
+const callTrainer = async ({
+  op, userId, text, name,
+}) => {
   const res = await fetch(config.TRAINER_RPC_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fn: 'api_trainerLine', args: [config.TRAINER_SECRET, op, userId, text] }),
+    body: JSON.stringify({ fn: 'api_trainerLine', args: [config.TRAINER_SECRET, op, userId, text, name] }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   const body = await res.json();
@@ -107,7 +111,11 @@ const exec = (context) => check(context) && (
     const command = parseCommand(text);
     const op = command ? command.op : 'say';
     try {
-      const result = await callTrainer({ op, userId: context.userId, text: command ? command.rest : text });
+      // The profile lookup falls back to a placeholder name when LINE does not answer; send no name then.
+      const name = context.source && context.source.name !== t('__SOURCE_NAME_SOMEONE') ? context.source.name || '' : '';
+      const result = await callTrainer({
+        op, userId: context.userId, text: command ? command.rest : text, name,
+      });
       setActive(context.userId, result.active);
       context.pushText(result.text);
     } catch (err) {

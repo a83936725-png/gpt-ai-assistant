@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import config from '../config/index.js';
 import analyzeIkigai, {
-  describeIkigaiError, IkigaiInputError, IKIGAI_CIRCLES, normalizeIkigai,
+  describeIkigaiError, IkigaiInputError, IKIGAI_CIRCLES, normalizeIkigai, normalizePlanInput, planIkigai,
 } from '../utils/analyze-ikigai.js';
 import moderateContent from '../utils/moderate-content.js';
 
@@ -55,14 +55,15 @@ router.get('/status', (req, res) => {
   res.json({ ai: config.IKIGAI_AI_ENABLED && Boolean(config.OPENAI_COMPLETION_API_KEY || config.APP_ENV !== 'production') });
 });
 
-router.post('/analyze', async (req, res) => {
+// Shared by the analysis and plan routes: switch, validation, hourly limit, moderation, error reasons.
+const aiRoute = (validate, run) => async (req, res) => {
   if (!config.IKIGAI_AI_ENABLED) {
     res.status(403).json({ code: 'disabled', error: 'AI 分析未開啟（IKIGAI_AI_ENABLED=false）' });
     return;
   }
-  let ikigai;
+  let input;
   try {
-    ikigai = normalizeIkigai(req.body);
+    input = validate(req.body);
   } catch (err) {
     if (!(err instanceof IkigaiInputError)) throw err;
     res.status(400).json({ code: 'invalid_input', error: err.message });
@@ -76,16 +77,15 @@ router.post('/analyze', async (req, res) => {
   let stage = 'moderation';
   try {
     const text = IKIGAI_CIRCLES
-      .flatMap(({ key }) => ikigai[key])
-      .concat(ikigai.note || [])
+      .flatMap(({ key }) => input[key])
+      .concat(input.note || [], input.direction || [])
       .join('\n');
     if (await moderateContent({ text })) {
       res.status(400).json({ code: 'flagged', error: '內容未通過安全檢查，請修改後再試' });
       return;
     }
     stage = 'completion';
-    const { text: result } = await analyzeIkigai(ikigai);
-    res.json({ text: result });
+    res.json(await run(input));
   } catch (err) {
     const reason = describeIkigaiError(err);
     if (stage === 'moderation') {
@@ -94,10 +94,17 @@ router.post('/analyze', async (req, res) => {
       const status = err.response?.status ? `（狀態碼 ${err.response.status}）` : '';
       reason.error = `安全檢查失敗：${shared ? reason.error : `OpenAI moderation 回傳錯誤${status}`}。可先把 OPENAI_MODERATION_ENABLED 設為 false`;
     }
-    console.error(`[ikigai] ${stage} ${reason.code}: ${err.response?.status || err.code || ''} ${err.message}`);
+    console.error(`[ikigai] ${req.path} ${stage} ${reason.code}: ${err.response?.status || err.code || ''} ${err.message}`);
     res.status(502).json(reason);
   }
-});
+};
+
+router.post('/analyze', aiRoute(normalizeIkigai, async (input) => {
+  const { text } = await analyzeIkigai(input);
+  return { text };
+}));
+
+router.post('/plan', aiRoute(normalizePlanInput, (input) => planIkigai(input)));
 
 export {
   isRateLimited,

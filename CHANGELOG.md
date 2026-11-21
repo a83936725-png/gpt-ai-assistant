@@ -5,7 +5,10 @@
 ### New Features
 
 - IKIGAI: redesigned page. Adds a welcome screen with a sample, a progress bar that marks finished steps, step transitions, a sticky bottom bar (and arrow keys), prompt questions on each step, undo after removing an item, colour toggle buttons in the match step, result counts with a next-step tip, an animated diagram, AI loading progress, and "copy prompt" to use any AI assistant when the AI analysis is unavailable
-- IKIGAI: one-minute demo of the whole flow in [docs/IKIGAI-WEB.zh-TW.md](docs/IKIGAI-WEB.zh-TW.md)
+- IKIGAI: each circle is sized by how many items it holds, with a proportion legend
+- IKIGAI: step 7 career plan: up to three directions scored against the four circles (fit out of 20), 30-day / 90-day / 1-year goals, and an action checklist with progress; `POST /ikigai/plan` fills goals and actions with AI
+- IKIGAI: share and export: 1080 × 1350 share cards (PNG, download or share), a read-only share link that keeps the data in the URL, and an A4 PDF report through the print dialog
+- IKIGAI: demo of the whole flow in [docs/IKIGAI-WEB.zh-TW.md](docs/IKIGAI-WEB.zh-TW.md)
 
 ## 4.12.1 (2026-11-20)
 

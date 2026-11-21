@@ -85,7 +85,7 @@
   }
   const mascotUrl = (opts = {}) => toUrl(mascotSvg({ ...opts, plain: true }));
   // which face fits an empty page, from its emoji
-  const EMPTY_MOOD = { '🌙': 'sleepy', '😴': 'sleepy', '💤': 'sleepy', '🔍': 'think', '🤔': 'think', '🫶': 'love', '🎁': 'love', '💌': 'love', '⚠️': 'oops' };
+  const EMPTY_MOOD = { '🌙': 'sleepy', '😴': 'sleepy', '💤': 'sleepy', '🔍': 'think', '🤔': 'think', '🫶': 'love', '💌': 'love', '⚠️': 'oops' };
   const moodFor = (icon) => EMPTY_MOOD[icon] || 'happy';
   const night = (d = new Date()) => { const hr = d.getHours(); return hr >= 22 || hr < 5; };
   // a big moment: 小滴 hops up by the corner for a moment and cheers (the toast next to it carries the words)

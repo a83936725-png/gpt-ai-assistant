@@ -1,8 +1,38 @@
 /* 分享面板、分享卡預覽、邀請好友、島上收集愛心 */
 .sh-body { display: grid; gap: 14px; }
-.sh-preview { display: flex; justify-content: center; }
-.sh-preview-ph { width: 180px; height: 320px; border-radius: 18px; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; color: var(--c-text-2); font-size: 13px; }
-.sh-img { width: 180px; height: auto; border-radius: 18px; box-shadow: var(--shadow-2); }
+/* 分享工作室: the preview keeps its height and takes the format's shape (9:16, 4:5, 1:1) */
+.sh-preview { display: flex; justify-content: center; padding: 4px 0 2px; }
+.sh-frame { position: relative; height: min(300px, 38vh); aspect-ratio: 9 / 16; border-radius: 18px; overflow: hidden; background: var(--c-surface-2); box-shadow: var(--shadow-2); }
+.sh-img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.sh-wait { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .45) 50%, transparent 70%); background-size: 250% 100%; }
+.sh-preview.busy .sh-wait { opacity: 1; }
+.sh-preview.busy .sh-img { opacity: .55; }
+.sh-studio { display: grid; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--c-surface-2); }
+.sh-sec { display: grid; gap: 8px; }
+.sh-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sh-send-head { margin-top: 2px; }
+.sh-swatches { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.sh-sw { min-width: 0; min-height: 44px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; border: 0; background: transparent; color: var(--c-text-2); font: inherit; cursor: pointer; border-radius: 12px; }
+.sh-sw-dot { position: relative; width: min(36px, 100%); aspect-ratio: 1; border-radius: 50%; background: linear-gradient(135deg, var(--sw1), var(--sw2)); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
+.sh-sw[aria-checked="true"] .sh-sw-dot { box-shadow: 0 0 0 3px var(--c-surface-2), 0 0 0 5px var(--c-primary); }
+.sh-sw[aria-checked="true"] .sh-sw-dot::after { content: '✓'; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 16px; text-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
+.sh-sw-name { font-size: 12px; font-weight: 600; }
+.sh-sw[aria-checked="true"] .sh-sw-name { color: var(--c-text); }
+.sh-format { background: var(--c-surface); }
+.sh-toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--c-text); font: inherit; font-weight: 700; font-size: 14px; text-align: left; cursor: pointer; }
+.sh-toggle .chev { color: var(--c-text-2); }
+.sh-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.sh-content { display: grid; gap: 10px; }
+.sh-content .field { margin-bottom: 0; }
+.sh-items { display: grid; gap: 6px; max-height: 248px; overflow-y: auto; padding: 2px; }
+.sh-item { gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--c-surface); min-height: 48px; cursor: pointer; }
+.sh-item.on { box-shadow: inset 0 0 0 1.5px var(--c-primary); }
+.sh-item:has(input:disabled) { opacity: .55; cursor: default; }
+.sh-item-text { flex: 1; min-width: 0; font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sh-item-done { flex: none; }
+.sh-switch { padding: 2px 4px; }
+.sh-save { margin-top: -2px; }
+.sh-hint { margin-top: -6px; }
 .sh-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .sh-ch {
   display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 76px; padding: 10px 4px;
@@ -114,3 +144,9 @@
 .wk-remind { min-height: 44px; }
 .wk-home .wk-home-ico { font-size: 28px; }
 .wk-home .wk-home-x { flex: none; }
+.sh-fit { margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--c-warn-soft, #fff4e5); color: var(--c-warn-ink, #8a4b00); }
+/* the send row: one line of apps pinned to the bottom of the sheet, always in reach */
+.sh-send { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 2px; }
+.sh-send .sh-ch { min-height: 64px; padding: 4px 0; gap: 4px; border: 0; background: transparent; font-size: 11.5px; min-width: 0; }
+.sh-send .sh-ch-l { white-space: nowrap; }
+.sh-send .sh-ch-ico { width: 40px; height: 40px; }

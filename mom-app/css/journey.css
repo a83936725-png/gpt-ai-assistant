@@ -33,8 +33,7 @@
 .jr-sub-warn { color: var(--c-danger-ink); }
 .jr-todos { display: grid; gap: 6px; }
 .jr-todo { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 12px; background: var(--c-surface-2); }
-.jr-todo.done { opacity: .65; }
-.jr-todo.done .jr-todo-main span { text-decoration: line-through; }
+.jr-todo.done .jr-todo-main span { color: var(--c-text-2); text-decoration: line-through; } /* muted, still readable (no opacity) */
 .jr-todo-main { flex: 1; display: flex; align-items: flex-start; gap: 10px; min-height: 40px; padding: 4px 0; font-size: 14px; line-height: 1.45; cursor: pointer; }
 .jr-todo-main input { width: 22px; height: 22px; margin-top: 1px; flex: none; accent-color: var(--c-primary); }
 .jr-watch { margin: 0; padding: 10px 12px 10px 30px; border-radius: 12px; background: var(--c-danger-soft); font-size: 14px; line-height: 1.55; }

@@ -252,7 +252,7 @@
     App.share.open({
       title: `${who}寶寶好物願望清單`,
       text: `${who}寶寶好物願望清單 🎁\n${names.slice(0, 8).map((n) => `・${n}`).join('\n')}${names.length > 8 ? `\n…共 ${names.length} 項` : ''}\n想送禮的親友可以點連結看完整清單，避免買重複 💜`,
-      lines: names.slice(0, 5), emoji: '🎁', kicker: '寶寶好物願望清單', theme: 'peach',
+      lines: names.slice(0, 5), items: names, emoji: '🎁', kicker: '寶寶好物願望清單', theme: 'peach',
       campaign: 'wishlist', path: 'wishlist', params: p, sheetTitle: '分享願望清單給親友',
     });
   }
@@ -261,7 +261,7 @@
     App.share.open({
       title: '寶寶用品購物清單',
       text: `寶寶用品購物清單 🛒\n${items.map((x) => `・${x.name}${entry(x.id).price ? `（${money(entry(x.id).price)}）` : ''}`).join('\n')}${total ? `\n預估 ${money(total)}` : ''}`,
-      lines: items.slice(0, 5).map((x) => x.name), emoji: '🛒', kicker: '易家做媽媽・常見好物', theme: 'green',
+      lines: items.slice(0, 5).map((x) => x.name), items: items.map((x) => x.name), emoji: '🛒', kicker: '易家做媽媽・常見好物', theme: 'green',
       campaign: 'goods-list', path: 'goods', sheetTitle: '分享購物清單',
     });
   }

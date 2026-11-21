@@ -85,10 +85,12 @@
   /* ================= share card renderer (canvas) ================= */
   const FONT = '"PingFang TC","Noto Sans TC","Microsoft JhengHei","Heiti TC",sans-serif';
   const loadImg = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+  // closing punctuation never starts a line (避頭點): it hangs at the end of the line before
+  const NO_START = '，。、；：！？）」』〉》】…,.;:!?)';
   function wrap(ctx, text, maxW) {
     const lines = []; let line = '';
     [...String(text)].forEach((ch) => {
-      if (ctx.measureText(line + ch).width > maxW && line) { lines.push(line); line = ch; } else line += ch;
+      if (ctx.measureText(line + ch).width > maxW && line && !NO_START.includes(ch)) { lines.push(line); line = ch; } else line += ch;
     });
     if (line) lines.push(line);
     return lines;
@@ -112,12 +114,22 @@
     for (let r = 0; r < n; r += 1) for (let c = 0; c < n; c += 1) if (qr.isDark(r, c)) ctx.fillRect(x + (c + 1) * cell, y + (r + 1) * cell, Math.ceil(cell), Math.ceil(cell));
     return true;
   }
+  // [background from, background to, soft (circles, rows), header/footer text (white unless given), accent text]
   const THEMES = {
     purple: ['#4a1f62', '#7b4597', '#f2e9f6'],
     peach: ['#b0502f', '#ee8b6f', '#fdeee8'],
     green: ['#1f6b4a', '#4fa77a', '#e3f4ec'],
     night: ['#1d1a3a', '#4b3f8a', '#ece8ff'],
+    sky: ['#2c475f', '#5f7f9c', '#e7eef4'],
+    rose: ['#7a2449', '#c95a80', '#fbe8ef'],
+    cream: ['#f5ebdf', '#e9d6c1', '#f3e7da', '#4a1f62', '#7b4597'], // light: dark purple text
   };
+  const THEME_NAMES = {
+    purple: '紫芋', peach: '蜜桃', green: '薄荷', night: '夜空', sky: '霧藍', rose: '莓果', cream: '奶茶',
+  };
+  const themeOf = (t) => THEMES[t] || THEMES.purple;
+  const inkOf = (t) => themeOf(t)[3] || '#fff';
+  const accentOf = (t) => themeOf(t)[4] || themeOf(t)[1];
   // every card shares this frame: the theme's background and the logo header (y 72–180)
   async function paintFrame(ctx, W, H, theme) {
     const [c1, c2] = THEMES[theme] || THEMES.purple;
@@ -128,92 +140,141 @@
     ctx.globalAlpha = 1;
     const logo = await loadImg(B().logo || 'assets/logo.svg');
     ctx.fillStyle = '#fff'; roundRect(ctx, 64, 72, 108, 108, 30); ctx.fill();
+    if (inkOf(theme) !== '#fff') { ctx.strokeStyle = 'rgba(74,31,98,.14)'; ctx.lineWidth = 3; ctx.stroke(); }
     if (logo) ctx.drawImage(logo, 78, 82, 80, 88);
-    ctx.fillStyle = '#fff'; ctx.font = `800 46px ${FONT}`; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+    ctx.fillStyle = inkOf(theme); ctx.font = `800 46px ${FONT}`; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
     ctx.fillText(B().appName || '易家做媽媽', 196, 84);
     ctx.globalAlpha = 0.85; ctx.font = `500 30px ${FONT}`; ctx.fillText(B().tagline || '', 196, 142); ctx.globalAlpha = 1;
   }
-  // …and this footer at y = fy: a QR code of the invite link (size qs), the invite code and the hashtags
-  function paintFooter(ctx, W, fy, qs, spec) {
+  // …and this footer at y = fy: a QR code of the invite link (size qs, unless qr is off), the invite code and the
+  // hashtags, in the theme's text colour
+  function paintFooter(ctx, W, fy, qs, spec, { qr = true } = {}) {
     const url = link({ path: spec.path || 'home', params: spec.params, channel: 'qr', campaign: spec.campaign || 'card' });
-    const hasQR = drawQR(ctx, url, 64, fy, qs);
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = '#fff';
+    const hasQR = qr && drawQR(ctx, url, 64, fy, qs);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = inkOf(spec.theme);
     const tx = hasQR ? 64 + qs + 44 : 64;
-    ctx.font = `800 44px ${FONT}`; ctx.fillText('掃描一起用・免費', tx, fy + 20);
+    ctx.font = `800 44px ${FONT}`; ctx.fillText(hasQR ? '掃描一起用・免費' : `${B().appName || '易家做媽媽'}・免費 App`, tx, fy + 20);
     ctx.font = `600 34px ${FONT}`; ctx.globalAlpha = 0.92;
     ctx.fillText(`邀請碼 ${ensure(store.state).code}`, tx, fy + 88);
     ctx.font = `500 28px ${FONT}`;
     wrap(ctx, tags(), W - tx - 64).slice(0, 2).forEach((ln, i) => ctx.fillText(ln, tx, fy + 146 + i * 40));
     ctx.globalAlpha = 1;
   }
-  // spec: {emoji, kicker, title, subtitle, stats:[{v,l}], lines:[], theme, photo, campaign, path, params}
-  async function render(spec, { format = 'story' } = {}) {
-    const W = 1080; const H = format === 'story' ? 1920 : 1350;
+  // spec: {emoji, kicker, title, subtitle, stats:[{v,l}], lines:[text | {text, done, warn}], checks, linesTitle,
+  //        footnote, theme, photo, bigPhoto, campaign, path, params}
+  // opts: format 'story' (9:16, 限時動態) | 'post' (4:5) | 'square' (1:1); qr (default on); note (one line from her)
+  const LAYOUT = {
+    story: { H: 1920, py: 300, ph: 1170, r: 130, block: 300, maxLines: 6, rowH: 72, step: 86, fs: 42, qs: 300, title: [80, 56], gap: 60 },
+    post: { H: 1350, py: 240, ph: 760, r: 96, block: 228, maxLines: 4, rowH: 62, step: 72, fs: 36, qs: 230, title: [72, 52], gap: 60 },
+    square: { H: 1080, py: 220, ph: 600, r: 72, block: 176, maxLines: 3, rowH: 58, step: 66, fs: 34, qs: 190, title: [62, 46], gap: 40 },
+  };
+  async function render(spec, { format = 'story', qr = true, note = '' } = {}) {
+    const L = LAYOUT[format] || LAYOUT.story;
+    const W = 1080; const H = L.H;
+    let drawn = 0; // list rows that fitted (blob.lines)
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
-    const [c1, c2, soft] = THEMES[spec.theme] || THEMES.purple;
+    const [c1, , soft] = themeOf(spec.theme);
+    const c2 = accentOf(spec.theme);
+    const strong = inkOf(spec.theme) !== '#fff' ? inkOf(spec.theme) : c1; // numbers and ✓ (a light theme uses its dark text)
     await paintFrame(ctx, W, H, spec.theme);
-    // main panel
-    const px = 64; const pw = W - 128; let y = format === 'story' ? 300 : 240;
-    const panelH = format === 'story' ? 1170 : 760;
-    ctx.fillStyle = 'rgba(255,255,255,0.97)'; roundRect(ctx, px, y, pw, panelH, 56); ctx.fill();
-    const cx = W / 2; y += 70;
+    // main panel (a light theme gets a thin edge so the white panel still stands out)
+    const px = 64; const pw = W - 128; const py = L.py; const bottom = py + L.ph;
+    ctx.fillStyle = 'rgba(255,255,255,0.97)'; roundRect(ctx, px, py, pw, L.ph, 56); ctx.fill();
+    if (inkOf(spec.theme) !== '#fff') { ctx.strokeStyle = 'rgba(74,31,98,.12)'; ctx.lineWidth = 3; ctx.stroke(); }
+    const cx = W / 2; let y = py + (format === 'square' ? 50 : 70);
     // a big picture (an ultrasound photo) in a rounded frame, or the emoji / round photo
     const big = spec.bigPhoto ? await loadImg(spec.bigPhoto) : null;
+    // a list card gives the list the room: a smaller emoji in 限時動態, in the small line above the title otherwise
+    const listMode = !big && !!(spec.lines && spec.lines.length);
+    const inlineEmoji = listMode && format !== 'story';
     if (big) {
-      const bw = pw - 100; const bh = format === 'story' ? 640 : 420; const bx = px + 50; const by = y - 20;
+      const bw = pw - 100; const bh = { story: 640, post: 420, square: 300 }[format] || 640; const bx = px + 50; const by = y - 20;
       ctx.save(); roundRect(ctx, bx, by, bw, bh, 36); ctx.clip();
       const k = Math.max(bw / big.naturalWidth, bh / big.naturalHeight);
       ctx.fillStyle = '#111'; ctx.fillRect(bx, by, bw, bh);
       ctx.drawImage(big, bx + (bw - big.naturalWidth * k) / 2, by + (bh - big.naturalHeight * k) / 2, big.naturalWidth * k, big.naturalHeight * k);
       ctx.restore();
       y = by + bh + 50;
-    } else {
+    } else if (!inlineEmoji) {
+      const R = listMode ? Math.round(L.r * 0.66) : L.r;
       const photo = spec.photo ? await loadImg(spec.photo) : null;
-      ctx.fillStyle = soft; ctx.beginPath(); ctx.arc(cx, y + 130, 130, 0, Math.PI * 2); ctx.fill();
-      if (photo) { ctx.save(); ctx.beginPath(); ctx.arc(cx, y + 130, 122, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(photo, cx - 122, y + 8, 244, 244); ctx.restore(); }
-      else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `150px ${FONT}`; ctx.fillText(spec.emoji || '💜', cx, y + 138); }
-      y += 300;
+      ctx.fillStyle = soft; ctx.beginPath(); ctx.arc(cx, y + R, R, 0, Math.PI * 2); ctx.fill();
+      if (photo) { ctx.save(); ctx.beginPath(); ctx.arc(cx, y + R, R - 8, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(photo, cx - R + 8, y + 8, (R - 8) * 2, (R - 8) * 2); ctx.restore(); }
+      else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${Math.round(R * 1.15)}px ${FONT}`; ctx.fillText(spec.emoji || '💜', cx, y + R + 8); }
+      y += listMode ? R * 2 + 40 : L.block;
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    if (spec.kicker) { ctx.fillStyle = c2; ctx.font = `700 36px ${FONT}`; ctx.fillText(spec.kicker, cx, y); y += 62; }
-    const quote = (spec.title || '').length > 12;
-    ctx.fillStyle = '#2b2231'; ctx.font = `900 ${quote ? 56 : 80}px ${FONT}`;
-    wrap(ctx, spec.title || '', pw - 120).slice(0, 3).forEach((ln) => { ctx.fillText(ln, cx, y); y += quote ? 72 : 98; });
+    const kicker = inlineEmoji ? `${spec.emoji || ''} ${spec.kicker || ''}`.trim() : spec.kicker;
+    if (kicker) { ctx.fillStyle = c2; ctx.font = `700 ${format === 'square' ? 32 : 36}px ${FONT}`; ctx.fillText(fitLine(ctx, kicker, pw - 100), cx, y); y += format === 'square' ? 52 : 62; }
+    const quote = listMode || (spec.title || '').length > 12;
+    const tf = quote ? L.title[1] : L.title[0];
+    ctx.fillStyle = '#2b2231'; ctx.font = `900 ${tf}px ${FONT}`;
+    wrap(ctx, spec.title || '', pw - 120).slice(0, format === 'square' ? 2 : 3).forEach((ln) => { ctx.fillText(ln, cx, y); y += Math.round(tf * 1.24); });
     if (spec.subtitle) {
-      ctx.fillStyle = '#5f5566'; ctx.font = `500 38px ${FONT}`;
-      wrap(ctx, spec.subtitle, pw - 140).slice(0, 3).forEach((ln) => { ctx.fillText(ln, cx, y + 6); y += 54; });
+      ctx.fillStyle = '#5f5566'; ctx.font = `500 ${format === 'square' ? 32 : 38}px ${FONT}`;
+      wrap(ctx, spec.subtitle, pw - 140).slice(0, format === 'story' ? 3 : 2).forEach((ln) => { ctx.fillText(ln, cx, y + 6); y += format === 'square' ? 46 : 54; });
       y += 14;
     }
     if (spec.stats && spec.stats.length) {
-      const n = Math.min(3, spec.stats.length); const gap = 22; const sw = (pw - 120 - gap * (n - 1)) / n;
+      const n = Math.min(3, spec.stats.length); const gap = 22; const sw = (pw - 120 - gap * (n - 1)) / n; const sh0 = format === 'square' ? 120 : 150;
       spec.stats.slice(0, 3).forEach((st, i) => {
         const sx = px + 60 + i * (sw + gap);
-        ctx.fillStyle = soft; roundRect(ctx, sx, y + 10, sw, 150, 30); ctx.fill();
-        ctx.fillStyle = c1; ctx.font = `900 52px ${FONT}`; ctx.fillText(String(st.v), sx + sw / 2, y + 36);
-        ctx.fillStyle = '#5f5566'; ctx.font = `500 28px ${FONT}`; ctx.fillText(st.l, sx + sw / 2, y + 106);
+        ctx.fillStyle = soft; roundRect(ctx, sx, y + 10, sw, sh0, 30); ctx.fill();
+        ctx.fillStyle = strong; ctx.font = `900 ${format === 'square' ? 44 : 52}px ${FONT}`; ctx.fillText(String(st.v), sx + sw / 2, y + 30);
+        ctx.fillStyle = '#5f5566'; ctx.font = `500 28px ${FONT}`; ctx.fillText(st.l, sx + sw / 2, y + sh0 - 44);
       });
-      y += 190;
+      y += sh0 + 40;
     }
+    // her one line: kept at the bottom of the panel, so the list above it leaves room
+    const noteRows = [];
+    if (note) { ctx.font = `700 ${format === 'square' ? 34 : 40}px ${FONT}`; noteRows.push(...wrap(ctx, `「${note}」`, pw - 140).slice(0, 2)); }
+    const noteH = noteRows.length ? noteRows.length * (format === 'square' ? 46 : 54) + 30 : 0;
+    const limit = bottom - 40 - noteH;
     if (spec.lines && spec.lines.length) {
-      // a titled list (e.g. an island's 注意事項) gets a heading and bigger, roomier lines
-      const big = !!spec.linesTitle && format === 'story';
-      if (spec.linesTitle) {
-        y += 18; ctx.fillStyle = c2; ctx.font = `800 40px ${FONT}`; ctx.fillText(spec.linesTitle, cx, y); y += 70;
-      }
-      ctx.textAlign = 'left'; ctx.fillStyle = '#3d3442'; ctx.font = `${big ? 600 : 500} ${big ? 42 : 34}px ${FONT}`;
-      spec.lines.slice(0, format === 'story' ? 5 : 3).forEach((ln) => {
-        if (big) { ctx.fillStyle = soft; roundRect(ctx, px + 56, y - 10, pw - 112, 72, 22); ctx.fill(); ctx.fillStyle = '#3d3442'; }
-        // a big row holds one line: a longer one ends in 「…」 instead of being cut off mid-word
-        const rows = big ? [fitLine(ctx, String(ln), pw - 180)] : wrap(ctx, `• ${ln}`, pw - 160).slice(0, 2);
-        rows.forEach((l2) => { if (y < 300 + panelH - 60) { ctx.fillText(l2, px + (big ? 84 : 70), y + (big ? 6 : 0)); y += big ? 86 : 50; } });
+      if (spec.linesTitle) { y += 12; ctx.fillStyle = c2; ctx.font = `800 ${format === 'square' ? 34 : 40}px ${FONT}`; ctx.fillText(spec.linesTitle, cx, y); y += format === 'square' ? 56 : 70; }
+      ctx.textAlign = 'left';
+      const rows = spec.lines.slice(0, L.maxLines).map((ln) => (typeof ln === 'string' ? { text: ln } : ln));
+      const lh = Math.round(L.fs * 1.3);
+      let full = false;
+      drawn = 0;
+      rows.forEach((ln) => {
+        if (full) return;
+        const check = spec.checks && typeof ln.done === 'boolean';
+        const r = Math.round(L.rowH * 0.27);
+        const tx = px + 80 + (check ? r * 2 + 22 : 0);
+        ctx.font = `600 ${L.fs}px ${FONT}`;
+        const maxW = px + pw - 80 - tx;
+        let parts = wrap(ctx, `${ln.warn ? '⚠️ ' : ''}${ln.text}`, maxW);
+        if (parts.length > 2) parts = [parts[0], fitLine(ctx, parts.slice(1).join(''), maxW)]; // two lines at most
+        const rh = L.rowH + (parts.length - 1) * lh;
+        if (y + rh > limit) { full = true; return; } // no half rows: the rest is left out
+        ctx.fillStyle = soft; roundRect(ctx, px + 50, y - 8, pw - 100, rh, 22); ctx.fill();
+        if (check) { // 已完成 ✓ / 還沒做 ○
+          const ccx = px + 80 + r; const ccy = y - 8 + L.rowH / 2;
+          ctx.beginPath(); ctx.arc(ccx, ccy, r, 0, Math.PI * 2);
+          if (ln.done) {
+            ctx.fillStyle = strong; ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(4, r * 0.28); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.beginPath(); ctx.moveTo(ccx - r * 0.45, ccy + r * 0.02); ctx.lineTo(ccx - r * 0.1, ccy + r * 0.38); ctx.lineTo(ccx + r * 0.5, ccy - r * 0.35); ctx.stroke();
+          } else { ctx.strokeStyle = c2; ctx.lineWidth = 4; ctx.stroke(); }
+        }
+        ctx.fillStyle = ln.done && check ? '#7a6f80' : '#3d3442'; ctx.font = `600 ${L.fs}px ${FONT}`;
+        parts.forEach((t, k) => ctx.fillText(t, tx, y - 8 + (L.rowH - L.fs) / 2 + k * lh));
+        y += L.step + (parts.length - 1) * lh;
+        drawn += 1;
       });
       ctx.textAlign = 'center';
-      if (spec.footnote && y < 300 + panelH - 80) { ctx.fillStyle = '#7a6f80'; ctx.font = `500 30px ${FONT}`; ctx.fillText(spec.footnote, cx, y + 14); }
+      if (spec.footnote && y + 40 < limit) { ctx.fillStyle = '#7a6f80'; ctx.font = `500 30px ${FONT}`; ctx.fillText(spec.footnote, cx, y + 14); }
+    }
+    if (noteRows.length) {
+      let ny = bottom - 30 - noteH + 20;
+      ctx.textAlign = 'center'; ctx.fillStyle = c2; ctx.font = `700 ${format === 'square' ? 34 : 40}px ${FONT}`;
+      noteRows.forEach((ln) => { ctx.fillText(ln, cx, ny); ny += format === 'square' ? 46 : 54; });
     }
     // footer: QR + invite
-    paintFooter(ctx, W, (format === 'story' ? 300 + 1170 : 240 + 760) + 60, format === 'story' ? 300 : 230, spec);
-    return new Promise((res) => cv.toBlob((b) => res(b), 'image/png'));
+    paintFooter(ctx, W, bottom + L.gap, L.qs, spec, { qr });
+    return new Promise((res) => cv.toBlob((b) => { if (b) b.lines = drawn; res(b); }, 'image/png'));
   }
 
   /* ================= card catalog (what can be shared right now) ================= */
@@ -287,6 +348,7 @@
     threads: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16.5 11.2c-.6-2.6-2.6-3.6-4.6-3.4-2.4.2-3.6 1.9-3.4 3.6.2 1.8 1.9 2.8 3.8 2.6 2.2-.2 3.6-1.9 3.4-4.8M16.6 9c.9 4 .3 7.6-3.9 8.6-4.6 1.1-8.2-1.8-8.2-5.9 0-4.7 3.5-7.6 7.7-7.6 3.8 0 6.6 2.1 7.2 5.4"/></svg>',
     copy: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>',
     more: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/></svg>',
+    save: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M5 17v1.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V17"/></svg>',
   };
   async function copyText(t) {
     try { await navigator.clipboard.writeText(t); return true; } catch (e) {
@@ -294,29 +356,155 @@
       let ok = false; try { ok = document.execCommand('copy'); } catch (e2) { ok = false; } ta.remove(); return ok;
     }
   }
+  // a plain file name: some phones turn other characters into 「download」
+  const fileName = (campaign, format) => `yijia-mom-${String(campaign || 'card').replace(/[^a-z0-9-]+/gi, '-')}${format ? `-${format}` : ''}.png`;
   function downloadBlob(blob, name) {
     const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
   function thanks(gained) { ui.toast(gained ? `謝謝分享 💜 好孕點數 +${gained}` : '謝謝分享 💜'); }
 
-  // payload: {title, text, path, params, campaign, spec (card spec) | kind, article:true}
+  /* ================= 分享工作室: the card she sends, her way =================
+   * 樣式 (seven colours) and 格式 (限時動態 9:16, 貼文 4:5, 方形 1:1) are remembered for next time; for a list she
+   * picks which items go on the card (as many as the format holds), can mark the done ones ✓, adds a line of her own,
+   * and decides whether the QR code goes on. The preview follows every choice. */
+  const FORMATS = [
+    { value: 'story', label: '限時動態', hint: '9:16', max: 6, ratio: '9 / 16' },
+    { value: 'post', label: '貼文', hint: '4:5', max: 4, ratio: '4 / 5' },
+    { value: 'square', label: '方形', hint: '1:1', max: 3, ratio: '1 / 1' },
+  ];
+  const cardPrefs = () => { const x = ensure(store.state); x.cardPrefs = x.cardPrefs || {}; return x.cardPrefs; };
+
+  // payload: {title, text, path, params, campaign, spec (card spec) | kind, items:[{text, done?, warn?, extra?}], sheetTitle}
   function open(payload = {}) {
     const p = { campaign: 'share', path: 'home', ...payload };
     if (p.kind && !p.spec) { const c = cards().find((x) => x.kind === p.kind); if (c) Object.assign(p, { spec: c.spec, text: p.text || c.text, campaign: c.campaign, path: c.path || p.path }); }
     if (!p.spec && p.text) p.spec = { emoji: p.emoji || '📖', kicker: p.kicker || '易家做媽媽・小知識', title: p.title || '', subtitle: '', lines: p.lines || [], theme: p.theme || 'purple', path: p.path, params: p.params };
     if (p.spec) { p.spec.path = p.spec.path || p.path; p.spec.params = p.spec.params || p.params; p.spec.campaign = p.campaign; }
     const fullText = (ch) => `${p.text || p.title || ''}\n${link({ path: p.path, params: p.params, channel: ch, campaign: p.campaign })}\n${tags()}`;
-    let blobP = null;
-    const getBlob = () => { if (!blobP) blobP = render(p.spec); return blobP; };
-    const preview = h('div', { class: 'sh-preview' }, h('div', { class: 'sh-preview-ph' }, '產生分享卡中…'));
-    if (p.spec) getBlob().then((blob) => { if (!blob) return; preview.innerHTML = ''; preview.append(h('img', { src: URL.createObjectURL(blob), alt: '分享卡預覽', class: 'sh-img' })); });
-    else preview.remove();
+
+    /* ---- her choices ---- */
+    const pf = cardPrefs();
+    const items = (p.items || (p.spec && p.spec.lines) || []).map((x) => (typeof x === 'string' ? { text: x } : x));
+    const hasDone = items.some((x) => typeof x.done === 'boolean');
+    const opt = {
+      format: FORMATS.some((f) => f.value === pf.format) ? pf.format : 'story',
+      theme: THEMES[pf.theme] ? pf.theme : ((p.spec && p.spec.theme) || 'purple'),
+      qr: pf.qr !== false,
+      checks: hasDone,
+      note: '',
+    };
+    const fmt = () => FORMATS.find((f) => f.value === opt.format);
+    const maxN = () => Math.max(1, fmt().max - (opt.note ? 1 : 0));
+    let picked = items.map((x, i) => i).filter((i) => !items[i].extra).slice(0, maxN());
+    let ownPick = false; // until she picks items herself, the default settles on what fits the card
+    const fit = () => { picked = picked.slice(0, maxN()); };
+    const remember = () => { Object.assign(pf, { format: opt.format, theme: opt.theme, qr: opt.qr }); store.save(); };
+    const specNow = () => p.spec && {
+      ...p.spec, theme: opt.theme, checks: opt.checks, lines: items.length ? picked.slice().sort((a, b) => a - b).map((i) => items[i]) : p.spec.lines,
+    };
+
+    /* ---- the preview: the same picture that will be sent; a new choice fades the next one in ---- */
+    const cache = new Map();
+    const key = () => JSON.stringify([opt, picked]);
+    const getBlob = () => { const k = key(); if (!cache.has(k)) cache.set(k, render(specNow(), { format: opt.format, qr: opt.qr, note: opt.note })); return cache.get(k); };
+    const img = h('img', { alt: '分享卡預覽', class: 'sh-img' });
+    const frame = h('div', { class: 'sh-frame' }, img, h('span', { class: 'sh-wait', 'aria-hidden': 'true' }));
+    const preview = h('div', { class: 'sh-preview busy', 'aria-live': 'polite' }, frame);
+    let seq = 0;
+    function refresh() {
+      if (!p.spec) return;
+      const n = ++seq; // eslint-disable-line no-plusplus
+      preview.classList.add('busy');
+      frame.style.aspectRatio = fmt().ratio;
+      Object.assign(preview.dataset, { format: opt.format, theme: opt.theme, items: String(items.length ? picked.length : 0), qr: String(opt.qr), checks: String(opt.checks), note: opt.note });
+      getBlob().then((blob) => {
+        if (!blob || n !== seq) return;
+        let left = items.length ? picked.length - (blob.lines || 0) : 0;
+        if (left > 0 && !ownPick) { picked = picked.slice(0, blob.lines || 0); left = 0; drawItems(); preview.dataset.items = String(picked.length); }
+        fitNote.hidden = left <= 0;
+        fitNote.textContent = left > 0 ? `卡片放得下 ${blob.lines} 項，另外 ${left} 項沒放進去：少選一些，或換「限時動態」` : '';
+        const url = URL.createObjectURL(blob);
+        img.onload = () => { if (n === seq) preview.classList.remove('busy'); URL.revokeObjectURL(url); };
+        img.src = url;
+      });
+    }
+    if (!p.spec) preview.remove();
+
+    /* ---- 樣式: seven colours ---- */
+    const swatches = h('div', { class: 'sh-swatches', role: 'radiogroup', 'aria-label': '卡片顏色' },
+      Object.keys(THEMES).map((t) => h('button', {
+        type: 'button', class: 'sh-sw', role: 'radio', 'aria-checked': String(t === opt.theme), 'aria-label': THEME_NAMES[t], dataset: { theme: t },
+        style: { '--sw1': THEMES[t][0], '--sw2': THEMES[t][1] },
+        onclick: () => {
+          opt.theme = t; remember();
+          swatches.querySelectorAll('.sh-sw').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.theme === t)));
+          refresh();
+        },
+      }, h('span', { class: 'sh-sw-dot', 'aria-hidden': 'true' }), h('span', { class: 'sh-sw-name' }, THEME_NAMES[t]))));
+
+    /* ---- 格式 ---- */
+    const formatSeg = ui.seg(FORMATS.map((f) => ({ value: f.value, label: `${f.label} ${f.hint}` })), opt.format, (v) => { opt.format = v; remember(); fit(); drawItems(); refresh(); }, { small: true });
+    formatSeg.classList.add('sh-format');
+
+    /* ---- 內容與文字: which items, ✓ for the done ones, her line, the QR code ---- */
+    const itemsBox = h('div', { class: 'sh-items' });
+    const fitNote = h('p', { class: 'small sh-fit', hidden: true, role: 'status' });
+    const countTag = h('span', { class: 'tag primary num sh-count' });
+    function drawItems() {
+      if (!items.length) return;
+      itemsBox.innerHTML = '';
+      countTag.textContent = `已選 ${picked.length}／${maxN()}`;
+      items.forEach((it, i) => {
+        const on = picked.includes(i);
+        const cb = h('input', {
+          type: 'checkbox', checked: on, disabled: !on && picked.length >= maxN(),
+          onchange: () => { ownPick = true; picked = cb.checked ? [...picked, i] : picked.filter((x) => x !== i); drawItems(); refresh(); },
+        });
+        itemsBox.append(h('label', { class: `check-row sh-item${on ? ' on' : ''}` }, cb,
+          h('span', { class: 'sh-item-text' }, it.warn ? '⚠️ ' : '', it.text),
+          hasDone && typeof it.done === 'boolean' ? h('span', { class: `tag ${it.done ? 'ok' : ''} sh-item-done` }, it.done ? '已完成' : '還沒') : null));
+      });
+    }
+    const switchRow = (label, sub, checked, onChange, cls = '') => {
+      const sw = h('input', { type: 'checkbox', class: 'switch', checked, onchange: (e) => onChange(e.target.checked) });
+      return h('label', { class: `row gap switch-row sh-switch ${cls}` }, h('span', { class: 'grow' }, h('span', { class: 'bold small' }, label), sub ? h('span', { class: 'tiny muted', style: { display: 'block' } }, sub) : null), sw);
+    };
+    let noteT = 0;
+    const noteIn = h('input', {
+      class: 'input sh-note', maxlength: 24, placeholder: '例如：老公記得陪我去產檢！', 'aria-label': '加一句話（選填，最多 24 個字）',
+      oninput: () => { clearTimeout(noteT); noteT = setTimeout(() => { opt.note = noteIn.value.trim(); fit(); drawItems(); refresh(); }, 350); },
+    });
+    const priv = ensure(store.state).privacy;
+    const babyCard = p.spec && (p.kind === 'baby-age' || p.kind === 'birth' || p.kind === 'milestone' || (p.kind || '').startsWith('custom'));
+    const reopen = () => { sheet.close(); setTimeout(() => open({ ...payload, spec: null }), 240); }; // the card is built again with the new choice
+    const content = h('div', { class: 'sh-content', id: `sh-content-${Date.now()}` },
+      items.length ? h('div', { class: 'sh-sec-head' }, h('span', { class: 'bold small' }, '放進卡片的項目'), countTag) : null,
+      items.length ? fitNote : null,
+      items.length ? itemsBox : null,
+      hasDone ? switchRow('標示已完成 ✓', '做到的項目打勾，還沒做的是空心圓', opt.checks, (v) => { opt.checks = v; refresh(); }, 'sh-sw-checks') : null,
+      ui.field('加一句話（選填）', noteIn),
+      switchRow('放 QR code', '朋友掃描就能免費下載，連結含你的邀請碼', opt.qr, (v) => { opt.qr = v; remember(); refresh(); }, 'sh-sw-qr'),
+      babyCard ? switchRow('顯示寶寶名字', null, priv.showName, (v) => { store.update((s) => { ensure(s).privacy.showName = v; }); reopen(); }, 'sh-sw-name') : null,
+      babyCard && store.baby() && store.baby().photo ? switchRow('顯示寶寶照片', null, priv.showPhoto, (v) => { store.update((s) => { ensure(s).privacy.showPhoto = v; }); reopen(); }, 'sh-sw-photo') : null);
+    const open0 = items.length > 0; // a list: show the choice of items right away
+    const contentBtn = h('button', {
+      type: 'button', class: 'sh-toggle', 'aria-expanded': String(open0), 'aria-controls': content.id,
+      onclick: () => { const o = content.hidden; content.hidden = !o; contentBtn.setAttribute('aria-expanded', String(o)); },
+    }, h('span', { class: 'grow' }, '✏️ 內容與文字'), h('span', { class: 'chev', 'aria-hidden': 'true' }, '▾'));
+    content.hidden = !open0;
+
+    /* ---- sending ---- */
     const act = async (ch) => {
       if (ch === 'line') { openUrl(`https://line.me/R/share?text=${enc(fullText('line'))}`); thanks(record('line', p.campaign)); return; }
       if (ch === 'fb') { openUrl(`https://www.facebook.com/sharer/sharer.php?u=${enc(link({ path: p.path, params: p.params, channel: 'facebook', campaign: p.campaign }))}&quote=${enc(p.text || '')}`); thanks(record('fb', p.campaign)); return; }
       if (ch === 'threads') { openUrl(`https://www.threads.net/intent/post?text=${enc(fullText('threads'))}`); thanks(record('threads', p.campaign)); return; }
       if (ch === 'copy') { const ok = await copyText(fullText('copy')); ui.toast(ok ? '已複製文字與連結' : '複製失敗，請長按選取'); if (ok) record('copy', p.campaign); return; }
+      if (ch === 'save') {
+        const blob = p.spec ? await getBlob() : null;
+        if (blob) { downloadBlob(blob, fileName(p.campaign, opt.format)); ui.toast('圖片存好了，可以傳到 LINE 群組或貼到限時動態'); }
+        return;
+      }
       if (ch === 'ig' || ch === 'more') {
         const blob = p.spec ? await getBlob() : null;
         const file = blob ? new File([blob], 'yijia-share.png', { type: 'image/png' }) : null;
@@ -328,7 +516,7 @@
           return;
         }
         if (ch === 'ig') { // desktop / no Web Share: download the card + copy caption
-          if (blob) downloadBlob(blob, `易家做媽媽-${p.campaign}.png`);
+          if (blob) downloadBlob(blob, fileName(p.campaign, opt.format));
           await copyText(fullText('instagram'));
           ui.toast('圖片已下載、文字已複製：打開 IG 限時動態選這張圖，加上「連結」貼紙貼上即可', { ms: 6000 });
           thanks(record('ig', p.campaign));
@@ -337,26 +525,31 @@
         await copyText(fullText('copy')); ui.toast('已複製文字與連結'); record('copy', p.campaign);
       }
     };
-    const chBtn = (id, label, iconHtml, cls) => h('button', { class: `sh-ch ${cls || ''}`, onclick: () => act(id), 'aria-label': `分享到${label}` },
-      h('span', { class: 'sh-ch-ico', html: iconHtml }), h('span', { class: 'sh-ch-l' }, label));
-    const priv = ensure(store.state).privacy;
-    const privRow = p.spec && (p.kind === 'baby-age' || p.kind === 'birth' || p.kind === 'milestone' || (p.kind || '').startsWith('custom')) ? h('div', { class: 'sh-priv' },
-      h('label', { class: 'check-row' }, h('input', { type: 'checkbox', checked: priv.showName, onchange: (e) => { store.update((s) => { ensure(s).privacy.showName = e.target.checked; }); sheet.close(); setTimeout(() => open({ ...payload, spec: null }), 240); } }), h('span', { class: 'small' }, '顯示寶寶名字')),
-      store.baby() && store.baby().photo ? h('label', { class: 'check-row' }, h('input', { type: 'checkbox', checked: priv.showPhoto, onchange: (e) => { store.update((s) => { ensure(s).privacy.showPhoto = e.target.checked; }); sheet.close(); setTimeout(() => open({ ...payload, spec: null }), 240); } }), h('span', { class: 'small' }, '放寶寶照片')) : null) : null;
+    const chBtn = (id, label, iconHtml, cls, short) => h('button', { class: `sh-ch ${cls || ''}`, onclick: () => act(id), 'aria-label': id === 'save' ? '存圖片' : `分享到${label}` },
+      h('span', { class: 'sh-ch-ico', html: iconHtml }), h('span', { class: 'sh-ch-l', 'aria-hidden': 'true' }, short || label));
+    const studio = p.spec ? h('div', { class: 'sh-studio' },
+      h('div', { class: 'sh-sec' }, h('div', { class: 'sh-sec-head' }, h('span', { class: 'bold small' }, '樣式')), swatches),
+      h('div', { class: 'sh-sec' }, h('div', { class: 'sh-sec-head' }, h('span', { class: 'bold small' }, '格式')), formatSeg),
+      h('div', { class: 'sh-sec' }, contentBtn, content)) : null;
+    const sendRow = h('div', { class: 'sh-grid sh-send', role: 'group', 'aria-label': '傳到' },
+      chBtn('line', 'LINE', ui.ICONS.line, 'sh-line'),
+      chBtn('ig', 'Instagram', ICON.ig, 'sh-ig', 'IG'),
+      chBtn('fb', 'Facebook', ICON.fb, 'sh-fb', 'FB'),
+      chBtn('threads', 'Threads', ICON.threads, 'sh-th'),
+      chBtn('copy', '複製連結', ICON.copy, '', '複製'),
+      p.spec ? chBtn('save', '存圖片', ICON.save, 'sh-save', '存圖片') : null,
+      chBtn('more', '更多', ICON.more, '', '更多'));
     const sheet = ui.sheet({
       title: p.sheetTitle || '分享',
       body: h('div', { class: 'sh-body' },
         preview,
-        privRow,
-        h('div', { class: 'sh-grid' },
-          chBtn('line', 'LINE', ui.ICONS.line, 'sh-line'),
-          chBtn('ig', 'Instagram', ICON.ig, 'sh-ig'),
-          chBtn('fb', 'Facebook', ICON.fb, 'sh-fb'),
-          chBtn('threads', 'Threads', ICON.threads, 'sh-th'),
-          chBtn('copy', '複製連結', ICON.copy, ''),
-          chBtn('more', '更多', ICON.more, '')),
+        studio,
+        p.spec ? h('p', { class: 'tiny muted center sh-hint' }, '想把這張圖傳到 LINE：按「更多」選 LINE，或先存圖片') : null,
         h('p', { class: 'tiny muted center' }, `連結含你的邀請碼 ${ensure(store.state).code}・分享可得好孕點數`)),
+      footer: sendRow,
     });
+    drawItems();
+    refresh();
     return sheet;
   }
 
@@ -615,7 +808,8 @@
     copyText, downloadBlob, CUSTOMS, REWARDS,
     // drawing pieces for cards with their own layout (家族週報)
     draw: {
-      FONT, THEMES, loadImg, wrap, fitLine, roundRect, paintFrame, paintFooter,
+      FONT, THEMES, THEME_NAMES, loadImg, wrap, fitLine, roundRect, paintFrame, paintFooter,
     },
+    FORMATS,
   };
 }());

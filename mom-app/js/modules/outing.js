@@ -337,6 +337,9 @@
       emoji: '🎒',
       kicker: `外出好幫手・${optsLabel(b)}`,
       lines: [`尿布 ${L.diapers} 片`, feedLine, `共 ${L.items.length} 項，已打包 ${done} 項`],
+      // 分享工作室: the summary first; each item (packed ✓, medicines never named) can be added
+      items: [{ text: `尿布 ${L.diapers} 片` }, { text: feedLine }, { text: `共 ${L.items.length} 項，已打包 ${done} 項` },
+        ...L.items.map((i) => ({ text: shareItemText(i), done: !!b.checked[i.id], extra: true }))],
       theme: 'purple',
       sheetTitle: '分享外出包清單',
     };

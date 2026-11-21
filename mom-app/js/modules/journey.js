@@ -329,6 +329,8 @@
         sheetTitle: `分享「${p.title}」清單`, title: `${p.title}：該做的事＋注意事項`, campaign: `journey-${p.id}`, path: 'journey', emoji: p.icon, kicker: `孕產路線圖・${p.range}`, theme: 'purple',
         text: `【${p.title}・${p.range}】\n✅ 該做的事：\n${p.todo.map((t) => `・${t.text}`).join('\n')}\n⚠️ 注意：${p.watch.slice(0, 3).join('；')}`,
         lines: p.todo.slice(0, 5).map((t) => t.text),
+        // 分享工作室: she picks what goes on the card (to-dos first, with ✓ for the done ones; 注意事項 to add)
+        items: [...p.todo.map((t) => ({ text: t.text, done: !!done[t.id] })), ...p.watch.map((x) => ({ text: x, warn: true, extra: true }))],
       }), { label: '分享這份清單給另一半／家人', cls: 'btn btn-sm btn-ghost btn-block' })) : null));
     return card;
   }

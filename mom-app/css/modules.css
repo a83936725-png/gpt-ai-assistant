@@ -3,6 +3,8 @@
 /* ---------- home ---------- */
 .greet { margin: 6px 2px 12px; gap: 10px; }
 .greet-hi { font-size: 20px; font-weight: 800; }
+/* the next sunrise or sunset next to the date; it moves to its own line as a whole on a narrow phone */
+.greet-sun { white-space: nowrap; margin-left: .3em; }
 .home-slot + .home-slot, .home-slot { margin-top: 12px; }
 
 .baby-hero {
@@ -288,20 +290,23 @@ body[data-screen="onboarding"] #view { padding-bottom: 40px; }
 .section-title a, .section-title button { min-height: 44px; display: inline-flex; align-items: center; padding: 0 4px; }
 .seg-sm button { min-height: 36px; }
 
-/* ---------- 夜間模式 (22:00–06:00): larger targets for one-handed night feeds ---------- */
-body.night .qt-ico { width: 52px; height: 52px; font-size: 27px; }
-body.night .qt-label { font-size: 16px; }
-body.night .qt-plus { min-width: 52px; height: 52px; bottom: -24px; font-size: 15px; }
-body.night .quick-row { row-gap: 34px; }
-body.night .active-timer .btn { min-height: 44px; padding: 0 18px; font-size: 15px; }
-body.night .at-seg button { min-height: 40px; }
-body.night .fab { width: 66px; height: 66px; }
+/* ---------- 深夜 (夜間模式 from 22:00 until just before sunrise): larger targets for one-handed night feeds.
+   Dark from sunset is body.night; the bigger buttons wait for the deep night, so an evening still looks like itself. */
+body.late .qt-ico { width: 52px; height: 52px; font-size: 27px; }
+body.late .qt-label { font-size: 16px; }
+body.late .qt-plus { min-width: 52px; height: 52px; bottom: -24px; font-size: 15px; }
+body.late .quick-row { row-gap: 34px; }
+body.late .active-timer .btn { min-height: 44px; padding: 0 18px; font-size: 15px; }
+body.late .at-seg button { min-height: 40px; }
+body.late .fab { width: 66px; height: 66px; }
+/* 我的 → 白天黑夜跟著: a compact place picker at the end of the row */
+.list-item .sun-place { width: auto; max-width: 46%; flex: none; min-height: 44px; padding: 8px 10px; font-size: 15px; }
 
 /* ---------- 自訂快速鍵 ---------- */
 .quick-edit-row { display: flex; justify-content: flex-end; margin-top: 22px; }
 .quick-edit-row .link-btn { min-height: 36px; padding: 0 4px; color: var(--c-text-2); font-weight: 500; }
 .quick-row + .quick-edit-row + .card, div:has(> .quick-edit-row) + .card { margin-top: 6px; }
-body.night .quick-edit-row { margin-top: 28px; }
+body.late .quick-edit-row { margin-top: 28px; }
 /* 滿月・百日・收涎・度晬 banner under the baby on 首頁 */
 .moment-line { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin: -4px 0 12px; padding: 8px 12px;
   border: 0; border-radius: var(--radius, 16px); background: linear-gradient(135deg, var(--c-accent-soft), var(--c-primary-soft));

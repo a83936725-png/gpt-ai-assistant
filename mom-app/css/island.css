@@ -137,6 +137,12 @@ body[data-screen="island"] #view { padding: 0; max-width: none; }
 
 /* season particles (HTML overlay) */
 .isl-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+/* 清晨 / 黃昏 (around sunrise and sunset, App.dayPhase): the sea takes the sky's colours at the top (gradients in the
+   map's <defs>); only the sea changes, so the name plates keep their contrast */
+.isl.dusk:not(.night) .m-sea-t { fill: url(#isl-sea-dusk); stroke: url(#isl-sea-dusk); }
+.isl.dusk.night .m-sea-t { fill: url(#isl-sea-dusk-n); stroke: url(#isl-sea-dusk-n); }
+.isl.dawn:not(.night) .m-sea-t { fill: url(#isl-sea-dawn); stroke: url(#isl-sea-dawn); }
+.isl.dawn.night .m-sea-t { fill: url(#isl-sea-dawn-n); stroke: url(#isl-sea-dawn-n); }
 .isl-fx i {
   position: absolute; display: block; width: 8px; height: 8px;
   animation-name: isl-fall; animation-timing-function: linear; animation-iteration-count: infinite;

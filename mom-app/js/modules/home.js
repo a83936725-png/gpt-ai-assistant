@@ -16,6 +16,26 @@
     lastQuickTap = { key, at: now }; return true;
   };
 
+  // the greeting follows the sun: 傍晚 comes with the season's own sunset, 深夜 lasts until the sky starts to light up
+  function greeting(now = new Date()) {
+    const hour = now.getHours();
+    const phase = App.dayPhase ? App.dayPhase(now) : (hour >= 22 || hour < 5 ? 'late' : 'day');
+    if (phase === 'late') return hour >= 22 || hour < 4 ? '夜深了，辛苦了' : '天還沒亮，辛苦了';
+    if (phase === 'dawn') return App.sun && now < App.sun(now).sunrise ? '天快亮了' : '早安';
+    if (phase === 'dusk') return '傍晚好';
+    if (phase === 'evening') return '晚安';
+    return hour < 11 ? '早安' : hour < 14 ? '午安' : '午後好';
+  }
+  // under the date: the next sunrise or sunset (nothing with the fixed clock)
+  function sunNote(now = new Date()) {
+    if (!App.sun || App.sunPlace() === 'clock') return null;
+    const s = App.sun(now);
+    if (now < s.sunrise) return { icon: '🌅', text: `日出 ${C.fmtTime(s.sunrise)}` };
+    if (now < s.sunset) return { icon: '🌇', text: `日落 ${C.fmtTime(s.sunset)}` };
+    return { icon: '🌅', text: `明早日出 ${C.fmtTime(App.sun(C.addDays(now, 1)).sunrise)}` };
+  }
+  App.greeting = greeting;
+
   const STAGES = [
     { value: 'prep', label: '備孕中', icon: '🌱' },
     { value: 'preg', label: '懷孕中', icon: '🤰' },
@@ -284,15 +304,17 @@
     render(el) {
       const stage = store.stage;
       const name = store.state.profile.momName;
-      const hour = new Date().getHours();
-      const greet = hour < 5 ? '夜深了，辛苦了' : hour < 11 ? '早安' : hour < 14 ? '午安' : hour < 18 ? '午後好' : '晚安';
+      const now = new Date();
+      const greet = greeting(now);
+      const sn = sunNote(now);
       const stageLabel = STAGES.find((s) => s.value === stage) || STAGES[2];
       const myHead = App.avatar && App.avatar.head(44);
       el.append(h('div', { class: 'greet row between' },
         h('div', { class: 'row' },
           myHead ? h('button', { class: 'greet-av', 'aria-label': '我的 Q 版角色', onclick: () => App.navigate('avatar') }, myHead) : null,
           h('div', null, h('div', { class: 'greet-hi' }, `${greet}${name ? `，${name}` : ''} `,
-            App.mascot && App.mascot.night() ? App.mascot.el({ mood: 'sleepy', size: 30, cls: 'greet-md' }) : h('span', { class: 'beat' }, '💜')), h('div', { class: 'tiny muted' }, C.fmtDateLong(new Date())))),
+            App.mascot && App.mascot.night() ? App.mascot.el({ mood: 'sleepy', size: 30, cls: 'greet-md' }) : h('span', { class: 'beat' }, '💜')), h('div', { class: 'tiny muted greet-date' }, C.fmtDateLong(now),
+            sn ? [' ', h('span', { class: 'greet-sun' }, h('span', { 'aria-hidden': 'true' }, sn.icon), ` ${sn.text}`)] : null))),
         h('a', { class: 'stage-pill', href: '#/me', title: '到「我的」切換階段' }, `${stageLabel.icon} ${stageLabel.label}${store.state.profile.pregnantToo && stage === 'baby' ? '＋懷孕' : ''}`)));
       if (App.livePill) el.append(App.livePill('home-live'));
       // a save that could not be kept: the warning goes right under the greeting, above everything else

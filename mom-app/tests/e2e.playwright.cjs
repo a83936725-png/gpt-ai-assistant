@@ -207,11 +207,15 @@ const ok = (name, cond, info = '') => { results.push({ name, pass: !!cond, info 
 
   // night mode
   await go(p, 'home');
-  await S(p, () => { App.isNight = () => true; App.applyTheme(); });
-  const night = await S(p, () => ({ cls: document.body.classList.contains('night'), theme: document.documentElement.dataset.theme, plus: document.querySelector('.qt-plus').getBoundingClientRect().width }));
-  ok('夜間模式: dark + bigger ＋ (52px)', night.cls && night.theme === 'dark' && night.plus >= 52, JSON.stringify(night));
+  // after sunset: dark; 深夜 (22:00 until just before sunrise): dark + bigger ＋ (tests/daynight has the real sun)
+  await S(p, () => { App.isNight = () => true; App.isLate = () => false; App.applyTheme(); });
+  const eve = await S(p, () => ({ cls: document.body.classList.contains('night'), late: document.body.classList.contains('late'), theme: document.documentElement.dataset.theme, plus: document.querySelector('.qt-plus').getBoundingClientRect().height }));
+  ok('夜間模式 after sunset: dark, the ＋ keeps its 44px', eve.cls && !eve.late && eve.theme === 'dark' && Math.round(eve.plus) === 44, JSON.stringify(eve));
+  await S(p, () => { App.isLate = () => true; App.applyTheme(); });
+  const night = await S(p, () => ({ cls: document.body.classList.contains('night'), late: document.body.classList.contains('late'), theme: document.documentElement.dataset.theme, plus: document.querySelector('.qt-plus').getBoundingClientRect().height }));
+  ok('夜間模式 深夜: dark + bigger ＋ (52px)', night.cls && night.late && night.theme === 'dark' && Math.round(night.plus) === 52, JSON.stringify(night));
   await p.screenshot({ path: `${SHOT}home-night.png` });
-  await S(p, () => { App.isNight = () => false; App.applyTheme(); });
+  await S(p, () => { App.isNight = () => false; App.isLate = () => false; App.applyTheme(); });
 
   // export → merge into a fresh device
   await go(p, 'me');

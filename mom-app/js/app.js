@@ -152,18 +152,46 @@
   App.updateTickers = updateTickers;
   setInterval(updateTickers, 1000);
 
-  /* ---------- theme ---------- */
-  // 夜間模式：22:00–06:00 自動深色＋按鈕放大（給半夜單手餵奶用）。手動選「淺色」時不強制變暗。
-  App.isNight = (d = new Date()) => d.getHours() >= 22 || d.getHours() < 6;
+  /* ---------- theme: day and night follow the sun ---------- */
+  // 夜間模式：日落後自動深色、日出後變亮（地方在「我的 → 白天黑夜跟著」選，預設北部）；深夜（22:00 到天快亮）
+  // 按鈕再放大，給半夜單手餵奶用。手機不在台灣時區、又沒選過地方時，用固定時鐘（6 點天亮、18 點天黑）。
+  // 手動選「淺色」時不強制變暗。
+  App.inTaiwanTime = () => {
+    try {
+      const z = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (z) return z === 'Asia/Taipei' || z === 'ROC';
+    } catch (e) { /* an old browser: go by the offset */ }
+    return new Date().getTimezoneOffset() === -480;
+  };
+  App.sunPlace = () => {
+    const p = App.store.state.settings.sunPlace;
+    if (p && Core.SUN_PLACES[p]) return p;
+    return App.inTaiwanTime() ? 'north' : 'clock';
+  };
+  App.sun = (d = new Date()) => Core.sunTimes(d, App.sunPlace());
+  App.dayPhase = (d = new Date()) => Core.dayPhase(d, App.sunPlace());
+  App.isNight = (d = new Date()) => Core.isDark(d, App.sunPlace());
+  App.isLate = (d = new Date()) => App.dayPhase(d) === 'late';
+  let lastSunKey = null;
   App.applyTheme = () => {
     const { theme, nightMode } = App.store.state.settings;
     const night = nightMode !== false && App.isNight();
+    const phase = App.dayPhase();
     document.body.classList.toggle('night', night);
+    document.body.classList.toggle('late', night && App.isLate());
+    document.body.dataset.phase = phase;
     const t = night && theme !== 'light' ? 'dark' : theme;
     if (t === 'auto') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', t);
+    // at sunrise, sunset and the other turns of the day, 首頁's greeting and sun line follow by themselves
+    // (only while 首頁 is showing and no sheet is open; the scroll stays where it is)
+    const key = `${phase}:${Core.isDark(new Date(), App.sunPlace()) ? 1 : 0}`;
+    if (lastSunKey && key !== lastSunKey && App.homeRefresh) App.homeRefresh();
+    lastSunKey = key;
   };
   setInterval(() => App.applyTheme(), 60 * 1000);
+  // back on the screen after the phone was locked: the right light at once, not up to a minute later
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') App.applyTheme(); });
 
   /* ---------- a save that could not be kept: never silent ---------- */
   let lastWarn = 0;

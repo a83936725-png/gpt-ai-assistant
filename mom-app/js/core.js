@@ -238,12 +238,67 @@
   const sum = (arr, f = (x) => x) => arr.reduce((a, b) => a + (Number(f(b)) || 0), 0);
   const groupBy = (arr, f) => arr.reduce((acc, x) => { const k = f(x); (acc[k] = acc[k] || []).push(x); return acc; }, {});
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+  /* ---------- the sun: real sunrise and sunset of the day (NOAA solar equations, within about 2 minutes of the
+   * 中央氣象署 table), so day and night follow the seasons instead of a fixed clock. Every place is in Taiwan, so the
+   * day and the hour are read in Taiwan time (UTC+8, no daylight saving) whatever the phone's time zone is;
+   * 'clock' is the fixed 06:00 / 18:00 of the phone's own clock. ---------- */
+  const TW = 8 * HOUR;
+  const SUN_PLACES = {
+    north: { label: '北部（臺北）', lat: 25.04, lon: 121.51 },
+    central: { label: '中部（臺中）', lat: 24.15, lon: 120.68 },
+    south: { label: '南部（高雄）', lat: 22.63, lon: 120.30 },
+    east: { label: '東部（花蓮）', lat: 23.98, lon: 121.60 },
+    penghu: { label: '澎湖', lat: 23.57, lon: 119.58 },
+    kinmen: { label: '金門', lat: 24.43, lon: 118.32 },
+    matsu: { label: '馬祖', lat: 26.16, lon: 119.95 },
+    clock: { label: '固定時鐘', clock: true }, // 6 點天亮・18 點天黑, the same all year
+  };
+  // { sunrise, sunset } (Dates) for the local calendar day of `date`
+  const sunTimes = (date = new Date(), place = 'north') => {
+    const P = SUN_PLACES[place] || SUN_PLACES.north;
+    const d = new Date(date);
+    if (P.clock) {
+      const a = new Date(d); a.setHours(6, 0, 0, 0);
+      const b = new Date(d); b.setHours(18, 0, 0, 0);
+      return { sunrise: a, sunset: b, clock: true };
+    }
+    const tw = new Date(d.getTime() + TW); // read with getUTC*: the calendar day in Taiwan
+    const y = tw.getUTCFullYear();
+    const base = Date.UTC(y, tw.getUTCMonth(), tw.getUTCDate());
+    const doy = Math.round((base - Date.UTC(y, 0, 1)) / DAY) + 1;
+    const days = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 366 : 365;
+    const g = ((2 * Math.PI) / days) * (doy - 1 - 1 / 3); // fractional year at about local noon in Taiwan
+    const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+    const decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g)
+      + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+    const R = Math.PI / 180; const lat = P.lat * R;
+    const cosHa = Math.cos(90.833 * R) / (Math.cos(lat) * Math.cos(decl)) - Math.tan(lat) * Math.tan(decl);
+    const ha = Math.acos(clamp(cosHa, -1, 1)) / R;
+    // minutes after UTC midnight of that date (sunrise in Taiwan falls on the UTC day before: a negative number)
+    const rise = 720 - 4 * (P.lon + ha) - eqt;
+    const set = 720 - 4 * (P.lon - ha) - eqt;
+    return { sunrise: new Date(base + rise * MIN), sunset: new Date(base + set * MIN) };
+  };
+  // 清晨 dawn (30 min before sunrise – 45 min after)・白天 day・黃昏 dusk (45 min before sunset – 25 min after)・
+  // 晚上 evening・深夜 late (22:00 until dawn)
+  const dayPhase = (date = new Date(), place = 'north') => {
+    const d = new Date(date); const t = d.getTime();
+    const { sunrise, sunset, clock } = sunTimes(d, place);
+    const hr = clock ? d.getHours() : new Date(t + TW).getUTCHours();
+    if (t < sunrise.getTime() - 30 * MIN) return 'late';
+    if (t < sunrise.getTime() + 45 * MIN) return 'dawn';
+    if (t < sunset.getTime() - 45 * MIN) return 'day';
+    if (t < sunset.getTime() + 25 * MIN) return 'dusk';
+    return hr >= 22 ? 'late' : 'evening';
+  };
+  const isDark = (date = new Date(), place = 'north') => { const { sunrise, sunset } = sunTimes(date, place); const t = new Date(date).getTime(); return t >= sunset.getTime() || t < sunrise.getTime(); };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
 
   return {
-    MIN, HOUR, DAY, WEEKDAYS,
+    MIN, HOUR, DAY, WEEKDAYS, SUN_PLACES, sunTimes, dayPhase, isDark,
     pad, uid, dateKey, parseKey, startOfDay, addDays, addMonths, diffDays,
     fmtDate, fmtDateLong, fmtTime, fmtDuration, fmtClock, ago, toLocalInput, fromLocalInput,
     babyAge, eddFromLmp, lmpFromEdd, gestAge,

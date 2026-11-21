@@ -890,7 +890,8 @@
   /* =========================================================
    * Scene
    * ========================================================= */
-  const ST = { night: null, season: null, view: null, size: null };
+  // night / glow follow the sun on every visit until the 白天／夜晚 button is pressed (then the choice stays, this visit)
+  const ST = { night: null, glow: null, manual: false, season: null, view: null, size: null };
   function defaultSeason() {
     const m = new Date().getMonth() + 1;
     if (m >= 3 && m <= 5) return 'spring';
@@ -898,7 +899,16 @@
     if (m >= 9 && m <= 11) return 'autumn';
     return 'winter';
   }
-  function defaultNight() { const hr = new Date().getHours(); return hr >= 18 || hr < 6; }
+  function defaultNight() {
+    if (App.isNight) return App.isNight();
+    const hr = new Date().getHours(); return hr >= 18 || hr < 6;
+  }
+  // 清晨 and 黃昏: around sunrise and sunset the sea takes the sky's colours (see the sea gradients in renderIsland)
+  function defaultGlow() {
+    const ph = App.dayPhase ? App.dayPhase() : 'day';
+    return ph === 'dawn' || ph === 'dusk' ? ph : null;
+  }
+  const GLOW_LABEL = { dawn: '清晨', dusk: '黃昏' };
 
   // lightweight stand-in for a building still under the clouds
   function mysteryTile(c) {
@@ -1527,7 +1537,7 @@
   function renderIsland(el, params) {
     if (cleanup) { cleanup(); cleanup = null; }
     injectCSS();
-    if (ST.night === null) ST.night = defaultNight();
+    if (!ST.manual) { ST.night = defaultNight(); ST.glow = defaultGlow(); }
     if (!ST.season) ST.season = defaultSeason();
     const firstVisit = seenBaseline();
     const fresh = freshIslands();
@@ -1541,7 +1551,15 @@
     const grad = (id, o1, o2) => sv('linearGradient', { id, x1: 0, x2: 1, y1: 0, y2: 0 },
       sv('stop', { offset: 0, 'stop-color': '#fff6c2', 'stop-opacity': o1 }),
       sv('stop', { offset: 1, 'stop-color': '#fff6c2', 'stop-opacity': o2 }));
-    const defs = sv('defs', null, grad('isl-beam-r', 0.9, 0), grad('isl-beam-l', 0, 0.9));
+    // 清晨 / 黃昏: the sky's colours on the top half of the sea, fading into the usual sea (in the map's own
+    // coordinates, so the moon's crescent cut-out matches the sea behind it)
+    const seaGrad = (id, stops) => sv('linearGradient', { id, gradientUnits: 'userSpaceOnUse', x1: 0, x2: 0, y1: 0, y2: '100%' },
+      ...stops.map(([o, c]) => sv('stop', { offset: o, 'stop-color': c })));
+    const defs = sv('defs', null, grad('isl-beam-r', 0.9, 0), grad('isl-beam-l', 0, 0.9),
+      seaGrad('isl-sea-dusk', [[0, '#f4b088'], [0.3, '#ebb5c0'], [0.72, MATS.sea]]),
+      seaGrad('isl-sea-dusk-n', [[0, '#71405f'], [0.36, '#3c3459'], [0.8, NIGHT_OVERRIDE.sea]]),
+      seaGrad('isl-sea-dawn', [[0, '#f7d9a6'], [0.28, '#f1c6cc'], [0.68, MATS.sea]]),
+      seaGrad('isl-sea-dawn-n', [[0, '#7c5b80'], [0.34, '#42426c'], [0.8, NIGHT_OVERRIDE.sea]]));
     svg.append(defs, sea, stars, built.world);
 
     const fx = h('div', { class: 'isl-fx', 'aria-hidden': 'true' });
@@ -1552,7 +1570,7 @@
     const tickerText = h('span', { class: 'isl-ticker-text' });
     const ticker = h('button', { class: 'isl-ticker', 'aria-label': '下一則好孕小報' }, h('span', { class: 'isl-ticker-tag' }, '好孕小報'), tickerText);
     const coach = h('div', { class: 'isl-coach', hidden: true });
-    const root = h('div', { class: `isl s-${ST.season}${ST.night ? ' night' : ''}` }, svg, fx, hud, ctrl, strip, ticker, coach, bubble);
+    const root = h('div', { class: `isl s-${ST.season}${ST.night ? ' night' : ''}${ST.glow ? ` ${ST.glow}` : ''}` }, svg, fx, hud, ctrl, strip, ticker, coach, bubble);
     // 島上的媽媽: a chip under the HUD, and other moms' chibis beside each island's name plate
     let socChip = null;
     el.append(root);
@@ -1791,7 +1809,11 @@
         ctrlBtn(I.map, '全景', () => animateTo(computeFit())),
         ctrlBtn(I.list, '清單', () => openList(goSpot)),
         ctrlBtn(I.star, '旅程', () => openJourney(goSpot)),
-        ctrlBtn(ST.night ? I.moon : I.sun, ST.night ? '夜晚' : '白天', () => { ST.night = !ST.night; root.classList.toggle('night', ST.night); makeStars(); renderCtrl(); }),
+        ctrlBtn(ST.night ? I.moon : I.sun, GLOW_LABEL[ST.glow] || (ST.night ? '夜晚' : '白天'), () => {
+          ST.night = !ST.night; ST.manual = true;
+          if (ST.glow) { root.classList.remove(ST.glow); ST.glow = null; }
+          root.classList.toggle('night', ST.night); makeStars(); renderCtrl();
+        }),
         ctrlBtn(SEASON_LABEL[ST.season].icon, SEASON_LABEL[ST.season].label, () => {
           const i = SEASONS.indexOf(ST.season);
           root.classList.remove(`s-${ST.season}`);

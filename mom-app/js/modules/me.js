@@ -644,6 +644,23 @@
         h('p', { class: 'tiny faint mt' }, '紀錄只存在這台手機。家人之間可以「匯出 → 用 LINE 傳檔 → 匯入合併」來同步；全家手機即時同步正在準備中。')));
 
       el.append(h('div', { class: 'section-title jump-target', id: 'me-settings' }, '設定'));
+      // 夜間模式 and 白天黑夜跟著: today's sunrise and sunset for the chosen place (the texts update when it changes)
+      const nightSub = h('div', { class: 'li-sub' });
+      const sunSub = h('div', { class: 'li-sub sun-sub' });
+      const sunTexts = () => {
+        const place = App.sunPlace();
+        if (place === 'clock') {
+          nightSub.textContent = '18 點後自動變暗、6 點後變亮；深夜按鈕再放大，半夜單手好按';
+          sunSub.textContent = !store.state.settings.sunPlace && !App.inTaiwanTime()
+            ? '手機不在台灣時區，先用固定時鐘：6 點天亮・18 點天黑' : '固定 6 點天亮・18 點天黑，不跟季節變';
+          return;
+        }
+        const t = App.sun();
+        const nw = (x) => h('span', { style: { whiteSpace: 'nowrap' } }, x); // a time never breaks away from its word
+        nightSub.textContent = '日落後自動變暗、日出後變亮；深夜按鈕再放大，半夜單手好按';
+        sunSub.replaceChildren('今天', nw(`日出 ${C.fmtTime(t.sunrise)}`), '・', nw(`日落 ${C.fmtTime(t.sunset)}`), '，跟著季節變');
+      };
+      sunTexts();
       el.append(h('div', { class: 'list' },
         App.screens.invite ? h('a', { class: 'list-item', href: '#/invite' }, h('span', { class: 'li-icon' }, '💌'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '邀請好友・分享卡'), h('div', { class: 'li-sub' }, App.gift && App.gift.ready() ? `好孕點數 ${(s.share && s.share.points) || 0}・會員福利：見面禮、邀請禮、點數換好禮` : `好孕點數 ${(s.share && s.share.points) || 0}・邀請碼 ${(s.share && s.share.code) || ''}`)), h('span', { class: 'li-right', html: ui.ICONS.chevron })) : null,
         App.groupbuy ? App.groupbuy.listItem() : null, // 團購揪團 (only while a group-buy is on, or she is in a team)
@@ -677,11 +694,17 @@
         h('div', { class: 'list-item' }, h('span', { class: 'li-icon' }, '🌓'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '外觀')),
           ui.seg([{ value: 'auto', label: '自動' }, { value: 'light', label: '淺色' }, { value: 'dark', label: '深色' }], s.settings.theme, (v) => { store.update((st) => { st.settings.theme = v; }); App.applyTheme(); }, { small: true })),
         h('label', { class: 'list-item' }, h('span', { class: 'li-icon' }, '🌙'),
-          h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '夜間模式'), h('div', { class: 'li-sub' }, '22:00–06:00 自動變暗、按鈕放大，半夜單手好按')),
+          h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '夜間模式'), nightSub),
           h('input', {
             type: 'checkbox', class: 'switch', checked: s.settings.nightMode !== false, 'aria-label': '夜間模式',
             onchange: (e) => { store.update((st) => { st.settings.nightMode = e.target.checked; }); App.applyTheme(); },
-          }))));
+          })),
+        h('label', { class: 'list-item' }, h('span', { class: 'li-icon' }, '🌅'),
+          h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '白天黑夜跟著'), sunSub),
+          h('select', {
+            class: 'input sun-place', 'aria-label': '白天黑夜跟著哪裡的日出日落',
+            onchange: (e) => { store.update((st) => { st.settings.sunPlace = e.target.value; }); App.applyTheme(); sunTexts(); },
+          }, Object.entries(C.SUN_PLACES).map(([v, p]) => h('option', { value: v, selected: v === App.sunPlace() }, p.label))))));
 
       el.append(h('div', { class: 'section-title jump-target', id: 'me-data' }, '資料'));
       el.append(h('div', { class: 'grid-2' },
@@ -697,7 +720,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.8.4`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.8.5`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
         App.screens.privacy ? h('button', { class: 'btn btn-ghost btn-sm center-btn', onclick: () => App.navigate('privacy') }, '🔒 隱私權政策與使用條款') : null,
         h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理（每則都附來源，可點開查看），不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。紀錄只儲存在你的裝置上；只有你開啟「島上的媽媽」、同週好孕圈或祝福牆時，才會送出角色樣子、名稱、預產週或出生月份，以及你的回答和祝福。')));

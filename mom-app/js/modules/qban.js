@@ -87,7 +87,8 @@
   // which face fits an empty page, from its emoji
   const EMPTY_MOOD = { '🌙': 'sleepy', '😴': 'sleepy', '💤': 'sleepy', '🔍': 'think', '🤔': 'think', '🫶': 'love', '💌': 'love', '⚠️': 'oops' };
   const moodFor = (icon) => EMPTY_MOOD[icon] || 'happy';
-  const night = (d = new Date()) => { const hr = d.getHours(); return hr >= 22 || hr < 5; };
+  // sleepy late at night: from 22:00 until the sky starts to light up (follows the season's sunrise, see App.dayPhase)
+  const night = (d = new Date()) => (App.dayPhase ? App.dayPhase(d) === 'late' : d.getHours() >= 22 || d.getHours() < 5);
   // a big moment: 小滴 hops up by the corner for a moment and cheers (the toast next to it carries the words)
   const CHEERS = ['太棒了！', '好厲害！', '恭喜你！', '耶～！'];
   let popT = 0;

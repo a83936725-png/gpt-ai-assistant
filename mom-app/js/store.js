@@ -51,7 +51,7 @@
     daily: { log: {} }, // 今日小任務 {'YYYY-MM-DD': {water: n}}
     reminders: defaultReminders(),
     active: {}, // running timers: { feed: {start, side}, sleep: {start}, pump: {start} }
-    settings: { theme: 'auto', notify: false, nightMode: true, quickTiles: null, lastBackupAt: null, backupSnoozeUntil: null, a2hsDismissed: null }, // quickTiles null = default set; lastBackupAt = last 匯出備份; the other two: 首頁 safety cards
+    settings: { theme: 'auto', notify: false, nightMode: true, sunPlace: null, quickTiles: null, lastBackupAt: null, backupSnoozeUntil: null, a2hsDismissed: null }, // sunPlace null = 北部, or 固定時鐘 when the phone is not on Taiwan time; quickTiles null = default set; lastBackupAt = last 匯出備份; the other two: 首頁 safety cards
   });
   function defaultReminders() {
     return [

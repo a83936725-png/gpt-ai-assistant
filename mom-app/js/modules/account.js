@@ -450,11 +450,19 @@
           let sent = null; // the address a sign-up code went to
           const codeUI = codeField(() => sendSignupCode(true));
           const codeWrap = h('div', { class: 'login-code-wrap', hidden: true }, ui.field('驗證碼', codeUI.el));
-          acct.addEventListener('input', () => { if (sent && acct.value.trim() !== sent) { sent = null; codeWrap.hidden = true; submit.textContent = '註冊並登入'; } });
+          // 步驟條: 填寫資料 → 輸入驗證碼 → 完成註冊, while the kind of account she types gets a code
+          const SIGN_STEPS = ['填寫資料', '輸入驗證碼', '完成註冊'];
+          const stepsBox = mode === 'register' && (canVerify(cfg, 'email') || canVerify(cfg, 'phone')) ? h('div', { class: 'login-steps' }, ui.steps(SIGN_STEPS, 0)) : null;
+          const showSteps = () => { if (stepsBox) stepsBox.hidden = !!acct.value.trim() && !canVerify(cfg, kindOf(acct.value.trim())); };
+          acct.addEventListener('input', () => {
+            if (sent && acct.value.trim() !== sent) { sent = null; codeWrap.hidden = true; submit.textContent = '註冊並登入'; if (stepsBox) stepsBox.replaceChildren(ui.steps(SIGN_STEPS, 0)); }
+            showSteps();
+          });
           async function sendSignupCode(again) {
             const r = await call('POST', 'auth/code', { account: acct.value, purpose: 'register', consent: App.privacy ? App.privacy.VERSION : '' });
             sent = acct.value.trim();
             codeWrap.hidden = false;
+            if (stepsBox && !stepsBox.querySelector('li.now:nth-child(2)')) stepsBox.replaceChildren(ui.steps(SIGN_STEPS, 1));
             codeUI.hint.textContent = `已寄出 6 位數驗證碼到 ${mask(acct.value)}，10 分鐘內有效${r.devCode ? `（測試環境：${r.devCode}）` : ''}`;
             codeUI.cool(60);
             submit.textContent = '確認驗證碼並註冊';
@@ -467,6 +475,7 @@
           const mkt = mode === 'register' && App.privacy ? App.privacy.box({ label: MKT_LABEL(), required: false }) : null;
           const form = h('form', { class: 'login-form', novalidate: true },
             ui.seg([{ value: 'login', label: '登入' }, { value: 'register', label: '註冊' }], mode, (v) => { mode = v; App.refresh(); }),
+            stepsBox,
             ui.field('帳號', acct),
             ui.field('密碼', h('div', { class: 'login-pw' }, pw, showPw)),
             forgot,

@@ -298,6 +298,14 @@
     return wrap;
   }
 
+  // 步驟條: where she is in a flow of a few steps (done ✓, this one ringed, the rest waiting)
+  function steps(labels, current) {
+    return h('ol', { class: 'steps', 'aria-label': `第 ${Math.min(current, labels.length - 1) + 1} 步，共 ${labels.length} 步` },
+      labels.map((l, i) => h('li', { class: i < current ? 'done' : i === current ? 'now' : '', 'aria-current': i === current ? 'step' : null }, // eslint-disable-line no-nested-ternary
+        h('span', { class: 'steps-dot', 'aria-hidden': 'true' }, i < current ? '✓' : String(i + 1)),
+        h('span', { class: 'steps-label' }, l))));
+  }
+
   function stepper({ value = 0, step = 10, min = 0, max = 9999, unit = '', onChange } = {}) {
     let v = Number(value) || 0;
     const input = h('input', { type: 'number', inputmode: 'decimal', value: v, min, max, step, class: 'stepper-input' });
@@ -367,6 +375,6 @@
   App.h = h;
   App.s = s;
   App.ui = {
-    h, s, append, sheet, toast, haptic, celebrate, burst, reducedMotion, confirm, field, seg, stepper, empty, card, progress, ICONS, icon,
+    h, s, append, sheet, toast, haptic, celebrate, burst, reducedMotion, confirm, field, seg, steps, stepper, empty, card, progress, ICONS, icon,
   };
 }());

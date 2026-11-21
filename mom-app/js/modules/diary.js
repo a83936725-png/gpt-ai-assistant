@@ -40,7 +40,12 @@
         }, '✕');
         wrap.append(h('div', { class: 'dy-thumb-wrap' }, t, x));
       });
-      if (ids.length < 6) wrap.append(h('button', { type: 'button', class: 'dy-add-photo', onclick: () => file.click() }, h('span', null, '＋'), h('small', null, '超音波照片')));
+      wrap.classList.toggle('no-photos', !ids.length);
+      if (!ids.length) {
+        wrap.append(h('button', { type: 'button', class: 'dy-drop', onclick: () => file.click() },
+          h('span', { class: 'dy-drop-ico', 'aria-hidden': 'true' }, '📷'), h('b', null, '加入超音波或產檢照片'),
+          h('span', { class: 'tiny' }, '最多 6 張')));
+      } else if (ids.length < 6) wrap.append(h('button', { type: 'button', class: 'dy-add-photo', 'aria-label': '再加一張照片', onclick: () => file.click() }, h('span', null, '＋'), h('small', null, '超音波照片')));
     };
     file.addEventListener('change', async () => {
       const files = [...(file.files || [])].slice(0, 6 - ids.length);

@@ -1,8 +1,8 @@
 /* Offline cache for 易家做媽媽 (network-first for HTML so updates show up, cache-first for assets). */
-const CACHE = 'yijia-mom-v22';
+const CACHE = 'yijia-mom-v23';
 const ASSETS = [
   './', 'index.html', 'config.js', 'manifest.webmanifest',
-  'css/base.css', 'css/modules.css', 'css/island.css', 'css/health.css', 'css/pregnancy.css', 'css/journey.css', 'css/monitor.css', 'css/outing.css', 'css/search.css', 'css/extras.css', 'css/share.css', 'css/account.css', 'css/goods.css', 'css/diary.css', 'css/social.css', 'css/groupbuy.css', 'css/motion.css',
+  'css/base.css', 'css/modules.css', 'css/island.css', 'css/health.css', 'css/pregnancy.css', 'css/journey.css', 'css/monitor.css', 'css/outing.css', 'css/search.css', 'css/extras.css', 'css/share.css', 'css/account.css', 'css/goods.css', 'css/diary.css', 'css/social.css', 'css/groupbuy.css', 'css/components.css', 'css/motion.css',
   'js/core.js', 'js/vendor/qrcode.js', 'js/store.js', 'js/media.js', 'js/ui.js', 'js/app.js',
   'js/data/log-types.js', 'js/data/island-data.js', 'js/data/health-data.js', 'js/data/pregnancy-data.js', 'js/data/journey-data.js', 'js/data/outing-data.js', 'js/data/faq-data.js', 'js/data/extras-data.js', 'js/data/goods-data.js', 'js/data/sources-data.js',
   'js/modules/home.js', 'js/modules/babylog.js', 'js/modules/milk.js', 'js/modules/avatar.js', 'js/modules/island.js', 'js/modules/diary.js',

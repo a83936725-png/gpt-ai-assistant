@@ -316,7 +316,9 @@
         h('span', { class: 'gb-emoji', 'aria-hidden': 'true' }, team.status === 'done' ? '🎉' : (c.emoji || '🛒')),
         h('div', { class: 'grow' }, h('div', { class: 'small muted' }, teamName(team), demoTag(c)), h('div', { class: 'card-title' }, c.title))),
       priceRow(c),
-      progressBlock(team));
+      progressBlock(team),
+      // 步驟條: 開團 → 湊人數 → 成團 → 官網結帳 (a team that ran out of time has none)
+      team.status === 'failed' ? null : h('div', { class: 'gb-steps-now' }, ui.steps(['開團', '湊人數', '成團', '官網結帳'], team.status === 'done' ? (team.member ? 3 : 2) : 1)));
     el.append(head);
     const actions = h('div', { class: 'gb-actions' });
     if (team.status === 'done') {

@@ -455,6 +455,7 @@
 
   /* ================= onboarding ================= */
   let ob = { step: 0, stage: null };
+  const OB_STEPS = ['你的階段', '基本資料', '開始記錄'];
   App.screen('onboarding', {
     title: '歡迎',
     liveUpdate: false,
@@ -491,7 +492,7 @@
             h('button', { class: 'btn btn-ghost btn-block mt', onclick: () => { ob = { step: 0, stage: null }; seedDemo(); } }, '先看看範例資料'),
             App.screens.login ? h('button', { class: 'link-btn ob-login', onclick: () => App.navigate('login') }, '已有帳號？登入／註冊') : null));
         } else if (ob.step === 1) {
-          wrap.append(h('h2', { class: 'ob-q' }, '你現在是？'),
+          wrap.append(ui.steps(OB_STEPS, 0), h('h2', { class: 'ob-q' }, '你現在是？'),
             h('div', { class: 'stack' }, App.STAGES.map((st) => h('button', { class: 'ob-choice', onclick: () => go({ step: 2, stage: st.value }) },
               h('span', { class: 'ob-choice-ico' }, st.icon),
               h('span', null, h('b', null, st.label), h('br'), h('span', { class: 'small muted' }, { prep: '記錄經期、預測排卵、孕前準備', preg: '孕週、產檢、胎動與宮縮', baby: '餵奶、尿布、睡眠、成長與疫苗' }[st.value]))))),
@@ -528,7 +529,7 @@
               if (hepb.checked) s.vaccines[baby.id] = { ...(s.vaccines[baby.id] || {}), hepb1: baby.birthday };
             };
           }
-          wrap.append(h('h2', { class: 'ob-q' }, '基本資料'), ui.field('你的暱稱', name), fields,
+          wrap.append(ui.steps(OB_STEPS, 1), h('h2', { class: 'ob-q' }, '基本資料'), ui.field('你的暱稱', name), fields,
             h('button', { class: 'btn btn-primary btn-block mt', onclick: () => { store.update((s) => { s.profile.stage = ob.stage; s.profile.momName = name.value.trim(); collect(s); }); finish(); } }, '完成，開始使用'),
             h('button', { class: 'link-btn mt', onclick: () => go({ step: 1 }) }, '‹ 上一步'));
         }
@@ -536,6 +537,19 @@
       draw();
     },
   });
+
+  // 錨點導航: chips that jump to a section of a long screen (and light it up for a moment)
+  function jumpChips(items) {
+    return h('nav', { class: 'jump-chips', 'aria-label': '跳到' }, items.map(([id, label]) => h('button', {
+      type: 'button', class: 'jump-chip',
+      onclick: (e) => {
+        const t = document.getElementById(id); if (!t) return;
+        e.currentTarget.parentNode.querySelectorAll('.jump-chip').forEach((x) => x.classList.toggle('on', x === e.currentTarget));
+        t.scrollIntoView({ behavior: ui.reducedMotion && ui.reducedMotion() ? 'auto' : 'smooth', block: 'start' });
+        t.classList.remove('jump-flash'); void t.offsetWidth; t.classList.add('jump-flash'); // eslint-disable-line no-void
+      },
+    }, label)));
+  }
 
   /* ================= 我的 tab ================= */
   App.screen('me', {
@@ -545,6 +559,7 @@
       const p = s.profile;
       const stageLabel = App.STAGES.find((x) => x.value === p.stage) || App.STAGES[2];
       const alertCard = storageAlert(); if (alertCard) el.append(alertCard);
+      el.append(jumpChips([['me-babies', '寶寶'], ['me-family', '家人共享'], ['me-settings', '設定'], ['me-data', '資料與備份']]));
       if (App.account) el.append(App.account.card());
       el.append(h('section', { class: 'card me-card' },
         h('div', { class: 'row gap' },
@@ -572,7 +587,7 @@
           }),
           h('span', null, h('b', null, '同時懷孕中（二寶）'), h('br'), h('span', { class: 'tiny muted' }, '首頁和健康會同時顯示孕期與寶寶的內容'))) : null));
 
-      el.append(h('div', { class: 'section-title' }, h('span', null, '寶寶'), h('button', { onclick: () => editBaby() }, '＋ 新增')));
+      el.append(h('div', { class: 'section-title jump-target', id: 'me-babies' }, h('span', null, '寶寶'), h('button', { onclick: () => editBaby() }, '＋ 新增')));
       if (s.babies.length) {
         el.append(h('div', { class: 'list' }, s.babies.map((b) => h('button', { class: 'list-item', onclick: () => editBaby(b) },
           b.photo ? h('img', { src: b.photo, alt: '', class: 'li-icon li-photo' }) : h('span', { class: 'li-icon' }, b.avatar || '👶'),
@@ -581,7 +596,7 @@
           h('span', { class: 'li-right', html: ui.ICONS.chevron })))));
       } else el.append(h('p', { class: 'small muted' }, '還沒有寶寶資料。'));
 
-      el.append(h('div', { class: 'section-title' }, '家人共享'));
+      el.append(h('div', { class: 'section-title jump-target', id: 'me-family' }, '家人共享'));
       const memberSel = h('select', { class: 'input' }, ['媽媽', '爸爸', '阿嬤', '阿公', '外婆', '外公', '保母', '其他'].map((m) => h('option', { value: m, selected: m === p.member }, m)));
       memberSel.addEventListener('change', () => store.update((st) => { st.profile.member = memberSel.value; }));
       el.append(h('section', { class: 'card' },
@@ -599,7 +614,7 @@
         needsHomeScreen() ? h('p', { class: 'tiny faint' }, 'iPhone：把 App 加到主畫面（Safari「分享」→「加入主畫面」），7 天沒打開也不會被清掉紀錄。') : null,
         h('p', { class: 'tiny faint mt' }, '紀錄只存在這台手機。家人之間可以「匯出 → 用 LINE 傳檔 → 匯入合併」來同步；全家手機即時同步正在準備中。')));
 
-      el.append(h('div', { class: 'section-title' }, '設定'));
+      el.append(h('div', { class: 'section-title jump-target', id: 'me-settings' }, '設定'));
       el.append(h('div', { class: 'list' },
         App.screens.invite ? h('a', { class: 'list-item', href: '#/invite' }, h('span', { class: 'li-icon' }, '💌'), h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '邀請好友・分享卡'), h('div', { class: 'li-sub' }, App.gift && App.gift.ready() ? `好孕點數 ${(s.share && s.share.points) || 0}・會員福利：見面禮、邀請禮、點數換好禮` : `好孕點數 ${(s.share && s.share.points) || 0}・邀請碼 ${(s.share && s.share.code) || ''}`)), h('span', { class: 'li-right', html: ui.ICONS.chevron })) : null,
         App.groupbuy ? App.groupbuy.listItem() : null, // 團購揪團 (only while a group-buy is on, or she is in a team)
@@ -639,7 +654,7 @@
             onchange: (e) => { store.update((st) => { st.settings.nightMode = e.target.checked; }); App.applyTheme(); },
           }))));
 
-      el.append(h('div', { class: 'section-title' }, '資料'));
+      el.append(h('div', { class: 'section-title jump-target', id: 'me-data' }, '資料'));
       el.append(h('div', { class: 'grid-2' },
         h('button', {
           class: 'btn btn-ghost',
@@ -653,7 +668,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.8.0`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.8.1`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
         App.screens.privacy ? h('button', { class: 'btn btn-ghost btn-sm center-btn', onclick: () => App.navigate('privacy') }, '🔒 隱私權政策與使用條款') : null,
         h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理（每則都附來源，可點開查看），不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。紀錄只儲存在你的裝置上；只有你開啟「島上的媽媽」、同週好孕圈或祝福牆時，才會送出角色樣子、名稱、預產週或出生月份，以及你的回答和祝福。')));

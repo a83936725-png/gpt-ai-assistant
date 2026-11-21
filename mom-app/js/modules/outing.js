@@ -896,6 +896,7 @@
       const dow = now.getDay();
       const kicker = next ? relDay(next, now) : dow === 5 ? '明天週末' : '週末';
       const su = next && signupInfo(next, now);
+      if (next) el.dataset.personal = '1'; // her own plan: never folded away (首頁 in 坐月子)
       el.append(ui.card({ class: 'ot-home' },
         h('div', { class: 'card-title' }, '🎒 外出好幫手', h('span', { class: 'tag primary' }, kicker)),
         next

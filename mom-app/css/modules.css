@@ -310,3 +310,26 @@ body.night .quick-edit-row { margin-top: 28px; }
 .moment-line strong { color: var(--c-primary); font-size: 15px; margin-right: 6px; }
 .moment-line .moment-more { font-size: 12.5px; color: var(--c-text-2); white-space: nowrap; }
 .moment-line .chev { color: var(--c-text-2); font-size: 20px; flex: none; }
+
+/* ---------- 新手任務 (starter.js) ---------- */
+.st-home { display: flex; flex-direction: column; gap: 10px; }
+.st-home .card-title { margin: 0; display: flex; align-items: center; gap: 6px; }
+.st-x { flex: none; }
+.st-next { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--c-surface-2); }
+.st-next .grow { min-width: 0; }
+.st-go { flex: none; min-height: 40px; }
+.st-all { align-self: flex-start; }
+.st-list { display: flex; flex-direction: column; gap: 8px; }
+.st-row { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px; border-radius: 14px; background: var(--c-surface-2); }
+.st-row .grow { min-width: 0; }
+.st-mark { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--c-border); display: grid; place-items: center; font-size: 14px; font-weight: 700; color: #fff; }
+.st-row.ok .st-mark { background: #1f7a52; border-color: transparent; } /* white ✓ readable in light and dark */
+.st-row.ok .bold { color: var(--c-text-2); }
+.st-row-go { flex: none; min-height: 40px; }
+
+/* ---------- 首頁 in 坐月子: suggestions folded into one row (home.js) ---------- */
+.home-more { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 10px 14px; border: 1px dashed var(--c-border); border-radius: 16px; background: transparent; color: var(--c-text); font: inherit; text-align: left; cursor: pointer; }
+.home-more .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.home-more .chev { color: var(--c-text-2); font-size: 16px; flex: none; }
+/* .home-more-cards: no display rule, so its [hidden] keeps working; the slots inside bring their own margin */
+.home-more-off { margin-top: 8px; }

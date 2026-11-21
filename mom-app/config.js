@@ -14,6 +14,8 @@ window.BRAND = {
   appUrl: '',
   // 雙向邀請禮：朋友用你的連結或邀請碼加入、完成設定並註冊會員時，兩邊各得的好孕點數（friend 見面禮、inviter 每位朋友）
   inviteGift: { friend: 30, inviter: 50 },
+  // 新手任務：剛開始用的 3 週（或剛註冊的 1 週）首頁的 5 件小事，每件 points 點，全部做完再 bonus 點
+  starter: { points: 5, bonus: 15 },
   // 分享獎勵：好孕點數達到 points 時顯示的優惠（code 留空 = 先不提供）
   shareReward: { points: 100, title: '易家滴雞精會員好禮', code: '', note: '請到官網結帳時輸入優惠碼，或出示給門市人員。' },
   // 即時人數：數字達到門檻才顯示（數字永遠是真實的，只是太小時先不顯示）

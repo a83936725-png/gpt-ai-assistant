@@ -497,10 +497,13 @@
                   account: acct.value, password: pw.value, nickname: nick.value, invitedBy: inv.value, consent: App.privacy ? App.privacy.VERSION : '', marketing: !!(mkt && mkt.checked), ...(sent ? { code: codeUI.input.value } : {}),
                 };
               const res = await call('POST', mode === 'login' ? 'auth/login' : 'auth/register', body);
+              if (mode !== 'login' && App.starter) App.starter.hush(); // the welcome list shows 註冊會員 ✓
               setAuth(res.token, res.user);
               ui.toast(mode === 'login' ? `歡迎回來，${res.user.nickname} 💜` : `註冊成功！歡迎 ${res.user.nickname} 💜`);
+              const joined = mode !== 'login';
               mode = 'login';
               goOn();
+              if (joined && App.starter) setTimeout(() => App.starter.welcome(res.user), 700); // 新手任務 as the welcome
               setTimeout(() => ensureConsent(res.user), 300); // agreed to an older policy: ask again
             } catch (ex) {
               err.textContent = errText(ex); err.hidden = false;

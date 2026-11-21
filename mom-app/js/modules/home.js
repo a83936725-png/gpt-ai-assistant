@@ -231,15 +231,48 @@
       h('div', { class: 'tiny faint center mt' }, `依最近 ${feed ? feed.samples : 0} 次餵食與寶寶月齡估算・紀錄越多越準`));
   }
 
+  /* 坐月子（寶寶未滿 30 天）：當天要用的卡片照常，下面的推薦（好孕島、團購、好孕圈、好物、邀請朋友）收成一列「更多」，
+   * 首頁短一點。她自己的事（她的團、成團了、排好的外出）和滿月祝福牆照常顯示（卡片在 slot 上標 data-personal）。 */
+  const FOLD_FROM = 40;
+  const FOLD_KEEP = new Set(['wall-nudge', 'share-moments']);
+  const FOLD_NAME = {
+    'island-progress': '好孕島', groupbuy: '團購', 'circle-join': '好孕圈', outing: '外出', goods: '好物', invite: '邀請朋友',
+  };
+  let foldOpen = false;
+  function calmHome() {
+    if (store.stage !== 'baby' || store.state.settings.calmHomeOff) return false;
+    const b = store.baby();
+    if (!b || !b.birthday) return false;
+    const d = C.diffDays(b.birthday, new Date());
+    return d >= 0 && d < 30;
+  }
   function moduleCards(el) {
+    const calm = calmHome();
+    const more = h('div', { class: 'home-more-cards', hidden: !foldOpen });
     App.homeCards
       .filter((c) => store.inStage(c.stages))
       .sort((a, b) => a.order - b.order)
       .forEach((c) => {
         const slot = h('div', { class: 'home-slot', dataset: { card: c.id } });
         try { c.render(slot); } catch (e) { console.error(c.id, e); }
-        if (slot.childNodes.length) el.append(slot);
+        if (!slot.childNodes.length) return;
+        if (calm && c.order >= FOLD_FROM && !FOLD_KEEP.has(c.id) && slot.dataset.personal !== '1') more.append(slot); else el.append(slot);
       });
+    if (!more.childNodes.length) return;
+    const names = [...new Set([...more.children].map((x) => FOLD_NAME[x.dataset.card]).filter(Boolean))];
+    const label = h('span', { class: 'grow' },
+      h('span', { class: 'bold' }, foldOpen ? '收起推薦' : `更多：${names.join('、')}`),
+      h('span', { class: 'tiny muted home-more-sub' }, '坐月子期間先收起來，讓首頁短一點'));
+    const chev = h('span', { class: 'chev', 'aria-hidden': 'true' }, foldOpen ? '︿' : '﹀');
+    const toggle = h('button', {
+      type: 'button', class: 'home-more', 'aria-expanded': String(foldOpen),
+      onclick: () => { foldOpen = !foldOpen; if (App.homeRefresh) App.homeRefresh(); },
+    }, label, chev);
+    el.append(h('div', { class: 'home-slot', dataset: { card: 'more' } }, toggle, more,
+      foldOpen ? h('button', {
+        type: 'button', class: 'link-btn small home-more-off',
+        onclick: () => { store.update((s) => { s.settings.calmHomeOff = true; }); ui.toast('之後首頁都會全部展開'); },
+      }, '以後都不要收起來') : null));
   }
 
   App.screen('home', {

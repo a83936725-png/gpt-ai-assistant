@@ -383,6 +383,7 @@
       if (!it) return;
       const c = it.c || campaignOf(it.team.campaign);
       if (!c) return;
+      if (it.kind !== 'new') el.dataset.personal = '1'; // her team, a friend's team, 成團了: never folded away (首頁 in 坐月子)
       let title; let sub; let btnText; let go;
       if (it.kind === 'done') { title = '🎉 你的團成團了！'; sub = `${c.title}・折扣碼準備好了`; btnText = '看折扣碼'; go = () => App.navigate('groupbuy', { team: it.team.id }); }
       else if (it.kind === 'mine') {

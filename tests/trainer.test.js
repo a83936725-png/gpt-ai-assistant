@@ -60,6 +60,20 @@ test('after the practice ends, messages go back to customer service', async () =
   expect(calls).toEqual([]);
 }, TIMEOUT);
 
+test('starting can name the scenario, and 「開始練習」 also starts', async () => {
+  expect(await replies('練習接待 中期 猶豫')).toEqual(['start:中期 猶豫']);
+  await replies('結束練習');
+  calls = [];
+  expect(await replies('開始練習')).toEqual(['start:']);
+  expect(calls[0].args[1]).toBe('start');
+}, TIMEOUT);
+
+test('a sentence that only begins with the command is not a command', async () => {
+  await replies('練習接待');
+  calls = [];
+  expect(await replies('練習接待的時候要先倒原味嗎')).toEqual(['say:練習接待的時候要先倒原味嗎']);
+}, TIMEOUT);
+
 test('「繼續練習」 picks the practice up again after the bot restarts', async () => {
   await replies('繼續練習');
   expect(calls[0].args[1]).toBe('resume');

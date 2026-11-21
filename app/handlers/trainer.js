@@ -48,7 +48,19 @@ const setActive = (userId, on) => {
  * @returns {string}
  */
 const typedText = (context) => context.event.text.replaceAll('　', ' ').trim();
-const commandOf = (text) => TRAINER_COMMANDS[text.replace(/[。！？!?.\s]+$/, '')];
+
+/**
+ * Starting can name the scenario: 「練習接待 中期 猶豫」 practises with a hesitant mum in mid
+ * pregnancy. 「開始練習」 also starts.
+ * @param {string} text
+ * @returns {{op: string, rest: string} | null}
+ */
+const parseCommand = (text) => {
+  const start = text.match(/^(?:練習接待|開始練習)(?:\s+(.*))?$/);
+  if (start) return { op: 'start', rest: (start[1] || '').trim() };
+  const op = TRAINER_COMMANDS[text.replace(/[。！？!?.\s]+$/, '')];
+  return op ? { op, rest: '' } : null;
+};
 
 const isEnabled = () => Boolean(config.TRAINER_RPC_URL && config.TRAINER_SECRET);
 
@@ -60,7 +72,7 @@ const check = (context) => isEnabled()
   && context.event.isText
   && !context.event.isGroup
   && config.TRAINER_USER_IDS.includes(context.userId)
-  && Boolean(commandOf(typedText(context)) || isActive(context.userId));
+  && Boolean(parseCommand(typedText(context)) || isActive(context.userId));
 
 /**
  * @param {Object} param
@@ -92,9 +104,10 @@ const callTrainer = async ({ op, userId, text }) => {
 const exec = (context) => check(context) && (
   async () => {
     const text = typedText(context);
-    const op = commandOf(text) || 'say';
+    const command = parseCommand(text);
+    const op = command ? command.op : 'say';
     try {
-      const result = await callTrainer({ op, userId: context.userId, text: op === 'say' ? text : '' });
+      const result = await callTrainer({ op, userId: context.userId, text: command ? command.rest : text });
       setActive(context.userId, result.active);
       context.pushText(result.text);
     } catch (err) {

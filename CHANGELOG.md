@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.13.0 (2026-11-21)
+
+### New Features
+
+- IKIGAI: redesigned page. Adds a welcome screen with a sample, a progress bar that marks finished steps, step transitions, a sticky bottom bar (and arrow keys), prompt questions on each step, undo after removing an item, colour toggle buttons in the match step, result counts with a next-step tip, an animated diagram, AI loading progress, and "copy prompt" to use any AI assistant when the AI analysis is unavailable
+- IKIGAI: one-minute demo of the whole flow in [docs/IKIGAI-WEB.zh-TW.md](docs/IKIGAI-WEB.zh-TW.md)
+
 ## 4.12.1 (2026-11-20)
 
 ### Bug Fixes

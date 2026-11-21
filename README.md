@@ -10,6 +10,7 @@ GPT AI Assistant is an application that is implemented using the OpenAI API and 
 
 ## News
 
+- 2026-11-21: `4.13.0` redesigns the IKIGAI page at `/ikigai` and adds a demo. See the [IKIGAI guide (中文)](docs/IKIGAI-WEB.zh-TW.md).
 - 2026-11-20: `4.12.0` adds the IKIGAI web page at `/ikigai` with an optional AI reading. See the [IKIGAI guide (中文)](docs/IKIGAI-WEB.zh-TW.md).
 - 2026-11-15: `4.11.0` adds `畫圖示` (SVG), `畫動畫` (GIF) and `數據卡` (KPI Flex card).
 - 2026-11-14: `4.10.0` adds `畫介面`, `寫貼文`, `模型檢查`, `我的ID`, an allowlist and optional moderation. See the [upgrade guide (中文)](docs/UPGRADE-2026.zh-TW.md).

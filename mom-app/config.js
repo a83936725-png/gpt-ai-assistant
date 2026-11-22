@@ -20,6 +20,8 @@ window.BRAND = {
   shareReward: { points: 100, title: '易家滴雞精會員好禮', code: '', note: '請到官網結帳時輸入優惠碼，或出示給門市人員。' },
   // 即時人數：數字達到門檻才顯示（數字永遠是真實的，只是太小時先不顯示）
   liveStats: { showOnlineFrom: 1, showRegisteredFrom: 1 },
+  // 團購「正在開團」的參加人數：真實的總數，達到這個人數才顯示（太少時先不顯示）
+  groupbuyStatsFrom: 3,
   // 常見好物：品牌自家商品放在「產後媽媽」分類並標示「品牌」；show: false 可隱藏
   goodsBrandItem: { show: true, when: '孕期、坐月子' },
   // 分享文案的 hashtag

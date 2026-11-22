@@ -10,6 +10,9 @@
  *   POST /groupbuy/team/:id/leave      leave before it is full (a leader can leave only while alone: the team closes)
  *
  * Campaigns come from MOM_GROUPBUYS (a JSON array, see docs/GROWTH.md); MOM_GROUPBUY_DEMO=1 adds a test campaign.
+ * `starts` / `ends` are a day ('2026-12-31', the whole day) or a minute ('2026-12-31T20:00'), in Taiwan time; the app
+ * gets the exact `startsAt` / `endsAt` for its countdowns, and `stats` per campaign: how many teams were started, how
+ * many members are in them and how many teams filled up (totals only, never who).
  * Every count is the real number of members; the code is never sent before the team is full, and only to members.
  * One team per person per campaign; a team has `hours` to fill (never past the campaign's last day). Kept: the team
  * (display name, members' account ids) until 60 days after the campaign ends; deleting an account removes it. */
@@ -28,9 +31,14 @@ const LIMITS = {
   read: [240, 600],
 };
 const okTeam = (s) => (typeof s === 'string' && /^[A-Za-z0-9_-]{16}$/.test(s) ? s : '');
-const dayMs = (key) => { // 'YYYY-MM-DD' → 00:00 that day in Taiwan, or NaN
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key || ''));
-  return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) - TAIPEI_MS : NaN;
+// 'YYYY-MM-DD' (that day) or 'YYYY-MM-DDTHH:MM' (that minute), Taiwan time → { ms, timed }, or null
+const whenMs = (s) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?$/.exec(String(s || ''));
+  if (!m) return null;
+  const day = Date.UTC(+m[1], +m[2] - 1, +m[3]) - TAIPEI_MS;
+  if (m[4] === undefined) return { ms: day, timed: false };
+  if (+m[4] > 23 || +m[5] > 59) return null;
+  return { ms: day + +m[4] * 3600e3 + +m[5] * 60e3, timed: true };
 };
 const taipeiKey = (t) => new Date(t + TAIPEI_MS).toISOString().slice(0, 10);
 const int = (v, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
@@ -40,11 +48,12 @@ const https = (u) => (/^https:\/\/[^\s"'<>]{4,300}$/.test(String(u || '')) ? Str
 export function cleanCampaign(c) {
   if (!c || typeof c !== 'object') return null;
   const id = String(c.id || '');
-  const ends = dayMs(c.ends);
-  const starts = c.starts ? dayMs(c.starts) : -Infinity;
+  const end = whenMs(c.ends);
+  const start = c.starts ? whenMs(c.starts) : { ms: -Infinity };
   const price = int(c.price, 1, 1e6);
   const code = cleanText(c.code, 40);
-  if (!/^[a-z0-9-]{3,32}$/.test(id) || !cleanText(c.title, 30) || !price || Number.isNaN(ends) || Number.isNaN(starts) || !/^[A-Za-z0-9_-]{3,40}$/.test(code)) return null;
+  if (!/^[a-z0-9-]{3,32}$/.test(id) || !cleanText(c.title, 30) || !price || !end || !start || !/^[A-Za-z0-9_-]{3,40}$/.test(code)) return null;
+  const endMs = end.timed ? end.ms : end.ms + DAY_MS; // a day means until the end of that day
   const listPrice = int(c.listPrice, price + 1, 1e6);
   return {
     id,
@@ -56,14 +65,14 @@ export function cleanCampaign(c) {
     listPrice,
     size: int(c.size, 2, 20) || 5,
     hours: int(c.hours, 1, 336) || 72,
-    starts: Number.isFinite(starts) ? c.starts : null,
+    starts: Number.isFinite(start.ms) ? c.starts : null,
     ends: c.ends,
     shopUrl: https(c.shopUrl),
     codeNote: cleanText(c.codeNote, 60),
     demo: !!c.demo,
     code,
-    startMs: starts,
-    endMs: ends + DAY_MS, // the end of its last day
+    startMs: start.ms,
+    endMs,
   };
 }
 export function loadCampaigns(env, t) {
@@ -90,10 +99,10 @@ export function loadCampaigns(env, t) {
   }
   return out;
 }
-// what anyone may see of a campaign (never the code)
+// what anyone may see of a campaign (never the code); the exact start and end for the app's countdowns
 const publicCampaign = ({
   code, startMs, endMs, ...c
-}) => c;
+}) => ({ ...c, startsAt: Number.isFinite(startMs) ? startMs : null, endsAt: endMs });
 
 export function mountGroupbuy(router, {
   store, now, over, clientIp, wrap, currentUser, env, needVerify = () => false,
@@ -145,6 +154,16 @@ export function mountGroupbuy(router, {
     if (!(await store.claimOnce(key, 15, t))) return null;
     try { return await fn(); } finally { await store.clearFlag(key); }
   }
+  // totals per campaign for 「正在開團」: teams started, members in them, teams that filled up (never who)
+  async function stat(cid, field, by) {
+    const c = byId.get(cid);
+    if (c) { const t = now(); await store.hincrBy(`gb:s:${cid}`, field, by, ttlSec(c, t), t); }
+  }
+  async function statsOf(cid, t) {
+    const s = await store.hgetAllJson(`gb:s:${cid}`, t);
+    const n = (k) => Math.max(0, Math.round(Number(s[k]) || 0));
+    return { teams: n('teams'), people: n('people'), done: n('done') };
+  }
   async function addMember(team, c, uid, t) {
     const ttl = ttlSec(c, t);
     await store.hsetJson(`gb:m:${team.id}`, uid, { at: t }, ttl, t);
@@ -154,9 +173,11 @@ export function mountGroupbuy(router, {
     await store.hdel(`gb:m:${team.id}`, uid);
     await store.incrBy(`gb:n:${team.id}`, -1, 0, t);
     await store.hdel(`gb:u:${uid}`, team.c);
+    await stat(team.c, 'people', -1);
   }
   async function closeTeam(team) {
     await store.del(`gb:t:${team.id}`); await store.del(`gb:n:${team.id}`); await store.del(`gb:m:${team.id}`);
+    await stat(team.c, 'teams', -1);
   }
 
   router.get('/groupbuy', wrap(async (req, res) => {
@@ -170,7 +191,9 @@ export function mountGroupbuy(router, {
         if (team) mine[c.id] = await teamView(team, t, user); // eslint-disable-line no-await-in-loop
       }
     }
-    res.json({ campaigns: list.map(publicCampaign), mine });
+    const out = [];
+    for (const c of list) out.push({ ...publicCampaign(c), stats: await statsOf(c.id, t) }); // eslint-disable-line no-restricted-syntax, no-await-in-loop
+    res.json({ campaigns: out, mine });
   }));
 
   router.get('/groupbuy/team/:id', wrap(async (req, res) => {
@@ -207,6 +230,7 @@ export function mountGroupbuy(router, {
       await store.setJson(`gb:t:${team.id}`, team, ttl, t);
       await store.incrBy(`gb:n:${team.id}`, 1, ttl, t);
       await addMember(team, c, user.id, t);
+      await stat(c.id, 'teams', 1); await stat(c.id, 'people', 1);
       return { status: 201, body: { team: await teamView(team, t, user) } };
     });
     if (!out) { fail(res, 409, 'busy'); return; }
@@ -237,7 +261,8 @@ export function mountGroupbuy(router, {
         return { status: 409, body: { error: 'full', team: await teamView(team, t, user) } };
       }
       await addMember(team, c, user.id, t);
-      if (n === c.size) { team.doneAt = t; await store.setJson(`gb:t:${team.id}`, team, ttlSec(c, t), t); }
+      await stat(c.id, 'people', 1);
+      if (n === c.size) { team.doneAt = t; await store.setJson(`gb:t:${team.id}`, team, ttlSec(c, t), t); await stat(c.id, 'done', 1); }
       return { status: 200, body: { team: await teamView(team, t, user), done: n === c.size } };
     });
     if (!out) { fail(res, 409, 'busy'); return; }

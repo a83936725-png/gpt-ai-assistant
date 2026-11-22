@@ -463,6 +463,7 @@
     for (let d = 1; d <= 9; d += 1) if (d !== 4) s.chicken.log[C.dateKey(C.addDays(now, -d))] = 1;
     s.island.stamps = {};
     s.starter = { demo: true }; // sample data: no 新手任務
+    s.sampleData = true; // 範例資料 (with no member service, 團購 shows its sample group-buys too)
     if (store.state.share) s.share = store.state.share; // keep invite code + who invited me
     if (store.state.auth) s.auth = store.state.auth; // stay logged in
     if (store.state.social) s.social = store.state.social; // keep 島上的媽媽／好孕圈 and the keys of my 祝福牆
@@ -720,7 +721,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.8.5`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.8.6`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
         App.screens.privacy ? h('button', { class: 'btn btn-ghost btn-sm center-btn', onclick: () => App.navigate('privacy') }, '🔒 隱私權政策與使用條款') : null,
         h('p', { class: 'disclaimer' }, '本 App 提供一般衛教資訊與紀錄工具，內容參考國健署、疾管署、WHO 等公開資料整理（每則都附來源，可點開查看），不能取代醫師的診斷與建議。寶寶或自己身體不舒服時，請直接就醫。紀錄只儲存在你的裝置上；只有你開啟「島上的媽媽」、同週好孕圈或祝福牆時，才會送出角色樣子、名稱、預產週或出生月份，以及你的回答和祝福。')));

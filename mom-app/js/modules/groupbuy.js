@@ -2,9 +2,14 @@
  * 品牌在伺服器設定團購（mom-api/groupbuy.js，MOM_GROUPBUYS）。媽媽「開一團」拿到團的連結，傳到媽媽群組；朋友打開連結
  * 「我要跟團」；在時間內湊滿人數就成團，每位團員拿到折扣碼，到品牌官網結帳（退換貨、發票依官網規定）。
  * 人數都是伺服器算的真實會員人數；折扣碼成團前不會送到手機；團的頁面只顯示團名、人數與剩下的時間，看不到誰跟了團。
- *   screen 'groupbuy'   團購清單、開團、我的團、從連結打開的團（還沒設定好 App 的朋友也能先看）
- *   首頁卡 'groupbuy'    成團了（看折扣碼）／我的團進度／朋友揪的團／有新的團購
- *   App.groupbuy = { load, live, listItem, brandCard, pendingTeam } */
+ *   screen 'groupbuy'   限時團購：正在開團的商品（大倒數、幾團開過幾位媽媽參加）、開團、我的團、從連結打開的團
+ *                       （還沒設定好 App 的朋友也能先看）；?c=<id> 直接看那一個團購
+ *   好孕島 限時團購入口  好孕島左側一排小圖（像遊戲盤面邊上的活動圖示）：成團了／我的團（揪團中）／朋友揪的團（等你）／
+ *                       還沒參加的團購（限時），每個都有每秒跳的倒數，點了直接看；‹ 收起來（今天）；放不下就只留 🛒 小頁籤
+ *   首頁卡 'groupbuy'    成團了（看折扣碼）／我的團進度／朋友揪的團／有新的團購（範例團購不上首頁）
+ *   範例團購             載入範例資料、又沒有會員服務時（例如網頁預覽版）：三個標「範例」的團購，可以試開團、看倒數、
+ *                       模擬朋友跟團到成團；全部只在這支手機，不會送出，折扣碼也不是真的
+ *   App.groupbuy = { load, live, listItem, brandCard, pendingTeam, homeItem, islandRail, railItems, endOf, clock } */
 (function () {
   const App = window.App;
   const { h, ui } = App;
@@ -20,7 +25,6 @@
     g.seen = g.seen || {}; // team id → day its code was first shown
     return g;
   };
-  const user = () => (store.state.auth && store.state.auth.user) || null;
   const money = (n) => `NT$${Number(n || 0).toLocaleString('zh-TW')}`;
   const teamName = (t) => `${t.leader || '媽媽'}的團`;
   function leftShort(ms) { // for a share card's number tile: 「1天23時」「5時20分」「12分」
@@ -40,27 +44,161 @@
     document.querySelectorAll('[data-gb-until]').forEach((e) => { e.textContent = left(Number(e.dataset.gbUntil) - Date.now()); });
   }, 30 * 1000);
 
+  /* ---------------- 限時: exact ends and countdowns ---------------- */
+  const TW = 8 * C.HOUR; // 台灣時間
+  const two = (n) => String(n).padStart(2, '0');
+  // a group-buy's end as a moment: the server sends it; an older reply had only the day (until the end of that day)
+  function endOf(c) {
+    if (c && Number.isFinite(c.endsAt)) return c.endsAt;
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String((c && c.ends) || ''));
+    return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) - TW + C.DAY : Date.now() + C.DAY;
+  }
+  // 「活動到 11/30」 for a whole day, 「活動到 11/23 20:00」 for a set time (Taiwan time)
+  function endText(c) {
+    const end = new Date(endOf(c) + TW);
+    const atMidnight = !end.getUTCHours() && !end.getUTCMinutes();
+    const last = atMidnight ? new Date(end.getTime() - 1) : end;
+    return `活動到 ${last.getUTCMonth() + 1}/${last.getUTCDate()}${atMidnight ? '' : ` ${two(end.getUTCHours())}:${two(end.getUTCMinutes())}`}`;
+  }
+  // the countdown on a 首頁 tile: 「19:40:57」 under 3 days (hours go past 24, like 44:41:57), then 「剩 6 天」
+  function clock(ms) {
+    if (ms <= 0) return '00:00:00';
+    if (ms >= 72 * C.HOUR) return `剩 ${Math.floor(ms / C.DAY)} 天`;
+    const s = Math.floor(ms / 1000);
+    return `${two(Math.floor(s / 3600))}:${two(Math.floor((s % 3600) / 60))}:${two(s % 60)}`;
+  }
+  const parts = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return { d: Math.floor(s / 86400), h: Math.floor((s % 86400) / 3600), m: Math.floor((s % 3600) / 60), s: s % 60 }; };
+  // the big countdown: 天・時・分・秒 in boxes (天 only while a day or more is left)
+  const BIG = [['d', '天'], ['h', '時'], ['m', '分'], ['s', '秒']];
+  const bigBoxes = (p) => BIG.filter(([k]) => k !== 'd' || p.d).map(([k, l]) => h('span', { class: 'gb-big-u' }, h('b', { class: `num gb-big-${k}` }, k === 'd' ? String(p.d) : two(p[k])), h('i', null, l)));
+  function paintBig(e, ms) {
+    const p = parts(ms);
+    if (!!p.d !== !!e.querySelector('.gb-big-d')) { e.replaceChildren(...bigBoxes(p)); return; }
+    BIG.forEach(([k]) => { const b = e.querySelector(`.gb-big-${k}`); if (b) b.textContent = k === 'd' ? String(p.d) : two(p[k]); });
+  }
+  const bigCountdown = (end, label) => h('div', {
+    class: 'gb-big', role: 'timer', 'aria-label': `${label}還剩 ${left(end - Date.now())}`, dataset: { gbEnd: String(end), gbFmt: 'big' },
+  }, ...bigBoxes(parts(end - Date.now())));
+  // every countdown on screen ticks each second; the last hour turns red; one that reaches zero asks again what is open
+  let zeroAt = 0;
+  setInterval(() => {
+    const els = document.querySelectorAll('[data-gb-end]');
+    if (!els.length) return;
+    const now = Date.now();
+    els.forEach((e) => {
+      const ms = Number(e.dataset.gbEnd) - now;
+      if (e.dataset.gbFmt === 'big') paintBig(e, ms); else e.textContent = clock(ms);
+      e.classList.toggle('soon', ms > 0 && ms < C.HOUR);
+      if (ms <= 0 && !e.dataset.gbZero) {
+        e.dataset.gbZero = '1';
+        if (now - zeroAt > 5000) { zeroAt = now; load(true); } // eslint-disable-line no-use-before-define
+      }
+    });
+  }, 1000);
+
+  /* ---------------- 範例團購: 範例資料 with no member service (the web preview) ---------------- */
+  // Three sample group-buys, made fresh around the current time so the countdowns are always running; she can start a
+  // team, watch it count down and 「模擬朋友跟團」 until it is full. Everything says 範例, nothing leaves the phone, and
+  // the code is not a real one. With a member service (a real setup) these never appear.
+  const isSample = () => { const s = store.state; return s.sampleData === true || (s.sampleData === undefined && !!(s.starter && s.starter.demo)); };
+  function sampleCampaigns(now) {
+    const tw = new Date(now + TW);
+    const day0 = Date.UTC(tw.getUTCFullYear(), tw.getUTCMonth(), tw.getUTCDate()) - TW; // today 00:00 in Taiwan
+    const at = (days, hour) => day0 + days * C.DAY + hour * C.HOUR;
+    const base = { sample: true, desc: '範例：正式上線後，商品、價格和時間由品牌設定', image: '', shopUrl: '', codeNote: '' };
+    return [
+      { ...base, id: 'sample-gift', title: '月子禮盒（範例）', emoji: '🎁', price: 3280, listPrice: 3880, size: 5, hours: 24, endsAt: now < at(0, 20) ? at(0, 22) : at(1, 22), stats: { teams: 4, people: 13, done: 2 } },
+      { ...base, id: 'sample-drip', title: '滴雞精 10 入（範例）', emoji: '🍲', price: 1980, listPrice: 2400, size: 3, hours: 48, endsAt: at(2, 20), stats: { teams: 9, people: 22, done: 5 } },
+      { ...base, id: 'sample-set', title: '媽媽常備組（範例）', emoji: '🧺', price: 1280, listPrice: 1500, size: 4, hours: 72, endsAt: at(6, 24), stats: { teams: 2, people: 5, done: 0 } },
+    ];
+  }
+  const sampleBox = () => { const g = ensure(store.state); g.sample = g.sample || { teams: {}, mine: {} }; return g.sample; };
+  function sampleView(t, now) {
+    const status = t.doneAt ? 'done' : (now >= t.endsAt ? 'failed' : 'open');
+    return {
+      ...t, status, member: true, mine: true, ...(status === 'done' ? { code: 'SAMPLE-0000', codeNote: '範例折扣碼，不能真的使用', shopUrl: '' } : {}),
+    };
+  }
+  async function sampleCall(m, path, body = {}) {
+    const now = Date.now();
+    const box = sampleBox();
+    const camps = sampleCampaigns(now);
+    const campOf = (id) => camps.find((c) => c.id === id) || null;
+    const fail = (status, code) => { const e = new Error(code); e.status = status; e.code = code; throw e; };
+    const tm = /^groupbuy\/team\/([\w-]+)(?:\/(join|leave))?$/.exec(path);
+    let out = null;
+    if (m === 'GET' && path === 'groupbuy') {
+      const mine = {};
+      Object.entries(box.mine).forEach(([cid, id]) => { const t = box.teams[id]; if (t && campOf(cid) && sampleView(t, now).status !== 'failed') mine[cid] = sampleView(t, now); });
+      out = { campaigns: camps, mine };
+    } else if (m === 'POST' && path === 'groupbuy/start') {
+      const c = campOf(body.campaign);
+      if (!c) fail(404, 'no_campaign');
+      const cur = box.teams[box.mine[c.id]];
+      if (cur && sampleView(cur, now).status !== 'failed') fail(409, 'in_team');
+      const t = {
+        id: `sample-${C.uid()}`, campaign: c.id, leader: (String(body.name || '').trim() || store.state.profile.momName || '媽媽').slice(0, 10), count: 1, size: c.size, endsAt: Math.min(now + c.hours * C.HOUR, c.endsAt), doneAt: null,
+      };
+      box.teams[t.id] = t; box.mine[c.id] = t.id;
+      out = { team: sampleView(t, now) };
+    } else if (tm) {
+      const t = box.teams[tm[1]];
+      if (!t) fail(404, 'not_found');
+      if (m === 'GET' && !tm[2]) out = { team: sampleView(t, now), campaign: campOf(t.campaign), active: !!campOf(t.campaign) };
+      else if (m === 'POST' && tm[2] === 'join') { // a sample team is hers: 「模擬朋友跟團」 adds one friend
+        if (sampleView(t, now).status !== 'open') fail(409, 'closed');
+        t.count = Math.min(t.size, t.count + 1);
+        if (t.count >= t.size) t.doneAt = now;
+        out = { team: sampleView(t, now), done: !!t.doneAt };
+      } else if (m === 'POST' && tm[2] === 'leave') {
+        delete box.teams[t.id];
+        if (box.mine[t.campaign] === t.id) delete box.mine[t.campaign];
+        out = { ok: true };
+      }
+    }
+    if (!out) fail(404, 'not_found');
+    store.save();
+    return JSON.parse(JSON.stringify(out));
+  }
+
   /* ---------------- data from the member service ---------------- */
-  let live = null; // {at, campaigns, mine}
+  let live = null; // {at, campaigns, mine, sample}
   let loading = null;
   const teams = new Map(); // team id → {at, team, campaign, active} or {at, gone: true}
-  const call = (m, p, b) => App.account.call(m, p, b);
+  // what is open, if known and still about the same data (範例資料 loaded or cleared since → ask again, show nothing yet)
+  const current = () => { if (!live || live.flag !== isSample()) { load(); return null; } return live; }; // eslint-disable-line no-use-before-define
+  // the sample ones while 範例資料 is on and no member service answers; otherwise the member service
+  const sampleOn = async () => isSample() && !(await App.account.config());
+  const call = async (m, p, b) => ((await sampleOn()) ? sampleCall(m, p, b) : App.account.call(m, p, b));
+  // logged in; or, with the sample group-buys, she is a sample member already
+  function user() {
+    return (store.state.auth && store.state.auth.user) || (live && live.sample ? { id: 'sample', nickname: store.state.profile.momName || '', sample: true } : null);
+  }
   function load(force = false) {
     if (!App.account) return Promise.resolve(null);
-    if (!force && live && Date.now() - live.at < 60 * 1000) return Promise.resolve(live);
+    // asked again after a minute, or at once when 範例資料 was loaded or cleared
+    if (!force && live && Date.now() - live.at < 60 * 1000 && live.flag === isSample()) return Promise.resolve(live);
     if (!loading) {
       loading = (async () => {
         const before = JSON.stringify(live && { c: live.campaigns, m: live.mine });
         try {
           const cfg = await App.account.config();
-          const r = cfg ? await call('GET', 'groupbuy') : null;
-          live = { at: Date.now(), campaigns: (r && r.campaigns) || [], mine: (r && r.mine) || {} };
-        } catch (e) { live = { at: Date.now(), campaigns: (live && live.campaigns) || [], mine: (live && live.mine) || {} }; }
+          const sample = !cfg && isSample();
+          const r = cfg || sample ? await call('GET', 'groupbuy') : null;
+          live = {
+            at: Date.now(), campaigns: (r && r.campaigns) || [], mine: (r && r.mine) || {}, sample, flag: isSample(),
+          };
+        } catch (e) {
+          live = {
+            at: Date.now(), campaigns: (live && live.campaigns) || [], mine: (live && live.mine) || {}, sample: !!(live && live.sample), flag: isSample(),
+          };
+        }
         loading = null;
         // something changed: the screens that show it are drawn again
         if (JSON.stringify({ c: live.campaigns, m: live.mine }) !== before) {
           const scr = document.body.dataset.screen;
           if (scr === 'home' && App.homeRefresh) App.homeRefresh();
+          else if (scr === 'island') syncRail(); // eslint-disable-line no-use-before-define
           else if (['groupbuy', 'me', 'brand'].includes(scr)) App.refresh();
         }
         return live;
@@ -135,7 +273,9 @@
           await load(true);
           teams.set(r.team.id, { at: Date.now(), team: r.team, campaign: c, active: true });
           App.navigate('groupbuy', { team: r.team.id });
-          setTimeout(() => invite(r.team, c), 450);
+          ui.celebrate({ emojis: ['🛒', '🎉', '💜', '✨'] });
+          if (live && live.sample) ui.toast('開團成功（範例）！可以按「模擬朋友跟團」看成團');
+          else { ui.toast('開團成功！把連結傳給朋友'); setTimeout(() => invite(r.team, c), 450); }
         } catch (e) {
           go.disabled = false;
           if (e.code === 'in_team' && e.status === 409) { sheet.close(); await load(true); const t = myTeam(c.id); if (t) App.navigate('groupbuy', { team: t.id }); return; }
@@ -145,11 +285,21 @@
         }
       },
     }, '開團');
+    // a team never runs past the group-buy's end
+    const capped = Date.now() + c.hours * C.HOUR > endOf(c);
+    const step = (ico, b, sub) => h('li', null, h('span', { class: 'gb-os-ico', 'aria-hidden': 'true' }, ico), h('b', null, b), h('span', { class: 'tiny muted' }, sub));
     const sheet = ui.sheet({
-      title: `開一團：${c.title}`,
-      body: h('div', { class: 'stack-sm' },
+      title: '開一團',
+      body: h('div', { class: 'stack-sm gb-open' },
+        h('div', { class: 'row gap gb-open-head' }, pic(c),
+          h('div', { class: 'grow' }, h('div', { class: 'bold' }, c.title, demoTag(c)), priceRow(c))),
+        h('ol', { class: 'gb-open-steps' },
+          step('🛒', '開團', '現在'),
+          step('💬', '邀朋友', `${capped ? '活動結束前' : `${c.hours} 小時內`}湊 ${c.size} 人`),
+          step('🎉', '成團', '每人拿折扣碼')),
         ui.field('團名', name, '朋友打開連結會看到「○○的團」和人數，看不到你的帳號或電話'),
-        h('p', { class: 'small muted' }, `${c.size} 人成團，開團後 ${c.hours} 小時內要湊齊；成團後每個人都拿到折扣碼，到官網結帳。`),
+        h('p', { class: 'small muted' }, `${c.size} 人成團，開團後 ${c.hours} 小時內要湊齊${capped ? `（這個團購${endText(c)}，這一團最晚也到那時）` : ''}；成團後每個人都拿到折扣碼，到官網結帳。`),
+        live && live.sample ? h('p', { class: 'tiny muted' }, '這是範例團購：開團只存在這支手機，不會送出。') : null,
         err),
       footer: go,
     });
@@ -187,7 +337,9 @@
     const need = Math.max(0, team.size - team.count);
     return `${teamName(team)}揪團中：${c.title}\n團購價 ${money(c.price)}${c.listPrice ? `（原價 ${money(c.listPrice)}）` : ''}・${c.size} 人成團${need ? `，還差 ${need} 人` : ''}\n湊齊後每個人都拿到折扣碼，到官網結帳 🛒`;
   }
+  const sampleNoShare = () => { if (!(live && live.sample)) return false; ui.toast('這是範例團購，正式上線後才能邀請朋友'); return true; };
   function invite(team, c) {
+    if (sampleNoShare()) return;
     App.share.open({
       sheetTitle: '邀請朋友跟團',
       title: `${teamName(team)}揪團中`,
@@ -207,11 +359,13 @@
     });
   }
   function lineInvite(team, c) {
+    if (sampleNoShare()) return;
     window.open(`https://line.me/R/share?text=${enc(`${inviteText(team, c)}\n${linkFor(team, 'line')}`)}`, '_blank', 'noopener');
     App.share.record('line', 'groupbuy');
   }
 
   /* ---------------- pieces ---------------- */
+  const pic = (c, emoji) => (c.image ? h('img', { class: 'gb-img', src: c.image, alt: '', loading: 'lazy' }) : h('span', { class: 'gb-emoji', 'aria-hidden': 'true' }, emoji || c.emoji || '🛒'));
   const priceRow = (c) => h('div', { class: 'gb-price' },
     h('span', { class: 'gb-price-now' }, h('span', { class: 'tiny' }, '團購價 '), money(c.price)),
     c.listPrice ? h('span', { class: 'gb-price-was' }, '原價 ', h('s', null, money(c.listPrice))) : null);
@@ -221,9 +375,9 @@
     return h('div', { class: 'gb-progress' },
       h('div', { class: 'row between' },
         h('b', { class: 'gb-count' }, `已 ${team.count}／${team.size} 人`),
-        team.status === 'open' ? h('span', { class: 'small muted' }, '還剩 ', h('b', { dataset: { gbUntil: String(team.endsAt) } }, left(team.endsAt - Date.now()))) : null),
+        team.status === 'open' ? h('span', { class: 'small muted' }, need ? `還差 ${need} 人就成團` : '人數到了') : null),
       ui.progress(team.count / team.size),
-      team.status === 'open' ? h('div', { class: 'small muted' }, need ? `還差 ${need} 人就成團` : '人數到了') : null);
+      team.status === 'open' ? h('div', { class: 'gb-team-clock' }, h('div', { class: 'small muted' }, '這一團還剩'), bigCountdown(team.endsAt, '這一團')) : null);
   }
   function codeBox(team, c) {
     const copy = h('button', {
@@ -239,35 +393,60 @@
       h('p', { class: 'tiny muted' }, '結帳、出貨、退換貨與發票都在官網，依官網規定。'));
   }
   const fine = () => h('p', { class: 'disclaimer' }, '團購在品牌官網結帳：App 不收款、不收地址。人數是真實的會員人數；團的頁面只顯示團名、人數和剩下的時間。折扣碼只給成團的團員，使用規則以官網為準。');
-  const demoTag = (c) => (c.demo ? h('span', { class: 'tag warn' }, '測試環境') : null);
+  const demoTag = (c) => (c.demo ? h('span', { class: 'tag warn' }, '測試環境') : c.sample ? h('span', { class: 'tag' }, '範例') : null);
 
   /* ---------------- screen ---------------- */
-  function renderList(el) {
+  // 「正在開團」: every group-buy open now, the one ending soonest first, each with its own big countdown
+  function statLine(c) {
+    const st = c.stats;
+    const from = Number.isFinite(B().groupbuyStatsFrom) ? B().groupbuyStatsFrom : 3; // real totals, shown once they are not tiny
+    if (!st || st.people < from) return null;
+    return h('div', { class: 'gb-stats small' }, h('span', { class: 'gb-live-dot', 'aria-hidden': 'true' }),
+      h('span', null, `${st.teams} 團開過・${st.people} 位媽媽參加${st.done ? `・${st.done} 團已成團` : ''}`),
+      c.sample ? h('span', { class: 'tiny muted' }, '（範例數字）') : null);
+  }
+  function dealCard(c, focus) {
+    const mine = myTeam(c.id);
+    const end = endOf(c);
+    const save = c.listPrice ? c.listPrice - c.price : 0;
+    return ui.card({ class: `gb-card gb-deal${focus ? ' focus' : ''}`, id: `gb-c-${c.id}`, dataset: { c: c.id } },
+      h('div', { class: 'row gap gb-card-top' }, pic(c),
+        h('div', { class: 'grow' }, h('div', { class: 'card-title' }, c.title, demoTag(c)), c.desc ? h('div', { class: 'small muted' }, c.desc) : null)),
+      h('div', { class: 'gb-deal-price' }, priceRow(c), save > 0 ? h('span', { class: 'gb-save' }, `省 ${money(save)}`) : null),
+      h('div', { class: 'gb-deal-clock' }, h('div', { class: 'small muted' }, '距離團購結束'), bigCountdown(end, '這個團購')),
+      h('div', { class: 'small muted gb-meta' }, `${c.size} 人成團・開團後 ${c.hours} 小時內湊齊・${endText(c)}`),
+      statLine(c),
+      mine ? h('button', { class: 'gb-mine', onclick: () => App.navigate('groupbuy', { team: mine.id }) },
+        h('span', { class: 'grow' }, h('b', null, mine.status === 'done' ? '🎉 你的團成團了' : `${teamName(mine)}・已 ${mine.count}／${mine.size} 人`),
+          h('span', { class: 'small muted' }, mine.status === 'done' ? '看折扣碼' : [live && live.sample ? '看我的團' : '邀請朋友跟團', '・剩 ', h('span', { class: 'num', dataset: { gbEnd: String(mine.endsAt) } }, clock(mine.endsAt - Date.now()))])),
+        h('span', { class: 'chev', 'aria-hidden': 'true' }, '›'))
+        : h('button', { class: 'btn btn-primary btn-block gb-start', onclick: () => startSheet(c) }, user() ? '🛒 我要開一團' : '🛒 登入後開一團'));
+  }
+  function renderList(el, params = {}) {
     el.append(ui.card({ class: 'card-hero gb-hero' },
-      h('div', { class: 'small muted' }, '一起買比較划算'),
-      h('div', { class: 'big-num' }, '團購揪團'),
-      h('p', { class: 'small' }, '開一團、把連結傳到媽媽群組，湊滿人數就成團，每個人都拿到折扣碼，到官網結帳。')));
-    if (!live) { el.append(h('p', { class: 'center muted mt', role: 'status' }, '載入中…')); load(); return; }
+      h('div', { class: 'gb-hero-top small' }, h('span', { class: 'gb-live-dot', 'aria-hidden': 'true' }), '限時團購・一起買比較划算'),
+      h('div', { class: 'big-num' }, '正在開團'),
+      h('p', { class: 'small' }, '開一團、把連結傳到媽媽群組，時間內湊滿人數就成團，每個人都拿到折扣碼，到官網結帳。')));
+    if (!current()) { el.append(h('p', { class: 'center muted mt', role: 'status' }, '載入中…')); return; }
     if (!live.campaigns.length) {
       el.append(ui.empty('🛒', '目前沒有進行中的團購。有新的團購時，會出現在這裡和首頁。'));
       el.append(fine());
       return;
     }
-    live.campaigns.forEach((c) => {
-      const mine = myTeam(c.id);
-      el.append(ui.card({ class: 'gb-card' },
-        h('div', { class: 'row gap gb-card-top' },
-          c.image ? h('img', { class: 'gb-img', src: c.image, alt: '', loading: 'lazy' }) : h('span', { class: 'gb-emoji', 'aria-hidden': 'true' }, c.emoji || '🛒'),
-          h('div', { class: 'grow' }, h('div', { class: 'card-title' }, c.title, demoTag(c)), c.desc ? h('div', { class: 'small muted' }, c.desc) : null)),
-        priceRow(c),
-        h('div', { class: 'small muted gb-meta' }, `${c.size} 人成團・開團後 ${c.hours} 小時內湊齊・活動到 ${endDay(c)}`),
-        mine ? h('button', { class: 'gb-mine', onclick: () => App.navigate('groupbuy', { team: mine.id }) },
-          h('span', { class: 'grow' }, h('b', null, mine.status === 'done' ? '🎉 你的團成團了' : `${teamName(mine)}・已 ${mine.count}／${mine.size} 人`),
-            h('span', { class: 'small muted' }, mine.status === 'done' ? '看折扣碼' : '邀請朋友跟團')),
-          h('span', { class: 'chev', 'aria-hidden': 'true' }, '›'))
-          : h('button', { class: 'btn btn-primary btn-block gb-start', onclick: () => startSheet(c) }, user() ? '🛒 開一團' : '🛒 登入後開一團')));
-    });
+    if (live.sample) {
+      el.append(h('div', { class: 'gb-sample-note small' }, h('b', null, '這些是範例團購'),
+        '：看看倒數和開團的樣子，可以試開團、模擬朋友跟團。正式上線後，商品、價格和時間由品牌設定，開團和跟團都是真的會員。'));
+    }
+    const focus = params.c && live.campaigns.some((c) => c.id === params.c) ? params.c : null;
+    [...live.campaigns].sort((a, b) => endOf(a) - endOf(b)).forEach((c) => el.append(dealCard(c, c.id === focus)));
     el.append(howTo(), fine());
+    // from a 首頁 tile: that group-buy comes into view, with a short glow
+    if (focus) {
+      requestAnimationFrame(() => {
+        const card = document.getElementById(`gb-c-${focus}`);
+        if (card) card.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      });
+    }
   }
   const howTo = () => ui.card({ class: 'soft gb-how' },
     h('div', { class: 'card-title' }, '怎麼揪團'),
@@ -321,8 +500,22 @@
       team.status === 'failed' ? null : h('div', { class: 'gb-steps-now' }, ui.steps(['開團', '湊人數', '成團', '官網結帳'], team.status === 'done' ? (team.member ? 3 : 2) : 1)));
     el.append(head);
     const actions = h('div', { class: 'gb-actions' });
+    if (team.status === 'open' && team.member && live && live.sample) {
+      // a sample team: see what happens when friends join, one at a time
+      actions.append(h('button', {
+        class: 'btn btn-soft btn-block gb-sim',
+        onclick: async (e) => {
+          e.currentTarget.disabled = true;
+          const r = await call('POST', `groupbuy/team/${enc(team.id)}/join`, {});
+          teams.set(team.id, { ...(teams.get(team.id) || {}), at: Date.now(), team: r.team });
+          await load(true);
+          if (r.done) { ui.celebrate({ emojis: ['🎉', '🛒', '💜', '✨'], big: true }); ui.toast('🎉 成團了！（範例）折扣碼在下面'); } else ui.toast(`有朋友跟團了（範例）！還差 ${r.team.size - r.team.count} 人`);
+          App.refresh();
+        },
+      }, '範例：模擬一位朋友跟團'));
+    }
     if (team.status === 'done') {
-      if (team.member && team.code) actions.append(h('p', { class: 'gb-done' }, '🎉 成團了！謝謝大家'), codeBox(team, c));
+      if (team.member && team.code) actions.append(h('p', { class: 'gb-done' }, live && live.sample ? '🎉 成團了！（範例）' : '🎉 成團了！謝謝大家'), codeBox(team, c));
       else actions.append(h('p', { class: 'gb-done' }, '這一團已經成團了 🎉'), cached.active && !mine ? h('button', { class: 'btn btn-primary btn-block', onclick: () => startSheet(c) }, '🛒 自己開一團') : null);
     } else if (team.status === 'failed') {
       actions.append(h('p', { class: 'small' }, '時間到了，這一團沒有湊齊人數，不會有折扣碼。'),
@@ -355,7 +548,7 @@
     render(el, params) {
       if (App.account) App.account.refreshSoon();
       if (params && params.team) renderTeam(el, String(params.team));
-      else { viewing = null; renderList(el); load(); }
+      else { viewing = null; renderList(el, params || {}); load(); }
     },
     onLeave() { viewing = null; navSeen = -1; },
   });
@@ -363,7 +556,7 @@
   /* ---------------- 首頁 ---------------- */
   // one card, the most useful: a full team's code, my team, a friend's team from a link, a new group-buy
   function homeItem() {
-    if (!live) { load(); return null; }
+    if (!current()) return null;
     const g = ensure(store.state);
     const mineList = Object.values(live.mine);
     const done = mineList.find((t) => t.status === 'done' && t.code && !g.seen[t.id]);
@@ -382,7 +575,7 @@
     order: 41,
     render(el) {
       const it = homeItem();
-      if (!it) return;
+      if (!it || (it.kind === 'new' && it.c.sample)) return; // the sample group-buys stay on 好孕島 and the group-buy page
       const c = it.c || campaignOf(it.team.campaign);
       if (!c) return;
       if (it.kind !== 'new') el.dataset.personal = '1'; // her team, a friend's team, 成團了: never folded away (首頁 in 坐月子)
@@ -408,18 +601,108 @@
     },
   });
 
+  /* ---------------- 好孕島: 限時團購 tiles ---------------- */
+  // A short column down the left side of 好孕島, over the map like the signs at the edge of a game board: one tile for
+  // each thing going on — 成團了 (her code is waiting), her team (揪團中, how many so far), a friend's team from a link
+  // (等你), a group-buy she is not in yet (限時, the discount). Each has a countdown that ticks every second; a tap
+  // opens it. ‹ tucks the column into the edge for the rest of the day; when there is no room (a phone on its side),
+  // or it is tucked, only the small 🛒 tab is left, which opens the group-buy page.
+  function railItems() {
+    if (!current()) return [];
+    const g = ensure(store.state);
+    const out = []; const taken = new Set();
+    Object.values(live.mine).forEach((t) => {
+      const c = campaignOf(t.campaign);
+      if (!c) return;
+      taken.add(c.id);
+      if (t.status === 'done' && t.code && !g.seen[t.id]) out.push({ kind: 'done', c, team: t, end: Infinity });
+      else if (t.status === 'open') out.push({ kind: 'mine', c, team: t, end: t.endsAt });
+    });
+    const p = pendingTeam(); const pt = p && teams.get(p);
+    if (pt && pt.team && pt.team.status === 'open' && !pt.team.member && pt.campaign && !taken.has(pt.campaign.id)) {
+      taken.add(pt.campaign.id); out.push({ kind: 'friend', c: pt.campaign, team: pt.team, end: pt.team.endsAt });
+    }
+    live.campaigns.forEach((c) => { if (!taken.has(c.id)) out.push({ kind: 'new', c, end: endOf(c) }); });
+    const rank = { done: 0, mine: 1, friend: 2, new: 3 };
+    return out.sort((a, b) => rank[a.kind] - rank[b.kind] || a.end - b.end);
+  }
+  const RIBBON = { done: '成團了', mine: '揪團中', friend: '等你', new: '限時' };
+  function railTile(it) {
+    const { kind, c, team } = it;
+    const ms = it.end - Date.now();
+    const off = c.listPrice ? Math.round((1 - c.price / c.listPrice) * 100) : 0;
+    const label = kind === 'done' ? `成團了：${c.title}，看折扣碼`
+      : kind === 'mine' ? `我的團：${c.title}，已 ${team.count}／${team.size} 人，還剩 ${left(ms)}`
+        : kind === 'friend' ? `${teamName(team)}等你跟團：${c.title}，還剩 ${left(ms)}`
+          : `限時團購：${c.title}，團購價 ${money(c.price)}，還剩 ${left(ms)}`;
+    return h('button', {
+      type: 'button', class: `gbr-tile k-${kind}`, 'aria-label': label, dataset: { kind, c: c.id },
+      onclick: () => App.navigate('groupbuy', team ? { team: team.id } : { c: c.id }),
+    },
+    h('span', { class: 'gbr-pic' },
+      c.image ? h('img', { src: c.image, alt: '' }) : h('span', { class: 'gbr-emoji', 'aria-hidden': 'true' }, kind === 'done' ? '🎉' : (c.emoji || '🛒'))),
+    h('span', { class: 'gbr-rib', 'aria-hidden': 'true' }, RIBBON[kind]),
+    kind === 'new' && off >= 5 ? h('span', { class: 'gbr-badge', 'aria-hidden': 'true' }, `-${off}%`) : null,
+    kind === 'mine' || kind === 'friend' ? h('span', { class: 'gbr-badge', 'aria-hidden': 'true' }, `${team.count}/${team.size}`) : null,
+    kind === 'done' ? h('span', { class: 'gbr-chip gold', 'aria-hidden': 'true' }, '看折扣碼')
+      : h('span', { class: 'gbr-chip num', 'aria-hidden': 'true', dataset: { gbEnd: String(it.end) } }, clock(ms)));
+  }
+  let railEl = null;
+  // the column for a new 好孕島 screen (js/modules/island.js puts it on the map)
+  function islandRail() {
+    railEl = h('aside', { class: 'gb-rail', 'aria-label': '限時團購' });
+    syncRail();
+    load();
+    return railEl;
+  }
+  function syncRail() {
+    if (!railEl) return;
+    const items = railItems();
+    railEl.hidden = !items.length;
+    if (!items.length) { railEl.replaceChildren(); return; }
+    railEl.classList.toggle('tucked', ensure(store.state).railTuck === C.dateKey());
+    const tuck = h('button', {
+      type: 'button', class: 'gbr-tuck', 'aria-label': '先收起限時團購（今天）',
+      onclick: () => { ensure(store.state).railTuck = C.dateKey(); store.save(); syncRail(); ui.toast('先收起來了，明天再出現；左邊的 🛒 隨時看得到'); },
+    }, h('span', { 'aria-hidden': 'true' }, '‹'));
+    const tab = h('button', {
+      type: 'button', class: 'gbr-tab', 'aria-label': `限時團購：${items.length} 個，看正在開團`, onclick: () => App.navigate('groupbuy'),
+    }, h('span', { class: 'gbr-tab-ico', 'aria-hidden': 'true' }, '🛒'), h('span', { class: 'gbr-tab-n', 'aria-hidden': 'true' }, String(items.length)),
+    items.some((i) => i.kind !== 'new') ? h('span', { class: 'gbr-dot', 'aria-hidden': 'true' }) : null);
+    railEl.replaceChildren(tuck, ...items.slice(0, 3).map(railTile), tab);
+    requestAnimationFrame(fitRail);
+    setTimeout(fitRail, 450); // again once the screen has settled in
+  }
+  // as many tiles as fit above what sits at the lower left of the island (the 💜 chip, the island strip); no room for
+  // even the 🛒 tab (a phone on its side) → nothing here, the group-buys are still in 我的
+  function fitRail() {
+    if (!railEl || railEl.hidden || !railEl.isConnected) return;
+    const tiles = [...railEl.querySelectorAll('.gbr-tile')];
+    // where the column starts on screen (read from its place on the map, so it works while it is hidden too)
+    const top = railEl.parentElement.getBoundingClientRect().top + (parseFloat(getComputedStyle(railEl).top) || 0);
+    const below = ['.isl-heart-badge', '.isl .isl-strip'].map((sel) => document.querySelector(sel))
+      .map((e) => e && e.getBoundingClientRect()).filter((r) => r && r.height && r.left < 90 && r.top > top).map((r) => r.top);
+    const room = (below.length ? Math.min(...below) : window.innerHeight) - top;
+    let n = railEl.classList.contains('tucked') ? 0 : tiles.length;
+    n = Math.max(0, Math.min(n, Math.floor((room - 52) / 74))); // 52: the ‹ above and the last chip; 74: a tile and its gap
+    tiles.forEach((t, i) => { t.hidden = i >= n; });
+    railEl.classList.toggle('peek', n === 0);
+    railEl.classList.toggle('none', n === 0 && room < 66);
+  }
+  window.addEventListener('resize', () => fitRail());
+
   /* ---------------- 我的 and 品牌 ---------------- */
   function listItem() {
-    if (!live) { load(); return null; }
+    if (!current()) return null;
     if (!live.campaigns.length && !Object.keys(live.mine).length) return null;
     const mineList = Object.values(live.mine);
-    const sub = mineList.length ? mineList.map((t) => (t.status === 'done' ? '🎉 成團了' : `${teamName(t)} ${t.count}／${t.size} 人`)).join('・') : `${live.campaigns.length} 個團購進行中`;
+    const sub = (mineList.length ? mineList.map((t) => (t.status === 'done' ? '🎉 成團了' : `${teamName(t)} ${t.count}／${t.size} 人`)).join('・') : `${live.campaigns.length} 個團購進行中`) + (live.sample ? '（範例）' : '');
     return h('a', { class: 'list-item', href: '#/groupbuy' }, h('span', { class: 'li-icon' }, '🛒'),
       h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '團購揪團'), h('div', { class: 'li-sub' }, sub)),
       h('span', { class: 'li-right', html: ui.ICONS.chevron }));
   }
   function brandCard() {
-    if (!live) { load(); return null; }
+    if (!current()) return null;
     if (!live.campaigns.length) return null;
     const c = live.campaigns[0];
     return ui.card({ class: 'gb-brand' },
@@ -429,6 +712,6 @@
   }
 
   App.groupbuy = {
-    load, live: () => live, listItem, brandCard, pendingTeam, left, homeItem,
+    load, live: () => live, listItem, brandCard, pendingTeam, left, homeItem, islandRail, railItems, endOf, clock,
   };
 }());

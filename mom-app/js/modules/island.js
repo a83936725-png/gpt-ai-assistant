@@ -1570,7 +1570,9 @@
     const tickerText = h('span', { class: 'isl-ticker-text' });
     const ticker = h('button', { class: 'isl-ticker', 'aria-label': '下一則好孕小報' }, h('span', { class: 'isl-ticker-tag' }, '好孕小報'), tickerText);
     const coach = h('div', { class: 'isl-coach', hidden: true });
-    const root = h('div', { class: `isl s-${ST.season}${ST.night ? ' night' : ''}${ST.glow ? ` ${ST.glow}` : ''}` }, svg, fx, hud, ctrl, strip, ticker, coach, bubble);
+    // 限時團購: a column of small tiles with countdowns down the left side (js/modules/groupbuy.js)
+    const gbRail = App.groupbuy && App.groupbuy.islandRail ? App.groupbuy.islandRail() : null;
+    const root = h('div', { class: `isl s-${ST.season}${ST.night ? ' night' : ''}${ST.glow ? ` ${ST.glow}` : ''}` }, svg, fx, gbRail, hud, ctrl, strip, ticker, coach, bubble);
     // 島上的媽媽: a chip under the HUD, and other moms' chibis beside each island's name plate
     let socChip = null;
     el.append(root);

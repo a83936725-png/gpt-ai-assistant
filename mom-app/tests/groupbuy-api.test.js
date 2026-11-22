@@ -48,6 +48,17 @@ describe('campaign settings', () => {
     expect(demo).toHaveLength(1);
     expect(demo[0]).toMatchObject({ id: 'demo', demo: true, size: 3 });
   });
+  test('限時: a start or an end can be a minute (Taiwan time); a day means that whole day', () => {
+    const base = { id: 'gb-1', title: '團', price: 100, code: 'ABC-1' };
+    expect(cleanCampaign({ ...base, ends: '2026-11-30' }).endMs).toBe(Date.UTC(2026, 10, 30, 16, 0, 0)); // 12/1 00:00 in Taipei
+    const timed = cleanCampaign({ ...base, starts: '2026-11-21T10:00', ends: '2026-11-23T20:00' });
+    expect(timed.startMs).toBe(Date.UTC(2026, 10, 21, 2, 0, 0));
+    expect(timed.endMs).toBe(Date.UTC(2026, 10, 23, 12, 0, 0));
+    expect(cleanCampaign({ ...base, ends: '2026-11-23 20:30' }).endMs).toBe(Date.UTC(2026, 10, 23, 12, 30, 0));
+    expect(cleanCampaign({ ...base, ends: '2026-11-23T24:00' })).toBeNull();
+    expect(cleanCampaign({ ...base, ends: '2026-11-23T8:00' })).toBeNull();
+    expect(cleanCampaign({ ...base, ends: '2026-11-30', starts: 'soon' })).toBeNull();
+  });
 });
 
 function flows(label, makeStore) {
@@ -81,6 +92,28 @@ function flows(label, makeStore) {
       expect(r.data.campaigns[0]).toMatchObject({
         title: '易家滴雞精 10 入', price: 1980, listPrice: 2400, size: 3, hours: 48, shopUrl: 'https://shop.example/gb', codeNote: '每位會員限用一次',
       });
+    });
+
+    test('the list has the exact start and end for countdowns, and real totals (never who)', async () => {
+      const list = async () => Object.fromEntries((await api.get(`${base}/groupbuy`)).data.campaigns.map((c) => [c.id, c]));
+      const before = await list();
+      expect(before['gb-test']).toMatchObject({ startsAt: null, endsAt: Date.UTC(2026, 10, 30, 16, 0, 0) });
+      expect(before['gb-test'].stats).toEqual({ teams: 0, people: 0, done: 0 });
+      const a = await reg(); const b = await reg(); const c = await reg(); const d = await reg();
+      const team = (await start(a)).data.team;
+      await join(b, team.id);
+      expect((await list())['gb-test'].stats).toEqual({ teams: 1, people: 2, done: 0 });
+      await join(c, team.id); // full
+      const solo = (await start(d, { campaign: 'gb-big' })).data.team;
+      const mid = await list();
+      expect(mid['gb-test'].stats).toEqual({ teams: 1, people: 3, done: 1 });
+      expect(mid['gb-big'].stats).toEqual({ teams: 1, people: 1, done: 0 });
+      // a leader alone leaves: the team closes, the totals go back
+      expect((await api.post(`${base}/groupbuy/team/${solo.id}/leave`, {}, as(d))).data.ok).toBe(true);
+      expect((await list())['gb-big'].stats).toEqual({ teams: 0, people: 0, done: 0 });
+      // only numbers: no names, no ids
+      expect(Object.values(mid['gb-test'].stats).every((v) => typeof v === 'number')).toBe(true);
+      expect(JSON.stringify(mid)).not.toMatch(/媽媽\d|gb\d+@/);
     });
 
     test('starting a team: logged in, agreed to the policy, one team per campaign', async () => {

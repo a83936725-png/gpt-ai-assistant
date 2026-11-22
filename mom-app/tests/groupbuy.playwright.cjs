@@ -47,7 +47,11 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   await A.goto(`${BASE}#/home`); await A.waitForTimeout(1800);
   const homeNew = await text(A, '.gb-home');
   ok('首頁: a new group-buy (price, team size), can be closed', /團購：易家滴雞精 10 入（測試）/.test(homeNew) && /團購價 NT\$1,980/.test(homeNew) && /3 人成團/.test(homeNew) && await A.isVisible('.gb-home-x'), homeNew);
-  await A.click('.gb-home-go'); await A.waitForTimeout(1200);
+  await A.goto(`${BASE}#/island`); await A.waitForTimeout(1800);
+  const islNew = await S(A, () => [...document.querySelectorAll('.isl .gbr-tile')].filter((x) => !x.hidden).map((x) => [x.dataset.kind, x.dataset.c, (x.querySelector('.gbr-badge') || {}).textContent, x.querySelector('.gbr-chip').textContent]));
+  ok('好孕島: the group-buy as a 限時 tile, its discount and how long is left', islNew.length === 1 && islNew[0][0] === 'new' && islNew[0][1] === 'gb-test' && islNew[0][2] === '-18%' && /^剩 \d+ 天$/.test(islNew[0][3]), JSON.stringify(islNew));
+  await A.click('.gbr-tile'); await A.waitForTimeout(1300);
+  ok('…a tap opens 正在開團 at that group-buy', (await S(A, () => document.body.dataset.screen)) === 'groupbuy' && await A.isVisible('.gb-deal.focus[data-c="gb-test"]'));
   const card = await text(A, '.gb-card');
   ok('團購 page: price, the real 原價, size, hours, last day', /團購價 NT\$1,980/.test(card) && /原價 NT\$2,400/.test(card) && /3 人成團・開團後 48 小時內湊齊・活動到 12\/31/.test(card), card);
   await A.click('.gb-start'); await A.waitForTimeout(500);
@@ -57,13 +61,18 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   ok('…the team page, with the invite options open', (await S(A, () => document.body.dataset.screen)) === 'groupbuy' && /邀請朋友跟團/.test(await text(A, '.sheet')));
   await closeSheets(A);
   const teamA = await text(A, '.gb-team');
-  ok('team page: 「小美的團」 (no phone number), 1／3, time left', /小美的團/.test(teamA) && !/0912/.test(teamA) && /已 1／3 人/.test(teamA) && /還剩 (1 天|2 天|47 小時)/.test(teamA) && /還差 2 人就成團/.test(teamA), teamA);
+  const clockA = (await text(A, '.gb-team-clock')).replace(/\s+/g, '');
+  ok('team page: 「小美的團」 (no phone number), 1／3, a big countdown of its 48 hours', /小美的團/.test(teamA) && !/0912/.test(teamA) && /已 1／3 人/.test(teamA) && /還差 2 人就成團/.test(teamA)
+    && /^這一團還剩(1天23時5\d分\d\d秒|2天00時00分00秒)$/.test(clockA), `${teamA} | ${clockA}`);
   await A.click('.gb-line'); await A.waitForTimeout(300);
   const lineMsg = decodeURIComponent(await S(A, () => window.__opened.pop() || ''));
   const link = (lineMsg.match(/https?:\/\/\S+groupbuy\S*/) || [''])[0];
   ok('LINE invite: who, what, price, how many still needed, and the team link (with her invite code)', /小美的團揪團中：易家滴雞精 10 入（測試）/.test(lineMsg) && /團購價 NT\$1,980（原價 NT\$2,400）・3 人成團，還差 2 人/.test(lineMsg) && /ref=/.test(link) && /team/.test(decodeURIComponent(link)), lineMsg);
   ok('the leader can cancel while alone', /取消這一團/.test(await text(A, '.gb-actions')));
   const teamId = await S(A, () => JSON.parse(decodeURIComponent(location.hash.split('?')[1] || '%7B%7D')).team);
+  await A.goto(`${BASE}#/island`); await A.waitForTimeout(1800);
+  const islA = await S(A, () => [...document.querySelectorAll('.isl .gbr-tile')].filter((x) => !x.hidden).map((x) => [x.dataset.kind, (x.querySelector('.gbr-rib') || {}).textContent, (x.querySelector('.gbr-badge') || {}).textContent, x.querySelector('.gbr-chip').textContent]));
+  ok('好孕島: her team as a tile — 揪團中, 1/3, its countdown (47:5x:xx)', islA.length === 1 && islA[0][0] === 'mine' && islA[0][1] === '揪團中' && islA[0][2] === '1/3' && /^(47:5\d|48:00):\d\d$/.test(islA[0][3]), JSON.stringify(islA));
 
   /* ---- B: new, opens the link: sees the team before setting up, joins after signing up ---- */
   const Bp = await mk();
@@ -81,6 +90,8 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   await A.goto(`${BASE}#/home`); await A.goto(`${BASE}#/groupbuy?${encodeURIComponent(JSON.stringify({ team: teamId }))}`); await A.waitForTimeout(1500);
   await S(A, () => App.refresh()); await A.waitForTimeout(400);
   ok('with a friend in, the leader can’t cancel (it would drop her)', /已 2／3 人/.test(await text(A, '.gb-team')) && !/取消這一團/.test(await text(A, '.gb-actions')), `${await text(A, '.gb-team')} | ${await text(A, '.gb-actions')} | ${await S(A, () => location.hash)}`);
+  // she leaves the team page (an open team page shows the code the moment it fills, which counts as seen)
+  await A.goto(`${BASE}#/me`); await A.waitForTimeout(500);
   const Cp = await mk();
   await setUpAndRegister(Cp, 'friend2');
   await Cp.goto(link); await Cp.waitForTimeout(1500);
@@ -96,7 +107,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
 
   /* ---- A: 首頁 says the team is full; the code once seen stops being pointed at ---- */
   await S(A, () => App.groupbuy.load(true)); await A.goto(`${BASE}#/home`); await A.waitForTimeout(1500);
-  ok('首頁 (leader): 「你的團成團了！」', /你的團成團了/.test(await text(A, '.gb-home')));
+  ok('首頁 (leader): 「你的團成團了！」', /你的團成團了/.test(await text(A, '.gb-home')), JSON.stringify(await S(A, () => ({ seen: (App.store.state.groupbuy || {}).seen, item: (App.groupbuy.homeItem() || {}).kind }))));
   await A.click('.gb-home-go'); await A.waitForTimeout(1500);
   ok('…her code too', /TEAM-TEST-1/.test(await text(A, '.gb-actions')));
   await A.goto(`${BASE}#/home`); await A.waitForTimeout(1200);
@@ -144,14 +155,19 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   ok('隱私權政策 lists group-buy data (team name, which team, kept 60 days after)', /團購揪團（你開團或跟團時）/.test(await text(G, '#view')) && /60 天/.test(await text(G, '#view')));
   await G.context().close();
 
-  /* ---- static copy (no member service): nothing about group-buys ---- */
+  /* ---- static copy (no member service): only the sample group-buys, only with 範例資料 ---- */
   if (process.env.STATIC_BASE) {
     const H = await mk();
     await H.goto(process.env.STATIC_BASE); await H.waitForTimeout(800);
     await H.click('text=先看看範例資料'); await H.waitForTimeout(1500);
-    ok('static host: no group-buy card on 首頁', !(await H.isVisible('.gb-home')));
-    await H.goto(`${process.env.STATIC_BASE}#/me`); await H.waitForTimeout(800);
-    ok('…no 團購揪團 in 我的', !/團購揪團/.test(await text(H, '#view')));
+    ok('static host + 範例資料: no group-buy card on 首頁', !(await H.isVisible('.gb-home')));
+    await H.goto(`${process.env.STATIC_BASE}#/me`); await H.waitForTimeout(1200);
+    ok('…我的 lists the sample group-buys, marked 範例', /3 個團購進行中（範例）/.test(await text(H, '#view')), await text(H, '#view'));
+    await H.goto(`${process.env.STATIC_BASE}#/groupbuy`); await H.waitForTimeout(1500);
+    ok('…the page shows the three samples and says they are samples', (await S(H, () => document.querySelectorAll('.gb-deal .tag').length)) === 3 && /這些是範例團購/.test(await text(H, '#view')));
+    await S(H, () => { const s = App.store.defaults(); s.onboarded = true; s.onboardedAt = '2026-01-01'; s.profile.stage = 'baby'; App.store.replace(s); });
+    await H.goto(`${process.env.STATIC_BASE}#/me`); await H.waitForTimeout(1500);
+    ok('static host, her own data (no 範例資料): no 團購揪團 in 我的', !/團購揪團/.test(await text(H, '#view')));
     await H.goto(`${process.env.STATIC_BASE}#/groupbuy`); await H.waitForTimeout(1500);
     ok('…and the page itself says there is none', /目前沒有進行中的團購/.test(await text(H, '#view')));
     await H.context().close();

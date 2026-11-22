@@ -68,6 +68,7 @@
   };
 
   let world = null;
+  let planTripId = null;
   const country = (n) => NUM[n] || { name: world?.byId.get(n)?.properties?.name || '未知地區', code: '', region: '', base: 0 };
 
   // ---------- state
@@ -270,9 +271,9 @@
   });
   $('#logout').addEventListener('click', () => { user = null; save(); showLogin(); });
   $('#load-demo').addEventListener('click', () => {
-    // eslint-disable-next-line no-alert
-    if (trips.length && !window.confirm('載入範例會取代目前的行程，確定嗎？')) return;
-    loadDemo(); renderAll(); toast('已載入範例足跡');
+    const run = () => { loadDemo(); renderAll(); toast('已載入範例足跡'); };
+    if (!trips.length) { run(); return; }
+    askConfirm('載入範例足跡？', '範例會取代目前所有的行程、行程表與 eSIM 紀錄。想保留的話，先到「足跡」匯出備份。', '取代為範例', run);
   });
 
   // ---------- tabs (with smooth view transitions)
@@ -486,6 +487,12 @@
     $('#modal-body').scrollTop = 0;
   }
   modal.addEventListener('click', (e) => { if (e.target === modal || e.target.closest('[data-close]')) modal.close(); });
+  // In-page confirmation (browser confirm() dialogs are blocked in embedded previews).
+  function askConfirm(title, message, action, onYes) {
+    openModal(esc(title), `<p style="margin:0">${esc(message)}</p>
+      <div class="actions"><button class="btn" data-close>取消</button><button class="btn primary" id="confirm-yes" style="background:var(--danger);border-color:var(--danger);color:#fff">${esc(action)}</button></div>`);
+    $('#confirm-yes').addEventListener('click', () => { modal.close(); onYes(); });
+  }
 
   function openCountry(n) {
     const c = country(n);
@@ -1000,11 +1007,12 @@
       save(); modal.close(); renderAll(); toast('行程已儲存');
     });
     $('#f-del')?.addEventListener('click', () => {
-      // eslint-disable-next-line no-alert
-      if (!window.confirm('確定刪除這趟行程？')) return;
-      trips = trips.filter((x) => x.id !== id);
-      orders.forEach((o) => { o.tripIds = (o.tripIds || []).filter((x) => x !== id); });
-      save(); modal.close(); renderAll();
+      askConfirm(`刪除「${t.city}」這趟行程？`, '行程表、預算與待辦會一起刪除，無法復原。', '刪除行程', () => {
+        trips = trips.filter((x) => x.id !== id);
+        orders.forEach((o) => { o.tripIds = (o.tripIds || []).filter((x) => x !== id); });
+        if (planTripId === id) planTripId = null;
+        save(); modal.close(); renderAll(); toast('已刪除行程');
+      });
     });
   }
 
@@ -1327,7 +1335,6 @@
   }
 
   // ---------- planner (行程表)
-  let planTripId = null;
   const openItems = new Set();
   let sortables = [];
   const KIND_ICON = { spot: '📍', food: '🍽️', move: '🚆', custom: '📝' };

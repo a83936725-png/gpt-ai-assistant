@@ -127,3 +127,30 @@ test('GET /ikigai/admin serves the admin page', async () => {
   expect(res.headers.get('cache-control')).toContain('no-store');
   expect(await res.text()).toContain('<title>IKIGAI 後台</title>');
 });
+
+test('referrals are counted and named in the admin list', async () => {
+  await post(RECORD);
+  await post({
+    ...RECORD, id: 'friend000000000001', profile: { ...RECORD.profile, name: '朋友' }, referredBy: RECORD.id, source: 'card',
+  });
+  const { records } = await (await admin('records')).json();
+  const inviter = records.find((r) => r.id === RECORD.id);
+  const friend = records.find((r) => r.id === 'friend000000000001');
+  expect(inviter.referrals).toEqual(1);
+  expect(friend.referrerName).toEqual('王小明');
+  expect(friend.source).toEqual('card');
+  const csv = Buffer.from(await (await admin('export.csv')).arrayBuffer()).toString('utf8');
+  expect(csv).toContain('"推薦人"');
+});
+
+test('a record cannot refer itself', async () => {
+  await post({ ...RECORD, referredBy: RECORD.id });
+  const { records } = await (await admin('records')).json();
+  expect(records[0].referredBy).toEqual('');
+});
+
+test('GET /ikigai/qrcode.js serves the QR library', async () => {
+  const res = await fetch(`${base}/ikigai/qrcode.js`);
+  expect(res.status).toEqual(200);
+  expect(await res.text()).toContain('QR Code Generator');
+});

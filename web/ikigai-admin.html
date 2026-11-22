@@ -37,6 +37,8 @@
   .msg { font-size: 14px; color: var(--muted); }
   .msg.error { color: var(--danger); }
   .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .ref { font-size: 13px; white-space: nowrap; }
+  .ref b { color: var(--ok); }
   @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
   .stat b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
@@ -104,7 +106,7 @@
     <div class="layout">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>更新時間</th><th>姓名</th><th>聯絡方式</th><th>進度</th><th>IKIGAI 中心</th><th>主要方向</th></tr></thead>
+          <thead><tr><th>更新時間</th><th>姓名</th><th>聯絡方式</th><th>進度</th><th>IKIGAI 中心</th><th>主要方向</th><th>推薦</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
@@ -168,7 +170,7 @@
       [rows.length, '客戶總數'],
       [rows.filter((r) => r.startedAt >= week).length, '近 7 天新增'],
       [rows.filter((r) => r.mainDirection).length, '已選生涯方向'],
-      [rows.filter((r) => r.center.length).length, '有 IKIGAI 中心'],
+      [rows.filter((r) => r.referredBy).length, '透過推薦進入'],
     ];
     $('stats').innerHTML = stats.map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
   }
@@ -184,7 +186,8 @@
         <td><span class="pill${r.step === '生涯規劃' ? ' ok' : ''}">${esc(r.step)}</span></td>
         <td>${esc(r.center.join('、')) || '—'}</td>
         <td>${esc(r.mainDirection) || '—'}</td>
-      </tr>`).join('') || `<tr><td colspan="6" class="empty">${rows.length ? '沒有符合的客戶。' : '還沒有客戶資料。客戶在網站留下基本資料後，就會出現在這裡。'}</td></tr>`;
+        <td class="ref">${r.referrals ? `<b>帶來 ${r.referrals} 位</b>` : ''}${r.referrals && r.referrerName ? '<br>' : ''}${r.referrerName ? `由 ${esc(r.referrerName)} 推薦` : (r.referredBy ? '由他人推薦' : '')}${!r.referrals && !r.referredBy ? '—' : ''}</td>
+      </tr>`).join('') || `<tr><td colspan="7" class="empty">${rows.length ? '沒有符合的客戶。' : '還沒有客戶資料。客戶在網站留下基本資料後，就會出現在這裡。'}</td></tr>`;
   }
 
   async function showDetail(id) {
@@ -204,6 +207,8 @@
           <dt>開始時間</dt><dd>${fmt(r.startedAt)}</dd>
           <dt>最後更新</dt><dd>${fmt(r.updatedAt)}</dd>
           <dt>目前步驟</dt><dd>${esc(s.step)}</dd>
+          <dt>推薦人</dt><dd>${s.referrerName ? esc(s.referrerName) : (r.referredBy ? '（已刪除的客戶）' : '—')}${r.source ? ` <span class="msg">（${esc({ card: '字卡 QR Code', invite: '邀請連結', share: '分享頁' }[r.source] || r.source)}）</span>` : ''}</dd>
+          <dt>帶來人數</dt><dd>${(rows.find((x) => x.id === r.id) || {}).referrals || 0} 位</dd>
           <dt>地區</dt><dd>${esc(s.location) || '—'}</dd>
           <dt>裝置</dt><dd style="font-size:12.5px;color:var(--muted)">${esc(s.device) || '—'}</dd>
         </dl>

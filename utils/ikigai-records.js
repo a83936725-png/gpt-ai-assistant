@@ -77,6 +77,8 @@ export const sanitizeRecord = (body, meta = {}) => {
       weakest: KEYS.includes(insights.weakest) ? insights.weakest : '',
     },
     ai: text(body.ai, 8000),
+    referredBy: isId(body.referredBy) && body.referredBy !== body.id ? body.referredBy : '',
+    source: str(body.source, 20),
     events: (Array.isArray(body.events) ? body.events : []).slice(-300)
       .map((e) => ({ t: num(e?.t), type: str(e?.type, 30), detail: str(e?.detail, 80) }))
       .filter((e) => e.t && e.type),
@@ -181,6 +183,8 @@ export const summarize = (r) => {
     hasAnalysis: Boolean(r.ai),
     note: r.note,
     location: [r.meta.city, r.meta.country].filter(Boolean).join(', '),
+    referredBy: r.referredBy || '',
+    source: r.source || '',
     device: r.meta.userAgent,
   };
 };
@@ -189,14 +193,15 @@ const BOM = String.fromCharCode(0xfeff);
 const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 const fmt = (ms) => (ms ? new Date(ms).toISOString().replace('T', ' ').slice(0, 16) : '');
 
-export const toCsv = (records) => {
+export const toCsv = (records, { referrals = new Map(), names = new Map() } = {}) => {
   const head = ['建立時間 (UTC)', '更新時間 (UTC)', '姓名', '手機/LINE', 'Email', '目前步驟', '熱愛', '擅長', '世界需要', '報酬',
-    'IKIGAI 中心', '建議職業', '主要方向', '30 天目標', '90 天目標', '1 年目標', '行動完成', '補充說明', '地區', '裝置'];
+    'IKIGAI 中心', '建議職業', '主要方向', '30 天目標', '90 天目標', '1 年目標', '行動完成', '補充說明', '推薦人', '來源', '帶來人數', '地區', '裝置'];
   const rows = records.map(summarize).map((s) => [
     fmt(s.startedAt), fmt(s.updatedAt), s.name, s.contact, s.email, s.step,
     s.circles.love.join('、'), s.circles.good.join('、'), s.circles.need.join('、'), s.circles.paid.join('、'),
     s.center.join('、'), s.careers.join('、'), s.mainDirection, s.goals.d30, s.goals.d90, s.goals.y1,
-    `${s.actionsDone}/${s.actionsTotal}`, s.note, s.location, s.device,
+    `${s.actionsDone}/${s.actionsTotal}`, s.note, names.get(s.referredBy) || (s.referredBy ? '（已刪除）' : ''), s.source,
+    referrals.get(s.id) || 0, s.location, s.device,
   ]);
   // The byte order mark lets Excel open the file as UTF-8.
   return `${BOM}${[head, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n`;

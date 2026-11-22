@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.16.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: personality type from the four circles (nine types with a tagline, strengths and advice)
+- IKIGAI: six share cards (type, map, talents and careers, 30-day challenge, overlaps, plan) in three styles (晨光, 夜空, 和紙) and two sizes (post 4:5, story 9:16), each with a QR code; download one or all, or share on phones
+- IKIGAI: referral tracking. Invite links, card QR codes and share pages carry the client's code; new visitors are credited to whoever brought them, shown in the admin list, detail view, stats and CSV
+- IKIGAI: 「邀請朋友一起測」 with a ready-made invitation message
+
 ## 4.15.0 (2026-11-22)
 
 ### New Features

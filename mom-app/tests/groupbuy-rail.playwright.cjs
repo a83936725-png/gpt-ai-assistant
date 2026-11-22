@@ -20,13 +20,15 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
 (async () => {
   const b = await chromium.launch();
   const ctxs = [];
-  const mk = async ({ width = 390, height = 844, time = NOW, scheme = 'light', motion = 'no-preference', sample = true, apiDown = false } = {}) => {
+  const mk = async ({ width = 390, height = 844, time = NOW, scheme = 'light', motion = 'no-preference', sample = true, apiDown = false, apiStatus = 0 } = {}) => {
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', colorScheme: scheme, reducedMotion: motion });
     ctxs.push(c);
     await c.clock.install({ time: new Date(time) });
     await c.addInitScript(() => { window.__noShareMoments = true; window.open = () => null; });
     // a real member service that can't be reached right now (offline): the API calls fail without an answer
     if (apiDown) await c.addInitScript(() => { const f = window.fetch.bind(window); window.fetch = (u, o) => (/\/api\//.test(String(u)) ? Promise.reject(new TypeError('Failed to fetch')) : f(u, o)); });
+    // a host that answers the API address with a plain page (403: a static host; 503: a real service having trouble)
+    if (apiStatus) await c.route('**/api/**', (route) => route.fulfill({ status: apiStatus, contentType: 'text/html', body: '<html><body>no</body></html>' }));
     const p = await c.newPage();
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
@@ -197,6 +199,12 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
   const down = await mk({ sample: false, apiDown: true });
   await go(down, 'island', null, 1800);
   ok('a real member service only unreachable for a moment (offline): no samples, even with the preview on', await S(down, () => { const r = document.querySelector('.isl .gb-rail'); return (!r || r.hidden) && window.BRAND.groupbuyPreview === true; }));
+  const h403 = await mk({ sample: false, apiStatus: 403 });
+  await go(h403, 'island', null, 1800);
+  ok('…a static host that answers 403 (not 404) is still a site with no member service: the samples show', (await tiles(h403)).length === 3);
+  const h503 = await mk({ sample: false, apiStatus: 503 });
+  await go(h503, 'island', null, 1800);
+  ok('…a real service answering 503 (having trouble): no samples', await S(h503, () => { const r = document.querySelector('.isl .gb-rail'); return !r || r.hidden; }));
 
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   for (const c of ctxs) await c.close().catch(() => {});

@@ -32,12 +32,13 @@
   }
   let cfgP = null;
   let cfgNow = null; // the same, once it has arrived (for things drawn without waiting)
-  // no config: 'none' — this site has no member service (a static copy, like the web preview: 404), or 'down' — it is
-  // there but not reachable right now (offline, a timeout, a server error)
+  // no config: 'none' — this site has no member service (a static copy, like the web preview: the address answers
+  // 404 / 403), or 'down' — it is there but not reachable right now (offline, a timeout, too many tries, a server error)
   let cfgWhy = null;
+  const noApiHere = (st) => st >= 400 && st < 500 && st !== 408 && st !== 429;
   const config = () => {
     if (!cfgP) {
-      cfgP = call('GET', 'config').catch((e) => { cfgWhy = e && e.status === 404 ? 'none' : 'down'; return null; }).then((c) => { cfgNow = c; return c; });
+      cfgP = call('GET', 'config').catch((e) => { cfgWhy = e && noApiHere(e.status) ? 'none' : 'down'; return null; }).then((c) => { cfgNow = c; return c; });
     }
     return cfgP;
   };

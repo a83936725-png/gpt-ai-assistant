@@ -95,42 +95,42 @@ const buildReport = (record, { siteUrl }) => {
   if (record.note) parts.push(`<p style="margin:10px 0 0;font-size:14px;color:#6d665f">補充說明：${esc(record.note)}</p>`);
 
   if (ins.careers.length) {
-    parts.push(h2('建議職業'));
-    parts.push(table(ins.careers.map((c, i) => row(`0${i + 1}`, `<b>${esc(c.name)}</b>&nbsp;&nbsp;<span style="color:#6d665f;font-size:13px">符合：${c.circles.map((k) => SHORT[k]).join('、')}</span>`)).join('')));
+    parts.push(h2(`${ins.careers.length} 個建議職業`));
+    ins.careers.slice(0, 3).forEach((c, i) => {
+      const skills = c.skills || [];
+      const have = c.have && c.have.length ? c.have : skills.filter(owned);
+      const gaps = c.gaps && c.gaps.length ? c.gaps : skills.filter((x) => !have.includes(x)).map((skill) => ({ name: skill, tip: '' }));
+      parts.push(`<h3 style="margin:18px 0 6px;font-size:17px">${i + 1}. ${esc(c.name)}${c.match ? `&nbsp;&nbsp;<span style="font-size:14px;color:#23988b">契合度 ${c.match}%</span>` : ''}</h3>`);
+      parts.push(table([
+        row('為什麼適合', `符合${c.circles.map((k) => SHORT[k]).join('、')}${c.items && c.items.length ? `；依據：${c.items.map(esc).join('、')}` : ''}`),
+        skills.length ? row('需要的能力', skills.map((x) => (have.includes(x) ? `✓ ${esc(x)}` : esc(x))).join('、')) : '',
+        row('你已具備', have.map(esc).join('、') || '—'),
+        gaps.length ? row('要補足的能力', gaps.map((g) => `<b>${esc(g.name)}</b>${g.tip ? `：${esc(g.tip)}` : ''}`).join('<br>')) : '',
+        c.advice && c.advice.length ? row('給你的建議', c.advice.map(esc).join('<br>')) : '',
+      ].join('')));
+    });
     if (ins.paths.length) {
       parts.push('<h3 style="margin:18px 0 6px;font-size:16px">可以往哪個方向走</h3>');
       parts.push(table(ins.paths.map((p) => row(esc(p.title), esc(p.career))).join('')));
     }
-    if (ins.skills.length) parts.push(`<p style="margin:14px 0 0;font-size:15px"><b>需要加強的能力：</b>${ins.skills.map(esc).join('、')}</p>`);
-    if (ins.weakest) parts.push(`<p style="margin:8px 0 0;font-size:15px"><b>最需要補強的圈：</b>${SHORT[ins.weakest]}。${GAP_ADVICE[ins.weakest]}</p>`);
-
-    parts.push(h2('前三個建議職業的準備方式'));
-    ins.careers.slice(0, 3).forEach((c) => {
-      const skills = c.skills || [];
-      const need = skills.filter((s) => !owned(s));
-      const have = skills.filter(owned);
-      const first = need[0] || skills[0] || '核心技能';
-      parts.push(`<h3 style="margin:18px 0 6px;font-size:16px">${esc(c.name)}</h3>`);
-      parts.push(table([
-        c.items && c.items.length ? row('為什麼適合', `符合${c.circles.map((k) => SHORT[k]).join('、')}；依據：${c.items.map(esc).join('、')}`) : '',
-        skills.length ? row('需要的能力', skills.map(esc).join('、')) : '',
-        row('你已具備', have.map(esc).join('、') || '—'),
-        row('第 1～30 天', `學習「${esc(first)}」的基礎，每週整理一篇學習筆記`),
-        row('第 31～60 天', `完成一個和「${esc(c.name)}」有關、可以公開展示的小作品`),
-        row('第 61～90 天', '請 3 位業內人士給回饋，修正後放進作品集，並投遞或洽談 3 個機會'),
-      ].join('')));
-    });
+    if (ins.weakest) parts.push(`<p style="margin:12px 0 0;font-size:15px"><b>最需要補強的圈：</b>${SHORT[ins.weakest]}。${GAP_ADVICE[ins.weakest]}</p>`);
   }
 
   if (an && an.roadmap.length) {
-    parts.push(h2('三階段生涯規劃建議'));
+    parts.push(h2('詳細生涯規劃'));
     const tint = ['#dc4f67', '#dd9324', '#4f63d6'];
     an.roadmap.forEach((st, i) => {
       parts.push(`<div style="margin:12px 0 0;padding:14px 16px;border-radius:12px;background:#faf7f2;border-left:4px solid ${tint[i] || '#23988b'}">
         <p style="margin:0;font-size:16px;font-weight:800">${i + 1}. ${esc(st.title)}&nbsp;&nbsp;<span style="font-size:13px;font-weight:400;color:#6d665f">${esc(st.when)}</span></p>
         <p style="margin:6px 0;font-size:15px;font-weight:700">${esc(st.goal)}</p>
-        <ul style="margin:0;padding-left:20px;font-size:14.5px">${st.actions.map((x) => `<li style="margin:3px 0">${esc(x)}</li>`).join('')}</ul></div>`);
+        <ul style="margin:0;padding-left:20px;font-size:14.5px">${st.actions.map((x) => `<li style="margin:3px 0">${esc(x)}</li>`).join('')}</ul>
+        ${st.checks && st.checks.length ? `<p style="margin:8px 0 0;font-size:13.5px;color:#4a443e"><b>檢核點：</b>${st.checks.map(esc).join('；')}</p>` : ''}
+        ${st.time ? `<p style="margin:4px 0 0;font-size:13.5px;color:#6d665f">時間安排：${esc(st.time)}</p>` : ''}</div>`);
     });
+    if (an.weeks && an.weeks.length) {
+      parts.push('<h3 style="margin:20px 0 6px;font-size:16px">前 12 週詳細行動表</h3>');
+      parts.push(table(an.weeks.map((w) => row(esc(w.when), `<b>${esc(w.title)}</b><br>${w.tasks.map((x) => `・${esc(x)}`).join('<br>')}<br><span style="color:#6d665f;font-size:13px">完成後你會有：${esc(w.output)}</span>`)).join('')));
+    }
     if (an.habits.length) parts.push(`<p style="margin:14px 0 0;font-size:15px"><b>每週好習慣：</b>${an.habits.map(esc).join('；')}</p>`);
     if (an.risk) parts.push(`<p style="margin:8px 0 0;font-size:15px"><b>風險提醒：</b>${esc(an.risk)}</p>`);
   }

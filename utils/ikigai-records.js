@@ -48,8 +48,16 @@ const sanitizeAnalysis = (a) => {
     assets: take(a.assets, 5).map((x) => ({ text: str(x?.text, 60), n: Math.min(4, Math.max(1, Number(x?.n) || 1)) })).filter((x) => x.text),
     priorities: take(a.priorities, 8).map((x) => ({ name: str(x?.name, 40), level: str(x?.level, 6) })).filter((x) => x.name),
     roadmap: take(a.roadmap, 3).map((x) => ({
-      title: str(x?.title, 20), when: str(x?.when, 20), goal: str(x?.goal, 80), actions: take(x?.actions, 5).map((y) => str(y, 120)).filter(Boolean),
+      title: str(x?.title, 20),
+      when: str(x?.when, 20),
+      goal: str(x?.goal, 80),
+      actions: take(x?.actions, 6).map((y) => str(y, 120)).filter(Boolean),
+      checks: take(x?.checks, 4).map((y) => str(y, 80)).filter(Boolean),
+      time: str(x?.time, 80),
     })).filter((x) => x.title),
+    weeks: take(a.weeks, 6).map((w) => ({
+      when: str(w?.when, 20), title: str(w?.title, 40), tasks: take(w?.tasks, 3).map((y) => str(y, 120)).filter(Boolean), output: str(w?.output, 60),
+    })).filter((w) => w.when),
     habits: take(a.habits, 4).map((x) => str(x, 80)).filter(Boolean),
     risk: str(a.risk, 120),
   };
@@ -93,12 +101,16 @@ export const sanitizeRecord = (body, meta = {}) => {
         .filter((a) => a.text),
     },
     insights: {
-      careers: (Array.isArray(insights.careers) ? insights.careers : []).slice(0, 6)
+      careers: (Array.isArray(insights.careers) ? insights.careers : []).slice(0, 3)
         .map((c) => ({
           name: str(c?.name, 40),
           circles: (Array.isArray(c?.circles) ? c.circles : []).filter((k) => KEYS.includes(k)),
           skills: (Array.isArray(c?.skills) ? c.skills : []).slice(0, 6).map((x) => str(x, 40)).filter(Boolean),
           items: (Array.isArray(c?.items) ? c.items : []).slice(0, 6).map((x) => str(x, 60)).filter(Boolean),
+          match: pct(c?.match),
+          have: take(c?.have, 6).map((x) => str(x, 40)).filter(Boolean),
+          gaps: take(c?.gaps, 6).map((g) => ({ name: str(g?.name, 40), tip: str(g?.tip, 100) })).filter((g) => g.name),
+          advice: take(c?.advice, 6).map((x) => str(x, 120)).filter(Boolean),
         }))
         .filter((c) => c.name),
       archetype: insights.archetype && typeof insights.archetype === 'object' ? {
@@ -241,6 +253,30 @@ export const setMailStatus = async (id, status) => {
   });
 };
 
+// Sending account entered on the admin page (an alternative to environment variables).
+const SETTINGS = 'ikigai/settings/mail.json';
+let memorySettings = null;
+
+export const getMailSettings = async () => {
+  if (!useBlob()) return memorySettings;
+  const result = await get(SETTINGS, { access: 'private', useCache: false, token: config.IKIGAI_BLOB_TOKEN });
+  return result ? JSON.parse(await readText(result.stream)) : null;
+};
+
+export const setMailSettings = async (settings) => {
+  if (!useBlob()) {
+    memorySettings = settings;
+    return;
+  }
+  if (!settings) {
+    await del(SETTINGS, { token: config.IKIGAI_BLOB_TOKEN }).catch(() => {});
+    return;
+  }
+  await put(SETTINGS, JSON.stringify(settings), {
+    access: 'private', allowOverwrite: true, addRandomSuffix: false, contentType: 'application/json', token: config.IKIGAI_BLOB_TOKEN,
+  });
+};
+
 /** Ids of records whose report was emailed, with the time of the last send. */
 export const listMailed = async () => {
   if (!useBlob()) return new Map([...memoryMail.entries()].map(([id, s]) => [id, s.lastSentAt]));
@@ -252,6 +288,7 @@ export const clearMemoryRecords = () => {
   memory.clear();
   memoryRefs.clear();
   memoryMail.clear();
+  memorySettings = null;
 };
 
 const STEP_LABELS = {

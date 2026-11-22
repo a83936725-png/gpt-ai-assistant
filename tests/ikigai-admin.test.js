@@ -8,12 +8,13 @@ let base;
 let clearMemoryRecords;
 let resetRateLimit;
 let setTestTransport;
+let resetMailCache;
 
 beforeAll(async () => {
   const { default: app } = await import('../api/index.js');
   ({ clearMemoryRecords } = await import('../utils/ikigai-records.js'));
   ({ resetRateLimit } = await import('../web/ikigai.js'));
-  ({ setTestTransport } = await import('../utils/ikigai-mailer.js'));
+  ({ setTestTransport, resetMailCache } = await import('../utils/ikigai-mailer.js'));
   server = app.listen(0);
   await new Promise((resolve) => { server.once('listening', resolve); });
   base = `http://127.0.0.1:${server.address().port}`;
@@ -25,6 +26,7 @@ beforeEach(() => {
   clearMemoryRecords();
   resetRateLimit();
   setTestTransport(null);
+  resetMailCache();
 });
 
 const RECORD = {
@@ -80,6 +82,9 @@ const ANALYSIS = {
   priorities: [{ name: 'SEO', level: '優先' }],
   roadmap: [{
     title: '探索驗證期', when: '0～3 個月', goal: '確認方向', actions: ['訪談 2 位業內人士'],
+  }],
+  weeks: [{
+    when: '第 1～2 週', title: '認識職業', tasks: ['列出 5 個職缺'], output: '職業需求對照表',
   }],
   habits: ['每天 30 分鐘練習'],
   risk: '收入還不穩定前不要裸辭。',
@@ -226,10 +231,11 @@ test('report email goes to the saved address with the full report', async () => 
   expect(sent[0].to).toEqual('ming@example.com');
   expect(sent[0].subject).toContain('王小明');
   expect(sent[0].subject).toContain('熱情創作者');
-  expect(sent[0].html).toContain('前三個建議職業的準備方式');
+  expect(sent[0].html).toContain('要補足的能力');
   expect(sent[0].html).toContain('能力分析與排名');
-  expect(sent[0].html).toContain('三階段生涯規劃建議');
+  expect(sent[0].html).toContain('詳細生涯規劃');
   expect(sent[0].text).toContain('IKIGAI 契合指數：72/100');
+  expect(sent[0].html).toContain('前 12 週詳細行動表');
   expect(sent[0].html).toContain(`ref=${RECORD.id}`);
   expect(sent[0].html).not.toContain('<script');
   // A second send right away is refused; the admin sees the status.
@@ -255,6 +261,7 @@ test('ability analysis is cleaned up, stored and shown to the consultant', async
   expect(a.index).toEqual(100);
   expect(a.abilities).toEqual(ANALYSIS.abilities);
   expect(a.roadmap).toEqual([]);
+  expect(a.weeks).toEqual(ANALYSIS.weeks);
   expect(a.extra).toBeUndefined();
   const { records } = await (await admin('records')).json();
   expect(records[0].fitIndex).toEqual(100);
@@ -270,4 +277,26 @@ test('report email escapes what visitors typed', async () => {
   await sendReport(RECORD.id);
   expect(sent[0].html).not.toContain('<img src=x');
   expect(sent[0].html).toContain('&lt;img src=x');
+});
+
+test('admin can save a sending account; the password is never returned', async () => {
+  const put = (body) => admin('mail-settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  expect((await put({ user: 'not-an-email', pass: 'abcdabcdabcdabcd' })).status).toEqual(400);
+  expect((await put({ user: 'me@gmail.com', pass: 'short' })).status).toEqual(400);
+  expect((await fetch(`${base}/ikigai/admin/api/mail-settings`)).status).toEqual(401);
+
+  const sent = [];
+  setTestTransport(async (m) => { sent.push(m); });
+  const res = await put({ user: 'Me@Gmail.com', pass: 'abcd efgh ijkl mnop', name: '小明顧問' });
+  expect(res.status).toEqual(200);
+  const settings = await (await admin('mail-settings')).json();
+  expect(settings).toMatchObject({ user: 'me@gmail.com', name: '小明顧問', hasPass: true });
+  expect(JSON.stringify(settings)).not.toContain('abcdefgh');
+
+  const testMail = await admin('mail-test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: 'me@gmail.com' }) });
+  expect(testMail.status).toEqual(200);
+  expect(sent[0].to).toEqual('me@gmail.com');
+
+  expect((await admin('mail-settings', { method: 'DELETE' })).status).toEqual(200);
+  expect((await (await admin('mail-settings')).json()).hasPass).toEqual(false);
 });

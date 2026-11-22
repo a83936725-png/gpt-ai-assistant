@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.20.0 (2026-11-22)
+## 4.22.0 (2026-11-22)
 
 ### New Features
 
@@ -23,6 +23,23 @@
 - Travel: budget-based planning. The itinerary estimates flights, stay, tickets and eSIM, says how much each person can spend per day, and can drop or add paid attractions to fit the budget cap. Recommendations can be filtered by total budget
 - Travel: a 2025 / 2026 memory album with a cover, one page per trip, your own photos and a journal
 - Travel eSIM: a database of the brand's public Threads replies (`data/esim-threads.json`) feeds the first FAQ answers and troubleshooting tips. `node scripts/threads-import.js` adds every post and reply from a Threads data export
+
+## 4.21.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: the admin page has a "寄信設定" panel: paste a Gmail address and app password, the server logs in to check it, saves it in private storage and starts emailing reports at once, without editing Vercel or redeploying. A test email can be sent from the same panel. The password is never sent back to the browser
+
+## 4.20.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: exactly three suggested careers, each with a match score, why it fits, the skills it needs (with the ones the visitor already has ticked), what to build and how, and advice for the circles it does not cover yet
+- IKIGAI: a more detailed plan: checkpoints and weekly time for each of the three stages, and a 12-week action table in two-week blocks; all of it is in the PDF and the emailed report
+
+### Improvements
+
+- IKIGAI: the AI analysis and AI plan buttons only show while `IKIGAI_AI_ENABLED` is on, so visitors never see an error when the OpenAI quota runs out
 
 ## 4.19.0 (2026-11-22)
 

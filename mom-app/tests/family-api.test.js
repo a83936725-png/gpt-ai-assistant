@@ -176,6 +176,25 @@ function flows(label, makeStore) {
       expect((await api.get(`${base}/family`, as(b))).data.family).toBeNull();
     });
 
+    test('交接卡: 「換你囉」 goes to the others who asked for family news, with fixed words', async () => {
+      const a = await reg(); const b = await reg(); const c = await reg();
+      const { family, invite } = (await create(a)).data;
+      await join(b, family.id, invite.token); await join(c, family.id, invite.token);
+      await api.post(`${base}/push/subscribe`, { sub: { endpoint: `https://fcm.googleapis.com/fcm/send/ho-b-${label.length}`, keys: { p256dh: 'BKey_b', auth: 'auth-b' } }, topics: { family: true } }, as(b));
+      await api.post(`${base}/push/subscribe`, { sub: { endpoint: `https://fcm.googleapis.com/fcm/send/ho-a-${label.length}`, keys: { p256dh: 'BKey_a', auth: 'auth-a' } }, topics: { family: true } }, as(a));
+      expect((await api.post(`${base}/family/nudge`, { kind: 'other' }, as(a))).status).toBe(400);
+      const before = sent.length;
+      const r = await api.post(`${base}/family/nudge`, { kind: 'handoff' }, as(a));
+      expect(r.data).toEqual({ ok: true, sent: 1 }); // b asked for family news; c did not; a never gets her own
+      expect(sent.slice(before)).toEqual([expect.objectContaining({
+        endpoint: `https://fcm.googleapis.com/fcm/send/ho-b-${label.length}`, title: '換你顧寶寶囉 💜', body: '家人把交接卡傳給你了，打開 App 看看', url: '#/home', kind: 'family',
+      })]);
+      const outsider = await reg();
+      expect((await api.post(`${base}/family/nudge`, { kind: 'handoff' }, as(outsider))).data.error).toBe('no_family');
+      for (let i = 0; i < 20; i += 1) await api.post(`${base}/family/nudge`, { kind: 'handoff' }, as(c)); // eslint-disable-line no-await-in-loop
+      expect((await api.post(`${base}/family/nudge`, { kind: 'handoff' }, as(c))).status).toBe(429);
+    });
+
     test('the dashboard counts new families and joins (never who)', async () => {
       clock += 31e3;
       const st = await api.get(`${base}/admin/stats?days=30`, { headers: { 'X-Admin-Key': 'admin-key-for-family-tests-01', 'X-Forwarded-For': '10.41.250.1' } });
@@ -183,6 +202,7 @@ function flows(label, makeStore) {
       expect(sum('family_new')).toBeGreaterThanOrEqual(8);
       expect(sum('family_join')).toBeGreaterThanOrEqual(10);
       expect(st.data.totals.families).toBeGreaterThan(0);
+      expect(sum('handoff')).toBeGreaterThanOrEqual(21);
     });
   });
 }

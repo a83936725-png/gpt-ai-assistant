@@ -21,7 +21,7 @@ const CACHE_MS = 30 * 1000;
 export const EVENTS = [
   'signup', 'signup_email', 'signup_phone', 'signup_line', 'login', 'open', 'invite', 'gift',
   'gb_start', 'gb_join', 'gb_done', 'wall_new', 'wall_wish', 'circle_join', 'circle_vote', 'wave', 'deleted',
-  'push_sub', 'push_sent', 'family_new', 'family_join',
+  'push_sub', 'push_sent', 'family_new', 'family_join', 'handoff',
 ];
 // 台灣日期 of a moment, and the start (00:00 台灣時間) of that day
 export const dayKey = (t) => new Date(t + TW_MS).toISOString().slice(0, 10);

@@ -68,7 +68,7 @@
     ['day', '日期'], ['signup', '新註冊'], ['signup_email', 'Email 註冊'], ['signup_phone', '手機註冊'], ['signup_line', 'LINE 註冊'], ['login', '登入'], ['open', 'App 開啟'],
     ['invite', '成功邀請'], ['gift', '邀請禮領取'], ['gb_start', '開團'], ['gb_join', '參團'], ['gb_done', '成團'], ['wall_new', '祝福牆新開'], ['wall_wish', '祝福留言'],
     ['circle_join', '好孕圈新成員'], ['circle_vote', '好孕圈投票'], ['wave', '島上打招呼'], ['push_sub', '開啟推播'], ['push_sent', '推播送出'], ['family_new', '家人共用（新家庭）'],
-    ['family_join', '家人共用（加入）'], ['deleted', '刪除帳號'],
+    ['family_join', '家人共用（加入）'], ['handoff', '交接卡'], ['deleted', '刪除帳號'],
   ];
   function csv(rows) {
     const q = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
@@ -247,7 +247,7 @@
       })) : h('p', { class: 'small muted' }, '還沒有團購活動（在伺服器的 MOM_GROUPBUYS 設定）。')));
 
     // what moms do
-    const acts = [['gift', '邀請禮領取'], ['gb_start', '開團'], ['gb_join', '參團'], ['wall_new', '祝福牆新開'], ['wall_wish', '祝福留言'], ['circle_join', '好孕圈新成員'], ['circle_vote', '好孕圈投票'], ['wave', '島上打招呼'], ['login', '登入'], ['push_sub', '開啟推播'], ['push_sent', '推播送出'], ['family_new', '家人共用（新家庭）'], ['family_join', '家人共用（加入）']];
+    const acts = [['gift', '邀請禮領取'], ['gb_start', '開團'], ['gb_join', '參團'], ['wall_new', '祝福牆新開'], ['wall_wish', '祝福留言'], ['circle_join', '好孕圈新成員'], ['circle_vote', '好孕圈投票'], ['wave', '島上打招呼'], ['login', '登入'], ['push_sub', '開啟推播'], ['push_sent', '推播送出'], ['family_new', '家人共用（新家庭）'], ['family_join', '家人共用（加入）'], ['handoff', '交接卡']];
     el.append(ui.card({ class: 'ad-card' }, h('h3', { class: 'ad-ct' }, '互動'), h('p', { class: 'tiny muted ad-cs' }, `近 ${view.range} 天合計・次`),
       h('table', { class: 'ad-acts' }, h('tbody', null, acts.map(([k, t]) => h('tr', null, h('th', { scope: 'row' }, t), h('td', null, fmt(S.cur(k)))))))));
     if (T.push != null || T.families != null) {

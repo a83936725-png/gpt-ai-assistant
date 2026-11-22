@@ -254,7 +254,8 @@
         ms > 0 ? h('span', null, '約 ', h('b', { dataset: { countdown: diaper.next.toISOString() } }, C.fmtDuration(ms)), '後檢查尿布') : h('span', null, '可以檢查一下尿布囉')));
     }
     return ui.card({ class: 'next-card' },
-      h('div', { class: 'card-title' }, '✨ 接下來', h('span', { class: 'tag primary' }, '預測')),
+      h('div', { class: 'card-title' }, '✨ 接下來', h('span', { class: 'tag primary' }, '預測'),
+        App.handoff ? h('button', { class: 'link-btn small next-handoff', onclick: () => App.handoff.open() }, '🤝 交接') : null),
       rows, lines.length ? h('div', { class: 'next-lines' }, lines) : null,
       h('div', { class: 'tiny faint center mt' }, `依最近 ${feed ? feed.samples : 0} 次餵食與寶寶月齡估算・紀錄越多越準`));
   }
@@ -334,6 +335,8 @@
           el.append(babyHero(baby));
           const moment = App.share && App.share.momentLine && App.share.momentLine(baby);
           if (moment) el.append(moment);
+          const handed = App.handoff && App.handoff.banner(baby); // 交接卡 from the family
+          if (handed) el.append(handed);
           const isle = App.island && App.island.newIslandLine && App.island.newIslandLine();
           if (isle) el.append(isle);
           // 寶寶月照 on the month-day: under a new island (that happens once), and not with a 滿月／收涎 line (its sheet offers it)

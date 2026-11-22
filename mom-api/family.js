@@ -16,6 +16,8 @@
  *   POST /family/leave                           leave; the owner leaving ends the family and deletes everything
  *   POST /family/push     {changes: [{r, d} | {r, x: true}]}   up to 200 records (or deletions) → {seq}
  *   GET  /family/pull?since=&limit=              the changes after `since`, oldest first → {changes, seq, more}
+ *   POST /family/nudge    {kind: 'handoff'}       交接卡: the others get 「換你顧寶寶囉」 on their phones (fixed words; the
+ *                                               card itself travels as an encrypted record)
  * Kept 400 days after the family was last used; ending the family or deleting the owner's account deletes it at once.
  *
  * Storage: fam:<f> {id, owner, createdAt, check, invite: {h, exp}}   fam:m:<f> uid → {mid, role, label, at}
@@ -29,7 +31,7 @@ const MAX_PUSH = 200;
 const MAX_RECORDS = 60000;
 const MAX_D = 16000;
 const LIMITS = {
-  create: [5, 3600], join: [20, 3600], invite: [20, 3600], preview: [60, 600], push: [240, 600], pull: [600, 600], change: [30, 600],
+  create: [5, 3600], join: [20, 3600], invite: [20, 3600], preview: [60, 600], push: [240, 600], pull: [600, 600], change: [30, 600], nudge: [20, 3600],
 };
 const RID = /^[A-Za-z0-9_-]{16,44}$/;
 const B64 = /^[A-Za-z0-9_-]+$/;
@@ -247,6 +249,24 @@ export function mountFamily(router, {
       return v.x ? { r: r.member, s: r.score, x: true } : { r: r.member, s: r.score, d: v.d };
     }).filter((c) => c.x || c.d);
     res.json({ changes, seq: await store.getNum(`fam:s:${fid}`, t), more: rows.length === limit });
+  }));
+
+  // 交接卡: tell the others it is their turn (the words are fixed here; what was handed over is in the encrypted records)
+  router.post('/family/nudge', wrap(async (req, res) => {
+    const user = await member(req, res, 'nudge'); if (!user) return;
+    if (!req.body || req.body.kind !== 'handoff') { fail(res, 400, 'bad_request'); return; }
+    const t = now();
+    const f = await familyOf(user.id, t);
+    if (!f) { fail(res, 404, 'no_family'); return; }
+    const others = Object.keys(await store.hgetAllJson(`fam:m:${f.fam.id}`, t)).filter((uid) => uid !== user.id);
+    let sent = 0;
+    try {
+      sent = await notify(others, 'family', {
+        title: '換你顧寶寶囉 💜', body: '家人把交接卡傳給你了，打開 App 看看', url: '#/home', tag: `handoff-${f.fam.id}`,
+      });
+    } catch (e) { sent = 0; }
+    await metrics.count('handoff');
+    res.json({ ok: true, sent });
   }));
 
   return {

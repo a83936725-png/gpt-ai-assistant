@@ -82,8 +82,11 @@
     ms: { get: (s) => perBaby(s.milestones) },
     vac: { get: (s) => perBaby(s.vaccines) },
     chk: { get: (s) => perBaby(s.checkups) },
+    hand: { get: (s) => byId(s.handoffs) }, // 交接卡
   };
-  const LIST = { baby: 'babies', log: 'logs', growth: 'growth', milk: 'milk' };
+  const LIST = {
+    baby: 'babies', log: 'logs', growth: 'growth', milk: 'milk', hand: 'handoffs',
+  };
   const MAP = { ms: 'milestones', vac: 'vaccines', chk: 'checkups' };
 
   /* ---------------- sync memory (this phone only, tied to this copy of the data) ---------------- */
@@ -137,7 +140,6 @@
     return recs.length;
   }
 
-  let busy = null;
   const call = (method, path, body) => App.account.call(method, path, body);
   async function syncNow() {
     const f = fam(); const m = meta();
@@ -190,13 +192,16 @@
     m.at = new Date().toISOString(); delete m.where; saveMeta(m);
     return got;
   }
-  // one sync at a time; a request while one runs waits for the next round
+  // one sync at a time; asking while one runs gets a second round right after it (so what was just changed goes too)
+  let busy = null; let queued = null;
   async function sync({ quiet = true } = {}) {
     if (!active()) return null;
-    if (busy) { busy.again = true; return busy.p; }
-    busy = { again: false };
+    if (busy) {
+      if (!queued) queued = busy.then(() => { queued = null; return sync({ quiet }); }, () => { queued = null; return sync({ quiet }); });
+      return queued;
+    }
     status.state = 'syncing'; paintStatus();
-    busy.p = (async () => {
+    busy = (async () => {
       let got = 0;
       try {
         got = await syncNow();
@@ -204,16 +209,15 @@
         if (got && !quiet) ui.toast(`已更新家人的 ${got} 筆紀錄`);
       } catch (e) {
         if (e && e.status === 404 && e.code === 'no_family') {
-          store.update((s) => { s.family = null; });
+          store.update((st) => { st.family = null; });
           ui.toast('你已經不在這個家庭的共用紀錄了（手機上的紀錄都還在）');
           status.state = 'off';
         } else { status.state = 'error'; status.error = e && e.code === 'offline' ? '離線中' : '暫時連不上，稍後會再試'; }
       }
-      const again = busy.again; busy = null; paintStatus();
-      if (again) setTimeout(() => sync(), 300);
+      paintStatus();
       return got;
     })();
-    return busy.p;
+    try { return await busy; } finally { busy = null; }
   }
   const status = { state: 'idle', pending: 0, error: '' };
   let statusEl = null;
@@ -263,7 +267,7 @@
 
   /* ---------------- the screen ---------------- */
   const MEMBERS = ['媽媽', '爸爸', '阿嬤', '阿公', '外婆', '外公', '保母', '其他'];
-  const SHARED = '寶寶資料、所有日常紀錄（餵奶、尿布、睡眠、擠奶…）、成長、疫苗與健檢、發展里程碑、母乳庫存';
+  const SHARED = '寶寶資料、所有日常紀錄（餵奶、尿布、睡眠、擠奶…）、成長、疫苗與健檢、發展里程碑、母乳庫存、交接卡';
   const NOT_SHARED = '懷孕紀錄、產檢日記、月照照片、你自己的健康紀錄和設定';
   const ownRecords = () => (store.state.logs || []).length + (store.state.babies || []).length + (store.state.growth || []).length;
   const consentBox = (ok) => {

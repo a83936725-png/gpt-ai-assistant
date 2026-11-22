@@ -73,6 +73,14 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   await A.goto(`${BASE}#/island`); await A.waitForTimeout(1800);
   const islA = await S(A, () => [...document.querySelectorAll('.isl .gbr-tile')].filter((x) => !x.hidden).map((x) => [x.dataset.kind, (x.querySelector('.gbr-rib') || {}).textContent, (x.querySelector('.gbr-badge') || {}).textContent, x.querySelector('.gbr-chip').textContent]));
   ok('好孕島: her team as a tile — 揪團中, 1/3, its countdown (47:5x:xx)', islA.length === 1 && islA[0][0] === 'mine' && islA[0][1] === '揪團中' && islA[0][2] === '1/3' && /^(47:5\d|48:00):\d\d$/.test(islA[0][3]), JSON.stringify(islA));
+  // 即時團購: her team was public (the default), so another member sees it in 正在開團 and could join it there
+  const F = await mk();
+  await setUpAndRegister(F, 'browser');
+  await F.goto(`${BASE}#/groupbuy`); await F.waitForTimeout(2000);
+  const fRows = await S(F, () => [...document.querySelectorAll('.gb-open[data-c="gb-test"] .gb-open-row')].map((r) => r.querySelector('.gb-open-main').innerText.replace(/\s+/g, '') + (r.querySelector('.gb-open-join') ? '|跟團' : '')));
+  ok('即時: another member sees 小美的團 1/3 in 正在揪的團 with 跟團 (no phone number)', fRows.some((r) => /^小美的團還差2人1／3人・剩4[78]:\d\d:\d\d\|跟團$/.test(r)) && !fRows.join().includes('0912'), JSON.stringify(fRows));
+  ok('…and the live line says 小美開了一團', /小美開了一團・易家滴雞精10入（測試）/.test((await text(F, '.gb-feed')).replace(/\s+/g, '')), await text(F, '.gb-feed'));
+  await F.context().close();
 
   /* ---- B: new, opens the link: sees the team before setting up, joins after signing up ---- */
   const Bp = await mk();

@@ -145,3 +145,30 @@
 .gb-open-steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .gb-open-steps li:not(:last-child)::after { content: '›'; position: absolute; right: -6px; top: 6px; color: var(--c-primary); font-weight: 800; opacity: .6; }
 .gb-os-ico { font-size: 22px; line-height: 1.15; }
+
+/* ---------- 即時團購: 正在揪的團 (other moms' public teams) and what just happened ---------- */
+.gb-open { display: grid; gap: 8px; margin: 0 0 12px; padding: 10px; border-radius: 16px; background: var(--c-surface-2); }
+.gb-open[hidden] { display: none; }
+.gb-open-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 14px; }
+.gb-open-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 10px; border-radius: 14px; background: var(--c-surface); border: 1px solid var(--c-border); }
+.gb-open-main { flex: 1; min-width: 0; display: grid; gap: 4px; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 44px; }
+.gb-open-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.gb-open-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gb-need1 { flex: none; padding: 1px 7px; border-radius: 999px; background: #c62f2a; color: #fff; font-size: 12px; font-weight: 800; line-height: 1.45; }
+.gb-open-bar { display: block; height: 5px; border-radius: 3px; background: var(--c-border); overflow: hidden; }
+.gb-open-bar i { display: block; height: 100%; border-radius: 3px; background: var(--c-primary); }
+.gb-open-sub .num { font-variant-numeric: tabular-nums; }
+.gb-open-sub .soon { color: var(--c-danger-ink); font-weight: 700; }
+.gb-open-join { flex: none; min-height: 40px; min-width: 64px; }
+.gb-open-more { justify-self: center; min-height: 40px; }
+.gb-feed { display: flex; align-items: center; gap: 8px; min-height: 40px; margin: 0 0 12px; padding: 8px 12px; border-radius: 14px; background: var(--c-surface); border: 1px solid var(--c-border); }
+.gb-feed[hidden] { display: none; }
+.gb-feed-tag { display: inline-flex; align-items: center; gap: 5px; flex: none; font-size: 12px; font-weight: 800; color: var(--c-danger-ink); }
+.gb-feed-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+/* 開一團 / her team: 公開這一團 */
+.gb-pub { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--c-surface-2); cursor: pointer; }
+.gb-pub input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; accent-color: var(--c-primary); }
+.gb-pub-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--c-surface-2); cursor: pointer; }
+.gb-pub-row .grow { display: grid; gap: 2px; }
+/* 好孕島: a group-buy with a team only 1 short */
+.gbr-rib.hot { background: #a3271f; }

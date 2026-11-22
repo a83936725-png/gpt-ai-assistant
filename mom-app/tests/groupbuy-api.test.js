@@ -239,6 +239,56 @@ function flows(label, makeStore) {
       await api.post(`${base}/auth/delete`, { password: 'baby-sleeps-9' }, as(d));
       expect((await view(open.id, c)).data.team).toMatchObject({ status: 'done', count: 3, code: 'TEAM-OK-1' });
     });
+
+    test('即時團購: public teams only (closest to full first), live counts, off the list when full, what just happened', async () => {
+      const live = async () => (await api.get(`${base}/groupbuy/live`)).data.live;
+      const tick = () => { clock += 1000; };
+      const [a, b, c, d, e] = [await reg(), await reg(), await reg(), await reg(), await reg()];
+      const pub1 = (await start(a, { campaign: 'gb-big', public: true, name: '阿芳' })).data.team; tick();
+      const priv = (await start(b, { campaign: 'gb-big', name: '小雅' })).data.team; tick();
+      expect([pub1.pub, priv.pub]).toEqual([true, false]);
+      const pub2 = (await start(c, { campaign: 'gb-big', public: true, name: 'Yuki' })).data.team; tick();
+      await join(d, pub2.id); tick();
+      await join(e, pub2.id); tick();
+      let L = (await live())['gb-big'];
+      expect(L.teams.map((x) => [x.leader, x.count, x.size])).toEqual([['Yuki', 3, 6], ['阿芳', 1, 6]]); // the closest to full first
+      expect(L).toMatchObject({ total: 2, teams: [{ id: pub2.id, endsAt: pub2.endsAt }, { id: pub1.id }] });
+      expect(JSON.stringify(L)).not.toMatch(new RegExp(`${priv.id}|小雅`)); // a private team is never listed
+      expect(L.recent.map((x) => [x.kind, x.leader, x.count])).toEqual([['join', 'Yuki', 3], ['join', 'Yuki', 2], ['start', 'Yuki', 1], ['start', '阿芳', 1]]);
+      expect(JSON.stringify(L)).not.toMatch(/媽媽\d|@example/); // team names only: no accounts, no member names
+      // someone leaves: the count goes down right away
+      await api.post(`${base}/groupbuy/team/${pub2.id}/leave`, {}, as(e)); tick();
+      expect((await live())['gb-big'].teams[0]).toMatchObject({ id: pub2.id, count: 2 });
+      // only the leader can take her team off the list; then its name is gone from what just happened too
+      expect((await api.post(`${base}/groupbuy/team/${pub1.id}/public`, { public: false }, as(d))).status).toBe(404);
+      const off = await api.post(`${base}/groupbuy/team/${pub1.id}/public`, { public: false }, as(a)); tick();
+      expect(off.data.team.pub).toBe(false);
+      L = (await live())['gb-big'];
+      expect(L.teams.map((x) => x.id)).toEqual([pub2.id]);
+      expect(L.recent.find((x) => x.kind === 'start' && x.count === 1 && x.leader !== 'Yuki').leader).toBe('一位媽媽');
+      expect((await api.post(`${base}/groupbuy/team/${pub1.id}/public`, { public: true }, as(a))).data.team.pub).toBe(true);
+      expect((await live())['gb-big'].total).toBe(2);
+      // a public team that fills up: off the list, 成團 in what just happened
+      const [x, y, z] = [await reg(), await reg(), await reg()];
+      const t3 = (await start(x, { campaign: 'gb-test', public: true, name: '佩佩' })).data.team; tick();
+      await join(y, t3.id); tick();
+      expect((await live())['gb-test'].teams.map((v) => v.id)).toEqual([t3.id]);
+      await join(z, t3.id); tick();
+      L = (await live())['gb-test'];
+      expect(L.total).toBe(0);
+      expect(L.recent[0]).toMatchObject({ kind: 'done', leader: '佩佩', count: 3, size: 3 });
+      // the export says whether her team is public
+      expect((await api.get(`${base}/me/export`, as(x))).data.groupBuys[0]).toMatchObject({ leader: true, public: true });
+      // deleting the leader's account: the team goes on, but privately and without her name anywhere
+      await api.post(`${base}/auth/delete`, { password: 'baby-sleeps-9' }, as(c)); tick();
+      L = (await live())['gb-big'];
+      expect(L.teams.map((v) => v.id)).toEqual([pub1.id]);
+      expect(JSON.stringify(L)).not.toContain('Yuki');
+      expect((await view(pub2.id, d)).data.team).toMatchObject({ leader: '會員', status: 'open' });
+      // time runs out: the list empties by itself
+      clock += 73 * HOUR;
+      expect((await live())['gb-big']).toMatchObject({ total: 0, teams: [] });
+    });
   });
 }
 

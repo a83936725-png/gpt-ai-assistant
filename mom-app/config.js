@@ -22,6 +22,8 @@ window.BRAND = {
   liveStats: { showOnlineFrom: 1, showRegisteredFrom: 1 },
   // 團購「正在開團」的參加人數：真實的總數，達到這個人數才顯示（太少時先不顯示）
   groupbuyStatsFrom: 3,
+  // 開團時「公開這一團」預設要不要勾（公開的團會出現在「正在開團」，其他媽媽可以直接跟團；開團的人可以隨時取消公開）
+  groupbuyPublicDefault: true,
   // 常見好物：品牌自家商品放在「產後媽媽」分類並標示「品牌」；show: false 可隱藏
   goodsBrandItem: { show: true, when: '孕期、坐月子' },
   // 分享文案的 hashtag

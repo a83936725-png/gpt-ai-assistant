@@ -66,12 +66,13 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
 
   /* ---------- 好孕島: the column ---------- */
   await go(P, 'island', null, 1600);
+  await P.waitForFunction(() => (document.querySelector('.gbr-tile[data-c="sample-gift"] .gbr-rib') || {}).textContent === '差1人', null, { timeout: 5000 }).catch(() => {});
   await P.clock.pauseAt(new Date('2026-11-22T14:19:10+08:00')); await P.clock.runFor(1000); // 14:19:11, held still
   let t = await tiles(P);
-  ok('好孕島: three tiles down the left side, the group-buy ending soonest first', t.length === 3 && t.map((x) => x.c).join() === 'sample-gift,sample-drip,sample-set' && t.every((x) => x.kind === 'new' && x.rib === '限時'), JSON.stringify(t));
-  ok('…each with its discount and a countdown: 07:40:49 (today 22:00), 53:40:49 (past 24 hours, like a game timer), 剩 6 天',
-    t.map((x) => x.badge).join() === '-15%,-18%,-15%' && t.map((x) => x.chip).join() === '07:40:49,53:40:49,剩 6 天', JSON.stringify(t));
-  ok('…a screen reader hears what, the price and how long is left', /^限時團購：月子禮盒（範例），團購價 NT\$3,280，還剩 7 小時 40 分$/.test(t[0].label), t[0].label);
+  ok('好孕島: three tiles down the left side, the group-buy ending soonest first', t.length === 3 && t.map((x) => x.c).join() === 'sample-gift,sample-drip,sample-set' && t.every((x) => x.kind === 'new'), JSON.stringify(t));
+  ok('…限時 with the discount; 差1人 (red) when another mom\'s team needs just one more', t.map((x) => `${x.rib}${x.badge}`).join() === '差1人,限時-18%,限時-15%', JSON.stringify(t));
+  ok('…each with a countdown: 07:40:49 (today 22:00), 53:40:49 (past 24 hours, like a game timer), 剩 6 天', t.map((x) => x.chip).join() === '07:40:49,53:40:49,剩 6 天', JSON.stringify(t));
+  ok('…a screen reader hears what, the price, how long is left, and that a team is one short', /^限時團購：月子禮盒（範例），團購價 NT\$3,280，還剩 7 小時 40 分，有一團只差 1 人$/.test(t[0].label), t[0].label);
   const place = await S(P, () => { const r = document.querySelector('.isl .gb-rail').getBoundingClientRect(); const hud = document.querySelector('.isl-hud').getBoundingClientRect(); const heart = document.querySelector('.isl-heart-badge'); const hb = heart && heart.getBoundingClientRect(); return { left: Math.round(r.left), top: Math.round(r.top), bottom: Math.round(r.bottom), hudBottom: Math.round(hud.bottom), heartTop: hb ? Math.round(hb.top) : null }; });
   ok('…on the left edge, below the island card and above the 💜 chip', place.left <= 12 && place.top > place.hudBottom && (place.heartTop === null || place.bottom < place.heartTop), JSON.stringify(place));
   await P.clock.runFor(3000);

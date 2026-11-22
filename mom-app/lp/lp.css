@@ -368,7 +368,7 @@ mark { background: linear-gradient(transparent 56%, var(--mark) 56%); color: inh
 
 /* 05 精選畫廊卡: one frame large, small ones to pick from; the next one takes the stage every few seconds */
 .gal { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
-.gal-main { position: relative; margin: 0; aspect-ratio: 4 / 5; border-radius: 4px; overflow: hidden; box-shadow: var(--shadow); background: var(--paper-2); }
+.gal-main { position: relative; width: 100%; max-width: 540px; margin: 0; aspect-ratio: 4 / 5; border-radius: 4px; overflow: hidden; box-shadow: var(--shadow); background: var(--paper-2); }
 .gm { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.04); transition: opacity .7s ease, transform 3.6s ease-out; }
 .gm.on { opacity: 1; transform: scale(1); }
 .gal-cap { margin: 0 0 12px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }

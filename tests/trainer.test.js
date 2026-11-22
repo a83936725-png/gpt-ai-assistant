@@ -80,6 +80,23 @@ test('「繼續練習」 picks the practice up again after the bot restarts', as
   expect(await replies('我懂，可以先從入門組開始')).toEqual(['say:我懂，可以先從入門組開始']);
 }, TIMEOUT);
 
+test('「快問快答」 starts the free drill, and 「下一題」 asks for the next card', async () => {
+  expect(await replies('快問快答')).toEqual(['drill:']);
+  expect(await replies('我懂，一包不到 100 塊')).toEqual(['say:我懂，一包不到 100 塊']);
+  expect(await replies('下一題！')).toEqual(['next:']);
+  expect(await replies('結束練習')).toEqual(['end:']);
+  expect(calls.map(({ args }) => args[1])).toEqual(['drill', 'say', 'next', 'end']);
+  calls = [];
+  expect(await replies('快問快答 換個說法')).toEqual(['drill:換個說法']);
+  expect(calls[0].args).toEqual(['test-secret', 'drill', MOCK_USER_01, '換個說法', 'user']);
+}, TIMEOUT);
+
+test('customers who send the drill words are not sent to the drill', async () => {
+  await replies('快問快答', MOCK_USER_02);
+  await replies('下一題', MOCK_USER_02);
+  expect(calls).toEqual([]);
+}, TIMEOUT);
+
 test('only staff on TRAINER_USER_IDS can practise, and not in groups', async () => {
   await replies('練習接待', MOCK_USER_02);
   await replies('練習接待', MOCK_USER_01, '000001');

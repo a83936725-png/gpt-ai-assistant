@@ -14,6 +14,10 @@ export const TRAINER_COMMANDS = Object.freeze({
   結束練習: 'end',
   繼續練習: 'resume',
   放棄練習: 'quit',
+  // Quick drill without AI: the expo site sends a card, staff answer, the site shows the suggested
+  // wording. Free, because nothing here or there calls a model.
+  快問快答: 'drill',
+  下一題: 'next',
 });
 
 const ACTIVE_MS = 2 * 60 * 60 * 1000;
@@ -52,13 +56,15 @@ const typedText = (context) => context.event.text.replaceAll('　', ' ').trim();
 
 /**
  * Starting can name the scenario: 「練習接待 中期 猶豫」 practises with a hesitant mum in mid
- * pregnancy. 「開始練習」 also starts.
+ * pregnancy. 「開始練習」 also starts. 「快問快答 換個說法」 picks the drill's deck the same way.
  * @param {string} text
  * @returns {{op: string, rest: string} | null}
  */
 const parseCommand = (text) => {
   const start = text.match(/^(?:練習接待|開始練習)(?:\s+(.*))?$/);
   if (start) return { op: 'start', rest: (start[1] || '').trim() };
+  const drill = text.match(/^快問快答(?:\s+(.*))?$/);
+  if (drill) return { op: 'drill', rest: (drill[1] || '').trim() };
   const op = TRAINER_COMMANDS[text.replace(/[。！？!?.\s]+$/, '')];
   return op ? { op, rest: '' } : null;
 };

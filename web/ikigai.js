@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import express from 'express';
 import { readFileSync } from 'fs';
 import path from 'path';
@@ -6,15 +7,24 @@ import analyzeIkigai, {
   describeIkigaiError, IkigaiInputError, IKIGAI_CIRCLES, normalizeIkigai, normalizePlanInput, planIkigai,
 } from '../utils/analyze-ikigai.js';
 import moderateContent from '../utils/moderate-content.js';
+import {
+  deleteRecord, getRecord, listRecords, sanitizeRecord, saveRecord, summarize, toCsv,
+} from '../utils/ikigai-records.js';
 
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
 const PAGE_PATH = path.join(process.cwd(), 'web', 'ikigai.html');
+const ADMIN_PATH = path.join(process.cwd(), 'web', 'ikigai-admin.html');
 const WINDOW_MS = 60 * 60 * 1000;
 
 let page;
 const getPage = () => {
   if (!page || config.APP_ENV !== 'production') page = readFileSync(PAGE_PATH, 'utf8');
   return page;
+};
+let adminPage;
+const getAdminPage = () => {
+  if (!adminPage || config.APP_ENV !== 'production') adminPage = readFileSync(ADMIN_PATH, 'utf8');
+  return adminPage;
 };
 
 // Best-effort limit per client IP. Serverless instances do not share memory, so this only slows down abuse.
@@ -31,7 +41,20 @@ const isRateLimited = (ip, now = Date.now()) => {
   return false;
 };
 
-const resetRateLimit = () => hits.clear();
+// Saves happen as the visitor works, so they get a separate, larger allowance.
+const saves = new Map();
+const isSaveLimited = (ip, now = Date.now()) => {
+  const recent = (saves.get(ip) || []).filter((time) => now - time < WINDOW_MS);
+  recent.push(now);
+  saves.set(ip, recent);
+  if (saves.size > 5000) saves.delete(saves.keys().next().value);
+  return recent.length > 400;
+};
+
+const resetRateLimit = () => {
+  hits.clear();
+  saves.clear();
+};
 
 const getClientIp = (req) => (req.get('x-forwarded-for') || req.ip || '').split(',')[0].trim();
 
@@ -113,6 +136,97 @@ router.post('/analyze', aiRoute(normalizeIkigai, async (input) => {
 }));
 
 router.post('/plan', aiRoute(normalizePlanInput, (input) => planIkigai(input)));
+
+// ---------- client records ----------
+
+router.post('/records', async (req, res) => {
+  if (isSaveLimited(getClientIp(req))) {
+    res.status(429).json({ code: 'too_many_requests' });
+    return;
+  }
+  let record;
+  try {
+    record = sanitizeRecord(req.body, {
+      country: req.get('x-vercel-ip-country') || '',
+      city: decodeURIComponent(req.get('x-vercel-ip-city') || ''),
+      userAgent: req.get('user-agent') || '',
+    });
+  } catch (err) {
+    if (!(err instanceof IkigaiInputError)) throw err;
+    res.status(400).json({ code: 'invalid_input', error: err.message });
+    return;
+  }
+  try {
+    await saveRecord(record);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(`[ikigai] save record: ${err.message}`);
+    res.status(502).json({ code: 'storage_error' });
+  }
+});
+
+// ---------- admin ----------
+
+const sameSecret = (a, b) => {
+  const x = crypto.createHash('sha256').update(String(a)).digest();
+  const y = crypto.createHash('sha256').update(String(b)).digest();
+  return crypto.timingSafeEqual(x, y);
+};
+
+router.get('/admin', (req, res) => {
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.set('Cache-Control', 'no-store');
+  res.set('X-Robots-Tag', 'noindex');
+  res.send(getAdminPage());
+});
+
+const requireAdmin = (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  if (!config.IKIGAI_ADMIN_PASSWORD) {
+    res.status(503).json({ code: 'admin_disabled', error: '後台尚未設定密碼（IKIGAI_ADMIN_PASSWORD）' });
+    return;
+  }
+  if (!sameSecret(req.get('x-admin-password') || '', config.IKIGAI_ADMIN_PASSWORD)) {
+    res.status(401).json({ code: 'unauthorized', error: '密碼不正確' });
+    return;
+  }
+  next();
+};
+
+const adminRoute = (fn) => async (req, res) => {
+  try {
+    await fn(req, res);
+  } catch (err) {
+    console.error(`[ikigai] admin ${req.path}: ${err.message}`);
+    res.status(502).json({ code: 'storage_error', error: '讀取資料失敗，請稍後再試' });
+  }
+};
+
+router.get('/admin/api/records', requireAdmin, adminRoute(async (req, res) => {
+  const records = await listRecords();
+  res.json({ storage: config.IKIGAI_BLOB_TOKEN ? 'blob' : 'memory', records: records.map(summarize) });
+}));
+
+router.get('/admin/api/records/:id', requireAdmin, adminRoute(async (req, res) => {
+  const record = await getRecord(req.params.id);
+  if (!record) {
+    res.status(404).json({ code: 'not_found', error: '找不到這筆資料' });
+    return;
+  }
+  res.json({ record, summary: summarize(record) });
+}));
+
+router.delete('/admin/api/records/:id', requireAdmin, adminRoute(async (req, res) => {
+  await deleteRecord(req.params.id);
+  res.json({ ok: true });
+}));
+
+router.get('/admin/api/export.csv', requireAdmin, adminRoute(async (req, res) => {
+  const records = await listRecords();
+  res.set('Content-Type', 'text/csv; charset=utf-8');
+  res.set('Content-Disposition', `attachment; filename="ikigai-clients-${new Date().toISOString().slice(0, 10)}.csv"`);
+  res.send(toCsv(records));
+}));
 
 export {
   sendPage,

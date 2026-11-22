@@ -684,7 +684,11 @@
         body: h('div', { class: 'sh-moment' },
           h('p', null, cu.sub),
           TRADITION[cu.id] ? h('p', { class: 'small muted' }, TRADITION[cu.id]) : null,
-          h('button', { class: 'btn btn-primary btn-block mt', onclick: () => { sh.close(); setTimeout(() => open({ kind: `custom-${cu.id}` }), 240); } }, '📤 做成分享卡')),
+          h('button', { class: 'btn btn-primary btn-block mt', onclick: () => { sh.close(); setTimeout(() => open({ kind: `custom-${cu.id}` }), 240); } }, '📤 做成分享卡'),
+          App.monthly && App.monthly.dueSlot(b) != null ? h('button', {
+            class: 'btn btn-soft btn-block mt-sm sh-monthly',
+            onclick: () => { const m = App.monthly.dueSlot(b); sh.close(); App.navigate('monthly', { m, baby: b.id }); },
+          }, `📸 拍${App.monthly.label(App.monthly.dueSlot(b)).text}照`) : null),
       });
     };
     const el = h('button', { class: 'moment-line', onclick: show },
@@ -859,7 +863,7 @@
   }
   // save a generated picture: the phone's share sheet (「儲存影像」, LINE…) when it takes files, otherwise a download
   async function saveImage(blob, name, title = '') {
-    const file = typeof File === 'function' ? new File([blob], name, { type: 'image/png' }) : null;
+    const file = typeof File === 'function' ? new File([blob], name, { type: blob.type || 'image/png' }) : null;
     if (file && navigator.canShare && navigator.share && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file], title }); return 'shared'; } catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
     }

@@ -80,12 +80,13 @@
     }
     return n;
   }
-  // every photo id the saved state refers to (diary entries + prenatal visits)
+  // every photo id the saved state refers to (diary entries + prenatal visits + 寶寶月照)
   function referenced(state = App.store && App.store.state) {
     const ids = [];
     const p = (state && state.preg) || {};
     Object.values(p.visitNotes || {}).forEach((v) => (v && v.photos || []).forEach((id) => ids.push(id)));
     (p.diary || []).forEach((e) => (e.photos || []).forEach((id) => ids.push(id)));
+    Object.values((state && state.monthly && state.monthly.babies) || {}).forEach((bs) => Object.values(bs || {}).forEach((sl) => { if (sl && sl.photo) ids.push(sl.photo); }));
     return ids;
   }
 

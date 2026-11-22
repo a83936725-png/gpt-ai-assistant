@@ -163,7 +163,7 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mom-diary-'));
   ok('the ✕ to remove a photo is big enough to tap (≥ 34px)', xSize === null || xSize >= 34, `${xSize}`);
   await go(p, 'me', null, 900);
   const line = await S(p, () => (document.querySelector('.storage-line') || {}).textContent || '');
-  ok('我的 says how many diary photos are kept and how much room they take', /產檢日記照片 \d+ 張（約 [\d.]+ MB）/.test(line), line);
+  ok('我的 says how many photos are kept (diary and 寶寶月照) and how much room they take', /照片 \d+ 張（產檢日記、寶寶月照，約 [\d.]+ MB）/.test(line), line);
   await S(p, () => App.store.reset()); await p.waitForTimeout(600);
   ok('清除所有資料 also deletes every ultrasound photo from the phone', (await nKeys()) === 0);
 

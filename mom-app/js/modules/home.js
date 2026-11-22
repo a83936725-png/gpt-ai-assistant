@@ -334,6 +334,7 @@
           el.append(babyHero(baby));
           const moment = App.share && App.share.momentLine && App.share.momentLine(baby);
           if (moment) el.append(moment);
+          else { const mo = App.monthly && App.monthly.homeLine && App.monthly.homeLine(baby); if (mo) el.append(mo); } // 寶寶月照
           const isle = App.island && App.island.newIslandLine && App.island.newIslandLine();
           if (isle) el.append(isle);
           const gift = App.gift && App.gift.line(); // 雙向邀請禮: a friend's welcome gift waiting

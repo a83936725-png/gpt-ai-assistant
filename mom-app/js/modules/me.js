@@ -92,6 +92,7 @@
               s.babies = s.babies.filter((x) => x.id !== baby.id);
               s.logs = s.logs.filter((l) => l.babyId !== baby.id);
               s.growth = s.growth.filter((g) => g.babyId !== baby.id);
+              if (s.monthly && s.monthly.babies) delete s.monthly.babies[baby.id]; // 寶寶月照
               Object.keys(s.active || {}).forEach((k) => { if (s.active[k] && s.active[k].babyId === baby.id) delete s.active[k]; }); // their running timers
               if (s.activeBabyId === baby.id) s.activeBabyId = s.babies[0]?.id || null;
             });
@@ -453,7 +454,15 @@
     const dayN = (n) => C.dateKey(C.addDays(birthday, n));
     s.vaccines[babyId] = { hepb1: dayN(0), hepb2: dayN(31), dtap1: dayN(61), pcv1: dayN(61) };
     s.checkups[babyId] = { nbs: dayN(2), hearing: dayN(2), v1: dayN(30), v2: dayN(62) };
-    s.milestones[babyId] = {};
+    s.milestones[babyId] = { m2c: dayN(52) };
+    s.monthly = { // 寶寶月照: drawn sample pictures, made on this phone when first shown
+      frame: 'cream', qr: false, skip: {},
+      babies: { [babyId]: {
+        0: { photo: 'demo-m0', frame: 'cream', crop: { x: 0, y: 0, z: 1 }, note: '歡迎來到這個世界', name: null, growth: true, at: new Date(now - 74 * C.DAY).toISOString() },
+        1: { photo: 'demo-m1', frame: 'wreath', crop: { x: 0, y: 0, z: 1 }, note: '滿月快樂', name: null, growth: true, at: new Date(now - 44 * C.DAY).toISOString() },
+        2: { photo: 'demo-m2', frame: 'polaroid', crop: { x: 0, y: 0, z: 1 }, note: '會發出「咕咕」「啊」等聲音了', name: null, growth: true, at: new Date(now - 14 * C.DAY).toISOString() },
+      } },
+    };
     s.milk = [
       { id: C.uid(), ml: 120, originalMl: 120, pumpedAt: new Date(now - 20 * C.DAY).toISOString(), storage: 'freezer', thawedAt: null, usedAt: null, note: 'A1' },
       { id: C.uid(), ml: 150, originalMl: 150, pumpedAt: new Date(now - 9 * C.DAY).toISOString(), storage: 'freezer', thawedAt: null, usedAt: null, note: 'A2' },
@@ -638,7 +647,7 @@
         (() => {
           const line = h('p', { class: 'small muted mt storage-line' }, storageLine());
           // diary photos live in their own store on the phone: say how many and how much room they take
-          if (App.media) App.media.stats().then(({ count, bytes }) => { if (count) line.textContent = `${storageLine()}・產檢日記照片 ${count} 張（約 ${Math.max(0.1, bytes / 1048576).toFixed(1)} MB）`; });
+          if (App.media) App.media.stats().then(({ count, bytes }) => { if (count) line.textContent = `${storageLine()}・照片 ${count} 張（產檢日記、寶寶月照，約 ${Math.max(0.1, bytes / 1048576).toFixed(1)} MB）`; });
           return line;
         })(),
         needsHomeScreen() ? h('p', { class: 'tiny faint' }, 'iPhone：把 App 加到主畫面（Safari「分享」→「加入主畫面」），7 天沒打開也不會被清掉紀錄。') : null,

@@ -89,7 +89,7 @@
     const { id, params } = parseHash();
     let def = App.screens[id];
     // visitors who haven't set up yet can still open login and shared content (Q&A, island articles, roadmap)
-    const PUBLIC = ['onboarding', 'login', 'search', 'island', 'island-guide', 'journey', 'wishlist', 'sources', 'wish', 'privacy', 'groupbuy'];
+    const PUBLIC = ['onboarding', 'login', 'search', 'island', 'island-guide', 'journey', 'wishlist', 'sources', 'wish', 'privacy', 'groupbuy', 'admin'];
     if (!App.store.state.onboarded && App.screens.onboarding && !PUBLIC.includes(id)) def = App.screens.onboarding;
     if (!def) def = App.screens.home;
     const el = view();

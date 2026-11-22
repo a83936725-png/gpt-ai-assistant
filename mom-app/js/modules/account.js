@@ -16,13 +16,13 @@
     return new URL('api/', location.href.split(/[?#]/)[0]).href;
   })();
   const token = () => (store.state.auth && store.state.auth.token) || '';
-  async function call(method, path, body) {
+  async function call(method, path, body, headers = null) {
     if (!base) throw Object.assign(new Error('offline'), { code: 'offline' });
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 8000);
     try {
       const r = await fetch(base + path, {
-        method, signal: ctrl.signal, headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}) },
+        method, signal: ctrl.signal, headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}), ...(headers || {}) },
         body: body ? JSON.stringify(body) : undefined,
       });
       const data = await r.json().catch(() => ({}));

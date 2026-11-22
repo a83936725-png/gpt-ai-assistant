@@ -66,7 +66,7 @@ export function pollFor(info, t) {
 }
 
 export function mountCircle(router, {
-  store, now, secret, over, clientIp, wrap,
+  store, now, secret, over, clientIp, wrap, metrics = { count: async () => {} },
 }) {
   const { nidOf, admit, okKey } = makeIdentity({
     store, secret, over, clientIp,
@@ -125,7 +125,9 @@ export function mountCircle(router, {
   router.post('/circle/sync', wrap(async (req, res) => {
     const c = await who(req, res, 'sync'); if (!c) return;
     if (!(await admit(req, c.nid, c.t))) { res.status(429).json({ error: 'too_many' }); return; }
+    const fresh = (await store.zscore(`circ:m:${c.cohort}`, c.nid)) === null;
     await store.zset(`circ:m:${c.cohort}`, c.nid, c.t);
+    if (fresh) await metrics.count('circle_join');
     res.json(await state(c));
   }));
 
@@ -150,6 +152,7 @@ export function mountCircle(router, {
       await store.hsetJson(vKey, c.nid, opt, WEEK_TTL, c.t);
       if (Number.isInteger(prev)) await store.hincrBy(cKey, String(prev), -1, WEEK_TTL, c.t); // changed her mind: still one vote
       await store.hincrBy(cKey, String(opt), 1, WEEK_TTL, c.t);
+      if (!Number.isInteger(prev)) await metrics.count('circle_vote');
     }
     res.json(await state(c));
   }));

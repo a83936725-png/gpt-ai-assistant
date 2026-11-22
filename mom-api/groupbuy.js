@@ -113,7 +113,7 @@ const publicCampaign = ({
 }) => ({ ...c, startsAt: Number.isFinite(startMs) ? startMs : null, endsAt: endMs });
 
 export function mountGroupbuy(router, {
-  store, now, over, clientIp, wrap, currentUser, env, needVerify = () => false,
+  store, now, over, clientIp, wrap, currentUser, env, needVerify = () => false, metrics = { count: async () => {} },
 }) {
   const campaigns = loadCampaigns(env, now());
   const byId = new Map(campaigns.map((c) => [c.id, c]));
@@ -259,7 +259,7 @@ export function mountGroupbuy(router, {
       await store.setJson(`gb:t:${team.id}`, team, ttl, t);
       await store.incrBy(`gb:n:${team.id}`, 1, ttl, t);
       await addMember(team, c, user.id, t);
-      await stat(c.id, 'teams', 1); await stat(c.id, 'people', 1);
+      await stat(c.id, 'teams', 1); await stat(c.id, 'people', 1); await metrics.count('gb_start');
       await pubName(team, c, t); await pubSet(team, c, 1, t); await feed(team, c, 'start', 1, t);
       return { status: 201, body: { team: await teamView(team, t, user) } };
     });
@@ -291,8 +291,8 @@ export function mountGroupbuy(router, {
         return { status: 409, body: { error: 'full', team: await teamView(team, t, user) } };
       }
       await addMember(team, c, user.id, t);
-      await stat(c.id, 'people', 1);
-      if (n === c.size) { team.doneAt = t; await store.setJson(`gb:t:${team.id}`, team, ttlSec(c, t), t); await stat(c.id, 'done', 1); }
+      await stat(c.id, 'people', 1); await metrics.count('gb_join');
+      if (n === c.size) { team.doneAt = t; await store.setJson(`gb:t:${team.id}`, team, ttlSec(c, t), t); await stat(c.id, 'done', 1); await metrics.count('gb_done'); }
       await pubSet(team, c, n, t); await feed(team, c, n === c.size ? 'done' : 'join', n, t);
       return { status: 200, body: { team: await teamView(team, t, user), done: n === c.size } };
     });
@@ -403,5 +403,12 @@ export function mountGroupbuy(router, {
       return out;
     },
     campaigns: () => campaigns.map(publicCampaign),
+    // 品牌數據: every campaign with its totals (teams started, people in them, teams that filled up)
+    async stats() {
+      const t = now();
+      return Promise.all(campaigns.map(async (c) => ({
+        id: c.id, title: c.title, emoji: c.emoji || '', size: c.size, startsAt: Number.isFinite(c.startMs) ? c.startMs : null, endsAt: c.endMs, active: active(c, t), ...(await statsOf(c.id, t)),
+      })));
+    },
   };
 }

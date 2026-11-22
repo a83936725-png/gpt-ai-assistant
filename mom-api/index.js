@@ -20,6 +20,8 @@
  *   /circle/*                    同週好孕圈 (weekly question, mood, cheers) — see circle.js
  *   /groupbuy/*                  團購揪團 stage 1: teams for the brand's group-buys, a discount code once full — see
  *                                groupbuy.js (no payment, no address)
+ *   GET /admin/stats             品牌數據 for the brand's dashboard (X-Admin-Key = MOM_ADMIN_KEY): daily counts only,
+ *                                never who — see metrics.js
  *
  * Health records and pregnancy stage are NOT sent here; they stay on the user's device.
  * Sign-up needs the current privacy policy version in `consent` (個資法 §7: the collector must be able to show
@@ -36,6 +38,7 @@ import { mountSocial } from './social.js';
 import { mountCircle } from './circle.js';
 import { mountInvite, inviteInfo, normCode } from './invite.js';
 import { mountGroupbuy } from './groupbuy.js';
+import { makeMetrics, mountAdmin, dayStart as twDayStart } from './metrics.js';
 import { makeSender, makeVerify } from './verify.js';
 import { POLICY_VERSION } from './policy.js';
 import {
@@ -90,7 +93,7 @@ export function createMomRouter({
     if (origin && allowed.includes(origin)) {
       res.set('Access-Control-Allow-Origin', origin);
       res.set('Vary', 'Origin');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Key');
       res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     }
     if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
@@ -122,6 +125,7 @@ export function createMomRouter({
   const keyed = (s) => crypto.createHmac('sha256', `${secret}:keys`).update(String(s)).digest('hex').slice(0, 32);
   const over = async (name, id, [max, windowSec]) => (await store.hit(`${name}:${keyed(id)}`, windowSec, now())) > max;
   // 驗證碼: Email (Resend), SMS (Twilio) or the brand's own webhook; without one, nothing asks for a code
+  const metrics = makeMetrics({ store, now }); // 品牌數據: counts per day, never who
   const verify = makeVerify({
     store, now, over, clientIp, keyed, secret, sender: makeSender(env, http, prodLike),
   });
@@ -188,6 +192,9 @@ export function createMomRouter({
       if (inviter) { user.invitedBy = inviter.code; user.refPending = true; }
     }
     if (!(await store.createUser(user))) return null;
+    await metrics.count('signup');
+    await metrics.count(`signup_${provider}`);
+    if (user.marketing.on) await metrics.total('marketing', 1);
     return user;
   }
   const wrap = (fn) => (req, res) => Promise.resolve().then(() => fn(req, res)).catch((e) => {
@@ -196,6 +203,8 @@ export function createMomRouter({
   });
   let statsCache = null; // /stats is cached briefly to save database calls; a new sign-up clears it
   let groupbuy = null; // set when the group-buy routes are mounted (below): its teams are part of my data
+  const forgetHooks = []; // more of my data to remove with my account (notifications, family)
+  const statsHooks = []; // more numbers for 品牌數據 (notifications, family)
   const needAuth = (res) => { if (!authOn) { res.status(503).json({ error: 'not_configured' }); return true; } return false; };
 
   router.get('/config', (req, res) => res.json({
@@ -258,6 +267,7 @@ export function createMomRouter({
     if (needsRehash(user.passwordHash)) patch.passwordHash = await hashPassword(password); // upgrade an older, weaker hash
     await store.updateUser(user.id, patch);
     await store.setFlag(trustKey, TRUSTED_DEVICE_SEC, now()); // this network may log in even while strangers fail
+    await metrics.count('login');
     res.json({ token: await session(user), user: publicUser(user, { referrals: await store.countReferrals(user.code) }) });
   }));
 
@@ -286,7 +296,9 @@ export function createMomRouter({
       patch.consent = { version: POLICY_VERSION, at: now() };
     }
     if (typeof body.marketing === 'boolean') patch.marketing = { on: body.marketing, at: now() }; // turning it off is free and instant (§20)
+    const was = !!(user.marketing && user.marketing.on); // read before the update (a store may hand back the same object)
     const updated = await store.updateUser(user.id, patch);
+    if (typeof body.marketing === 'boolean' && body.marketing !== was) await metrics.total('marketing', body.marketing ? 1 : -1);
     res.json({ user: publicUser(updated, { referrals: await store.countReferrals(updated.code) }) });
   }));
 
@@ -328,8 +340,11 @@ export function createMomRouter({
       if (!(await verifyPassword(pw, user.passwordHash))) { res.status(401).json({ error: 'invalid' }); return; }
     }
     if (groupbuy) await groupbuy.forget(user); // first: if this fails, the account is still there to try again
+    for (const fn of forgetHooks) await fn(user); // eslint-disable-line no-restricted-syntax, no-await-in-loop
     await store.deleteUser(user);
     statsCache = null;
+    await metrics.count('deleted');
+    if (user.marketing && user.marketing.on) await metrics.total('marketing', -1);
     res.json({ ok: true });
   }));
 
@@ -339,8 +354,10 @@ export function createMomRouter({
     // one network can only bring a few new "online" sessions (a family's phones), and each session only beats
     // about once a minute, so the online count can't be inflated with made-up ids
     if (await over('presence-sid', sid, LIMITS.presenceSid)) { res.status(429).json({ error: 'too_many' }); return; }
-    if (!(await store.hasPresence(sid)) && await over('presence-new', clientIp(req), LIMITS.presenceNew)) { res.status(429).json({ error: 'too_many' }); return; }
+    const fresh = !(await store.hasPresence(sid));
+    if (fresh && await over('presence-new', clientIp(req), LIMITS.presenceNew)) { res.status(429).json({ error: 'too_many' }); return; }
     await store.touchPresence(sid, now());
+    if (fresh) await metrics.count('open'); // the app was opened (or came back after an hour)
     res.json({ ok: true });
   }));
 
@@ -433,10 +450,10 @@ export function createMomRouter({
     },
   });
   mountSocial(router, {
-    store, now, secret, over, clientIp, wrap,
+    store, now, secret, over, clientIp, wrap, metrics,
   });
   mountCircle(router, {
-    store, now, secret, over, clientIp, wrap,
+    store, now, secret, over, clientIp, wrap, metrics,
   });
   mountInvite(router, {
     store,
@@ -448,9 +465,37 @@ export function createMomRouter({
     userOut: async (u) => publicUser(u, { referrals: await store.countReferrals(u.code) }),
     referralLimits: { ip: LIMITS.referralIp, day: LIMITS.referralDay },
     needVerify: verify.needVerify,
+    metrics,
   });
   groupbuy = mountGroupbuy(router, {
-    store, now, over, clientIp, wrap, currentUser, env, needVerify: verify.needVerify,
+    store, now, over, clientIp, wrap, currentUser, env, needVerify: verify.needVerify, metrics,
+  });
+  mountAdmin(router, {
+    store,
+    now,
+    over,
+    clientIp,
+    keyed,
+    wrap,
+    env,
+    metrics,
+    // the numbers for the brand: members, sign-ups per day (from the members list, so also before this version),
+    // what was done each day, the group-buys, and what the other parts add
+    build: async ({
+      t, days, totals, len,
+    }) => {
+      const today = twDayStart(t);
+      const starts = [...days.map((d, i) => today - (len - 1 - i) * 86400e3), today + 86400e3];
+      const since = await Promise.all(starts.map((x) => store.countSignupsSince(x)));
+      // the day's count from this version on is exact (deleted accounts included); the members list fills in the days before
+      days.forEach((d, i) => { d.signup = Math.max(d.signup, since[i] - since[i + 1], 0); }); // eslint-disable-line no-param-reassign
+      const [members, online, groupbuys] = await Promise.all([store.countUsers(), store.countOnline(t - ONLINE_WINDOW_MS), groupbuy ? groupbuy.stats() : []]);
+      const extra = {};
+      for (const fn of statsHooks) Object.assign(extra, await fn(t)); // eslint-disable-line no-restricted-syntax, no-await-in-loop
+      return {
+        storage: store.kind, members, online, totals, rows: days, groupbuys, ...extra,
+      };
+    },
   });
 
   return router;

@@ -100,7 +100,7 @@ export function makeIdentity({
 }
 
 export function mountSocial(router, {
-  store, now, secret, over, clientIp, wrap,
+  store, now, secret, over, clientIp, wrap, metrics = { count: async () => {} },
 }) {
   const { nidOf, admit } = makeIdentity({
     store, secret, over, clientIp,
@@ -184,6 +184,7 @@ export function mountSocial(router, {
       },
     }, 30, 7 * DAY, t);
     if (kind === 'heart') await store.incrBy(`soc:h:${to}`, 1, 180 * DAY, t);
+    await metrics.count('wave');
     res.json({ ok: true });
   }));
 
@@ -256,6 +257,7 @@ export function mountSocial(router, {
       id: b62(10), occasion: b.occasion, baby: cleanName(b.baby) || '寶寶', mom: cleanName(b.mom), av: b.av ? cleanAvatar(b.av) : null, keyHash: hashKey(`wall:${key}`), createdAt: t,
     };
     await store.setJson(`wall:${w.id}`, w, WALL_TTL, t);
+    await metrics.count('wall_new');
     res.status(201).json({ id: w.id, key, wall: publicWall(w) });
   }));
 
@@ -279,6 +281,7 @@ export function mountSocial(router, {
       id: b62(8), name: cleanName(b.name) || '親友', text, sticker: STICKERS.includes(b.sticker) ? b.sticker : '💜', at: t, ok: false,
     };
     await store.hsetJson(`wall:${w.id}:w`, wish.id, wish, Math.max(60, Math.round((w.createdAt + WALL_TTL * 1000 - t) / 1000)), t);
+    await metrics.count('wall_wish');
     res.status(201).json({ ok: true, wish: { ...wish, ok: undefined }, pending: true });
   }));
 

@@ -31,7 +31,7 @@ export const inviteInfo = (u, t) => ({
 });
 
 export function mountInvite(router, {
-  store, now, over, clientIp, wrap, currentUser, userOut, referralLimits, needVerify = () => false,
+  store, now, over, clientIp, wrap, currentUser, userOut, referralLimits, needVerify = () => false, metrics = { count: async () => {} },
 }) {
   const fail = (res, status, error) => res.status(status).json({ error });
   const already = async (res, user) => res.json({
@@ -71,12 +71,14 @@ export function mountInvite(router, {
         && !(await over('ref-ip', `${code}|${ip}`, referralLimits.ip))
         && !(await over('ref', code, referralLimits.day))) {
         await store.addReferral(code);
+        await metrics.count('invite');
         counted = true;
       }
       patch.refPending = false;
     }
     patch.giftAt = t;
     const updated = await store.updateUser(user.id, patch);
+    await metrics.count('gift');
     res.json({ gift: true, counted, user: await userOut(updated) });
   }));
 }

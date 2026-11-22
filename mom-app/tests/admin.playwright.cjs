@@ -105,6 +105,9 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   });
   ok('sums and deltas: the range and the period before; no % against 0; nothing when there is no period before', u.cur === 9 && u.prev === 3 && u.short === null && u.d1.text === '200%' && u.d1.dir === 'up' && u.d2.text === '前期 0' && u.d3.text === '持平' && u.d4.dir === 'down' && u.d5 === null, JSON.stringify(u));
 
+  const meLink = await S(P, async () => { App.navigate('me'); await new Promise((r) => setTimeout(r, 900)); const b2 = document.querySelector('.me-admin'); return b2 ? b2.innerText : ''; });
+  ok('the web preview links the dashboard from 我的 (品牌數據後台（預覽）)', /品牌數據後台（預覽）/.test(meLink), meLink);
+
   /* ---------- 2. small phone, dark ---------- */
   const Q = await mk(BASE, { width: 320, height: 568, scheme: 'dark' });
   const fit = await S(Q, () => ({ over: document.documentElement.scrollWidth - innerWidth, hero: getComputedStyle(document.querySelector('.ad-hv')).fontSize }));
@@ -122,6 +125,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
     const R = await mk(API_BASE);
     d = await page(R);
     ok('with the member service: it asks for the admin key (no numbers before)', d.key && !d.hero && !d.banner, JSON.stringify(d));
+    ok('…and 我的 does not link the dashboard for moms', await S(R, async () => { location.hash = '#/me'; await new Promise((r) => setTimeout(r, 900)); const has = !!document.querySelector('.me-admin'); location.hash = '#/admin'; await new Promise((r) => setTimeout(r, 900)); return !has; }));
     await shot(R, 'admin-key');
     await axe(R, 'admin key form');
     await R.fill('.ad-key', 'too-short'); await R.click('text=查看數據'); await R.waitForTimeout(300);

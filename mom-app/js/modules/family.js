@@ -127,9 +127,9 @@
             const val = r.t === 'baby' && i >= 0 && s[k][i].photo ? { ...r.v, photo: s[k][i].photo } : r.v; // her own photo of the baby stays
             if (i >= 0) s[k][i] = val; else s[k].push(val);
             if (r.t === 'baby' && !s.activeBabyId) s.activeBabyId = r.id;
-            if (r.t === 'log') s.logs.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0)); // eslint-disable-line no-nested-ternary
           } else if (MAP[r.t]) { s[MAP[r.t]] = s[MAP[r.t]] || {}; s[MAP[r.t]][r.id] = r.v; }
         });
+        if (recs.some((r) => r.t === 'log')) s.logs.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0)); // eslint-disable-line no-nested-ternary
         if (s.babies.length && s.profile.stage !== 'baby' && recs.some((r) => r.t === 'baby')) s.profile.stage = 'baby'; // a family with a baby: this phone shows the baby too
         if (!s.onboarded && s.babies.length) s.onboarded = true;
       });
@@ -253,8 +253,13 @@
   };
   const pendingJoin = () => { try { return JSON.parse(sessionStorage.getItem(PENDING) || 'null'); } catch (e) { return null; } };
   const setPending = (v) => { try { if (v) sessionStorage.setItem(PENDING, JSON.stringify(v)); else sessionStorage.removeItem(PENDING); } catch (e) { /* private mode */ } };
-  // after logging in, an invite opened before goes on
-  store.subscribe(() => { const p = pendingJoin(); if (p && store.state.auth && !/^#\/family/.test(location.hash)) { App.navigate('family', p); } });
+  // the moment she logs in, an invite opened before goes on (once: it never pulls her back later)
+  let hadAuth = null;
+  store.subscribe(() => {
+    const now = !!store.state.auth;
+    if (hadAuth === false && now) { const p = pendingJoin(); setPending(null); if (p && !/^#\/family/.test(location.hash)) App.navigate('family', p); }
+    hadAuth = now;
+  });
 
   /* ---------------- the screen ---------------- */
   const MEMBERS = ['媽媽', '爸爸', '阿嬤', '阿公', '外婆', '外公', '保母', '其他'];
@@ -433,7 +438,7 @@
   }
 
   function renderScreen(el, params) {
-    const inv = parseInvite(params) || (params && params.j ? null : parseInvite(pendingJoin()));
+    const inv = parseInvite(params);
     if (params && params.j && !inv) { el.append(ui.card({ class: 'fm-card' }, h('p', { role: 'alert' }, '這個邀請連結不完整，請家人用「LINE 傳給家人」或「複製連結」再傳一次。'))); return; }
     if (!subtle()) { el.append(ui.card({ class: 'fm-card' }, h('p', null, '這個瀏覽器不支援加密功能，請用手機的 Chrome 或 Safari 開啟。'))); return; }
     const host = h('div', { class: 'fm' }); el.append(host);

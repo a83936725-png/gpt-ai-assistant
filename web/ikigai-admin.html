@@ -81,6 +81,18 @@
   .empty { color: var(--muted); padding: 30px; text-align: center; }
   .confirm { display: inline-flex; gap: 8px; align-items: center; color: var(--danger); font-size: 14px; flex-wrap: wrap; }
   [hidden] { display: none !important; }
+  .mail-card { margin-bottom: 14px; }
+  .mail-head { display: flex; gap: 10px; align-items: center; }
+  .mail-head h2 { margin: 0; font-size: 17px; }
+  .pill.warn { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--text); }
+  .steps { margin: 10px 0 14px; padding-left: 20px; font-size: 14px; display: grid; gap: 4px; }
+  .steps a { color: var(--paid); }
+  .mail-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; margin-top: 8px; }
+  #testForm { grid-template-columns: minmax(0, 1fr) auto; max-width: 520px; }
+  .mail-form label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+  .mail-form input { font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+  #mailMsg.err { color: var(--danger); } #mailMsg.ok { color: var(--ok); }
+  @media (max-width: 760px) { .mail-form, #testForm { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -100,11 +112,32 @@
     <div class="top">
       <h1>IKIGAI 客戶紀錄</h1>
       <div class="tools" style="margin:0">
+        <button class="btn ghost" type="button" id="mailToggle">寄信設定</button>
         <button class="btn ghost" type="button" id="refresh">重新整理</button>
         <button class="btn" type="button" id="export">匯出 CSV</button>
         <button class="btn ghost" type="button" id="logout">登出</button>
       </div>
     </div>
+    <section class="card mail-card" id="mailCard" hidden>
+      <div class="mail-head"><h2>寄信設定</h2><span class="pill" id="mailState">檢查中…</span></div>
+      <p class="msg" id="mailInfo"></p>
+      <ol class="steps">
+        <li>打開 <a href="https://myaccount.google.com/signinoptions/twosv" target="_blank" rel="noopener">兩步驟驗證</a>，確認已開啟。</li>
+        <li>打開 <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">應用程式密碼</a>，名稱輸入「IKIGAI」，按「建立」，複製畫面上的 16 個字母。</li>
+        <li>貼到下面，按「儲存並驗證」。成功後再寄一封測試信給自己。</li>
+      </ol>
+      <form id="mailForm" class="mail-form" autocomplete="off">
+        <label>Gmail 地址<input type="email" id="mUser" placeholder="you@gmail.com" required></label>
+        <label>應用程式密碼<input type="password" id="mPass" placeholder="16 個字母，有空格也沒關係" required autocomplete="new-password"></label>
+        <label>寄件人名稱<input type="text" id="mName" maxlength="40" placeholder="IKIGAI 生涯羅盤"></label>
+        <div class="row"><button class="btn" type="submit" id="mSave">儲存並驗證</button></div>
+      </form>
+      <form id="testForm" class="mail-form">
+        <label>測試信寄到<input type="email" id="mTo" placeholder="你的 Email" required></label>
+        <div class="row"><button class="btn ghost" type="submit" id="mTest">寄測試信</button></div>
+      </form>
+      <p class="msg" id="mailMsg" role="status"></p>
+    </section>
     <div class="stats" id="stats"></div>
     <section class="card board" id="board" hidden></section>
     <div class="tools">
@@ -164,6 +197,7 @@
       $('status').textContent = data.storage === 'memory' ? '注意：尚未設定資料儲存空間，資料只暫存在伺服器記憶體。' : `共 ${rows.length} 位客戶`;
       renderStats();
       renderRows();
+      loadMail();
     } catch (err) {
       if (err.message !== 'unauthorized') {
         $('loginView').hidden = false;
@@ -292,6 +326,48 @@
       a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 1500);
     } catch (err) { if (err.message !== 'unauthorized') $('status').textContent = err.message; }
+  });
+
+  // ---------- sending account ----------
+  const SOURCES = { env: '已開啟（Vercel 環境變數）', resend: '已開啟（Resend）', admin: '已開啟（Gmail）', test: '已開啟（測試）' };
+  function mailMsg(text, kind) { $('mailMsg').textContent = text; $('mailMsg').className = `msg ${kind || ''}`; }
+  async function loadMail() {
+    try {
+      const m = await (await api('mail-settings')).json();
+      $('mailState').textContent = SOURCES[m.source] || '尚未開啟';
+      $('mailState').className = `pill ${m.source ? 'ok' : 'warn'}`;
+      $('mailInfo').textContent = m.source === 'admin'
+        ? `目前用 ${m.user} 寄出完整報告${m.updatedAt ? `（${new Date(m.updatedAt).toLocaleString('zh-TW')} 設定）` : ''}。要換帳號，重新填寫即可。`
+        : m.source ? '目前由伺服器設定寄信。' : '還沒設定寄信帳號，客戶填完不會收到 Email 報告。照下面 3 步設定：';
+      if (m.user && !$('mUser').value) $('mUser').value = m.user;
+      if (m.name && !$('mName').value) $('mName').value = m.name;
+      if (!$('mTo').value) $('mTo').value = m.user || '';
+      if (!m.source) $('mailCard').hidden = false;
+    } catch (err) { if (err.message !== 'unauthorized') mailMsg(err.message, 'err'); }
+  }
+  $('mailToggle').addEventListener('click', () => { $('mailCard').hidden = !$('mailCard').hidden; if (!$('mailCard').hidden) loadMail(); });
+  $('mailForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('mSave').disabled = true;
+    mailMsg('正在用這組帳號密碼登入 Gmail 驗證…');
+    try {
+      await api('mail-settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user: $('mUser').value, pass: $('mPass').value, name: $('mName').value }) });
+      $('mPass').value = '';
+      if (!$('mTo').value) $('mTo').value = $('mUser').value;
+      mailMsg('驗證成功，已儲存。客戶填完就會收到完整報告。可以先寄一封測試信給自己。', 'ok');
+      loadMail();
+    } catch (err) { if (err.message !== 'unauthorized') mailMsg(err.message, 'err'); }
+    $('mSave').disabled = false;
+  });
+  $('testForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('mTest').disabled = true;
+    mailMsg('寄送中…');
+    try {
+      await api('mail-test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: $('mTo').value }) });
+      mailMsg(`測試信已寄到 ${$('mTo').value}，請到信箱查看（也看一下垃圾郵件）。`, 'ok');
+    } catch (err) { if (err.message !== 'unauthorized') mailMsg(err.message, 'err'); }
+    $('mTest').disabled = false;
   });
 
   if (password) load();

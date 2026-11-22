@@ -8,10 +8,12 @@ import analyzeIkigai, {
 } from '../utils/analyze-ikigai.js';
 import moderateContent from '../utils/moderate-content.js';
 import {
-  countReferrals, deleteRecord, getMailStatus, getRecord, listMailed, listRecords, sanitizeRecord, saveRecord,
-  setMailStatus, summarize, toCsv,
+  countReferrals, deleteRecord, getMailSettings, getMailStatus, getRecord, listMailed, listRecords, sanitizeRecord, saveRecord,
+  setMailSettings, setMailStatus, summarize, toCsv,
 } from '../utils/ikigai-records.js';
-import { mailConfigured, sendMail } from '../utils/ikigai-mailer.js';
+import {
+  mailConfigured, mailSource, resetMailCache, sendMail, verifyGmail,
+} from '../utils/ikigai-mailer.js';
 import buildReport from '../utils/ikigai-report.js';
 
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
@@ -210,13 +212,14 @@ const siteUrlOf = (req) => {
   return `${proto}://${req.get('host')}`;
 };
 
-router.get('/mail-status', (req, res) => {
-  res.json({ enabled: mailConfigured() });
+router.get('/mail-status', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ enabled: await mailConfigured() });
 });
 
 // Emails the full report to the address the visitor saved. The content comes only from their stored record.
 router.post('/report-email', async (req, res) => {
-  if (!mailConfigured()) {
+  if (!(await mailConfigured())) {
     res.status(503).json({ code: 'mail_disabled', error: '目前還不能寄送報告' });
     return;
   }
@@ -291,7 +294,7 @@ router.get('/admin/api/records', requireAdmin, adminRoute(async (req, res) => {
   records.forEach((r) => { if (r.referredBy) referrals.set(r.referredBy, (referrals.get(r.referredBy) || 0) + 1); });
   res.json({
     storage: config.IKIGAI_BLOB_TOKEN ? 'blob' : 'memory',
-    mail: mailConfigured(),
+    mail: await mailConfigured(),
     records: records.map((r) => ({
       ...summarize(r), referrals: referrals.get(r.id) || 0, referrerName: names.get(r.referredBy) || '', mailedAt: mailed.get(r.id) || null,
     })),
@@ -325,6 +328,80 @@ router.get('/admin/api/export.csv', requireAdmin, adminRoute(async (req, res) =>
   const names = new Map(records.map((r) => [r.id, r.profile.name]));
   res.send(toCsv(records, { referrals, names }));
 }));
+
+// ---------- admin: sending account ----------
+// The Gmail app password is write-only: it is never sent back to the browser.
+router.get('/admin/api/mail-settings', requireAdmin, adminRoute(async (req, res) => {
+  const [source, saved] = await Promise.all([mailSource(), getMailSettings()]);
+  res.json({
+    source, user: saved ? saved.user : (config.IKIGAI_SMTP_USER || ''), name: saved ? saved.name : '', hasPass: Boolean(saved && saved.pass), updatedAt: saved ? saved.updatedAt : null,
+  });
+}));
+
+router.put('/admin/api/mail-settings', requireAdmin, async (req, res) => {
+  const user = String(req.body?.user || '').trim().toLowerCase();
+  const pass = String(req.body?.pass || '').replace(/\s+/g, '');
+  const name = String(req.body?.name || '').trim().slice(0, 40);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user)) {
+    res.status(400).json({ code: 'invalid_input', error: '請輸入正確的 Gmail 地址' });
+    return;
+  }
+  if (pass.length < 8 || pass.length > 64) {
+    res.status(400).json({ code: 'invalid_input', error: '應用程式密碼是 Google 產生的 16 個字母' });
+    return;
+  }
+  try {
+    await verifyGmail({ user, pass });
+  } catch (err) {
+    console.error(`[ikigai] gmail login: ${err.code || ''} ${err.responseCode || ''}`);
+    if (err.code === 'EAUTH' || err.responseCode === 535 || err.responseCode === 534) {
+      res.status(400).json({ code: 'login_failed', error: 'Gmail 登入失敗：請確認信箱正確，並使用「應用程式密碼」（不是 Gmail 登入密碼）' });
+    } else {
+      res.status(502).json({ code: 'connect_failed', error: `暫時連不上 Gmail，請稍後再試（${err.code || 'network'}）` });
+    }
+    return;
+  }
+  try {
+    await setMailSettings({
+      user, pass, name, updatedAt: Date.now(),
+    });
+    resetMailCache();
+    res.json({ ok: true, source: await mailSource() });
+  } catch (err) {
+    console.error(`[ikigai] save mail settings: ${err.message}`);
+    res.status(502).json({ code: 'storage_error', error: '儲存失敗，請稍後再試' });
+  }
+});
+
+router.delete('/admin/api/mail-settings', requireAdmin, adminRoute(async (req, res) => {
+  await setMailSettings(null);
+  resetMailCache();
+  res.json({ ok: true, source: await mailSource() });
+}));
+
+router.post('/admin/api/mail-test', requireAdmin, async (req, res) => {
+  const to = String(req.body?.to || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    res.status(400).json({ code: 'invalid_input', error: '請輸入要收測試信的 Email' });
+    return;
+  }
+  if (!(await mailConfigured())) {
+    res.status(503).json({ code: 'mail_disabled', error: '還沒有設定寄信帳號' });
+    return;
+  }
+  try {
+    await sendMail({
+      to,
+      subject: 'IKIGAI 生涯羅盤：寄信測試',
+      text: '收到這封信，代表客戶填完 IKIGAI 後，可以收到完整報告了。',
+      html: '<p style="font-size:16px">收到這封信，代表客戶填完 IKIGAI 後，可以收到完整報告了。</p>',
+    });
+    res.json({ ok: true, to });
+  } catch (err) {
+    console.error(`[ikigai] test mail: ${err.code || ''} ${err.message}`);
+    res.status(502).json({ code: 'mail_error', error: '寄送失敗，請確認 Gmail 帳號與應用程式密碼' });
+  }
+});
 
 export {
   sendPage,

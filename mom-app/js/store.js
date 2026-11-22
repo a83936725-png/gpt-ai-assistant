@@ -6,7 +6,9 @@
  */
 (function () {
   const App = window.App = window.App || {};
-  const KEY = 'yijia-mom-app-v1';
+  // ?sandbox=1 (the landing page's 試玩): its own data, so a demo never touches the real app's records on the same site
+  const SANDBOX = /[?&]sandbox=1(&|$)/.test(location.search);
+  const KEY = SANDBOX ? 'yijia-mom-app-sandbox' : 'yijia-mom-app-v1';
   const { uid, dateKey } = window.Core;
 
   const defaults = () => ({
@@ -127,7 +129,7 @@
   let dbp = null;
   const idb = () => dbp || (dbp = new Promise((res, rej) => {
     if (!window.indexedDB) { rej(new Error('no IndexedDB')); return; }
-    const rq = indexedDB.open('yijia-mom', 1);
+    const rq = indexedDB.open(SANDBOX ? 'yijia-mom-sandbox' : 'yijia-mom', 1);
     rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
     rq.onsuccess = () => res(rq.result);
     rq.onerror = () => rej(rq.error);

@@ -750,4 +750,14 @@
   });
 
   App.me = { editBaby, editProfile, exportData, importData };
+  // the landing page's 試玩 (?sandbox=1) opens straight on the sample data
+  App.sandbox = /[?&]sandbox=1(&|$)/.test(location.search);
+  if (App.sandbox) {
+    // once the app is up (app.js loads after this file) and the sandbox's own storage is read
+    const demo = () => {
+      if (store.loading || typeof App.navigate !== 'function') { setTimeout(demo, 40); return; }
+      if (!store.state.onboarded) seedDemo();
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demo, { once: true }); else demo();
+  }
 }());

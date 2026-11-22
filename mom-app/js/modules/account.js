@@ -80,7 +80,7 @@
     });
   }
   async function tick() {
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== 'visible' || App.sandbox) return; // the landing page's 試玩 is not a mom opening the app
     const cfg = await config();
     if (!cfg) return;
     let here = false;

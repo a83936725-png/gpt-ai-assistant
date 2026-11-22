@@ -5,7 +5,7 @@
  *   App.media.dataUrl(id)    App.media.del(id)           App.media.exportAll(ids) / importAll(map) for backups */
 (function () {
   const App = window.App = window.App || {};
-  const DB = 'yijia-mom-media'; const STORE = 'blobs';
+  const DB = /[?&]sandbox=1(&|$)/.test(location.search) ? 'yijia-mom-media-sandbox' : 'yijia-mom-media'; const STORE = 'blobs'; // 試玩 keeps its own photos
   let dbp = null;
   const db = () => {
     if (!dbp) {

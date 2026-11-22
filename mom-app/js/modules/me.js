@@ -284,7 +284,10 @@
         if (mode.dataset.value === 'replace') {
           if (!(await ui.confirm('用備份檔取代這台裝置上的所有資料？'))) return;
           // keep my own invite code, login, and 島上的媽媽 identity + 祝福牆 keys (the backup's walls are added to mine)
-          store.replace({ ...data, share: store.state.share || data.share, auth: store.state.auth, social: keepSocial(store.state.social, data.social) });
+          store.replace({
+            ...data, share: store.state.share || data.share, auth: store.state.auth, social: keepSocial(store.state.social, data.social), family: store.state.family || null,
+          });
+          if (App.family && store.state.family) App.family.rebase(); // 家人共用: the next sync merges, it never deletes the family's records
           if (App.media) await App.media.prune(); // photos of the replaced data go; the backup's own photos stay
         } else mergeState(data);
         sh.close(); ui.toast('匯入完成');
@@ -641,6 +644,7 @@
       el.append(h('div', { class: 'section-title jump-target', id: 'me-family' }, '家人共享'));
       const memberSel = h('select', { class: 'input' }, ['媽媽', '爸爸', '阿嬤', '阿公', '外婆', '外公', '保母', '其他'].map((m) => h('option', { value: m, selected: m === p.member }, m)));
       memberSel.addEventListener('change', () => store.update((st) => { st.profile.member = memberSel.value; }));
+      if (App.family) el.append(h('div', { class: 'list mb' }, App.family.listItem())); // 家人共用紀錄 (end-to-end encrypted)
       el.append(h('section', { class: 'card' },
         ui.field('這台裝置是誰在記錄', memberSel, '每筆紀錄會標示是誰記的'),
         h('div', { class: 'grid-2' },
@@ -654,7 +658,7 @@
           return line;
         })(),
         needsHomeScreen() ? h('p', { class: 'tiny faint' }, 'iPhone：把 App 加到主畫面（Safari「分享」→「加入主畫面」），7 天沒打開也不會被清掉紀錄。') : null,
-        h('p', { class: 'tiny faint mt' }, '紀錄只存在這台手機。家人之間可以「匯出 → 用 LINE 傳檔 → 匯入合併」來同步；全家手機即時同步正在準備中。')));
+        h('p', { class: 'tiny faint mt' }, '沒有開啟「家人共用紀錄」時，紀錄只存在這台手機；也可以「匯出 → 用 LINE 傳檔 → 匯入合併」交換紀錄。')));
 
       el.append(h('div', { class: 'section-title jump-target', id: 'me-settings' }, '設定'));
       // 夜間模式 and 白天黑夜跟著: today's sunrise and sunset for the chosen place (the texts update when it changes)

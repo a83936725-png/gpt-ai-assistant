@@ -49,7 +49,7 @@ export function fakeRedis({ now } = {}) {
       case 'SADD': { if (!sets.has(a[0])) sets.set(a[0], new Set()); sets.get(a[0]).add(a[1]); return 1; }
       case 'SCARD': return sets.has(a[0]) ? sets.get(a[0]).size : 0;
       case 'SREM': return sets.has(a[0]) && sets.get(a[0]).delete(String(a[1])) ? 1 : 0;
-      case 'ZADD': z(a[0]).set(String(a[2]), Number(a[1])); return 1;
+      case 'ZADD': { for (let i = 1; i + 1 < a.length; i += 2) z(a[0]).set(String(a[i + 1]), Number(a[i])); return 1; }
       case 'ZREM': return z(a[0]).delete(String(a[1])) ? 1 : 0;
       case 'ZSCORE': return z(a[0]).has(String(a[1])) ? String(z(a[0]).get(String(a[1]))) : null;
       case 'ZCOUNT': return [...z(a[0]).values()].filter((s) => inRange(s, a[1], a[2])).length;
@@ -65,7 +65,8 @@ export function fakeRedis({ now } = {}) {
         const cut = lim >= 0 ? rows.slice(Number(a[lim + 1]), Number(a[lim + 1]) + Number(a[lim + 2])) : rows;
         return a.includes('WITHSCORES') ? cut.flatMap(([k, s]) => [k, String(s)]) : cut.map(([k]) => k);
       }
-      case 'HSET': hm(a[0]).set(String(a[1]), String(a[2])); return 1;
+      case 'HSET': { for (let i = 1; i + 1 < a.length; i += 2) hm(a[0]).set(String(a[i]), String(a[i + 1])); return 1; }
+      case 'HMGET': return a.slice(1).map((f) => (hm(a[0]).has(String(f)) ? String(hm(a[0]).get(String(f))) : null));
       case 'HGET': return hm(a[0]).has(a[1]) ? String(hm(a[0]).get(a[1])) : null;
       case 'HGETALL': return [...hm(a[0])].flat();
       case 'HDEL': return hm(a[0]).delete(String(a[1])) ? 1 : 0;

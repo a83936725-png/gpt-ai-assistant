@@ -55,7 +55,7 @@
 .mo-ideas { margin-top: 2px; }
 .mo-ideas .chip { max-width: 100%; }
 .mo-safe { margin: 6px 0 0; }
-.mo-del { color: var(--c-danger); }
+.mo-del { color: var(--c-danger-ink, var(--c-danger)); }
 .mo-count { margin: 0; }
 
 /* 首頁: the month-day line with its ✕ */

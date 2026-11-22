@@ -21,6 +21,7 @@
  *   /groupbuy/*                  團購揪團 stage 1: teams for the brand's group-buys, a discount code once full — see
  *                                groupbuy.js (no payment, no address)
  *   /push/*                      手機通知 (Web Push; optional LINE messages) — see push.js
+ *   /family/*                    家人共用紀錄: end-to-end encrypted records a family's phones share — see family.js
  *   GET /admin/stats             品牌數據 for the brand's dashboard (X-Admin-Key = MOM_ADMIN_KEY): daily counts only,
  *                                never who — see metrics.js
  *
@@ -41,6 +42,7 @@ import { mountInvite, inviteInfo, normCode } from './invite.js';
 import { mountGroupbuy } from './groupbuy.js';
 import { makeMetrics, mountAdmin, dayStart as twDayStart } from './metrics.js';
 import { mountPush } from './push.js';
+import { mountFamily } from './family.js';
 import { makeSender, makeVerify } from './verify.js';
 import { POLICY_VERSION } from './policy.js';
 import {
@@ -102,7 +104,9 @@ export function createMomRouter({
     res.set('Cache-Control', 'no-store');
     next();
   });
-  router.use(express.json({ limit: '20kb' }));
+  const smallJson = express.json({ limit: '20kb' });
+  const familyJson = express.json({ limit: '4mb' }); // 家人共用紀錄: a batch of encrypted records
+  router.use((req, res, next) => (req.path === '/family/push' ? familyJson : smallJson)(req, res, next));
   // any problem reading the body (too big, bad JSON, unknown encoding, broken gzip…) → a short JSON error;
   // never Express's default page, which shows a stack trace with server paths
   router.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
@@ -206,6 +210,7 @@ export function createMomRouter({
   let statsCache = null; // /stats is cached briefly to save database calls; a new sign-up clears it
   let groupbuy = null; // set when the group-buy routes are mounted (below): its teams are part of my data
   let push = null; // 手機通知 (below)
+  let family = null; // 家人共用紀錄 (below)
   const forgetHooks = []; // more of my data to remove with my account (notifications, family)
   const statsHooks = []; // more numbers for 品牌數據 (notifications, family)
   const needAuth = (res) => { if (!authOn) { res.status(503).json({ error: 'not_configured' }); return true; } return false; };
@@ -331,6 +336,7 @@ export function createMomRouter({
       referrals: await store.countReferrals(user.code),
       groupBuys: groupbuy ? await groupbuy.exportFor(user) : [],
       notifications: push ? await push.exportFor(user) : null,
+      family: family ? await family.exportFor(user) : null,
       note: '懷孕、寶寶與健康紀錄只存在你的手機，伺服器沒有這些資料。',
     });
   }));
@@ -478,6 +484,10 @@ export function createMomRouter({
     store, now, over, wrap, currentUser, env, metrics, http, sender: pushSender,
   });
   forgetHooks.push((u) => push.forget(u));
+  family = mountFamily(router, {
+    store, now, over, wrap, currentUser, metrics, notify: (uids, topic, p) => push.notify(uids, topic, p),
+  });
+  forgetHooks.push((u) => family.forget(u));
   statsHooks.push(async () => ({ push: { on: push.on, line: push.lineOn } }));
   groupbuy = mountGroupbuy(router, {
     store, now, over, clientIp, wrap, currentUser, env, needVerify: verify.needVerify, metrics, notify: (uids, topic, p) => push.notify(uids, topic, p),

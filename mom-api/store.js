@@ -134,6 +134,22 @@ export class MemoryStore {
 
   async hgetJson(key, field, now = Date.now()) { if (this.gone(key, now)) return null; const m = this.hashes.get(key); return m && m.has(field) ? JSON.parse(m.get(field)) : null; }
 
+  // several fields at once: [[field, value], …]; and several read at once (null where missing)
+  async hsetManyJson(key, entries, ttlSec = 0, now = Date.now()) {
+    if (!entries.length) return;
+    this.gone(key, now);
+    if (!this.hashes.has(key)) this.hashes.set(key, new Map());
+    const m = this.hashes.get(key);
+    entries.forEach(([f, v]) => m.set(f, JSON.stringify(v)));
+    if (ttlSec) this.expire(key, ttlSec, now);
+  }
+
+  async hmgetJson(key, fields, now = Date.now()) {
+    if (this.gone(key, now)) return fields.map(() => null);
+    const m = this.hashes.get(key) || new Map();
+    return fields.map((f) => (m.has(f) ? JSON.parse(m.get(f)) : null));
+  }
+
   async hgetAllJson(key, now = Date.now()) {
     if (this.gone(key, now)) return {};
     const out = {}; (this.hashes.get(key) || new Map()).forEach((v, k) => { out[k] = JSON.parse(v); });
@@ -153,6 +169,8 @@ export class MemoryStore {
   async drain(key, now = Date.now()) { if (this.gone(key, now)) return []; const l = this.lists.get(key) || []; this.lists.delete(key); this.exp.delete(key); return l.map((v) => JSON.parse(v)); }
 
   async zset(key, member, score) { if (!this.zsets.has(key)) this.zsets.set(key, new Map()); this.zsets.get(key).set(member, score); }
+
+  async zsetMany(key, entries) { if (!entries.length) return; if (!this.zsets.has(key)) this.zsets.set(key, new Map()); const m = this.zsets.get(key); entries.forEach(([member, score]) => m.set(member, score)); }
 
   async zrem(key, member) { const m = this.zsets.get(key); if (m) m.delete(member); }
 
@@ -299,6 +317,18 @@ export class RedisRestStore {
 
   async hgetJson(key, field) { const v = await this.cmd('HGET', `mom:x:${key}`, field); return v ? JSON.parse(v) : null; }
 
+  async hsetManyJson(key, entries, ttlSec = 0) {
+    if (!entries.length) return;
+    await this.cmd('HSET', `mom:x:${key}`, ...entries.flatMap(([f, v]) => [f, JSON.stringify(v)]));
+    if (ttlSec) await this.cmd('EXPIRE', `mom:x:${key}`, ttlSec);
+  }
+
+  async hmgetJson(key, fields) {
+    if (!fields.length) return [];
+    const r = (await this.cmd('HMGET', `mom:x:${key}`, ...fields)) || [];
+    return fields.map((f, i) => (r[i] ? JSON.parse(r[i]) : null));
+  }
+
   async hgetAllJson(key) {
     const flat = (await this.cmd('HGETALL', `mom:x:${key}`)) || [];
     const out = {};
@@ -322,6 +352,8 @@ export class RedisRestStore {
   }
 
   async zset(key, member, score) { await this.cmd('ZADD', `mom:x:${key}`, score, member); }
+
+  async zsetMany(key, entries) { if (entries.length) await this.cmd('ZADD', `mom:x:${key}`, ...entries.flatMap(([member, score]) => [score, member])); }
 
   async zrem(key, member) { await this.cmd('ZREM', `mom:x:${key}`, member); }
 

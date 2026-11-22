@@ -2,11 +2,11 @@
 const CACHE = 'yijia-mom-v31';
 const ASSETS = [
   './', 'index.html', 'config.js', 'manifest.webmanifest',
-  'css/base.css', 'css/modules.css', 'css/island.css', 'css/health.css', 'css/pregnancy.css', 'css/journey.css', 'css/monitor.css', 'css/outing.css', 'css/search.css', 'css/extras.css', 'css/share.css', 'css/account.css', 'css/goods.css', 'css/diary.css', 'css/social.css', 'css/groupbuy.css', 'css/monthly.css', 'css/admin.css', 'css/components.css', 'css/qban.css', 'css/motion.css',
+  'css/base.css', 'css/modules.css', 'css/island.css', 'css/health.css', 'css/pregnancy.css', 'css/journey.css', 'css/monitor.css', 'css/outing.css', 'css/search.css', 'css/extras.css', 'css/share.css', 'css/account.css', 'css/goods.css', 'css/diary.css', 'css/social.css', 'css/groupbuy.css', 'css/monthly.css', 'css/admin.css', 'css/family.css', 'css/components.css', 'css/qban.css', 'css/motion.css',
   'js/core.js', 'js/vendor/qrcode.js', 'js/store.js', 'js/media.js', 'js/ui.js', 'js/app.js',
   'js/data/log-types.js', 'js/data/island-data.js', 'js/data/health-data.js', 'js/data/pregnancy-data.js', 'js/data/journey-data.js', 'js/data/outing-data.js', 'js/data/faq-data.js', 'js/data/extras-data.js', 'js/data/goods-data.js', 'js/data/sources-data.js',
   'js/modules/home.js', 'js/modules/babylog.js', 'js/modules/milk.js', 'js/modules/avatar.js', 'js/modules/qban.js', 'js/modules/island.js', 'js/modules/diary.js',
-  'js/modules/health.js', 'js/modules/pregnancy.js', 'js/modules/journey.js', 'js/modules/outing.js', 'js/modules/monitor.js', 'js/modules/search.js', 'js/modules/extras.js', 'js/modules/goods.js', 'js/modules/share.js', 'js/modules/privacy.js', 'js/modules/account.js', 'js/modules/gift.js', 'js/modules/starter.js', 'js/modules/groupbuy.js', 'js/modules/social.js', 'js/modules/wall.js', 'js/modules/circle.js', 'js/modules/weekly.js', 'js/modules/monthly.js', 'js/modules/admin.js', 'js/modules/push.js', 'js/modules/brand.js', 'js/modules/me.js', 'js/modules/sources.js',
+  'js/modules/health.js', 'js/modules/pregnancy.js', 'js/modules/journey.js', 'js/modules/outing.js', 'js/modules/monitor.js', 'js/modules/search.js', 'js/modules/extras.js', 'js/modules/goods.js', 'js/modules/share.js', 'js/modules/privacy.js', 'js/modules/account.js', 'js/modules/gift.js', 'js/modules/starter.js', 'js/modules/groupbuy.js', 'js/modules/social.js', 'js/modules/wall.js', 'js/modules/circle.js', 'js/modules/weekly.js', 'js/modules/monthly.js', 'js/modules/admin.js', 'js/modules/push.js', 'js/modules/family.js', 'js/modules/brand.js', 'js/modules/me.js', 'js/modules/sources.js',
   'assets/logo.svg', 'assets/logo-full.svg', 'assets/icon.svg', 'assets/icon-192.png', 'assets/icon-512.png',
 ];
 self.addEventListener('install', (e) => {

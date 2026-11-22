@@ -8,12 +8,13 @@ let base;
 let clearMemoryRecords;
 let resetRateLimit;
 let setTestTransport;
+let resetMailCache;
 
 beforeAll(async () => {
   const { default: app } = await import('../api/index.js');
   ({ clearMemoryRecords } = await import('../utils/ikigai-records.js'));
   ({ resetRateLimit } = await import('../web/ikigai.js'));
-  ({ setTestTransport } = await import('../utils/ikigai-mailer.js'));
+  ({ setTestTransport, resetMailCache } = await import('../utils/ikigai-mailer.js'));
   server = app.listen(0);
   await new Promise((resolve) => { server.once('listening', resolve); });
   base = `http://127.0.0.1:${server.address().port}`;
@@ -25,6 +26,7 @@ beforeEach(() => {
   clearMemoryRecords();
   resetRateLimit();
   setTestTransport(null);
+  resetMailCache();
 });
 
 const RECORD = {
@@ -275,4 +277,26 @@ test('report email escapes what visitors typed', async () => {
   await sendReport(RECORD.id);
   expect(sent[0].html).not.toContain('<img src=x');
   expect(sent[0].html).toContain('&lt;img src=x');
+});
+
+test('admin can save a sending account; the password is never returned', async () => {
+  const put = (body) => admin('mail-settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  expect((await put({ user: 'not-an-email', pass: 'abcdabcdabcdabcd' })).status).toEqual(400);
+  expect((await put({ user: 'me@gmail.com', pass: 'short' })).status).toEqual(400);
+  expect((await fetch(`${base}/ikigai/admin/api/mail-settings`)).status).toEqual(401);
+
+  const sent = [];
+  setTestTransport(async (m) => { sent.push(m); });
+  const res = await put({ user: 'Me@Gmail.com', pass: 'abcd efgh ijkl mnop', name: '小明顧問' });
+  expect(res.status).toEqual(200);
+  const settings = await (await admin('mail-settings')).json();
+  expect(settings).toMatchObject({ user: 'me@gmail.com', name: '小明顧問', hasPass: true });
+  expect(JSON.stringify(settings)).not.toContain('abcdefgh');
+
+  const testMail = await admin('mail-test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: 'me@gmail.com' }) });
+  expect(testMail.status).toEqual(200);
+  expect(sent[0].to).toEqual('me@gmail.com');
+
+  expect((await admin('mail-settings', { method: 'DELETE' })).status).toEqual(200);
+  expect((await (await admin('mail-settings')).json()).hasPass).toEqual(false);
 });

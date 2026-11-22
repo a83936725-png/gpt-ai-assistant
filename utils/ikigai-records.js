@@ -253,6 +253,30 @@ export const setMailStatus = async (id, status) => {
   });
 };
 
+// Sending account entered on the admin page (an alternative to environment variables).
+const SETTINGS = 'ikigai/settings/mail.json';
+let memorySettings = null;
+
+export const getMailSettings = async () => {
+  if (!useBlob()) return memorySettings;
+  const result = await get(SETTINGS, { access: 'private', useCache: false, token: config.IKIGAI_BLOB_TOKEN });
+  return result ? JSON.parse(await readText(result.stream)) : null;
+};
+
+export const setMailSettings = async (settings) => {
+  if (!useBlob()) {
+    memorySettings = settings;
+    return;
+  }
+  if (!settings) {
+    await del(SETTINGS, { token: config.IKIGAI_BLOB_TOKEN }).catch(() => {});
+    return;
+  }
+  await put(SETTINGS, JSON.stringify(settings), {
+    access: 'private', allowOverwrite: true, addRandomSuffix: false, contentType: 'application/json', token: config.IKIGAI_BLOB_TOKEN,
+  });
+};
+
 /** Ids of records whose report was emailed, with the time of the last send. */
 export const listMailed = async () => {
   if (!useBlob()) return new Map([...memoryMail.entries()].map(([id, s]) => [id, s.lastSentAt]));
@@ -264,6 +288,7 @@ export const clearMemoryRecords = () => {
   memory.clear();
   memoryRefs.clear();
   memoryMail.clear();
+  memorySettings = null;
 };
 
 const STEP_LABELS = {

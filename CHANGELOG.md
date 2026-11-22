@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.21.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: the admin page has a "寄信設定" panel: paste a Gmail address and app password, the server logs in to check it, saves it in private storage and starts emailing reports at once, without editing Vercel or redeploying. A test email can be sent from the same panel. The password is never sent back to the browser
+
 ## 4.20.0 (2026-11-22)
 
 ### New Features

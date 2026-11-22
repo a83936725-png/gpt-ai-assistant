@@ -184,6 +184,15 @@ IKIGAI（生き甲斐）是用四個圈找出人生方向的方法：**你熱愛
 - 後台列表會標示「已寄報告」，客戶明細顯示寄送次數與最後時間。
 - 寄信狀態存在 `ikigai/mail/<id>.json`，不會被客戶的自動同步覆蓋。
 
+### 最簡單：在後台設定 Gmail（不用進 Vercel、不用重新部署）
+
+1. 到 Google 帳戶開啟「兩步驟驗證」：https://myaccount.google.com/signinoptions/twosv
+2. 建立「應用程式密碼」：https://myaccount.google.com/apppasswords （名稱輸入 IKIGAI，複製 16 個字母）
+3. 登入後台 `/ikigai/admin`，按右上角「寄信設定」，填 Gmail 地址和應用程式密碼，按「儲存並驗證」。伺服器會先登入 Gmail 確認密碼正確才儲存，成功後立刻生效。
+4. 在同一個區塊按「寄測試信」，確認收得到。
+
+密碼存在私人的 Blob 儲存空間（`ikigai/settings/mail.json`），不會再傳回瀏覽器。若同時設定了下面的環境變數，以環境變數為準。
+
 ### 設定寄信（擇一）
 
 **Gmail（最簡單，不需要網域，每天約 500 封）**

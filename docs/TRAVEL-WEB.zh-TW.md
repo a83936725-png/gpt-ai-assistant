@@ -63,6 +63,15 @@
 
 **匯入 Google 地圖時間軸**：支援手機匯出的 Timeline.json 與 Google Takeout 的位置記錄。檔案只在瀏覽器裡分析，不會上傳，會自動找出 2025、2026 的海外旅行。
 
+## Threads 問答資料庫（@esim_87cc）
+
+`data/esim-threads.json` 收錄 @esim_87cc 公開的回覆與貼文：提問、原文回覆、主題、標籤、連結，以及整理好的重點（`insight`）。比較同業的貼文標成 `internal`，不會放進 App。App 的 eSIM 常見問題前四題就是從這裡整理的（測速快但實際慢、日本選哪家、為什麼不追求最便宜、哪家最好）。
+
+目前只收到未登入看得到的內容（4 則回覆、7 篇貼文）。留言串要登入才看得到，要收錄全部回覆：
+
+1. Threads App → 設定 → 帳號 → 下載你的資訊（或 Meta 帳號管理中心 → 你的資訊和權限 → 下載你的資訊），選 Threads、格式選 JSON。
+2. 收到檔案後解壓縮，執行 `node scripts/threads-import.js <解壓縮的資料夾>`，所有貼文與回覆會補進資料庫（會自動修正匯出檔的亂碼，已收錄的不會重複）。
+
 ## 三、環境變數（Vercel → Settings → Environment Variables）
 
 | 變數 | 預設 | 說明 |

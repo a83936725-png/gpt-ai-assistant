@@ -22,6 +22,7 @@
 - Travel: 隨機出國, a roulette that picks a destination within a budget, number of days and month, with a cost estimate
 - Travel: budget-based planning. The itinerary estimates flights, stay, tickets and eSIM, says how much each person can spend per day, and can drop or add paid attractions to fit the budget cap. Recommendations can be filtered by total budget
 - Travel: a 2025 / 2026 memory album with a cover, one page per trip, your own photos and a journal
+- Travel eSIM: a database of the brand's public Threads replies (`data/esim-threads.json`) feeds the first FAQ answers and troubleshooting tips. `node scripts/threads-import.js` adds every post and reply from a Threads data export
 
 ## 4.19.0 (2026-11-22)
 

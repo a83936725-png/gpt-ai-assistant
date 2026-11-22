@@ -744,6 +744,6 @@
   });
 
   App.monthly = {
-    label, slotDate, slotOf, slotsOf, dueSlot, homeLine, growthFor, suggestions, drawCard, drawCollage, open, openCollage, FRAMES, ensure, isDemo, cover,
+    label, slotDate, slotOf, slotsOf, dueSlot, homeLine, growthFor, suggestions, drawCard, drawCollage, open, openCollage, FRAMES, ensure, isDemo, cover, photoUrl,
   };
 }());

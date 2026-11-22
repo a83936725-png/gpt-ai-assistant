@@ -674,6 +674,9 @@
     y1: '度晬：準備抓周的小物，看看寶寶先拿起什麼。',
   };
   let cheering = null;
+  // 滿月・百日・度晬 come with a 成長回顧 of that time
+  const RECAP_OF = { m30: 'm1', d100: 'd100', y1: 'y1' };
+  const recapKind = (b, cu) => { const k = RECAP_OF[cu.id]; return k && App.recap && App.recap.available(b).some((x) => x.kind === k) ? k : null; };
   function momentLine(b) {
     if (!b) return null;
     const cu = customFor(b); if (!cu) return null;
@@ -685,6 +688,10 @@
           h('p', null, cu.sub),
           TRADITION[cu.id] ? h('p', { class: 'small muted' }, TRADITION[cu.id]) : null,
           h('button', { class: 'btn btn-primary btn-block mt', onclick: () => { sh.close(); setTimeout(() => open({ kind: `custom-${cu.id}` }), 240); } }, '📤 做成分享卡'),
+          recapKind(b, cu) ? h('button', {
+            class: 'btn btn-soft btn-block mt-sm sh-recap',
+            onclick: () => { const k = recapKind(b, cu); sh.close(); setTimeout(() => App.recap.open(b, k), 240); },
+          }, `🎬 看${b.name || '寶寶'}的${App.recap.PERIODS[recapKind(b, cu)].label}`) : null,
           App.monthly && App.monthly.dueSlot(b) != null ? h('button', {
             class: 'btn btn-soft btn-block mt-sm sh-monthly',
             onclick: () => { const m = App.monthly.dueSlot(b); sh.close(); App.navigate('monthly', { m, baby: b.id }); },
@@ -693,7 +700,7 @@
     };
     const el = h('button', { class: 'moment-line', onclick: show },
       h('span', { class: 'moment-emoji', 'aria-hidden': 'true' }, cu.emoji),
-      h('span', { class: 'grow' }, h('strong', null, `${b.name} ${cu.title}`), h('span', { class: 'moment-more' }, '習俗・分享卡')),
+      h('span', { class: 'grow' }, h('strong', null, `${b.name} ${cu.title}`), h('span', { class: 'moment-more' }, recapKind(b, cu) ? '回顧・習俗・分享卡' : '習俗・分享卡')),
       h('span', { class: 'chev', 'aria-hidden': 'true' }, '›'));
     if (!(ensure(store.state).cheered || {})[key] && cheering !== key && !window.__noShareMoments) {
       cheering = key;

@@ -16,6 +16,12 @@
 - Travel: year-in-review with badges, a shareable 1080×1350 travel card, and import of trips from a Google Maps Timeline export
 - Travel: optional AI itinerary (`POST /travel/api/advise`), limited per IP per hour (`TRAVEL_RATE_LIMIT`)
 - Travel: dialogs open as bottom sheets on phones and close with a downward swipe
+- Travel: real photos for every destination, attraction and famous food or custom (Wikimedia Commons, credited to each author), shown as large photo galleries. `node scripts/travel-photos.js` rebuilds `web/travel-photos.json`
+- Travel: tapping a country shows its famous food, culture, souvenirs and travel tips, with photos
+- Travel: 探索世界 lists every country and territory with its flag; countries without their own plan use a regional or global plan
+- Travel: 隨機出國, a roulette that picks a destination within a budget, number of days and month, with a cost estimate
+- Travel: budget-based planning. The itinerary estimates flights, stay, tickets and eSIM, says how much each person can spend per day, and can drop or add paid attractions to fit the budget cap. Recommendations can be filtered by total budget
+- Travel: a 2025 / 2026 memory album with a cover, one page per trip, your own photos and a journal
 
 ## 4.19.0 (2026-11-22)
 

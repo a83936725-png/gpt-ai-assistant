@@ -468,6 +468,59 @@ dialog#modal { transition: transform .2s; }
 .check-row .state.on, .check-row .state.pick { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
 .check-row .state.off { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .pre-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+/* photos, galleries, country, random trip, album */
+.gallery { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 78%); gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 8px; margin-top: 8px; }
+@media (min-width: 700px) { dialog#modal .gallery { grid-auto-columns: minmax(220px, 46%); } }
+.ph-card { margin: 0; scroll-snap-align: start; border-radius: 18px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); display: grid; text-align: left; padding: 0; cursor: default; }
+button.ph-card { cursor: pointer; font: inherit; color: inherit; }
+.ph { position: relative; aspect-ratio: 4 / 3; background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 25%, var(--surface-2)), color-mix(in srgb, var(--brand-2) 25%, var(--surface-2))); overflow: hidden; }
+.ph img, .cover > img, .country-hero > img, .album-photo > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; color: transparent; }
+.ph.ph-missing::after, .country-hero.ph-missing::after { content: "📷"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; opacity: .45; }
+.ph-card figcaption { padding: 10px 12px 12px; display: grid; gap: 4px; font-size: 14px; }
+.credit-mini { font-size: 10px; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cover > img { z-index: 0; }
+.cover.has-photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .05) 30%, rgba(0, 0, 0, .6)); z-index: 0; }
+.cover > :not(img) { position: relative; z-index: 1; }
+.cover { height: 200px; overflow: hidden; }
+.country-hero { position: relative; min-height: 220px; border-radius: 22px; overflow: hidden; color: #fff; display: flex; align-items: flex-end; background: linear-gradient(160deg, var(--brand), #0b1430); }
+.country-hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, .7)); z-index: 1; }
+.country-hero-text { position: relative; z-index: 2; padding: 16px; display: grid; gap: 2px; }
+.country-hero-text h2 { font-size: 34px; }
+.country-hero .credit-mini { position: absolute; right: 10px; top: 8px; z-index: 2; color: rgba(255, 255, 255, .8); }
+section h3 { margin-top: 2px; }
+.cost { display: grid; gap: 4px; margin: 8px 0; font-size: 14px; }
+.cost div { display: flex; justify-content: space-between; gap: 8px; }
+.cost .total { border-top: 1px solid var(--border); padding-top: 6px; font-size: 15px; }
+.slot { min-height: 180px; display: grid; }
+.slot-empty { display: grid; place-items: center; gap: 4px; text-align: center; border: 2px dashed var(--border); border-radius: 22px; padding: 24px; }
+.slot-empty span { font-size: 44px; }
+.slot-frame { display: grid; gap: 8px; text-align: center; font-size: 20px; }
+.slot-frame .ph { border-radius: 22px; aspect-ratio: 16 / 10; }
+.rnd-result { display: grid; gap: 12px; animation: pop .5s cubic-bezier(.2, 1.2, .4, 1); }
+.album { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; scroll-snap-type: x mandatory; gap: 0; margin: 0 -16px; }
+.album-page { scroll-snap-align: start; padding: 0 16px 8px; display: grid; gap: 12px; align-content: start; }
+.album-photo { position: relative; margin: 0; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; background: linear-gradient(135deg, var(--surface-2), color-mix(in srgb, var(--brand) 18%, var(--surface-2))); }
+.album-photo figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 10px 8px; color: #fff; font-size: 12px; background: linear-gradient(transparent, rgba(0, 0, 0, .6)); }
+.album-photo .icon-btn { position: absolute; top: 6px; right: 6px; background: rgba(0, 0, 0, .45); color: #fff; }
+.album-hero { aspect-ratio: 16 / 11; border-radius: 22px; }
+.album-no { position: absolute; left: 12px; top: 10px; z-index: 1; color: #fff; font: 900 15px "Noto Serif TC", serif; letter-spacing: .1em; text-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+.album-body { display: grid; gap: 10px; }
+.album-body h2 { font-size: 30px; }
+.album-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.album-add { display: grid; place-items: center; align-content: center; gap: 4px; aspect-ratio: 4 / 3; border: 2px dashed var(--border); border-radius: 16px; cursor: pointer; font-size: 13px; color: var(--muted); }
+.album-add span { font-size: 26px; }
+.journal { font-family: "Noto Serif TC", serif; }
+.album-cover { position: relative; }
+.collage { display: grid; gap: 4px; border-radius: 22px; overflow: hidden; aspect-ratio: 4 / 5; grid-template-columns: 1fr 1fr; background: var(--surface-2); }
+.collage .album-photo { border-radius: 0; aspect-ratio: auto; }
+.collage.n1 { grid-template-columns: 1fr; }
+.collage.n3 .album-photo:first-child { grid-row: span 2; }
+.album-cover-text { position: absolute; left: 16px; right: 16px; bottom: 8px; padding: 22px 18px 16px; color: #fff; background: linear-gradient(transparent, rgba(5, 10, 25, .8)); border-radius: 0 0 22px 22px; }
+.album-cover-text h2 { font-size: 64px; line-height: 1; }
+.album-cover-text p { margin: 4px 0; }
+.album-cover-text .flags { font-size: 22px; }
+.album-end { align-content: center; text-align: center; min-height: 60vh; }
+.album-nav { display: flex; align-items: center; justify-content: center; gap: 14px; }
 @media (prefers-reduced-motion: reduce) { .tcard-inner, #toast, .land, .mag-cover::before, dialog#modal { transition: none; animation: none; } .check path { animation: none; stroke-dashoffset: 0; } .gift-icon { animation: none; } .tap { animation: none; } }
 </style>
 </head>
@@ -516,10 +569,10 @@ dialog#modal { transition: transform .2s; }
     <section data-view="map">
       <div id="cover"></div>
       <div class="quick" style="margin-top:14px">
+        <button data-random><span class="icon-tile">🎲</span>隨機出國</button>
+        <button data-album="2026"><span class="icon-tile">📖</span>紀念冊</button>
         <button data-goto="esim"><span class="icon-tile">📶</span>我的 eSIM</button>
-        <button data-guide="quiz"><span class="icon-tile">🧭</span>幫我挑方案</button>
         <button data-guide="install"><span class="icon-tile">📲</span>安裝教學</button>
-        <button data-guide="device"><span class="icon-tile">✅</span>支援裝置</button>
       </div>
       <div class="section-title" id="strip-title"></div>
       <div class="day-strip" id="day-strip"></div>
@@ -550,7 +603,7 @@ dialog#modal { transition: transform .2s; }
 
     <section data-view="recs" hidden>
       <div class="card">
-        <div class="row" style="justify-content:space-between"><h2>附近的旅行推薦</h2><span class="muted small" id="recs-count"></span></div>
+        <div class="row" style="justify-content:space-between"><h2>附近的旅行推薦</h2><span class="muted small" id="recs-count"></span><span class="spacer"></span><button class="btn primary" data-random>🎲 隨機出國</button></div>
         <p class="muted small" style="margin:6px 0 12px">從你所在的位置、下一站或去過的城市出發，結合你的旅行元素、季節與飛行時間推薦。每張旅遊卡都整合官方觀光網站、Google 地圖、景點門票與當地 eSIM。</p>
         <div class="field"><label>出發點</label><div class="row" id="origin-chips"></div></div>
         <div class="field" style="margin-top:10px"><label>想要的元素</label><div class="row" id="tag-chips"></div></div>
@@ -558,6 +611,7 @@ dialog#modal { transition: transform .2s; }
           <div class="field"><label for="rec-month">出發月份</label><select class="input" id="rec-month"></select></div>
           <div class="field"><label for="rec-hours">從家出發飛行時間</label><select class="input" id="rec-hours"><option value="0">不限</option><option value="3">3 小時內</option><option value="5">5 小時內</option><option value="10">10 小時內</option></select></div>
           <div class="field"><label for="rec-fee">景點門票</label><select class="input" id="rec-fee"><option value="any">不限</option><option value="free">要有免費景點</option><option value="budget">門票合計 NT$1,500 內</option></select></div>
+          <div class="field"><label for="rec-budget">每人總預算（5 天概估）</label><select class="input" id="rec-budget"><option value="0">不限</option><option value="20000">2 萬內</option><option value="30000">3 萬內</option><option value="50000">5 萬內</option><option value="80000">8 萬內</option></select></div>
           <label class="row small" style="margin-top:20px"><input type="checkbox" id="rec-new"> 只看沒去過</label>
         </div>
       </div>
@@ -585,7 +639,7 @@ dialog#modal { transition: transform .2s; }
     <section data-view="trips" hidden>
       <div class="section-title" style="margin-top:4px"><span class="kicker muted">Year in Review</span><h2 class="serif">年度旅行回顧</h2><span class="muted small">2025 與 2026 你的足跡、元素與徽章</span></div>
       <div class="grid two" id="review"></div>
-      <div class="row" style="margin:24px 0 12px"><h2>我的行程</h2><span class="spacer"></span><button class="btn primary" id="trip-add">＋ 新增行程</button><button class="btn" id="share-card">🪪 旅遊卡</button></div>
+      <div class="row" style="margin:24px 0 12px"><h2>我的行程</h2><button class="btn sm" data-album="2025">📖 2025 紀念冊</button><button class="btn sm" data-album="2026">📖 2026 紀念冊</button><span class="spacer"></span><button class="btn primary" id="trip-add">＋ 新增行程</button><button class="btn" id="share-card">🪪 旅遊卡</button></div>
       <div class="grid two">
         <div class="card">
           <h3>匯入 Google 地圖時間軸</h3>

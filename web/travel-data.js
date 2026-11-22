@@ -180,7 +180,7 @@
     ASIA: { name: '亞洲多國', icon: '🌏', base: 55, countries: ['JP', 'KR', 'TH', 'VN', 'SG', 'MY', 'ID', 'PH', 'HK', 'MO', 'KH'] },
     SEA: { name: '東南亞', icon: '🌴', base: 45, countries: ['TH', 'VN', 'SG', 'MY', 'ID', 'PH', 'KH'] },
     HKMO: { name: '港澳', icon: '🌉', base: 39, countries: ['HK', 'MO'] },
-    EU: { name: '歐洲多國', icon: '🇪🇺', base: 65, countries: ['GB', 'FR', 'IT', 'ES', 'DE', 'CH', 'NL', 'AT', 'CZ', 'GR', 'PT', 'TR'] },
+    EU: { name: '歐洲多國', icon: '🇪🇺', base: 65, countries: ['GB', 'IE', 'FR', 'DE', 'IT', 'ES', 'PT', 'NL', 'BE', 'LU', 'CH', 'AT', 'CZ', 'SK', 'PL', 'HU', 'SI', 'HR', 'GR', 'BG', 'RO', 'EE', 'LV', 'LT', 'FI', 'SE', 'NO', 'DK', 'IS', 'MT', 'TR'] },
     ANZ: { name: '澳紐', icon: '🦘', base: 59, countries: ['AU', 'NZ'] },
     NA: { name: '美加', icon: '🗽', base: 59, countries: ['US', 'CA'] },
     GLOBAL: { name: '全球通用', icon: '🌐', base: 99, countries: Object.keys(COUNTRIES).filter((code) => code !== 'TW') },
@@ -227,6 +227,59 @@
   // 使用期限（示意，請改成官網條款）。
   const POLICY = { claimDays: 540, installDays: 180, activateDays: 30 };
 
+  // 各國有名的美食、文化、伴手禮與小提醒。[中文, 英文維基條目（用來找照片）]
+  const CULTURE = {
+    JP: { food: [['壽司', 'Sushi'], ['拉麵', 'Ramen'], ['和牛燒肉', 'Wagyu']], culture: [['溫泉', 'Onsen'], ['和服體驗', 'Kimono'], ['茶道', 'Japanese tea ceremony']], buy: ['藥妝', '抹茶點心', '文具'], tips: ['手扶梯東京靠左站、大阪靠右站', '多數餐廳不收小費，在桌上結帳時直接付'] },
+    KR: { food: [['韓式烤肉', 'Korean barbecue'], ['部隊鍋', 'Budae-jjigae'], ['炸雞配啤酒', 'Chimaek']], culture: [['韓服體驗', 'Hanbok'], ['汗蒸幕', 'Jjimjilbang'], ['K-POP', 'K-pop']], buy: ['韓系美妝', '海苔', '蜂蜜奶油杏仁'], tips: ['叫車用 Kakao T，搭車用 T-money 卡', '多數店家一個人也能用餐，但烤肉店常要兩人份起'] },
+    TH: { food: [['泰式酸辣蝦湯', 'Tom yum'], ['泰式炒河粉', 'Pad thai'], ['芒果糯米飯', 'Mango sticky rice']], culture: [['泰式按摩', 'Thai massage'], ['水上市場', 'Floating market'], ['潑水節', 'Songkran (Thailand)']], buy: ['香氛精油', '泰式奶茶', '乾燥水果'], tips: ['進寺廟要遮住肩膀與膝蓋', '不要摸別人的頭，也不要批評王室'] },
+    VN: { food: [['越南河粉', 'Phở'], ['越式法國麵包', 'Bánh mì'], ['越南咖啡', 'Vietnamese iced coffee']], culture: [['奧黛', 'Áo dài'], ['水上木偶戲', 'Water puppetry'], ['斗笠', 'Nón lá']], buy: ['咖啡豆與滴漏壺', '腰果', '絲巾'], tips: ['過馬路慢慢走、不要突然停下或後退', '叫車用 Grab，比路邊攔車更好溝通價格'] },
+    SG: { food: [['海南雞飯', 'Hainanese chicken rice'], ['辣椒螃蟹', 'Chilli crab'], ['叻沙', 'Laksa']], culture: [['小販中心', 'Hawker centre'], ['濱海灣超級樹', 'Supertree Grove'], ['魚尾獅', 'Merlion']], buy: ['肉骨茶包', '咖椰醬', '鹹蛋魚皮'], tips: ['地鐵上不能飲食，榴槤不能帶上車', '口香糖不能買賣，亂丟垃圾會被罰款'] },
+    MY: { food: [['椰漿飯', 'Nasi lemak'], ['沙爹', 'Satay'], ['拉茶', 'Teh tarik']], culture: [['峇峇娘惹', 'Peranakan'], ['清真寺', 'Putra Mosque'], ['夜市', 'Pasar malam']], buy: ['白咖啡', '榴槤餅', '娘惹糕點'], tips: ['遞東西、吃東西用右手', '進清真寺要穿長袖長褲，女生要包頭巾'] },
+    ID: { food: [['印尼炒飯', 'Nasi goreng'], ['仁當牛肉', 'Rendang'], ['巴東菜', 'Padang food']], culture: [['峇里島火舞', 'Kecak'], ['梯田灌溉', 'Subak (irrigation)'], ['蠟染', 'Batik']], buy: ['麝香貓咖啡', '蠟染布', '木雕'], tips: ['進峇里島寺廟要圍沙龍', '只喝瓶裝水，刷牙也建議用瓶裝水'] },
+    PH: { food: [['阿斗波', 'Adobo'], ['烤乳豬', 'Lechon'], ['哈囉哈囉', 'Halo-halo']], culture: [['吉普尼', 'Jeepney'], ['跳島', 'Island hopping'], ['聖嬰節', 'Sinulog']], buy: ['芒果乾', '椰子油', '珍珠飾品'], tips: ['叫車用 Grab', '海島陽光強，防曬與防水袋要帶'] },
+    HK: { food: [['港式點心', 'Dim sum'], ['菠蘿包', 'Pineapple bun'], ['燒鵝', 'Siu mei']], culture: [['茶餐廳', 'Cha chaan teng'], ['叮叮電車', 'Hong Kong Tramways'], ['幻彩詠香江', 'A Symphony of Lights']], buy: ['老婆餅', '雞仔餅', '涼茶'], tips: ['八達通卡搭車、便利商店都能用', '手扶梯靠右站，左邊讓人走'] },
+    MO: { food: [['葡式蛋塔', 'Pastel de nata'], ['豬扒包', 'Pork chop bun'], ['杏仁餅', 'Almond biscuit']], culture: [['葡式碎石路', 'Portuguese pavement'], ['澳門歷史城區', 'Historic Centre of Macau'], ['路氹度假村', 'Cotai']], buy: ['杏仁餅', '肉乾', '蛋卷'], tips: ['酒店接駁巴士免費又方便', '港幣通用，但找零常是澳門幣'] },
+    KH: { food: [['阿莫克魚', 'Fish amok'], ['柬式粿條湯', 'Kuy teav'], ['棕櫚糖', 'Palm sugar']], culture: [['吳哥窟日出', 'Angkor Wat'], ['嘟嘟車', 'Auto rickshaw'], ['仙女舞', 'Apsara Dance']], buy: ['貢布胡椒', '棕櫚糖', '絲綢圍巾'], tips: ['美金通用，小額找零常給瑞爾', '參觀吳哥窟要遮住肩膀與膝蓋'] },
+    MV: { food: [['鮪魚椰子沙拉', 'Mas huni'], ['魚湯', 'Garudhiya'], ['熱帶水果', 'Coconut']], culture: [['水上屋', 'Water villa'], ['浮潛', 'Snorkeling'], ['發光海灘', 'Bioluminescence']], buy: ['漆器', '鮪魚乾'], tips: ['度假島可以喝酒，首都馬列禁酒', '當地是穆斯林國家，離開度假島穿著保守些'] },
+    AU: { food: [['澳洲肉派', 'Meat pie'], ['帕芙洛娃', 'Pavlova'], ['小白咖啡', 'Flat white']], culture: [['無尾熊', 'Koala'], ['袋鼠', 'Kangaroo'], ['大堡礁', 'Great Barrier Reef']], buy: ['綿羊油', 'Tim Tam 餅乾', '蜂膠'], tips: ['陽光很強，防曬要擦足', '入境時食物、木製品都要申報'] },
+    NZ: { food: [['麥蘆卡蜂蜜', 'Mānuka honey'], ['紐西蘭羊排', 'Lamb and mutton'], ['奇異果', 'Kiwifruit']], culture: [['毛利戰舞', 'Haka'], ['哈比屯', 'Hobbiton Movie Set'], ['高空彈跳', 'Bungee jumping']], buy: ['麥蘆卡蜂蜜', '美麗諾羊毛', '綿羊油'], tips: ['入境生鮮食品一定要申報，罰款很重', '天氣變化快，隨時帶外套'] },
+    US: { food: [['漢堡', 'Hamburger'], ['紐約披薩', 'New York–style pizza'], ['美式烤肉', 'Barbecue in the United States']], culture: [['百老匯', 'Broadway theatre'], ['國家公園', 'Grand Canyon National Park'], ['職棒球賽', 'Major League Baseball']], buy: ['保健食品', 'Outlet 名牌', '球隊周邊'], tips: ['餐廳小費約 18–20%', '入境前要申請 ESTA'] },
+    CA: { food: [['楓糖漿', 'Maple syrup'], ['肉汁起司薯條', 'Poutine'], ['冰酒', 'Ice wine']], culture: [['極光', 'Aurora'], ['洛磯山脈', 'Banff National Park'], ['冰上曲棍球', 'Ice hockey']], buy: ['楓糖製品', '冰酒', '煙燻鮭魚'], tips: ['小費約 15–20%', '冬天非常冷，洋蔥式穿搭'] },
+    GB: { food: [['炸魚薯條', 'Fish and chips'], ['英式早餐', 'Full breakfast'], ['英式下午茶', 'Afternoon tea']], culture: [['衛兵交接', 'Changing of the Guard'], ['英式酒吧', 'Pub'], ['英超足球', 'Premier League']], buy: ['紅茶', '奶油酥餅', '博物館周邊'], tips: ['車輛靠左行駛，過馬路先看右邊', '大型博物館多數免費'] },
+    FR: { food: [['可頌', 'Croissant'], ['馬卡龍', 'Macaron'], ['法式長棍', 'Baguette']], culture: [['巴黎咖啡館', 'Coffeehouse'], ['香水', 'Perfume'], ['法國葡萄酒', 'French wine']], buy: ['香水', '馬卡龍', '藥妝保養品'], tips: ['進店先說 Bonjour', '地鐵與觀光區小心扒手'] },
+    IT: { food: [['拿坡里披薩', 'Neapolitan pizza'], ['義式冰淇淋', 'Gelato'], ['義大利麵', 'Pasta']], culture: [['文藝復興藝術', 'Italian Renaissance'], ['站著喝濃縮咖啡', 'Espresso'], ['威尼斯貢多拉', 'Gondola']], buy: ['橄欖油', '皮件', '檸檬酒'], tips: ['觀光區小心扒手', '教堂要遮住肩膀與膝蓋'] },
+    ES: { food: [['西班牙海鮮飯', 'Paella'], ['Tapas 小菜', 'Tapas'], ['吉拿棒', 'Churros']], culture: [['佛朗明哥', 'Flamenco'], ['高第建築', 'Antoni Gaudí'], ['鬥牛場', 'Plaza de toros de Las Ventas']], buy: ['伊比利火腿', '橄欖油', '番紅花'], tips: ['晚餐 21 點後才熱鬧', '巴塞隆納觀光區小心扒手'] },
+    DE: { food: [['德國豬腳', 'Schweinshaxe'], ['德國香腸', 'Bratwurst'], ['椒鹽卷餅', 'Pretzel']], culture: [['啤酒節', 'Oktoberfest'], ['聖誕市集', 'Christmas market'], ['新天鵝堡', 'Neuschwanstein Castle']], buy: ['小熊軟糖', '啤酒杯', '保養品'], tips: ['週日多數商店不營業', '不要走在自行車道上'] },
+    CH: { food: [['起司火鍋', 'Fondue'], ['瑞士巧克力', 'Swiss chocolate'], ['烤起司', 'Raclette']], culture: [['冰河列車', 'Glacier Express'], ['馬特洪峰', 'Matterhorn'], ['瑞士製錶', 'Swiss watch']], buy: ['巧克力', '瑞士刀', '手錶'], tips: ['物價高，善用 Swiss Travel Pass', '水龍頭的水可以直接喝'] },
+    NL: { food: [['焦糖煎餅', 'Stroopwafel'], ['生鯡魚', 'Soused herring'], ['高達起司', 'Gouda cheese']], culture: [['風車', 'Kinderdijk'], ['鬱金香', 'Tulip'], ['騎單車', 'Cycling in the Netherlands']], buy: ['起司', '木鞋', '焦糖煎餅'], tips: ['小心自行車道，車速很快', '很多地方只收卡不收現金'] },
+    AT: { food: [['維也納炸豬排', 'Wiener schnitzel'], ['薩赫蛋糕', 'Sachertorte'], ['蘋果捲', 'Apple strudel']], culture: [['維也納咖啡館', 'Viennese coffee house'], ['古典音樂', 'Vienna Philharmonic'], ['哈修塔特', 'Hallstatt']], buy: ['莫札特巧克力球', '薩赫蛋糕', '水晶飾品'], tips: ['咖啡館坐多久都可以，結帳再叫服務生', '週日多數商店休息'] },
+    CZ: { food: [['烤豬肉佐酸菜', 'Vepřo knedlo zelo'], ['煙囪捲', 'Trdelník'], ['皮爾森啤酒', 'Pilsner Urquell']], culture: [['天文鐘', 'Prague astronomical clock'], ['波希米亞水晶', 'Bohemian glass'], ['提線木偶', 'Marionette']], buy: ['水晶玻璃', '溫泉餅', '木偶'], tips: ['換匯認明「0% 手續費」，避開路邊換匯所', '啤酒常比水便宜'] },
+    GR: { food: [['希臘沙拉', 'Greek salad'], ['希臘烤肉捲', 'Gyros'], ['希臘優格', 'Strained yogurt']], culture: [['帕德嫩神廟', 'Parthenon'], ['愛琴海跳島', 'Cyclades'], ['藍白小鎮', 'Santorini']], buy: ['橄欖油', '蜂蜜', '天然海綿'], tips: ['夏天很熱，中午避開戶外', '跳島船班旺季要提早訂'] },
+    PT: { food: [['葡式蛋塔', 'Pastel de nata'], ['鹽漬鱈魚', 'Bacalhau'], ['波特酒', 'Port wine']], culture: [['法朵音樂', 'Fado'], ['花磚', 'Azulejo'], ['杜羅河谷', 'Douro Valley']], buy: ['花磚', '軟木製品', '沙丁魚罐頭'], tips: ['里斯本坡很多，穿好走的鞋', '晚餐時間偏晚'] },
+    TR: { food: [['土耳其烤肉', 'Kebab'], ['土耳其軟糖', 'Turkish delight'], ['土耳其咖啡', 'Turkish coffee']], culture: [['土耳其浴', 'Hammam'], ['旋轉舞', 'Mevlevi Order'], ['藍眼睛', 'Nazar (amulet)']], buy: ['土耳其軟糖', '藍眼睛', '香料'], tips: ['進清真寺女生要包頭巾、遮住膝蓋', '市集殺價是常態'] },
+    AE: { food: [['椰棗', 'Date palm'], ['沙威瑪', 'Shawarma'], ['駱駝奶', 'Camel milk']], culture: [['沙漠野營', 'Desert safari'], ['黃金市集', 'Gold Souk'], ['謝赫扎耶德清真寺', 'Sheikh Zayed Grand Mosque']], buy: ['椰棗', '香料', '駱駝奶巧克力'], tips: ['公共場合穿著保守', '齋戒月白天不要在公開場合飲食'] },
+    TW: { food: [['珍珠奶茶', 'Bubble tea'], ['小籠包', 'Xiaolongbao'], ['夜市小吃', 'Night markets in Taiwan']], culture: [['九份', 'Jiufen'], ['台北 101', 'Taipei 101'], ['媽祖遶境', 'Mazu']], buy: ['鳳梨酥', '高山茶', '牛軋糖'], tips: ['這是你的出發地'] },
+  };
+
+  // 所有國家與地區（ISO 3166-1 alpha-2），探索世界用；名稱由瀏覽器依繁體中文顯示。
+  const WORLD = {
+    asia: 'JP KR CN TW HK MO MN KP TH VN SG MY ID PH KH LA MM BN TL',
+    southasia: 'IN PK BD LK NP BT MV AF',
+    mideast: 'AE SA QA KW BH OM YE JO IL PS LB SY IQ IR TR CY',
+    centralasia: 'KZ UZ KG TJ TM GE AM AZ',
+    europe: 'GB IE FR DE IT ES PT NL BE LU CH AT CZ SK PL HU SI HR BA RS ME MK AL GR BG RO MD UA BY RU EE LV LT FI SE NO DK IS MT AD MC SM VA LI XK',
+    america: 'US CA MX GT BZ SV HN NI CR PA CU JM HT DO BS BB TT AG DM GD KN LC VC PR CO VE EC PE BO BR PY UY AR CL GY SR',
+    oceania: 'AU NZ FJ PG SB VU NC PF WS TO KI TV NR MH FM PW GU',
+    africa: 'EG MA DZ TN LY SD SS ET ER DJ SO KE UG TZ RW BI CD CG GA GQ CM CF TD NE NG BJ TG GH CI LR SL GN GW SN GM ML BF MR CV ST AO ZM ZW MW MZ MG MU SC KM NA BW ZA LS SZ RE',
+  };
+
+  // 中等預算每人每天的花費（住宿、餐飲、交通，新台幣，概估）。
+  const DAY_COST = {
+    JP: 4500, KR: 3800, TH: 2500, VN: 2200, SG: 5200, MY: 2600, ID: 2800, PH: 2600, HK: 5000, MO: 4800, KH: 2200, MV: 12000,
+    AU: 6200, NZ: 6200, US: 7800, CA: 6800, GB: 7500, FR: 7200, IT: 6500, ES: 5600, DE: 6200, CH: 9500, NL: 7000, AT: 6200,
+    CZ: 4600, GR: 5600, PT: 5200, TR: 4200, AE: 7200,
+  };
+
   const HOMES = {
     TPE: { name: '台北', lat: 25.08, lng: 121.23, n: '158' },
     RMQ: { name: '台中', lat: 24.26, lng: 120.62, n: '158' },
@@ -234,6 +287,6 @@
   };
 
   global.TRAVEL_DATA = {
-    ELEMENTS, REGIONS, RATES, COUNTRIES, DESTS, PACKS, HOMES, WIKI, PLAN_TYPES, POLICY,
+    ELEMENTS, REGIONS, RATES, COUNTRIES, DESTS, PACKS, HOMES, WIKI, PLAN_TYPES, POLICY, CULTURE, WORLD, DAY_COST,
   };
 }(typeof window !== 'undefined' ? window : globalThis));

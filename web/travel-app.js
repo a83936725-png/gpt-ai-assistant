@@ -1,7 +1,7 @@
 /* 旅圖 eSIM：前端邏輯。資料存在瀏覽器 localStorage（示範版），地圖用 d3 + world-atlas。 */
 (function main() {
   const {
-    ELEMENTS, REGIONS, RATES, COUNTRIES, DESTS, PACKS, HOMES, WIKI, PLAN_TYPES, POLICY,
+    ELEMENTS, REGIONS, RATES, COUNTRIES, DESTS, PACKS, HOMES, WIKI, PLAN_TYPES, POLICY, CULTURE, WORLD, DAY_COST,
   } = window.TRAVEL_DATA;
 
   const CONFIG = {
@@ -83,7 +83,7 @@
   let pendingGift = null;
   let guideState = null;
   const recState = {
-    origin: null, tags: [], month: new Date().getMonth() + 1, hours: 0, fee: 'any', unvisited: false, gps: null,
+    origin: null, tags: [], month: new Date().getMonth() + 1, hours: 0, fee: 'any', unvisited: false, gps: null, budget: 0,
   };
   const home = () => HOMES[settings.home] || HOMES.TPE;
   const save = () => {
@@ -279,6 +279,55 @@
       o.title = planLabel(o.key, o.plan);
     });
   }
+
+  // ---------- photos (web/travel-photos.json: Wikimedia Commons, credited to each author)
+  let PHOTOS = {};
+  const photoOf = (key) => PHOTOS[key] || null;
+  const destPhoto = (id) => photoOf(`dest:${id}`);
+  const spotPhoto = (destId, name) => photoOf(`spot:${destId}:${name}`);
+  const culturePhoto = (code, name) => photoOf(`culture:${code}:${name}`);
+  const creditHtml = (p) => (p ? `<a class="credit-mini" href="${esc(p.page)}" target="_blank" rel="noopener">📷 ${esc(p.author || 'Wikimedia Commons')}${p.license ? `・${esc(p.license)}` : ''}</a>` : '');
+  const imgHtml = (p, alt) => (p ? `<img src="${esc(p.src)}" alt="${esc(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '');
+  const photoCard = (p, title, sub = '') => `<figure class="ph-card"><div class="ph ${p ? '' : 'ph-missing'}">${imgHtml(p, title)}</div><figcaption><b>${esc(title)}</b>${sub}${creditHtml(p)}</figcaption></figure>`;
+  async function loadPhotos() {
+    try {
+      const res = await fetch('travel-photos.json');
+      if (res.ok) PHOTOS = (await res.json()).photos || {};
+    } catch { /* photos are optional */ }
+  }
+  // A photo that fails to load leaves the designed placeholder instead of a broken image.
+  document.addEventListener('error', (e) => {
+    const box = e.target.tagName === 'IMG' && e.target.closest('.ph, .cover, .album-photo');
+    if (box) { box.classList.add('ph-missing'); e.target.remove(); }
+  }, true);
+
+  // ---------- every country (探索世界), names in Traditional Chinese
+  const REGION_NAMES = (() => { try { return new Intl.DisplayNames(['zh-TW'], { type: 'region' }); } catch { return null; } })();
+  const countryName = (code) => COUNTRIES[code]?.name || REGION_NAMES?.of(code) || code;
+  const WORLD_CODES = Object.fromEntries(Object.entries(WORLD).map(([k, v]) => [k, v.split(' ')]));
+  const ALL_CODES = [...new Set(Object.values(WORLD_CODES).flat())].filter((c) => c !== 'TW');
+  function packFor(code) {
+    if (COUNTRIES[code]?.base) return code;
+    if (PACKS.EU.countries.includes(code)) return 'EU';
+    if (PACKS.ASIA.countries.includes(code)) return 'ASIA';
+    return 'GLOBAL';
+  }
+
+  // ---------- trip cost estimate (概估) used by 隨機出國 and 預算回推
+  const FLIGHT_COST = [[2, 7000], [3.5, 11000], [5, 14000], [10, 26000], [13, 33000], [99, 38000]];
+  const flightCost = (hours) => FLIGHT_COST.find(([max]) => hours <= max)[1];
+  function tripCost(d, days, people = 1) {
+    const day = DAY_COST[d.c] || 5000;
+    const flight = flightCost(d.hours) * people;
+    const stay = day * days * people;
+    const tickets = ticketTotal(d) * people;
+    const esim = planPrice(d.c, { type: 'daily', size: '2', days: Math.min(30, days) }) * people;
+    return { day, flight, stay, tickets, esim, total: flight + stay + tickets + esim };
+  }
+  const costRows = (c) => `<div class="cost">
+    <div><span>✈️ 來回機票</span><b>NT$${fmt(c.flight)}</b></div><div><span>🏨 住宿・餐飲・交通</span><b>NT$${fmt(c.stay)}</b></div>
+    <div><span>🎟️ 景點門票</span><b>NT$${fmt(c.tickets)}</b></div><div><span>📶 eSIM</span><b>NT$${fmt(c.esim)}</b></div>
+    <div class="total"><span>概估總計</span><b>NT$${fmt(c.total)}</b></div></div>`;
 
   // ---------- demo data
   const demoTrip = (dest, start, end, tags, gb) => {
@@ -593,25 +642,6 @@
     $('#confirm-yes').addEventListener('click', () => { modal.close(); onYes(); });
   }
 
-  function openCountry(n) {
-    const c = country(n);
-    const visits = sortTrips(trips.filter((t) => t.n === n));
-    const dests = DESTS.filter((d) => COUNTRIES[d.c]?.n === n);
-    const tags = {};
-    visits.forEach((t) => t.tags.forEach((k) => { tags[k] = (tags[k] || 0) + 1; }));
-    openModal(`${flag(c.code)} ${esc(c.name)}`, `
-      ${visits.length ? `<div><b>你去過 ${visits.length} 次</b><ul class="timeline" style="margin-top:8px">${visits.map((t) => `<li data-trip="${t.id}"><span class="flag">${isUpcoming(t) ? '🧳' : '📍'}</span><div><b>${esc(t.city)}</b><div class="small muted">${t.start} – ${t.end}・${t.tags.map((k) => el(k).icon).join(' ')}</div></div></li>`).join('')}</ul></div>` : '<p class="muted">還沒去過，加入你的下一站吧！</p>'}
-      ${Object.keys(tags).length ? `<div class="row">${Object.entries(tags).map(([k, v]) => `<span class="chip">${el(k).icon} ${el(k).label} ×${v}</span>`).join('')}</div>` : ''}
-      ${c.note ? `<div class="notice">ℹ️ ${esc(c.note)}</div>` : ''}
-      ${c.cur ? `<div class="small muted">貨幣 ${esc(c.cur)}・插座 ${esc(c.plug)}</div>` : ''}
-      ${dests.length ? `<div><b>推薦城市</b><div class="row" style="margin-top:6px">${dests.map((d) => `<button class="chip" data-dest="${d.id}">${DEST_EMOJI[d.tags[0]]} ${esc(d.name)}</button>`).join('')}</div></div>` : ''}
-      <div class="actions">
-        ${c.base ? `<button class="btn primary" data-plan="${c.code}">📶 ${esc(c.name)} eSIM</button>` : ''}
-        ${c.site ? `<a class="btn" href="${c.site}" target="_blank" rel="noopener">官方觀光網 ↗</a>` : ''}
-        <a class="btn" href="${gmaps(`${c.name} 景點`)}" target="_blank" rel="noopener">Google 地圖 ↗</a>
-        <button class="btn" data-trip-new="${n}">＋ 記錄一趟</button>
-      </div>`);
-  }
   function openTrip(id) {
     const t = trips.find((x) => x.id === id);
     if (!t) return;
@@ -667,6 +697,7 @@
       if (opts.tags.length && !opts.tags.some((t) => d.tags.includes(t))) return null;
       if (opts.fee === 'free' && !freeCount(d)) return null;
       if (opts.fee === 'budget' && ticketTotal(d) > 1500) return null;
+      if (opts.budget && tripCost(d, 5).total > opts.budget) return null;
       const why = [];
       let score = Math.max(0, 1 - dist / 4000) * 40;
       if (dist < 600) why.push(`離${origin.name}只有 ${fmtKm(dist)}，很適合順遊`);
@@ -691,11 +722,11 @@
 
   function spotsHtml(d) {
     const c = COUNTRIES[d.c];
-    return `<div class="grid" style="gap:6px">${d.spots.map((s) => {
-      const twd = toTwd(s);
-      return `<div class="spot"><a href="${gmaps(`${s.name} ${d.name}`)}" target="_blank" rel="noopener">${esc(s.name)} ↗</a>
-        <span class="chip ${s.fee === 0 ? 'free' : 'fee'}">${s.fee === 0 ? '免費' : esc(ticketText(s))}</span>
-        <small>${s.fee ? `成人門票 ≈ NT$${fmt(twd)}${s.note ? `・${esc(s.note)}` : ''}` : esc(s.note || '不需門票')}</small></div>`;
+    return `<div class="gallery">${d.spots.map((x) => {
+      const fee = `<span class="chip ${x.fee === 0 ? 'free' : 'fee'}">${x.fee === 0 ? '免費' : esc(ticketText(x))}</span>`;
+      const sub = `<span class="row" style="gap:6px">${fee}<a class="small" href="${gmaps(`${x.name} ${d.name}`)}" target="_blank" rel="noopener">地圖 ↗</a></span>
+        <small class="muted">${x.fee ? `成人門票 ≈ NT$${fmt(toTwd(x))}${x.note ? `・${esc(x.note)}` : ''}` : esc(x.note || '不需門票')}</small>`;
+      return photoCard(spotPhoto(d.id, x.name), x.name, sub);
     }).join('')}</div>
     <div class="ticket-sum"><span>🎟️ 門票合計（成人）</span><b>≈ NT$${fmt(ticketTotal(d))}</b></div>
     <div class="small muted">參考價（匯率概估），以景點官網公告為準。貨幣 ${c.cur}・插座 ${esc(c.plug)}</div>`;
@@ -709,10 +740,11 @@
     return `<article class="tcard" data-card="${d.id}" style="--i:${i}">
       <div class="tcard-inner">
         <div class="face front">
-          <div class="cover" style="background:linear-gradient(135deg,${c1},${c2})">
+          <div class="cover ${destPhoto(d.id) ? 'has-photo' : ''}" style="background:linear-gradient(135deg,${c1},${c2})">
+            ${imgHtml(destPhoto(d.id), d.name)}
             <span class="score">配對 ${r.score}%</span>
             <div><div class="small" style="opacity:.9">${flag(d.c)} ${c.name}・${r.dist ? fmtKm(r.dist) : ''}</div><h3>${esc(d.name)}</h3></div>
-            <span class="emoji" aria-hidden="true">${DEST_EMOJI[d.tags[0]]}</span>
+            ${destPhoto(d.id) ? '' : `<span class="emoji" aria-hidden="true">${DEST_EMOJI[d.tags[0]]}</span>`}
           </div>
           <div class="body">
             <div class="small">${esc(d.blurb)}</div>
@@ -756,7 +788,7 @@
   function renderMapRecs() {
     const origin = defaultOrigin();
     const list = recommend(origin, {
-      tags: [], month: recState.month, hours: 0, fee: 'any', unvisited: true,
+      tags: [], month: recState.month, hours: 0, fee: 'any', unvisited: true, budget: 0,
     }, 6);
     $('#map-recs').innerHTML = list.map(travelCard).join('');
   }
@@ -767,6 +799,7 @@
     $('#rec-hours').addEventListener('change', (e) => { recState.hours = Number(e.target.value); renderRecs(); });
     $('#rec-fee').addEventListener('change', (e) => { recState.fee = e.target.value; renderRecs(); });
     $('#rec-new').addEventListener('change', (e) => { recState.unvisited = e.target.checked; renderRecs(); });
+    $('#rec-budget').addEventListener('change', (e) => { recState.budget = Number(e.target.value); renderRecs(); });
   }());
   function setOrigin(key) {
     if (key === 'gps') {
@@ -883,14 +916,12 @@
   let esimTab = null;
   let planState = null;
   const HOT = ['JP', 'KR', 'TH', 'VN', 'SG', 'HK', 'MO', 'MY', 'US', 'FR', 'GB', 'AU'];
-  const REGION_CHIPS = [['hot', '精選熱門'], ['jk', '日韓'], ['sea', '東南亞'], ['hkmo', '港澳'], ['europe', '歐洲'], ['america', '美洲'], ['oceania', '大洋洲'], ['mideast', '中東'], ['packs', '多國方案'], ['all', '全部']];
-  const REGION_CODES = { jk: ['JP', 'KR'], sea: ['TH', 'VN', 'SG', 'MY', 'ID', 'PH', 'KH', 'MV'], hkmo: ['HK', 'MO'] };
-  const inRegion = (code, c, r) => {
-    if (r === 'hot') return HOT.includes(code);
-    if (r === 'all') return true;
-    if (REGION_CODES[r]) return REGION_CODES[r].includes(code);
-    return c.region === r;
-  };
+  const REGION_CHIPS = [['hot', '精選熱門'], ['jk', '日韓'], ['sea', '東南亞'], ['hkmo', '中港澳'], ['southasia', '南亞'], ['mideast', '中東'], ['europe', '歐洲'], ['america', '美洲'], ['oceania', '大洋洲'], ['africa', '非洲'], ['centralasia', '中亞・高加索'], ['packs', '多國方案'], ['all', '全部']];
+  const REGION_CODES = { hot: HOT, jk: ['JP', 'KR'], sea: ['TH', 'VN', 'SG', 'MY', 'ID', 'PH', 'KH', 'LA', 'MM', 'BN', 'TL'], hkmo: ['HK', 'MO', 'CN'] };
+  function regionCodes(r) {
+    if (r === 'all') return ALL_CODES;
+    return (REGION_CODES[r] || WORLD_CODES[r] || []).filter((c) => c !== 'TW');
+  }
   const allCards = () => orders.flatMap((o) => (o.cards || []).map((c) => ({ o, c, st: cardState(o, c) })));
   const findCard = (ref) => {
     const [oid, cid] = String(ref).split(':');
@@ -971,14 +1002,12 @@
     if (esimRegion === 'packs' && !q) {
       items = Object.keys(PACKS).map((k) => ({ key: k, icon: PACKS[k].icon, name: PACKS[k].name, sub: `${PACKS[k].countries.length} 國` }));
     } else {
-      const matches = (code, c) => (q ? c.name.includes(q) || code.toLowerCase() === q.toLowerCase() : inRegion(code, c, esimRegion));
-      items = Object.entries(COUNTRIES).filter(([code, c]) => c.base && matches(code, c))
-        .sort((a, b) => (esimRegion === 'hot' ? HOT.indexOf(a[0]) - HOT.indexOf(b[0]) : 0))
-        .map(([code, c]) => ({ key: code, icon: flag(code), name: c.name }));
+      const codes = q ? ALL_CODES.filter((code) => countryName(code).includes(q) || code.toLowerCase() === q.toLowerCase()) : regionCodes(esimRegion);
+      items = codes.map((code) => ({ key: packFor(code), code, icon: flag(code), name: countryName(code) }));
       if (q) items.push(...Object.keys(PACKS).filter((k) => PACKS[k].name.includes(q)).map((k) => ({ key: k, icon: PACKS[k].icon, name: PACKS[k].name })));
     }
-    $('#esim-count').textContent = items.length ? `${items.length} 個地區` : '';
-    $('#esim-grid').innerHTML = items.length ? items.map((it) => `<button class="flag-btn" data-plan="${it.key}"><span class="flag-tile lg">${it.icon}</span><b>${esc(it.name)}</b><small>NT$${fmt(fromPrice(it.key))} 起</small></button>`).join('')
+    $('#esim-count').textContent = items.length ? `${items.length} 個國家・地區` : '';
+    $('#esim-grid').innerHTML = items.length ? items.map((it) => `<button class="flag-btn" data-plan="${it.key}" ${it.code && it.code !== it.key ? `data-for="${it.code}"` : ''}><span class="flag-tile lg">${it.icon}</span><b>${esc(it.name)}</b><small>${it.code && it.code !== it.key ? `${esc(PACKS[it.key].name)}・` : ''}NT$${fmt(fromPrice(it.key))} 起</small></button>`).join('')
       : '<p class="muted">找不到這個國家，試試「多國方案」或「全球通用」。</p>';
     renderCartFab();
   }
@@ -993,7 +1022,8 @@
     planState = {
       key, ...pickForUsage(), days: fromTrip ? pick.plan.days : 5, qty: 1, tripIds: fromTrip ? pick.journey.map((t) => t.id) : [], ...preset,
     };
-    openModal(`${target(key).icon} ${esc(target(key).name)}`, '<div id="plan-sheet"></div>', { sheet: 'tall' });
+    const title = planState.forCountry && planState.forCountry !== key ? `${flag(planState.forCountry)} ${esc(countryName(planState.forCountry))}` : `${target(key).icon} ${esc(target(key).name)}`;
+    openModal(title, '<div id="plan-sheet"></div>', { sheet: 'tall' });
     renderPlanSheet();
   }
   function renderPlanSheet() {
@@ -1017,7 +1047,8 @@
     const dayChips = [3, 5, 7, 10, 15, 30];
     const total = planPrice(p.key, p, p.qty);
     $('#plan-sheet').innerHTML = `
-      <div class="small muted">${t.pack ? `適用：${t.countries.map((c) => `${flag(c)} ${COUNTRIES[c].name}`).join('、')}` : `可連網路：${esc(t.ops)}（以官網為準）`}</div>
+      ${p.forCountry && p.forCountry !== p.key ? `<div class="banner info">${flag(p.forCountry)} ${esc(countryName(p.forCountry))} 使用「${esc(t.name)}」方案，一張就能上網</div>` : ''}
+      <div class="small muted">${t.pack ? `適用 ${t.countries.length} 國：${t.countries.slice(0, 14).map((c) => `${flag(c)} ${esc(countryName(c))}`).join('、')}${t.countries.length > 14 ? ' 等' : ''}` : `可連網路：${esc(t.ops)}（以官網為準）`}</div>
       ${trip ? `<div class="banner info">🧳 已依你的行程帶入：${esc(trip.city)} ${md(trip.start)}–${md(orderTripsEnd(p.tripIds))}，共 ${p.days} 天</div>` : ''}
       <div><h3>選擇最適合你的連網方式</h3><p class="small muted" style="margin:2px 0 0">不確定？<button class="link" data-guide="quiz">回答 3 題幫你挑</button></p></div>
       <div class="seg seg-lg seg-full" id="type-seg">${Object.entries(PLAN_TYPES).map(([k, v]) => `<button data-type="${k}" class="${p.type === k ? 'on' : ''}">${v.label}</button>`).join('')}</div>
@@ -1497,7 +1528,7 @@
 
   // Store events
   $('#modal-body').addEventListener('click', (e) => {
-    if (planSheetClick(e) || quizClick(e) || guideClick(e)) return;
+    if (planSheetClick(e) || quizClick(e) || guideClick(e) || randomClick(e)) return;
     const b = e.target.closest('button, a');
     if (!b) return;
     const ds = b.dataset;
@@ -1535,12 +1566,27 @@
       else { input.select(); toast('請長按名稱複製'); }
     } else if (ds.installForce) openInstall(ds.installForce, true);
     else if (ds.guideCard) openInstallGuide(ds.guideCard);
-    else if (ds.os) {
+    else if (ds.albumStep) { const album = $('#album'); album.scrollBy({ left: album.clientWidth * Number(ds.albumStep), behavior: REDUCED ? 'auto' : 'smooth' }); } else if (ds.albumDel) {
+      const [tripId, id] = ds.albumDel.split(':');
+      store.set(albumKey(tripId), albumPhotos(tripId).filter((x) => x.id !== id));
+      const page = Math.round($('#album').scrollLeft / $('#album').clientWidth);
+      openAlbum(openAlbum.year);
+      $('#album').scrollLeft = page * $('#album').clientWidth;
+    } else if (ds.os) {
       $$('#guide-os button').forEach((x) => x.classList.toggle('on', x === b));
       $('#guide-steps').innerHTML = GUIDE_STEPS[ds.os].map((x) => `<li>${esc(x)}</li>`).join('');
     }
   });
   $('#cart-fab').addEventListener('click', openCart);
+  $('#modal-body').addEventListener('change', (e) => { if (e.target.dataset.albumAdd && e.target.files.length) addAlbumPhotos(e.target.dataset.albumAdd, e.target.files); });
+  $('#modal-body').addEventListener('input', (e) => {
+    const id = e.target.dataset.memo;
+    const t = id && trips.find((x) => x.id === id);
+    if (!t) return;
+    t.memo = e.target.value;
+    clearTimeout(openAlbum.timer);
+    openAlbum.timer = setTimeout(save, 400);
+  });
 
   // ---------- trips list & form
   function renderTrips() {
@@ -1739,7 +1785,7 @@
       const max = Math.max(1, ...s.topElements.map(([, v]) => v));
       const color = y === 2025 ? 'var(--y25)' : 'var(--y26)';
       return `<div class="card" style="display:grid;gap:14px;border-top:4px solid ${color}">
-        <div class="row"><h2>${y}</h2><span class="muted small">${travelerType(s)}</span><span class="spacer"></span><button class="btn sm" data-share="${y}">🪪 旅遊卡</button></div>
+        <div class="row"><h2>${y}</h2><span class="muted small">${travelerType(s)}</span><span class="spacer"></span><button class="btn sm" data-album="${y}">📖 紀念冊</button><button class="btn sm" data-share="${y}">🪪 旅遊卡</button></div>
         <div class="grid stats" style="grid-template-columns:repeat(4,1fr)">
           <div class="stat">${count(s.countries.size)}<span>國家</span></div><div class="stat">${count(s.cities.size)}<span>城市</span></div>
           <div class="stat">${count(s.days)}<span>天</span></div><div class="stat">${count(s.km)}<span>公里</span></div></div>
@@ -1851,18 +1897,19 @@
   const spotTitle = (name) => name.replace(/（.*?）|\(.*?\)/g, '').split(/[ ＋+]/)[0];
   function applyPhoto(node, title) {
     if (!node) return;
-    wikiPhoto(title).then((p) => {
+    const local = node.dataset.photoKey ? photoOf(node.dataset.photoKey) : null;
+    (local ? Promise.resolve(local) : wikiPhoto(title)).then((p) => {
       if (!p) { if (node.classList.contains('photo')) { node.classList.add('empty'); node.innerHTML = '<span>沒有找到照片，點「照片」看更多</span>'; } return; }
       const img = new Image();
       img.onload = () => {
         if (node.classList.contains('photo')) {
           node.style.backgroundImage = `url("${p.src}")`;
-          node.innerHTML = p.page ? `<a href="${p.page}" target="_blank" rel="noopener">照片：Wikipedia</a>` : '';
+          node.innerHTML = p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">📷 ${esc(p.author || 'Wikipedia')}${p.license ? `・${esc(p.license)}` : ''}</a>` : '';
         } else {
           node.style.setProperty('--cover-img', `url("${p.src}")`);
           node.classList.add('loaded');
           const credit = node.querySelector('.credit');
-          if (credit && p.page) { credit.href = p.page; credit.hidden = false; }
+          if (credit && p.page) { credit.href = p.page; credit.textContent = `📷 ${p.author || 'Wikipedia'}${p.license ? `・${p.license}` : ''}`; credit.hidden = false; }
         }
       };
       img.src = p.src;
@@ -1907,7 +1954,7 @@
     const tickets = items.filter((it) => it.fee).length;
     const order = orders.find((o) => o.tripIds?.includes(t.id));
     const vol = parseDate(t.start);
-    return `<header class="mag-cover ${planner ? 'plan-cover' : ''}" data-cover="${esc(WIKI[t.dest] || t.city)}" style="--cover-fallback:linear-gradient(160deg,${c1} 0%,${c2} 45%,#0b1430 100%)">
+    return `<header class="mag-cover ${planner ? 'plan-cover' : ''}" data-cover="${esc(WIKI[t.dest] || t.city)}" data-photo-key="dest:${esc(t.dest || '')}" style="--cover-fallback:linear-gradient(160deg,${c1} 0%,${c2} 45%,#0b1430 100%)">
       ${coverArt(t.lng, t.lat)}
       <div class="masthead"><span>${esc(CONFIG.brand)}</span><span>VOL.${vol.getFullYear()} · NO.${pad(vol.getMonth() + 1)}</span></div>
       <div class="content">
@@ -1925,7 +1972,7 @@
     if (!t) {
       const pick = recommend({ ...home(), name: home().name }, { tags: [], month: recState.month, hours: 5, fee: 'any', unvisited: false }, 1)[0];
       const d = pick?.d;
-      $('#cover').innerHTML = d ? `<header class="mag-cover" data-cover="${esc(WIKI[d.id] || d.name)}" style="--cover-fallback:linear-gradient(160deg,${(TAG_COLORS[d.tags[0]] || [])[0]} 0%,${(TAG_COLORS[d.tags[0]] || [])[1]} 45%,#0b1430 100%)">
+      $('#cover').innerHTML = d ? `<header class="mag-cover" data-cover="${esc(WIKI[d.id] || d.name)}" data-photo-key="dest:${d.id}" style="--cover-fallback:linear-gradient(160deg,${(TAG_COLORS[d.tags[0]] || [])[0]} 0%,${(TAG_COLORS[d.tags[0]] || [])[1]} 45%,#0b1430 100%)">
         ${coverArt(d.lng, d.lat)}
         <div class="masthead"><span>${esc(CONFIG.brand)}</span><span>本期推薦</span></div>
         <div class="content"><span class="kicker">${flag(d.c)} ${COUNTRIES[d.c].name}・台北直飛 ${d.hours} 小時</span><h1 class="cover-title serif">${esc(d.name)}</h1>
@@ -2009,7 +2056,7 @@
         ${fee}
       </div>
       ${open ? `<div class="item-detail">
-        ${it.kind === 'move' ? '' : `<div class="photo" data-photo="${esc(it.kind === 'food' ? (WIKI[t.dest] || t.city) : spotTitle(it.name))}">載入照片中…</div>`}
+        ${it.kind === 'move' ? '' : `<div class="photo" data-photo="${esc(it.kind === 'food' ? (WIKI[t.dest] || t.city) : spotTitle(it.name))}" data-photo-key="${it.kind === 'food' ? `dest:${esc(t.dest || '')}` : `spot:${esc(t.dest || '')}:${esc(it.name)}`}">載入照片中…</div>`}
         <div class="links">
           <a class="btn sm" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(place)}" target="_blank" rel="noopener">📷 照片</a>
           <a class="btn sm" href="https://www.youtube.com/results?search_query=${encodeURIComponent(`${place} 旅遊`)}" target="_blank" rel="noopener">▶️ 影片</a>
@@ -2096,6 +2143,7 @@
         <div class="budget-row" style="margin-top:8px"><label for="b-cap" class="small muted">預算上限</label><input class="input" id="b-cap" type="number" min="0" step="1000" value="${b.cap || ''}" placeholder="不設定" data-budget="cap"></div>
         ${b.cap ? `<div class="usage" style="margin-top:8px"><div style="width:${pct}%;background:${total > b.cap ? 'var(--danger)' : 'var(--brand-2)'}"></div></div><div class="small muted">${total > b.cap ? `超出 NT$${fmt(total - b.cap)}` : `還剩 NT$${fmt(b.cap - total)}`}</div>` : ''}
       </div>
+      ${budgetAdvice(t)}
       <div class="card"><div class="row"><h3>✅ 待辦</h3><span class="spacer"></span><span class="small muted">${doneCount}/${todoTotal}</span></div>
         <div style="margin-top:6px">
           ${autos.map((a) => `<label class="todo ${t.plan.done[a.key] ? 'done' : ''}"><input type="checkbox" data-auto="${esc(a.key)}" ${t.plan.done[a.key] ? 'checked' : ''}><span style="flex:1">${esc(a.text)} <span class="auto-tag">自動</span></span>${a.action || ''}</label>`).join('')}
@@ -2218,6 +2266,8 @@
     });
     side.addEventListener('click', (e) => {
       const t = planTrip();
+      if (t && e.target.closest('[data-bfill]')) { fillBudget(t); return; }
+      if (t && e.target.closest('[data-badjust]')) { adjustToBudget(t); return; }
       const del = e.target.closest('[data-todo-del]');
       if (!t || !del) return;
       e.preventDefault();
@@ -2234,13 +2284,265 @@
     });
   }());
 
+  // ---------- country sheet: famous food, culture, souvenirs and tips
+  function openCountry(n) {
+    const c = country(n);
+    const { code } = c;
+    const cul = CULTURE[code];
+    const visits = sortTrips(trips.filter((t) => t.n === n));
+    const dests = DESTS.filter((d) => COUNTRIES[d.c]?.n === n);
+    const hero = dests[0] ? destPhoto(dests[0].id) : null;
+    const { name } = c;
+    const plan = code ? packFor(code) : 'GLOBAL';
+    openModal(`${flag(code)} ${esc(name)}`, `
+      <div class="country-hero ${hero ? '' : 'ph-missing'}">${imgHtml(hero, name)}<div class="country-hero-text"><span class="kicker">${esc(REGIONS[c.region] || '世界')}</span><h2 class="serif">${esc(name)}</h2>${c.cur ? `<span class="small">貨幣 ${esc(c.cur)}・插座 ${esc(c.plug)}</span>` : ''}</div>${creditHtml(hero)}</div>
+      ${cul ? `<section><h3>🍜 必吃美食</h3><div class="gallery">${cul.food.map(([zh]) => photoCard(culturePhoto(code, zh), zh, `<a class="small" href="${gmaps(`${zh} ${name}`)}" target="_blank" rel="noopener">找附近的店 ↗</a>`)).join('')}</div></section>
+      <section><h3>🎎 必體驗文化</h3><div class="gallery">${cul.culture.map(([zh]) => photoCard(culturePhoto(code, zh), zh, `<a class="small" href="${gsearch(`${zh} ${name} 體驗`)}" target="_blank" rel="noopener">怎麼體驗 ↗</a>`)).join('')}</div></section>
+      <section><h3>🎁 伴手禮</h3><div class="row">${cul.buy.map((b) => `<span class="chip lg">${esc(b)}</span>`).join('')}</div></section>
+      <div class="banner info"><b>💡 小提醒</b><br>${[...cul.tips, c.note].filter(Boolean).map(esc).join('<br>')}</div>`
+    : `<p class="muted" style="margin:0">這個國家還沒有整理在地資料。</p><div class="row"><a class="btn" href="https://en.wikipedia.org/wiki/${encodeURIComponent(name)}" target="_blank" rel="noopener">認識這個國家 ↗</a><a class="btn" href="${gsearch(`${name} 必吃 必玩`)}" target="_blank" rel="noopener">必吃必玩 ↗</a></div>`}
+      ${dests.length ? `<section><h3>📍 推薦城市</h3><div class="gallery">${dests.map((d) => `<button class="ph-card city" data-dest="${d.id}"><div class="ph ${destPhoto(d.id) ? '' : 'ph-missing'}">${imgHtml(destPhoto(d.id), d.name)}</div><figcaption><b>${esc(d.name)}</b><small class="muted">${esc(d.blurb)}</small></figcaption></button>`).join('')}</div></section>` : ''}
+      ${visits.length ? `<section><h3>🧳 你去過 ${visits.length} 次</h3><ul class="timeline" style="margin-top:8px">${visits.map((t) => `<li data-trip="${t.id}"><span class="flag">${isUpcoming(t) ? '🧳' : '📍'}</span><div><b>${esc(t.city)}</b><div class="small muted">${t.start} – ${t.end}・${t.tags.map((k) => el(k).icon).join(' ')}</div></div></li>`).join('')}</ul></section>` : ''}
+      <div class="actions two">
+        <button class="btn primary" data-plan="${plan}" ${code && plan !== code ? `data-for="${code}"` : ''}>📶 ${esc(name)} eSIM</button>
+        ${c.site ? `<a class="btn" href="${c.site}" target="_blank" rel="noopener">官方觀光網 ↗</a>` : `<a class="btn" href="${gmaps(`${name} 景點`)}" target="_blank" rel="noopener">Google 地圖 ↗</a>`}
+        <button class="btn" data-trip-new="${n}">＋ 記錄一趟</button>
+        ${dests[0] ? `<button class="btn" data-dest="${dests[0].id}">附近推薦</button>` : `<a class="btn" href="${gmaps(`${name} 景點`)}" target="_blank" rel="noopener">景點地圖 ↗</a>`}
+      </div>`, { sheet: 'tall' });
+  }
+
+  // ---------- 隨機出國
+  const BUDGETS = [[15000, '1.5 萬'], [30000, '3 萬'], [50000, '5 萬'], [80000, '8 萬'], [0, '不限']];
+  const rnd = { budget: 30000, days: 5, month: ((new Date().getMonth() + 1) % 12) + 1, tags: [], fresh: false, result: null };
+  function randomCandidates() {
+    const visited = new Set(trips.filter((t) => !isUpcoming(t)).map((t) => t.dest));
+    return DESTS.filter((d) => (!rnd.budget || tripCost(d, rnd.days).total <= rnd.budget)
+      && (!rnd.tags.length || rnd.tags.some((k) => d.tags.includes(k)))
+      && (!rnd.fresh || !visited.has(d.id)));
+  }
+  function openRandom() {
+    openModal('🎲 隨機出國', '<div id="rnd"></div>', { sheet: 'tall' });
+    renderRandom();
+  }
+  function randomResult(d) {
+    const cost = tripCost(d, rnd.days);
+    const cul = CULTURE[d.c];
+    const ph = destPhoto(d.id);
+    return `<div class="rnd-result">
+      <div class="country-hero ${ph ? '' : 'ph-missing'}">${imgHtml(ph, d.name)}<div class="country-hero-text"><span class="kicker">${flag(d.c)} ${esc(COUNTRIES[d.c].name)}・台北直飛約 ${d.hours} 小時</span><h2 class="serif">${esc(d.name)}</h2><span class="small">${esc(d.blurb)}</span></div>${creditHtml(ph)}</div>
+      <div class="row">${d.months.includes(rnd.month) ? `<span class="chip free">${rnd.month} 月正是好季節</span>` : `<span class="chip">${rnd.month} 月非旺季，人少比較便宜</span>`}${d.tags.slice(0, 3).map((k) => `<span class="chip">${el(k).icon} ${el(k).label}</span>`).join('')}</div>
+      <div><b class="small">${rnd.days} 天每人概估</b>${costRows(cost)}</div>
+      ${cul ? `<div class="small"><b>必吃：</b>${cul.food.map(([x]) => esc(x)).join('、')}<br><b>必體驗：</b>${cul.culture.map(([x]) => esc(x)).join('、')}</div>` : ''}
+      <div class="actions two"><button class="btn primary" data-trip-dest="${d.id}">＋ 排進我的行程</button><button class="btn" data-ai="${d.id}">✨ 建議行程</button><button class="btn" data-country-code="${d.c}">看在地文化</button><button class="btn" data-plan="${d.c}">📶 ${esc(COUNTRIES[d.c].name)} eSIM</button></div>
+      <p class="notice">機票、住宿與門票都是概估，實際價格依日期與訂購管道而定。</p></div>`;
+  }
+  function renderRandom() {
+    const list = randomCandidates();
+    const result = rnd.result && DEST[rnd.result];
+    $('#rnd').innerHTML = `
+      <div class="field"><label>每人總預算（含機票）</label><div class="row">${BUDGETS.map(([v, l]) => `<button class="chip lg ${rnd.budget === v ? 'on' : ''}" data-rbudget="${v}">${l}</button>`).join('')}</div></div>
+      <div class="row"><div class="field"><label>天數</label><span class="stepper"><button data-rdays="-1" aria-label="少一天">－</button><b>${rnd.days} 天</b><button data-rdays="1" aria-label="多一天">＋</button></span></div>
+        <div class="field"><label for="rnd-month">出發月份</label><select class="input" id="rnd-month" style="width:auto">${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${rnd.month === i + 1 ? 'selected' : ''}>${i + 1} 月</option>`).join('')}</select></div>
+        <label class="row small" style="margin-top:20px"><input type="checkbox" id="rnd-fresh" ${rnd.fresh ? 'checked' : ''}> 只去沒去過的</label></div>
+      <div class="field"><label>想要的元素（可不選）</label><div class="row">${Object.entries(ELEMENTS).slice(0, 8).map(([k, v]) => `<button class="chip ${rnd.tags.includes(k) ? 'on' : ''}" data-rtag="${k}">${v.icon} ${v.label}</button>`).join('')}</div></div>
+      <div class="slot" id="slot">${result ? randomResult(result) : `<div class="slot-empty"><span>🎲</span><b>讓命運決定下一站</b><small class="muted">符合條件的地點有 ${list.length} 個</small></div>`}</div>
+      <div class="sheet-bar"><span class="small muted">${list.length ? `${list.length} 個地點符合` : '沒有符合的地點，放寬預算或天數試試'}</span><span class="spacer"></span><button class="btn primary" data-rspin ${list.length ? '' : 'disabled'}>🎲 ${result ? '再轉一次' : '轉一下'}</button></div>`;
+    $('#rnd-month').addEventListener('change', (e) => { rnd.month = Number(e.target.value); renderRandom(); });
+    $('#rnd-fresh').addEventListener('change', (e) => { rnd.fresh = e.target.checked; rnd.result = null; renderRandom(); });
+  }
+  function spin() {
+    const list = randomCandidates();
+    if (!list.length) return;
+    const pref = elementPrefs();
+    const weights = list.map((d) => 1 + (d.months.includes(rnd.month) ? 2 : 0) + d.tags.reduce((s, k) => s + (pref[k] || 0), 0) / d.tags.length);
+    let roll = Math.random() * weights.reduce((a, b) => a + b, 0);
+    const pick = list.find((d, i) => { roll -= weights[i]; return roll <= 0; }) || list[0];
+    const done = () => { rnd.result = pick.id; renderRandom(); $('#rnd .rnd-result')?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'nearest' }); };
+    if (REDUCED || list.length === 1) { done(); return; }
+    const slot = $('#slot');
+    const btn = $('[data-rspin]');
+    btn.disabled = true;
+    const frames = Array.from({ length: 16 }, () => list[Math.floor(Math.random() * list.length)]);
+    let i = 0;
+    const step = () => {
+      const d = frames[i];
+      slot.innerHTML = `<div class="slot-frame"><div class="ph ${destPhoto(d.id) ? '' : 'ph-missing'}">${imgHtml(destPhoto(d.id), d.name)}</div><b>${flag(d.c)} ${esc(d.name)}</b></div>`;
+      i += 1;
+      if (i < frames.length) setTimeout(step, 50 + i * i * 1.6); else setTimeout(done, 380);
+    };
+    step();
+  }
+  function randomClick(e) {
+    const b = e.target.closest('button');
+    if (!b || !b.closest('#rnd')) return false;
+    const ds = b.dataset;
+    if (ds.rbudget) { rnd.budget = Number(ds.rbudget); rnd.result = null; } else if (ds.rdays) { rnd.days = Math.max(2, Math.min(21, rnd.days + Number(ds.rdays))); rnd.result = null; } else if (ds.rtag) { rnd.tags = rnd.tags.includes(ds.rtag) ? rnd.tags.filter((x) => x !== ds.rtag) : [...rnd.tags, ds.rtag]; rnd.result = null; } else if ('rspin' in ds) { spin(); return true; } else return false;
+    renderRandom();
+    return true;
+  }
+
+  // ---------- 預算回推 (planner): estimate the trip, then fit the plan to the budget cap
+  function budgetAdvice(t) {
+    const d = t.dest && DEST[t.dest];
+    if (!d) return '<div class="card"><h3>💡 預算回推</h3><p class="small muted" style="margin:6px 0 0">自訂城市沒有價格資料，無法概估。</p></div>';
+    const b = t.plan.budget;
+    const people = b.people || 1;
+    const days = t.plan.days.length;
+    const est = tripCost(d, days, people);
+    const planned = sum(t.plan.days.flat(), toTwd) * people;
+    let advice = '<p class="small muted" style="margin:8px 0 0">在上面設定「預算上限」，就能回推每天可以花多少、該排哪些景點。</p>';
+    if (b.cap) {
+      const perDay = (b.cap - est.flight - est.esim - planned) / (days * people);
+      let tier;
+      let tip;
+      if (perDay < est.day * 0.7) {
+        const maxDays = Math.max(1, Math.floor((b.cap - est.flight - est.esim) / (est.day * 0.7 * people)));
+        tier = '省錢模式';
+        tip = perDay > 0 ? `每人每天只剩 NT$${fmt(perDay)}：住青旅或商務旅館、吃在地小吃、優先排免費景點。${maxDays < days ? `或把行程縮短到 ${maxDays} 天比較寬裕。` : ''}` : `預算不夠支付機票與 eSIM，建議提高預算或換成較近的目的地（例如 ${DESTS.filter((x) => x.hours <= 3 && x.c !== d.c).slice(0, 2).map((x) => x.name).join('、')}）。`;
+      } else if (perDay < est.day * 1.3) {
+        tier = '舒適模式';
+        tip = `每人每天約 NT$${fmt(perDay)}：三星飯店、每天一個付費景點剛好。`;
+      } else {
+        tier = '享受模式';
+        const paid = poolFor(t).filter((s) => s.fee > 0).slice(0, 2).map((s) => s.name);
+        tip = `每人每天約 NT$${fmt(perDay)}：可以升級住宿${paid.length ? `，或加排 ${paid.join('、')}` : ''}。`;
+      }
+      advice = `<div class="banner ${perDay < est.day * 0.7 ? 'warn' : 'good'}" style="margin-top:8px"><b>${tier}</b><br>${esc(tip)}</div>
+        <button class="btn block" data-badjust style="margin-top:8px">依預算自動調整景點</button>`;
+    }
+    return `<div class="card"><h3>💡 預算回推</h3><p class="small muted" style="margin:4px 0 0">${esc(d.name)} ${days} 天・${people} 人的概估</p>
+      ${costRows({ ...est, tickets: planned, total: est.flight + est.stay + planned + est.esim })}
+      <button class="btn sm" data-bfill>把概估帶入預算表</button>${advice}</div>`;
+  }
+  function fillBudget(t) {
+    const d = DEST[t.dest];
+    if (!d) return;
+    const b = t.plan.budget;
+    const est = tripCost(d, t.plan.days.length, b.people || 1);
+    if (!b.flight) b.flight = est.flight;
+    const round100 = (v) => Math.round(v / 100) * 100;
+    if (!b.hotel) b.hotel = round100(est.stay * 0.55);
+    if (!b.food) b.food = round100(est.stay * 0.3);
+    if (!b.transport) b.transport = round100(est.stay * 0.15);
+    save(); renderPlanner(); toast('已帶入概估，可以再自己修改');
+  }
+  function adjustToBudget(t) {
+    const d = DEST[t.dest];
+    const b = t.plan.budget;
+    if (!d || !b.cap) return;
+    const people = b.people || 1;
+    const est = tripCost(d, t.plan.days.length, people);
+    const room = b.cap - est.flight - est.esim - est.day * 0.7 * t.plan.days.length * people;
+    let spend = sum(t.plan.days.flat(), toTwd) * people;
+    const removed = [];
+    const added = [];
+    if (spend > room) {
+      const paid = t.plan.days.flatMap((list, i) => list.filter((it) => it.fee > 0).map((it) => ({ it, i }))).sort((a, c) => toTwd(c.it) - toTwd(a.it));
+      const free = poolFor(t).filter((s) => s.fee === 0);
+      paid.forEach(({ it, i }) => {
+        if (spend <= room) return;
+        t.plan.days[i] = t.plan.days[i].filter((x) => x.id !== it.id);
+        spend -= toTwd(it) * people;
+        removed.push(it.name);
+        const swap = free.shift();
+        if (swap) t.plan.days[i].push(newItem(swap.side ? `${swap.name}（${swap.city}）` : swap.name, it.time, { fee: 0, cur: swap.cur, note: swap.note }));
+      });
+    } else {
+      poolFor(t).filter((s) => s.fee > 0).sort((a, c) => toTwd(c) - toTwd(a)).forEach((s) => {
+        if (added.length >= 3 || spend + toTwd(s) * people > room) return;
+        const day = t.plan.days.reduce((best, list, i) => (list.length < t.plan.days[best].length ? i : best), 0);
+        t.plan.days[day].push(newItem(s.side ? `${s.name}（${s.city}）` : s.name, '', { fee: s.fee, cur: s.cur, note: s.note }));
+        spend += toTwd(s) * people;
+        added.push(s.name);
+      });
+    }
+    save(); renderPlanner(); renderCover();
+    if (removed.length) toast(`超出預算：拿掉 ${removed.join('、')}，換成免費景點`);
+    else if (added.length) toast(`預算還有空間：加排 ${added.join('、')}`);
+    else toast('目前的景點剛好在預算內');
+  }
+
+  // ---------- 回憶紀念冊
+  function albumKey(tripId) { return `album:${tripId}`; }
+  function albumPhotos(tripId) { return store.get(albumKey(tripId), []); }
+  function openAlbum(year) {
+    const s = stats(year);
+    const list = s.past;
+    const name = esc(user?.name || '旅人');
+    const coverPhotos = list.map((t) => destPhoto(t.dest)).filter(Boolean).slice(0, 4);
+    const pages = [`<section class="album-page album-cover">
+        <div class="collage n${coverPhotos.length}">${coverPhotos.map((p) => `<div class="album-photo">${imgHtml(p, '')}</div>`).join('')}</div>
+        <div class="album-cover-text"><span class="kicker">Travel Memories</span><h2 class="serif">${year}</h2><p>${name} 的旅行紀念冊</p>
+        <p class="small">${s.countries.size} 個國家・${s.cities.size} 座城市・${s.days} 天・${fmt(s.km)} 公里</p><div class="flags">${[...new Set(list.map((t) => flag(country(t.n).code)))].join(' ')}</div></div></section>`,
+    ...list.map((t, i) => {
+      const p = destPhoto(t.dest);
+      const d = DEST[t.dest];
+      const mine = albumPhotos(t.id);
+      const spotsShown = d ? d.spots.map((x) => ({ x, ph: spotPhoto(d.id, x.name) })).filter((x) => x.ph).slice(0, 2) : [];
+      return `<section class="album-page">
+        <div class="album-hero album-photo ${p ? '' : 'ph-missing'}">${imgHtml(p, t.city)}<span class="album-no">No. ${pad(i + 1)}</span></div>
+        <div class="album-body">
+          <span class="kicker muted">${flag(country(t.n).code)} ${esc(country(t.n).name)}・${t.start.replace(/-/g, '.')} – ${t.end.slice(5).replace('-', '.')}</span>
+          <h2 class="serif">${esc(t.city)}</h2>
+          <div class="row">${t.tags.map((k) => `<span class="chip">${el(k).icon} ${el(k).label}</span>`).join('')}${Number(t.gb) ? `<span class="chip">📶 ${t.gb} GB</span>` : ''}</div>
+          ${spotsShown.length ? `<div class="album-grid">${spotsShown.map(({ x, ph }) => `<figure class="album-photo">${imgHtml(ph, x.name)}<figcaption>${esc(x.name)}</figcaption></figure>`).join('')}</div>` : ''}
+          <div class="album-grid mine">${mine.map((m) => `<figure class="album-photo">${`<img src="${m.src}" alt="我的照片">`}<button class="icon-btn" data-album-del="${t.id}:${m.id}" aria-label="刪除照片">✕</button></figure>`).join('')}
+            <label class="album-add"><input type="file" accept="image/*" multiple hidden data-album-add="${t.id}"><span>＋</span>加入我的照片</label></div>
+          <textarea class="input journal" rows="3" data-memo="${t.id}" placeholder="寫下這趟最難忘的一刻…">${esc(t.memo || '')}</textarea>
+        </div></section>`;
+    }),
+    `<section class="album-page album-end"><span class="kicker muted">Year in Review</span><h2 class="serif">${year} 的旅行，謝謝自己</h2>
+      <div class="grid stats" style="grid-template-columns:repeat(2,1fr)"><div class="stat"><b>${s.countries.size}</b><span>國家</span></div><div class="stat"><b>${s.days}</b><span>天</span></div><div class="stat"><b>${fmt(s.km)}</b><span>公里</span></div><div class="stat"><b>${s.gb.toFixed(1)}</b><span>GB 上網</span></div></div>
+      <p>${esc(travelerType(s))}</p><div class="badges">${BADGES.filter((x) => { const [v, g] = x.progress(s); return v >= g; }).map((x) => `<div class="badge"><b>${x.icon}</b>${x.name}</div>`).join('') || '<span class="muted small">明年一起解鎖徽章！</span>'}</div>
+      <button class="btn primary block" data-share="${year}">🪪 產生分享用旅遊卡</button></section>`];
+    openModal(`📖 ${year} 旅行紀念冊`, list.length ? `<div class="album" id="album">${pages.join('')}</div>
+      <div class="album-nav"><button class="btn sm" data-album-step="-1" aria-label="上一頁">‹</button><span class="small muted" id="album-page">1 / ${pages.length}</span><button class="btn sm" data-album-step="1" aria-label="下一頁">›</button></div>`
+      : `<div class="empty"><div class="empty-icon">📖</div><b>${year} 還沒有旅行紀錄</b><span class="small muted">新增行程或匯入 Google 地圖時間軸，就能做出紀念冊。</span></div>`, { sheet: 'tall' });
+    const album = $('#album');
+    if (!album) return;
+    album.addEventListener('scroll', () => {
+      const i = Math.round(album.scrollLeft / album.clientWidth);
+      $('#album-page').textContent = `${i + 1} / ${pages.length}`;
+    }, { passive: true });
+    openAlbum.year = year;
+  }
+  function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload = () => {
+        const scale = Math.min(1, 1280 / Math.max(im.width, im.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(im.width * scale); cv.height = Math.round(im.height * scale);
+        cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        resolve(cv.toDataURL('image/jpeg', 0.78));
+      };
+      im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
+      im.src = url;
+    });
+  }
+  async function addAlbumPhotos(tripId, files) {
+    const list = albumPhotos(tripId);
+    const datas = await Promise.all([...files].slice(0, 6).map((f) => compressImage(f).catch(() => null)));
+    datas.filter(Boolean).forEach((src) => list.push({ id: uid(), src }));
+    try { localStorage.setItem(`tm:${albumKey(tripId)}`, JSON.stringify(list)); } catch { toast('這台裝置的空間滿了，請刪掉幾張照片再試'); return; }
+    const page = Math.round($('#album').scrollLeft / $('#album').clientWidth);
+    openAlbum(openAlbum.year);
+    $('#album').scrollLeft = page * $('#album').clientWidth;
+    toast('已加入紀念冊');
+  }
+
   // ---------- delegated actions
   document.addEventListener('click', (e) => {
     const t = e.target.closest('button, li[data-trip], [data-trip]');
     if (!t) return;
     const ds = t.dataset;
     if ('flip' in ds) { t.closest('.tcard').classList.toggle('flipped'); return; }
-    if (ds.plan !== undefined) { openPlan(ds.plan); return; }
+    if (ds.plan !== undefined) { openPlan(ds.plan, ds.for ? { forCountry: ds.for } : {}); return; }
+    if ('random' in ds) { openRandom(); return; }
+    if (ds.album) { openAlbum(Number(ds.album)); return; }
+    if (ds.countryCode) { openCountry(COUNTRIES[ds.countryCode].n); return; }
     if (ds.claim) { claimCard(ds.claim); return; }
     if (ds.share) { openGiftShare(ds.share); return; }
     if (ds.install) { openInstall(ds.install); return; }
@@ -2302,5 +2604,5 @@
   migrateOrders();
   pendingGift = readGift();
   window.addEventListener('hashchange', () => { const g = readGift(); if (g) { pendingGift = g; if (user) openGift(g); } });
-  loadConfig().finally(() => { if (user) showApp(); else showLogin(); });
+  Promise.all([loadConfig(), loadPhotos()]).finally(() => { if (user) showApp(); else showLogin(); });
 }());

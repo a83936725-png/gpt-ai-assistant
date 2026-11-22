@@ -13,6 +13,7 @@ const FILES = {
   '': { file: 'travel.html', type: 'text/html; charset=utf-8', maxAge: 300 },
   'travel-app.js': { file: 'travel-app.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
   'travel-data.js': { file: 'travel-data.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
+  'travel-photos.json': { file: 'travel-photos.json', type: 'application/json; charset=utf-8', maxAge: 3600 },
   'vendor/d3.min.js': { file: 'vendor/d3.min.js', type: 'application/javascript; charset=utf-8', maxAge: 86400 },
   'vendor/topojson-client.min.js': { file: 'vendor/topojson-client.min.js', type: 'application/javascript; charset=utf-8', maxAge: 86400 },
   'vendor/Sortable.min.js': { file: 'vendor/Sortable.min.js', type: 'application/javascript; charset=utf-8', maxAge: 86400 },

@@ -10,6 +10,7 @@ GPT AI Assistant is an application that is implemented using the OpenAI API and 
 
 ## News
 
+- 2026-11-22: `4.19.0` adds the travel and eSIM web app at `/travel/`: a magazine-style home page, a drag-and-drop itinerary planner, nearby recommendations with ticket prices, and an eSIM store. See the [travel guide (中文)](docs/TRAVEL-WEB.zh-TW.md).
 - 2026-11-21: `4.13.0` redesigns the IKIGAI page at `/ikigai`, adds a career plan step, share cards, share links and a PDF report. See the [IKIGAI guide (中文)](docs/IKIGAI-WEB.zh-TW.md).
 - 2026-11-20: `4.12.0` adds the IKIGAI web page at `/ikigai` with an optional AI reading. See the [IKIGAI guide (中文)](docs/IKIGAI-WEB.zh-TW.md).
 - 2026-11-15: `4.11.0` adds `畫圖示` (SVG), `畫動畫` (GIF) and `數據卡` (KPI Flex card).

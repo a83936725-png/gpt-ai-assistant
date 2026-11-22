@@ -7,6 +7,29 @@ module.exports = {
   extends: 'airbnb',
   overrides: [
     {
+      // Browser scripts for the travel page (web/travel.html): d3 and topojson come from web/vendor/.
+      files: [
+        'web/travel-app.js',
+        'web/travel-data.js',
+      ],
+      env: {
+        browser: true,
+        node: false,
+      },
+      globals: {
+        d3: 'readonly',
+        topojson: 'readonly',
+        Sortable: 'readonly',
+      },
+      rules: {
+        // Data tables and short UI handlers read better on one line.
+        'object-curly-newline': 'off',
+        'object-property-newline': 'off',
+        'newline-per-chained-call': 'off',
+        'no-use-before-define': ['error', { functions: false }],
+      },
+    },
+    {
       files: [
         'config/index.js',
       ],

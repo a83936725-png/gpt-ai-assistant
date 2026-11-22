@@ -7,6 +7,7 @@ import storage from '../storage/index.js';
 import { fetchVersion, getVersion } from '../utils/index.js';
 import { getStoredImage, setPublicOrigin } from '../utils/upload-image.js';
 import ikigai, { sendPage, servesHome } from '../web/ikigai.js';
+import travel from '../web/travel.js';
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use(express.json({
 }));
 
 app.use('/ikigai', ikigai);
+app.use('/travel', travel);
 
 app.get('/', async (req, res) => {
   if (servesHome(req)) {

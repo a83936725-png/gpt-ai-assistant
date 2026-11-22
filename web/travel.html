@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>旅圖 eSIM</title>
+<meta name="description" content="世界地圖點亮你 2025、2026 年的旅行足跡，依旅行元素推薦附近景點與門票，整合官網、Google 地圖與 eSIM 出國上網。">
+<meta name="theme-color" content="#1463ff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f6fb; --surface: #ffffff; --surface-2: #eef1f8; --text: #121829; --muted: #5d667b; --border: #dde2ec;
+  --brand: #1463ff; --brand-2: #00b3a4; --brand-ink: #ffffff; --accent: #ff7a1a; --danger: #d93a3a; --good: #16915a;
+  --y25: #0fa597; --y26: #f2711c; --both: #7c4dff; --soon: #1463ff; --soon-fill: #d6e2ff;
+  --land: #dfe4ee; --home: #c9d2e3; --ocean: #edf2fb; --grat: #dde5f3;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 8px 24px rgba(16, 24, 40, .08);
+  --radius: 18px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0f17; --surface: #131927; --surface-2: #1b2234; --text: #e8ecf5; --muted: #9aa3b7; --border: #283249;
+    --brand: #5b8cff; --brand-2: #2cc5b5; --brand-ink: #0b0f17; --accent: #ff9a4d; --danger: #ff6b6b; --good: #3ccf8a;
+    --y25: #2cc5b0; --y26: #ff8a3d; --both: #a183ff; --soon: #7ea6ff; --soon-fill: #233258;
+    --land: #263049; --home: #33405e; --ocean: #0f1522; --grat: #182033;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0f17; --surface: #131927; --surface-2: #1b2234; --text: #e8ecf5; --muted: #9aa3b7; --border: #283249;
+  --brand: #5b8cff; --brand-2: #2cc5b5; --brand-ink: #0b0f17; --accent: #ff9a4d; --danger: #ff6b6b; --good: #3ccf8a;
+  --y25: #2cc5b0; --y26: #ff8a3d; --both: #a183ff; --soon: #7ea6ff; --soon-fill: #233258;
+  --land: #263049; --home: #33405e; --ocean: #0f1522; --grat: #182033;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--brand); }
+[hidden] { display: none !important; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.spacer { flex: 1; }
+h1, h2, h3, h4 { margin: 0; line-height: 1.3; }
+h2 { font-size: 20px; }
+h3 { font-size: 16px; }
+
+/* buttons & chips */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 8px 14px;
+  border-radius: 12px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; text-decoration: none;
+  color: var(--text); font-weight: 600; font-size: 14px; white-space: nowrap;
+}
+.btn:hover { border-color: var(--brand); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.btn.accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.ghost { background: transparent; }
+.btn.sm { min-height: 32px; padding: 4px 10px; font-size: 13px; border-radius: 10px; }
+.btn.block { width: 100%; }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 13px;
+  background: var(--surface-2); border: 1px solid transparent; color: var(--text); cursor: default; white-space: nowrap;
+}
+button.chip { cursor: pointer; }
+.chip.on { background: var(--brand); color: var(--brand-ink); }
+.chip.free { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good); font-weight: 600; }
+.chip.fee { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); font-weight: 600; }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 12px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 9px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--muted); }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+.grid { display: grid; gap: 12px; }
+.grid.two { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid.stats { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.stat b { display: block; font-size: 24px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+.section-title { display: flex; align-items: baseline; gap: 8px; margin: 24px 0 10px; flex-wrap: wrap; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 13px; color: var(--muted); font-weight: 600; }
+.input, select.input, textarea.input {
+  width: 100%; min-height: 40px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface);
+}
+.input:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+/* login */
+#login { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.login-card { max-width: 440px; width: 100%; }
+.logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; }
+.logo svg { width: 34px; height: 34px; }
+.login-card h1 { font-size: 26px; margin: 18px 0 8px; }
+.login-list { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 8px; }
+.login-list li { display: flex; gap: 10px; align-items: flex-start; }
+
+/* app shell */
+.top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+.top .wrap { display: flex; align-items: center; gap: 10px; height: 58px; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; display: grid; place-items: center; font-weight: 800; border: 0; cursor: pointer; }
+.tabs { display: flex; gap: 4px; }
+.tabs button { display: flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 8px 12px; border-radius: 10px; cursor: pointer; color: var(--muted); font-weight: 600; }
+.tabs button.on { color: var(--brand); background: color-mix(in srgb, var(--brand) 12%, transparent); }
+.tabs svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+main { padding: 16px 0 40px; }
+@media (max-width: 860px) {
+  .top .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; justify-content: space-around; background: var(--surface); border-top: 1px solid var(--border); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  .tabs button { flex-direction: column; gap: 2px; font-size: 11px; padding: 4px 6px; }
+  main { padding-bottom: 96px; }
+  .hide-sm { display: none !important; }
+}
+
+/* hero */
+.hero { background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand-2) 80%, var(--brand))); color: #fff; border: 0; }
+.hero h2 { font-size: 22px; }
+.hero .yr { display: grid; gap: 6px; margin-top: 12px; }
+.hero .yr div { background: rgba(255, 255, 255, .14); border-radius: 12px; padding: 8px 12px; }
+.hero .btn { background: rgba(255, 255, 255, .95); color: #0d1a3a; border: 0; }
+.next-trip { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; background: rgba(0, 0, 0, .18); border-radius: 14px; padding: 10px 12px; }
+
+/* map */
+.map-card { padding: 0; overflow: hidden; position: relative; }
+#map { width: 100%; touch-action: none; }
+#map svg { display: block; width: 100%; height: auto; cursor: grab; }
+.ocean { fill: var(--ocean); }
+.grat { fill: none; stroke: var(--grat); stroke-width: .6; vector-effect: non-scaling-stroke; }
+.land { fill: var(--land); stroke: var(--surface); stroke-width: .5; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill .2s; }
+.land:hover { filter: brightness(.93); }
+.land.home { fill: var(--home); }
+.land.v25 { fill: var(--y25); }
+.land.v26 { fill: var(--y26); }
+.land.vboth { fill: var(--both); }
+.land.vsoon { fill: var(--soon-fill); stroke: var(--soon); stroke-width: 1.2; stroke-dasharray: 3 2; }
+.arc { fill: none; stroke-width: 1.4; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; opacity: .85; pointer-events: none; }
+.arc.y2025 { stroke: var(--y25); } .arc.y2026 { stroke: var(--y26); } .arc.soon { stroke: var(--soon); }
+.pin { stroke: var(--surface); stroke-width: 1.2; vector-effect: non-scaling-stroke; cursor: pointer; }
+.pin.y2025 { fill: var(--y25); } .pin.y2026 { fill: var(--y26); } .pin.soon { fill: var(--soon); } .pin.home { fill: var(--text); }
+.pin.focus { fill: var(--accent); }
+.map-tools { position: absolute; right: 10px; top: 10px; display: grid; gap: 6px; }
+.map-tools button { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 18px; box-shadow: var(--shadow); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; }
+.map-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
+
+/* review */
+.bar { display: grid; grid-template-columns: 96px 1fr 28px; gap: 8px; align-items: center; font-size: 13px; }
+.bar .track { height: 10px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.bar .fill { height: 100%; border-radius: 99px; }
+.months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+.months span { aspect-ratio: 1; border-radius: 6px; background: var(--surface-2); font-size: 10px; display: grid; place-items: center; color: var(--muted); }
+.months span.on { color: #fff; font-weight: 700; }
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.badge { text-align: center; padding: 10px 6px; border-radius: 14px; background: var(--surface-2); font-size: 12px; }
+.badge b { display: block; font-size: 26px; }
+.badge.locked { opacity: .45; filter: grayscale(1); }
+.timeline { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.timeline li { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); cursor: pointer; }
+.timeline .flag { font-size: 24px; }
+
+/* travel cards (旅遊卡) */
+.cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
+@media (max-width: 640px) {
+  .cards.scroll { grid-auto-flow: column; grid-auto-columns: 86%; grid-template-columns: none; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; }
+  .cards.scroll > * { scroll-snap-align: start; }
+}
+.tcard { perspective: 1200px; min-height: 430px; }
+.tcard-inner { position: relative; width: 100%; height: 100%; min-height: 430px; transition: transform .6s cubic-bezier(.2, .8, .2, 1); transform-style: preserve-3d; }
+.tcard.flipped .tcard-inner { transform: rotateY(180deg); }
+.face { position: absolute; inset: 0; border-radius: 22px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); border: 1px solid var(--border); background: var(--surface); }
+.face.back { transform: rotateY(180deg); padding: 16px; gap: 10px; overflow-y: auto; }
+.cover { position: relative; height: 170px; padding: 14px; color: #fff; display: flex; flex-direction: column; justify-content: space-between; }
+.cover .emoji { position: absolute; right: 10px; bottom: -6px; font-size: 84px; line-height: 1; opacity: .9; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .2)); }
+.cover .score { align-self: flex-start; background: rgba(255, 255, 255, .22); backdrop-filter: blur(6px); padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.cover h3 { font-size: 22px; text-shadow: 0 2px 8px rgba(0, 0, 0, .2); }
+.face .body { padding: 14px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.why { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+.ticket-sum { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; }
+.spot { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); }
+.spot a { font-weight: 600; text-decoration: none; color: var(--text); }
+.spot small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+
+/* eSIM */
+.feature { display: flex; gap: 10px; align-items: flex-start; }
+.feature b { font-size: 22px; }
+.country-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.country { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; text-align: left; }
+.country:hover { border-color: var(--brand); }
+.country .flag { font-size: 26px; }
+.country small { display: block; color: var(--muted); font-size: 12px; }
+.price { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.plan-opt { padding: 10px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; text-align: left; }
+.plan-opt.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, var(--surface)); }
+.usage { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.usage div { height: 100%; background: var(--brand-2); }
+.status { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+.status.pending { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.status.active { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+.status.done { background: var(--surface-2); color: var(--muted); }
+details.faq { border-bottom: 1px solid var(--border); padding: 10px 0; }
+details.faq summary { cursor: pointer; font-weight: 600; }
+details.faq p { margin: 8px 0 0; color: var(--muted); }
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.steps li { counter-increment: s; display: flex; gap: 10px; }
+.steps li::before { content: counter(s); flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+input[type=range] { width: 100%; accent-color: var(--brand); }
+
+/* trips */
+.trip { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); }
+.trip .flag { font-size: 28px; }
+.trip .grow { flex: 1; min-width: 0; }
+.trip .tags { font-size: 13px; }
+
+/* modal & toast */
+dialog#modal { border: 0; padding: 0; border-radius: 22px; width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 48px); background: var(--surface); color: var(--text); box-shadow: 0 24px 80px rgba(0, 0, 0, .35); }
+dialog#modal::backdrop { background: rgba(8, 12, 24, .55); backdrop-filter: blur(2px); }
+.modal-head { position: sticky; top: 0; background: var(--surface); padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; z-index: 1; }
+.modal-body { padding: 16px; display: grid; gap: 14px; }
+.close { margin-left: auto; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--surface-2); cursor: pointer; font-size: 18px; }
+.md h4 { margin: 12px 0 4px; font-size: 15px; }
+.md p { margin: 6px 0; }
+.md ul { margin: 4px 0; padding-left: 20px; }
+#toast { position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 12px; opacity: 0; transition: .25s; pointer-events: none; z-index: 100; max-width: calc(100vw - 32px); font-size: 14px; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.notice { font-size: 12px; color: var(--muted); background: var(--surface-2); border-radius: 12px; padding: 8px 12px; }
+canvas.share { width: 100%; height: auto; border-radius: 16px; box-shadow: var(--shadow); }
+/* magazine (首頁) */
+.serif { font-family: "Noto Serif TC", "Songti TC", "PMingLiU", serif; }
+.kicker { display: block; width: 100%; letter-spacing: .22em; text-transform: uppercase; font-size: 11px; font-weight: 700; }
+.mag-cover { position: relative; min-height: min(72vh, 560px); border-radius: 26px; overflow: hidden; color: #fff; display: flex; align-items: flex-end; background: var(--cover-fallback); background-size: cover; background-position: center; isolation: isolate; }
+.mag-cover::before { content: ""; position: absolute; inset: 0; background: var(--cover-img, none) center / cover no-repeat; z-index: -2; transform: scale(1.04); transition: transform 1.6s cubic-bezier(.2, .8, .2, 1), opacity .6s; }
+.mag-cover.loaded::before { transform: scale(1); }
+.mag-cover::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(5, 10, 25, .05) 20%, rgba(5, 10, 25, .25) 50%, rgba(5, 10, 25, .82) 100%); }
+.mag-cover .cover-art { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+.mag-cover.loaded .cover-art { display: none; }
+.mag-cover .masthead { position: absolute; top: 20px; left: 24px; right: 24px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; letter-spacing: .18em; font-weight: 700; opacity: .92; }
+.mag-cover .content { padding: 28px 24px; max-width: 760px; display: grid; gap: 10px; }
+.cover-title { font-size: clamp(44px, 9vw, 92px); font-weight: 900; line-height: 1; letter-spacing: -.01em; text-shadow: 0 4px 30px rgba(0, 0, 0, .25); }
+.cover-lede { font-size: 17px; line-height: 1.6; opacity: .95; max-width: 560px; }
+.cover-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.cover-meta span { background: rgba(255, 255, 255, .16); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+.mag-cover .btn { background: #fff; color: #0d1a3a; border: 0; }
+.mag-cover .btn.glass { background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .35); }
+.credit { position: absolute; right: 14px; bottom: 10px; font-size: 11px; color: rgba(255, 255, 255, .8); text-decoration: none; }
+.day-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(210px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+.day-card { scroll-snap-align: start; border: 1px solid var(--border); background: var(--surface); border-radius: 18px; padding: 14px; cursor: pointer; text-align: left; display: grid; gap: 6px; align-content: start; }
+.day-card:hover { border-color: var(--brand); }
+.day-card .dn { font-family: "Noto Serif TC", serif; font-size: 30px; font-weight: 900; line-height: 1; }
+.day-card ol { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+.editorial { display: grid; gap: 10px; }
+.editorial h3 { font-size: 22px; }
+.editorial .yr { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.editorial .yr div { border-left: 3px solid var(--y25); padding: 4px 0 4px 12px; }
+.editorial .yr div + div { border-left-color: var(--y26); }
+.editorial .next-trip { background: var(--surface-2); }
+
+/* planner (行程表) */
+.planner { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; margin-top: 18px; }
+@media (max-width: 960px) { .planner { grid-template-columns: 1fr; } }
+.side { display: grid; gap: 12px; }
+.plan-cover { min-height: 340px; }
+.day { position: relative; padding: 0 0 18px 0; }
+.day-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.day-head .dn { font-size: 34px; font-weight: 900; line-height: 1; }
+.day-head .date { color: var(--muted); font-size: 13px; }
+.items { list-style: none; margin: 0; padding: 0 0 0 18px; display: grid; gap: 8px; min-height: 52px; position: relative; }
+.items::before { content: ""; position: absolute; left: 5px; top: 6px; bottom: 6px; border-left: 2px dashed var(--border); }
+.items:empty::after { content: "把景點拖到這裡，或在下方新增"; display: grid; place-items: center; min-height: 52px; border: 1.5px dashed var(--border); border-radius: 14px; color: var(--muted); font-size: 13px; }
+.item { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+.item::before { content: ""; position: absolute; left: -18px; top: 18px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--brand); }
+.item.k-move::before { border-color: var(--muted); }
+.item.k-food::before { border-color: var(--accent); }
+.item-row { display: grid; grid-template-columns: 22px 60px 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; }
+.handle { cursor: grab; color: var(--muted); font-size: 16px; line-height: 1; user-select: none; touch-action: none; text-align: center; }
+.item-row input.time { border: 0; border-radius: 8px; background: var(--surface-2); font-variant-numeric: tabular-nums; color: var(--text); font-size: 13px; padding: 4px 6px; width: 60px; text-align: center; }
+.item-name { border: 0; background: transparent; text-align: left; font-weight: 600; cursor: pointer; padding: 4px 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item-detail { padding: 0 12px 12px; display: grid; gap: 10px; }
+.photo { aspect-ratio: 16 / 9; border-radius: 12px; background: var(--surface-2) center / cover no-repeat; position: relative; overflow: hidden; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+.photo.empty { aspect-ratio: auto; min-height: 44px; }
+.photo a { position: absolute; right: 8px; bottom: 6px; font-size: 11px; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); text-decoration: none; }
+.links { display: flex; flex-wrap: wrap; gap: 6px; }
+.drag-ghost { opacity: .35; }
+.drag-chosen { box-shadow: 0 12px 32px rgba(20, 99, 255, .25); }
+.add-item { display: flex; gap: 6px; margin: 8px 0 0 18px; }
+.add-item input { flex: 1; }
+.pool { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pool li { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 12px; background: var(--surface-2); cursor: grab; font-size: 14px; }
+.budget-row { display: grid; grid-template-columns: 1fr 120px; gap: 8px; align-items: center; font-size: 14px; }
+.budget-row input { text-align: right; min-height: 34px; padding: 4px 8px; }
+.budget-row .auto { text-align: right; font-weight: 600; padding-right: 9px; }
+.todo { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; padding: 4px 0; }
+.todo input { margin-top: 4px; accent-color: var(--brand); }
+.todo.done span { text-decoration: line-through; color: var(--muted); }
+.todo .auto-tag { font-size: 11px; color: var(--brand); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .tcard-inner, #toast, .land, .mag-cover::before { transition: none; } }
+</style>
+</head>
+<body>
+
+<section id="login" hidden>
+  <div class="card login-card">
+    <div class="logo"><svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1463ff"/><stop offset="1" stop-color="#00b3a4"/></linearGradient></defs><rect width="40" height="40" rx="11" fill="url(#lg)"/><circle cx="20" cy="20" r="10" fill="none" stroke="#fff" stroke-width="2"/><path d="M10 20h20M20 10c4 4 4 16 0 20M20 10c-4 4-4 16 0 20" fill="none" stroke="#fff" stroke-width="1.6"/></svg><span data-brand>旅圖 eSIM</span></div>
+    <h1>你的旅行足跡 × 出國上網，一個 App 搞定</h1>
+    <ul class="login-list">
+      <li><span>🗺️</span><span>一登入就在世界地圖點亮 2025、2026 去過的國家，看你的旅行元素</span></li>
+      <li><span>🧭</span><span>依你的喜好推薦附近的旅行與景點，門票要多少一眼看清楚</span></li>
+      <li><span>🔗</span><span>整合官方觀光網站、Google 地圖與 AI 行程建議</span></li>
+      <li><span>📶</span><span>eSIM 即買即用，出發前自動提醒你安裝</span></li>
+    </ul>
+    <div class="field"><label for="login-name">你的暱稱</label><input id="login-name" class="input" maxlength="20" placeholder="例如：小安" autocomplete="nickname"></div>
+    <div class="grid" style="margin-top:12px">
+      <button class="btn primary block" id="login-demo">以示範帳號登入（含 2025–2026 範例足跡）</button>
+      <button class="btn block" id="login-new">建立新帳號（從空白開始）</button>
+    </div>
+    <p class="notice" style="margin-top:12px">示範版：帳號與足跡只存在這台裝置的瀏覽器，不會上傳。正式版可接 Google / LINE 登入與雲端同步。</p>
+  </div>
+</section>
+
+<div id="app" hidden>
+  <header class="top">
+    <div class="wrap">
+      <div class="logo"><svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="11" fill="url(#lg)"/><circle cx="20" cy="20" r="10" fill="none" stroke="#fff" stroke-width="2"/><path d="M10 20h20M20 10c4 4 4 16 0 20M20 10c-4 4-4 16 0 20" fill="none" stroke="#fff" stroke-width="1.6"/></svg><span class="hide-sm" data-brand>旅圖 eSIM</span></div>
+      <nav class="tabs" aria-label="主要功能">
+        <button data-tab="map" class="on"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg>首頁</button>
+        <button data-tab="plan"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h4M8 17h7"/></svg>行程表</button>
+        <button data-tab="recs"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>探索</button>
+        <button data-tab="esim"><svg viewBox="0 0 24 24"><path d="M8 3h7l4 4v13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><rect x="10" y="11" width="6" height="6" rx="1"/></svg>eSIM</button>
+        <button data-tab="trips"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>足跡</button>
+      </nav>
+      <span class="spacer"></span>
+      <div class="seg" id="year-seg" role="group" aria-label="年份">
+        <button data-year="all" class="on">全部</button><button data-year="2025">2025</button><button data-year="2026">2026</button>
+      </div>
+      <button class="avatar" id="avatar" aria-label="帳號">旅</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section data-view="map">
+      <div id="cover"></div>
+      <div class="section-title" id="strip-title"></div>
+      <div class="day-strip" id="day-strip"></div>
+      <div class="section-title"><span class="kicker muted">Your Journal</span><h2 class="serif">你的 2025–2026</h2></div>
+      <div class="card editorial" id="hero"></div>
+      <div class="grid stats" id="stats" style="margin-top:12px"></div>
+      <div class="card map-card" style="margin-top:12px">
+        <div id="map" aria-label="世界旅遊足跡地圖"></div>
+        <div class="map-empty" id="map-loading">地圖載入中…</div>
+        <div class="map-tools">
+          <button id="zoom-in" aria-label="放大">＋</button>
+          <button id="zoom-out" aria-label="縮小">－</button>
+          <button id="zoom-reset" aria-label="回到全圖">⟲</button>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="section-title"><h2>下一站靈感</h2><span class="muted small">依你的旅行元素挑選，點卡片翻面看景點與門票</span><span class="spacer"></span><button class="btn sm" data-goto="recs">看全部推薦 →</button></div>
+      <div class="cards scroll" id="map-recs"></div>
+    </section>
+
+    <section data-view="plan" hidden>
+      <div id="plan-cover"></div>
+      <div class="planner">
+        <div id="plan-days"></div>
+        <aside class="side" id="plan-side"></aside>
+      </div>
+    </section>
+
+    <section data-view="recs" hidden>
+      <div class="card">
+        <div class="row" style="justify-content:space-between"><h2>附近的旅行推薦</h2><span class="muted small" id="recs-count"></span></div>
+        <p class="muted small" style="margin:6px 0 12px">從你所在的位置、下一站或去過的城市出發，結合你的旅行元素、季節與飛行時間推薦。每張旅遊卡都整合官方觀光網站、Google 地圖、景點門票與當地 eSIM。</p>
+        <div class="field"><label>出發點</label><div class="row" id="origin-chips"></div></div>
+        <div class="field" style="margin-top:10px"><label>想要的元素</label><div class="row" id="tag-chips"></div></div>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><label for="rec-month">出發月份</label><select class="input" id="rec-month"></select></div>
+          <div class="field"><label for="rec-hours">從家出發飛行時間</label><select class="input" id="rec-hours"><option value="0">不限</option><option value="3">3 小時內</option><option value="5">5 小時內</option><option value="10">10 小時內</option></select></div>
+          <div class="field"><label for="rec-fee">景點門票</label><select class="input" id="rec-fee"><option value="any">不限</option><option value="free">要有免費景點</option><option value="budget">門票合計 NT$1,500 內</option></select></div>
+          <label class="row small" style="margin-top:20px"><input type="checkbox" id="rec-new"> 只看沒去過</label>
+        </div>
+      </div>
+      <div class="cards" id="recs" style="margin-top:14px"></div>
+    </section>
+
+    <section data-view="esim" hidden>
+      <div class="card hero">
+        <div class="row"><h2>出國上網，掃一下就通</h2><span class="spacer"></span><a class="btn sm" id="esim-site" target="_blank" rel="noopener">官網購買 ↗</a></div>
+        <p style="margin:6px 0 0;opacity:.9">不用換卡、保留台灣門號收簡訊，抵達開啟數據漫遊就能上網。</p>
+        <div id="smart-pick"></div>
+      </div>
+      <div class="grid stats" style="margin-top:12px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+        <div class="card feature"><b>⚡</b><div><strong>即買即用</strong><div class="muted small">付款後 QR Code 立即寄送</div></div></div>
+        <div class="card feature"><b>📱</b><div><strong>保留原門號</strong><div class="muted small">雙卡雙待，簡訊驗證照收</div></div></div>
+        <div class="card feature"><b>📶</b><div><strong>熱點分享</strong><div class="muted small">一人買、全家一起用</div></div></div>
+        <div class="card feature"><b>⏱️</b><div><strong>抵達才計時</strong><div class="muted small">連上當地網路才開始算天數</div></div></div>
+        <div class="card feature"><b>🌏</b><div><strong>多國方案</strong><div class="muted small">歐洲、東南亞一張搞定</div></div></div>
+        <div class="card feature"><b>💬</b><div><strong>24 小時客服</strong><div class="muted small">LINE 線上即時協助</div></div></div>
+      </div>
+
+      <div class="section-title"><h2>我的 eSIM</h2><span class="muted small">依行程自動整理</span></div>
+      <div class="grid" id="wallet"></div>
+
+      <div class="section-title"><h2>選擇目的地</h2><span class="spacer"></span><input class="input" id="esim-search" placeholder="搜尋國家，例如：日本" style="max-width:240px"></div>
+      <div class="row" id="esim-regions" style="margin-bottom:10px"></div>
+      <div class="country-grid" id="esim-grid"></div>
+      <p class="notice" style="margin-top:10px">價格為示意，正式價格與方案以官網為準。</p>
+
+      <div class="grid two" style="margin-top:18px">
+        <div class="card">
+          <h3>流量試算：我需要多少？</h3>
+          <div id="calc" class="grid" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <h3>我的手機支援 eSIM 嗎？</h3>
+          <p class="muted small">在撥號畫面輸入 <b>*#06#</b>，看到 EID 就代表支援。也可以直接輸入型號查詢：</p>
+          <div class="row"><input class="input" id="device" placeholder="例如：iPhone 13、Pixel 8、Galaxy S23" style="flex:1"><button class="btn primary" id="device-check">檢查</button></div>
+          <p id="device-result" class="small" style="margin-bottom:0"></p>
+        </div>
+      </div>
+
+      <div class="grid two" style="margin-top:12px">
+        <div class="card">
+          <div class="row"><h3>安裝教學</h3><span class="spacer"></span><div class="seg" id="os-seg"><button data-os="ios" class="on">iPhone</button><button data-os="android">Android</button></div></div>
+          <ol class="steps" id="steps" style="margin-top:12px"></ol>
+        </div>
+        <div class="card">
+          <h3>常見問題</h3>
+          <div id="faq"></div>
+          <p class="notice" style="margin-top:10px">以上是常見的 eSIM 規則，請依官網實際條款調整。</p>
+        </div>
+      </div>
+    </section>
+
+    <section data-view="trips" hidden>
+      <div class="section-title" style="margin-top:4px"><span class="kicker muted">Year in Review</span><h2 class="serif">年度旅行回顧</h2><span class="muted small">2025 與 2026 你的足跡、元素與徽章</span></div>
+      <div class="grid two" id="review"></div>
+      <div class="row" style="margin:24px 0 12px"><h2>我的行程</h2><span class="spacer"></span><button class="btn primary" id="trip-add">＋ 新增行程</button><button class="btn" id="share-card">🪪 旅遊卡</button></div>
+      <div class="grid two">
+        <div class="card">
+          <h3>匯入 Google 地圖時間軸</h3>
+          <p class="muted small">在手機 Google 地圖 → 設定 → 位置與隱私權 → 匯出時間軸資料（或 Google Takeout 的「位置記錄」），選擇 JSON 檔。只在這台裝置分析，會自動找出 2025、2026 去過的國家。</p>
+          <label class="btn"><input type="file" id="import-timeline" accept=".json,application/json" multiple hidden>選擇時間軸 JSON</label>
+        </div>
+        <div class="card">
+          <h3>備份與設定</h3>
+          <div class="row" style="margin-top:8px">
+            <div class="field" style="flex:1"><label for="home-select">我的出發城市</label><select class="input" id="home-select"></select></div>
+            <div class="field" style="flex:1"><label for="theme-select">外觀</label><select class="input" id="theme-select"><option value="">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn sm" id="export">匯出備份</button>
+            <label class="btn sm"><input type="file" id="import-backup" accept=".json,application/json" hidden>匯入備份</label>
+            <button class="btn sm" id="load-demo">載入範例足跡</button>
+            <button class="btn sm" id="logout">登出</button>
+          </div>
+        </div>
+      </div>
+      <div id="trip-list" style="margin-top:14px"></div>
+    </section>
+  </main>
+</div>
+
+<dialog id="modal" aria-labelledby="modal-title">
+  <div class="modal-head"><h3 id="modal-title"></h3><button class="close" data-close aria-label="關閉">✕</button></div>
+  <div class="modal-body" id="modal-body"></div>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/topojson-client.min.js"></script>
+<script src="vendor/Sortable.min.js"></script>
+<script src="travel-data.js"></script>
+<script src="travel-app.js"></script>
+</body>
+</html>

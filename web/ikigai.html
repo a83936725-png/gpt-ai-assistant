@@ -345,6 +345,19 @@
   .timeline li:last-child { border-bottom: 1px solid var(--border); }
   .timeline li span { font-weight: 700; color: var(--muted); font-size: 13.5px; }
 
+  /* Profile form */
+  .profile-form { display: grid; gap: 12px; max-width: 520px; }
+  .profile-form label.f { display: grid; gap: 4px; font-weight: 600; font-size: 14.5px; }
+  .profile-form label.f span { font-weight: 400; color: var(--muted); font-size: 13px; }
+  .profile-form input[type="text"], .profile-form input[type="email"], .profile-form input[type="tel"] {
+    font: inherit; color: var(--text); background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 11px 14px;
+  }
+  .profile-form input:focus { border-color: var(--paid); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--paid) 22%, transparent); }
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--text); background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
+  .consent input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--paid); }
+  .form-error { color: var(--danger); font-size: 14px; margin: 0; }
+  .me-line { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); margin-top: 10px; }
+
   /* Share and export */
   .share-section + .share-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
   .share-section h3 { margin: 0 0 4px; }
@@ -428,7 +441,7 @@
   <nav class="progress" id="progress" aria-label="步驟"></nav>
   <main id="view"></main>
 
-  <footer>內容只存在這台裝置的瀏覽器。只有按下「深度解析」或「產生建議計畫」時，清單才會送到伺服器進行分析。</footer>
+  <footer>填寫內容會自動儲存在這台裝置。看結果前，您可以選擇留下基本資料；同意後，填寫內容會提供給本服務的顧問，用於生涯諮詢與後續聯繫，不會提供給其他第三方。</footer>
 </div>
 
 <div class="nav" id="nav" hidden><div class="nav-inner" id="navInner"></div></div>
@@ -501,7 +514,12 @@
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const blankPlan = () => ({ dirs: [], main: null, goals: { d30: '', d90: '', y1: '' }, actions: [] });
-  const blank = () => ({ items: [], note: '', step: 'intro', ai: '', name: '', plan: blankPlan() });
+  const newRid = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(36).padStart(2, '0')).join('').slice(0, 20);
+  const blankProfile = () => ({ name: '', contact: '', email: '', consent: false, consentAt: null });
+  const blank = () => ({
+    items: [], note: '', step: 'intro', ai: '', name: '', plan: blankPlan(),
+    rid: newRid(), startedAt: Date.now(), profile: blankProfile(), events: [], isSample: false,
+  });
   let shareMode = false;
   let state = load();
   let filter = null;
@@ -531,6 +549,7 @@
   let savedTimer;
   function save(quiet) {
     if (shareMode) return;
+    scheduleSync();
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { return; }
     if (quiet) return;
     const el = document.getElementById('saved');
@@ -575,6 +594,16 @@
     s.ai = str(data?.ai, 8000);
     s.name = str(data?.name, 20);
     s.plan = sanitizePlan(data?.plan);
+    if (typeof data?.rid === 'string' && /^[a-z0-9]{12,40}$/.test(data.rid)) s.rid = data.rid;
+    if (Number.isFinite(data?.startedAt)) s.startedAt = data.startedAt;
+    if (data?.profile && typeof data.profile === 'object') {
+      s.profile = {
+        name: str(data.profile.name, 40), contact: str(data.profile.contact, 80), email: str(data.profile.email, 120),
+        consent: data.profile.consent === true, consentAt: Number.isFinite(data.profile.consentAt) ? data.profile.consentAt : null,
+      };
+    }
+    if (Array.isArray(data?.events)) s.events = data.events.filter((e) => e && Number.isFinite(e.t) && typeof e.type === 'string').slice(-300);
+    s.isSample = data?.isSample === true;
     if (ORDER.includes(data?.step)) s.step = data.step;
     return s;
   }
@@ -664,14 +693,128 @@
     state.plan.goals = { ...SAMPLE.plan.goals };
     state.plan.actions = SAMPLE.plan.actions.map(([text, h, done]) => ({ id: uid(), text, h, done }));
     state.step = 'result';
+    state.isSample = true;
+    logEvent('載入範例');
     animateResult = true;
     save();
     render();
     toast('已載入範例，隨時可以按「全部清除」重新開始');
   }
 
+  // ---------- activity log and sync to the consultant ----------
+  const STEP_NAMES = { intro: '介紹', love: '熱愛', good: '擅長', need: '世界需要', paid: '報酬', match: '交集對照', result: '結果', plan: '生涯規劃' };
+  function logEvent(type, detail = '') {
+    if (shareMode) return;
+    state.events.push({ t: Date.now(), type, detail: String(detail).slice(0, 80) });
+    if (state.events.length > 300) state.events.splice(0, state.events.length - 300);
+  }
+  const canSync = () => !shareMode && !state.isSample && state.profile.consent;
+  function recordPayload() {
+    const ins = careerInsights();
+    const main = mainDir();
+    return {
+      id: state.rid,
+      startedAt: state.startedAt,
+      step: state.step,
+      profile: state.profile,
+      items: state.items.map((it) => ({ text: it.text, c: it.c })),
+      note: state.note,
+      plan: {
+        dirs: state.plan.dirs.map((d) => ({ title: d.title, s: d.s, main: Boolean(main && d.id === main.id) })),
+        goals: state.plan.goals,
+        actions: state.plan.actions.map((a) => ({ text: a.text, h: a.h, done: a.done })),
+      },
+      insights: {
+        careers: ins.careers.map((c) => ({ name: c.name, circles: c.circles })),
+        paths: ins.paths.map((p) => ({ title: p.title, career: p.career.name })),
+        skills: ins.skills.map((x) => x.name),
+        weakest: ins.weakest.key,
+      },
+      ai: state.ai,
+      events: state.events,
+    };
+  }
+  let syncTimer = null;
+  let syncing = false;
+  function scheduleSync(delay = 2500) {
+    if (!canSync()) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, delay);
+  }
+  async function syncNow() {
+    if (!canSync()) return;
+    if (syncing) { scheduleSync(); return; }
+    syncing = true;
+    clearTimeout(syncTimer);
+    try {
+      const res = await fetch('/ikigai/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(recordPayload()), keepalive: true });
+      if (!res.ok && res.status >= 500) scheduleSync(30000);
+    } catch (err) {
+      scheduleSync(30000);
+    } finally {
+      syncing = false;
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && canSync() && syncTimer && navigator.sendBeacon) {
+      clearTimeout(syncTimer);
+      syncTimer = null;
+      navigator.sendBeacon('/ikigai/records', new Blob([JSON.stringify(recordPayload())], { type: 'application/json' }));
+    }
+  });
+
+  // ---------- basic info form (shown once, before the results) ----------
+  let editingProfile = false;
+  function renderProfileForm() {
+    const p = state.profile;
+    $('view').innerHTML = `
+      <section class="${viewClass()}">
+        <div class="card">
+          <div class="eyebrow" style="--c:var(--text)">看結果前</div>
+          <h2>留下您的基本資料</h2>
+          <p class="hint">顧問會依您的結果提供後續建議與聯繫。姓名必填，手機／LINE ID 和 Email 至少填一項。</p>
+          <form class="profile-form" id="profileForm" novalidate>
+            <label class="f" for="pfName">姓名</label>
+            <input type="text" id="pfName" maxlength="40" autocomplete="name" value="${esc(p.name)}" required>
+            <label class="f" for="pfContact">手機或 LINE ID <span>選填其一</span></label>
+            <input type="tel" id="pfContact" maxlength="80" autocomplete="tel" value="${esc(p.contact)}">
+            <label class="f" for="pfEmail">Email <span>選填其一</span></label>
+            <input type="email" id="pfEmail" maxlength="120" autocomplete="email" value="${esc(p.email)}">
+            <label class="consent" for="pfConsent"><input type="checkbox" id="pfConsent" ${p.consent ? 'checked' : ''}>
+              <span>我同意將以上基本資料與本次填寫的內容提供給本服務的顧問，用於生涯諮詢與後續聯繫。資料不會提供給其他第三方，我可以隨時要求刪除。</span></label>
+            <p class="form-error" id="pfError" role="alert"></p>
+            <div class="row" style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn" type="submit">${editingProfile ? '儲存' : '看我的結果'}</button>
+              ${editingProfile ? '<button class="btn ghost" type="button" id="pfCancel">取消</button>' : ''}
+            </div>
+          </form>
+        </div>
+      </section>`;
+    $('profileForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = $('pfName').value.replace(/\s+/g, ' ').trim();
+      const contact = $('pfContact').value.replace(/\s+/g, ' ').trim();
+      const email = $('pfEmail').value.trim();
+      const err = !name ? '請填寫姓名' : (!contact && !email) ? '請至少留下手機／LINE ID 或 Email' : (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) ? 'Email 格式不正確' : !$('pfConsent').checked ? '請勾選同意，才能提供您的結果' : '';
+      if (err) { $('pfError').textContent = err; return; }
+      const first = !state.profile.consent;
+      state.profile = { name: name.slice(0, 40), contact: contact.slice(0, 80), email: email.slice(0, 120), consent: true, consentAt: state.profile.consentAt || Date.now() };
+      if (!state.name) state.name = name.slice(0, 20);
+      logEvent(first ? '留下基本資料' : '修改基本資料');
+      editingProfile = false;
+      animateResult = true;
+      save();
+      syncNow();
+      render();
+      window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+    if ($('pfCancel')) $('pfCancel').addEventListener('click', () => { editingProfile = false; render(); });
+    $('pfName').focus({ preventScroll: true });
+  }
+
   function go(step) {
     if (step === state.step) return;
+    logEvent('前往', STEP_NAMES[step] || step);
     lastStep = state.step;
     state.step = step;
     if (step === 'result') animateResult = true;
@@ -1215,6 +1358,7 @@
       const c = ins.careers[Number(b.dataset.addcareer)];
       if (state.plan.dirs.some((d) => d.title === c.name)) { toast('這個職業已經在生涯規劃裡了'); return; }
       if (state.plan.dirs.length >= MAX_DIRS) { toast(`生涯規劃最多 ${MAX_DIRS} 個方向，請先刪除一個`); return; }
+      logEvent('加入職業', c.name);
       const d = { id: uid(), title: c.name, s: Object.fromEntries(KEYS.map((k) => [k, c.circles.includes(k) ? 4 : 2])) };
       state.plan.dirs.push(d);
       if (!state.plan.main) state.plan.main = d.id;
@@ -1461,6 +1605,10 @@
           <div id="linkBox"></div>
           <p class="fine">連結裡直接包含你的清單內容，任何拿到連結的人都看得到，請只分享給信任的人。</p>
         </div>`}
+        ${readOnly || !state.profile.consent ? '' : `<div class="share-section">
+          <h3>我的基本資料</h3>
+          <div class="me-line"><span>${esc(state.profile.name)}${state.profile.contact ? ` · ${esc(state.profile.contact)}` : ''}${state.profile.email ? ` · ${esc(state.profile.email)}` : ''}</span><button class="btn ghost small" type="button" id="editProfile">修改</button></div>
+        </div>`}
         <div class="share-section">
           <h3>報告與備份</h3>
           <div class="toolbar">
@@ -1476,9 +1624,10 @@
   }
 
   function bindShareCard() {
+    if ($('editProfile')) $('editProfile').addEventListener('click', () => { editingProfile = true; render(); window.scrollTo(0, 0); });
     $('makeCards').addEventListener('click', makeCards);
     $('pdfBtn').addEventListener('click', printReport);
-    $('copyBtn').addEventListener('click', () => copy(asText(), '已複製，可以貼到 LINE 或筆記'));
+    $('copyBtn').addEventListener('click', () => { logEvent('複製文字'); save(true); copy(asText(), '已複製，可以貼到 LINE 或筆記'); });
     if ($('shareName')) {
       $('shareName').addEventListener('change', (e) => { state.name = e.target.value.trim().slice(0, 20); save(); });
       $('makeLink').addEventListener('click', makeLink);
@@ -1689,6 +1838,7 @@
 
   const toBlob = (cv) => new Promise((resolve) => cv.toBlob(resolve, 'image/png'));
   async function makeCards() {
+    logEvent('產生字卡');
     const btn = $('makeCards');
     btn.disabled = true;
     btn.textContent = '產生中…';
@@ -1724,6 +1874,8 @@
     }
   }
   function download(blob, filename) {
+    logEvent('下載檔案', filename);
+    save(true);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = filename;
@@ -1800,6 +1952,7 @@
     return sanitize(data);
   }
   async function makeLink() {
+    logEvent('產生分享連結');
     state.name = $('shareName').value.trim().slice(0, 20);
     save(true);
     const code = await encodeShare(packShare($('shareAi').checked, $('sharePlan').checked));
@@ -1884,6 +2037,8 @@
 
   // ---------- PDF report ----------
   function printReport() {
+    logEvent('匯出 PDF 報告');
+    save(true);
     const dir = mainDir();
     const listRow = (c) => `<tr><th><span class="dot" style="--c:${c.color}"></span>${c.label}</th><td>${inCircle(c.key).map((it) => esc(it.text)).join('、') || '—'}</td></tr>`;
     const regions = [];
@@ -1943,6 +2098,7 @@
 
   const AI_STEPS = ['整理四個圈…', '尋找交集…', '思考可能的方向…', '寫下 30 天行動…'];
   async function runAi() {
+    logEvent('深度解析');
     aiBusy = true;
     aiError = null;
     refreshAi();
@@ -1954,8 +2110,10 @@
       state.ai = data.text;
       save();
       toast('深度解析完成');
+      logEvent('深度解析完成');
     } catch (err) {
       aiError = err.message || '目前無法完成，請稍後再試';
+      logEvent('深度解析失敗', aiError);
     } finally {
       clearInterval(ticker);
       aiBusy = false;
@@ -1967,6 +2125,7 @@
     const dir = mainDir();
     if (!dir) return;
     planBusy = true;
+    logEvent('產生建議計畫', dir.title);
     planError = null;
     refreshPlanBlock();
     try {
@@ -2052,6 +2211,7 @@
     else if (state.step === 'intro') renderIntro();
     else if (KEYS.includes(state.step)) renderCircle(state.step, opts.focusInput);
     else if (state.step === 'match') renderMatch();
+    else if ((state.step === 'result' || state.step === 'plan') && (editingProfile || (!state.profile.consent && !state.isSample))) renderProfileForm();
     else if (state.step === 'plan') renderPlan();
     else renderResult();
     lastStep = state.step;

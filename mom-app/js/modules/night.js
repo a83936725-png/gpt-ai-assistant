@@ -65,7 +65,8 @@
     const last = b ? (store.state.logs || []).filter((l) => l.babyId === b.id && (l.type === 'breast' || l.type === 'bottle')).reduce((a, x) => (!a || x.start > a.start ? x : a), null) : null;
     const body = root.querySelector('.nt-body');
     body.innerHTML = '';
-    body.append(
+    // DOM append() would print a left-out part (null) as the word "null": leave those out first
+    body.append(...[
       h('div', { class: 'nt-time' }, `${now.getHours() < 5 ? '凌晨' : '晚上'} ${C.fmtTime(now)}`),
       t ? h('div', { class: 'nt-what' }, `${b && (store.state.babies || []).length > 1 ? `${b.name}・` : ''}親餵中・${t.side === 'L' ? '左' : '右'}邊`) : h('div', { class: 'nt-what' }, last ? `上一餐 ${C.fmtTime(last.start)}（${C.ago(last.start)}）` : '準備餵奶了嗎？'),
       t ? h('div', { class: 'nt-clock', dataset: { clock: t.start }, role: 'timer', 'aria-label': '餵奶計時' }, C.fmtClock(now - new Date(t.start).getTime())) : null,
@@ -79,7 +80,8 @@
       t ? h('button', { class: 'nt-done', onclick: () => { App.timers.stopWithUndo('breast', bid); close(); } }, '✓ 餵完了') : h('button', { class: 'nt-done nt-bottle', onclick: () => { close(); if (App.babylog && App.babylog.openAdd) App.babylog.openAdd('bottle'); } }, '🍼 記一筆瓶餵'),
       h('label', { class: 'nt-auto' }, h('input', {
         type: 'checkbox', checked: autoOn(), onchange: (e) => { store.update((s) => { s.settings.nightCompanion = e.target.checked; }); },
-      }), h('span', null, '深夜開始餵奶時自動打開')));
+      }), h('span', null, '深夜開始餵奶時自動打開')),
+    ].filter(Boolean));
     awake(body.querySelector('.nt-awake'));
   }
   function open(babyId = null) {

@@ -334,9 +334,10 @@
           el.append(babyHero(baby));
           const moment = App.share && App.share.momentLine && App.share.momentLine(baby);
           if (moment) el.append(moment);
-          else { const mo = App.monthly && App.monthly.homeLine && App.monthly.homeLine(baby); if (mo) el.append(mo); } // 寶寶月照
           const isle = App.island && App.island.newIslandLine && App.island.newIslandLine();
           if (isle) el.append(isle);
+          // 寶寶月照 on the month-day: under a new island (that happens once), and not with a 滿月／收涎 line (its sheet offers it)
+          if (!moment) { const mo = App.monthly && App.monthly.homeLine && App.monthly.homeLine(baby); if (mo) el.append(mo); }
           const gift = App.gift && App.gift.line(); // 雙向邀請禮: a friend's welcome gift waiting
           if (gift) el.append(gift);
           const banner = App.babylog.activeBanner();

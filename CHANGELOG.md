@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.17.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: referral rewards. Clients see their invite progress; once enough friends finish (`IKIGAI_REFERRAL_GOAL`, default 3) they unlock a gold limited-edition card style and a full report with preparation plans for their top three careers (`IKIGAI_REFERRAL_REWARD` sets the wording). `GET /ikigai/referrals/:rid` returns the count
+- IKIGAI: referral leaderboard in the admin page
+
 ## 4.16.0 (2026-11-22)
 
 ### New Features

@@ -379,6 +379,15 @@
   .cards-grid.story .card-prev img { aspect-ratio: 9 / 16; }
   .card-prev .row { align-items: center; }
   .card-prev .cap { font-size: 13px; color: var(--muted); margin-right: auto; }
+  .seg button.locked { opacity: .55; }
+  .seg button.locked::after { content: " 🔒"; }
+  .ref-progress, .ref-done { margin: 4px 0 12px; display: grid; gap: 8px; }
+  .ref-head { display: flex; justify-content: space-between; gap: 10px; font-size: 14.5px; }
+  .ref-head span { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 700; }
+  .ref-progress .track { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .ref-progress .track b { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--good), var(--love)); transition: width .6s var(--ease); }
+  .ref-done { background: color-mix(in srgb, var(--good) 16%, transparent); border-radius: 12px; padding: 12px 14px; font-size: 14.5px; }
+  .ref-done span { color: var(--muted); }
   .invite-box { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; font-size: 14.5px; overflow-wrap: anywhere; }
 
   /* Shared view */
@@ -1402,6 +1411,31 @@
     </section>`;
   }
 
+  // Extra pages of the full report, unlocked by referrals.
+  function careerAdvancedHtml() {
+    const ins = careerInsights();
+    if (!ins.careers.length) return '';
+    const strengths = inCircle('good').map((it) => it.text.toLowerCase());
+    const has = (skill) => strengths.some((g) => skill.toLowerCase().includes(g) || g.includes(skill.toLowerCase().slice(0, 2)));
+    const pitch = `我擅長${inCircle('good').slice(0, 2).map((it) => it.text).join('、') || '學習新事物'}，熱愛${inCircle('love').slice(0, 2).map((it) => it.text).join('、') || '挑戰'}，希望用這些能力${inCircle('need').length ? `幫助${inCircle('need')[0].text}` : '創造價值'}。`;
+    return `<section><h2>完整版：前三個建議職業的準備方式</h2>
+      ${ins.careers.slice(0, 3).map((c) => {
+        const need = c.skills.filter((x) => !has(x));
+        const owned = c.skills.filter(has);
+        const s1 = need[0] || c.skills[0] || '核心技能';
+        return `<h3>${esc(c.name)}</h3><table>
+          <tr><th>為什麼適合</th><td>符合${c.circles.map((k) => BY_KEY[k].short).join('、')}；依據：${c.items.map(esc).join('、')}</td></tr>
+          <tr><th>需要的能力</th><td>${c.skills.map(esc).join('、')}</td></tr>
+          <tr><th>你已具備</th><td>${owned.map(esc).join('、') || '—'}</td></tr>
+          <tr><th>第 1～30 天</th><td>學習「${esc(s1)}」的基礎，每週整理一篇學習筆記</td></tr>
+          <tr><th>第 31～60 天</th><td>完成一個和「${esc(c.name)}」有關、可以公開展示的小作品</td></tr>
+          <tr><th>第 61～90 天</th><td>請 3 位業內人士給回饋，修正後放進作品集，並投遞或洽談 3 個機會</td></tr>
+        </table>`;
+      }).join('')}
+      <h3>自我介紹可以這樣說</h3><p>${esc(pitch)}</p>
+    </section>`;
+  }
+
   function careerText() {
     const ins = careerInsights();
     if (!ins.careers.length) return [];
@@ -1603,7 +1637,7 @@
           <h3>分享字卡</h3>
           <p class="hint">${readOnly ? '' : `你是「<b>${esc(archetype().name)}</b>」。`}選一種風格和尺寸，產生 ${hasPlan ? 6 : 5} 張字卡，每張都有 QR Code，朋友一掃就能測。${hasPlan ? '' : '完成「生涯規劃」後會多一張計畫字卡。'}</p>
           <div class="card-opts">
-            <div class="seg" role="group" aria-label="風格">${Object.entries(THEMES).map(([k, v]) => `<button type="button" data-theme-pick="${k}" aria-pressed="${k === cardTheme}"><i class="sw" style="background:linear-gradient(135deg, ${v.bg[0]}, ${v.bg[1]})"></i>${v.label}</button>`).join('')}</div>
+            <div class="seg" role="group" aria-label="風格">${Object.entries(THEMES).filter(([k]) => !readOnly || k !== 'gold').map(([k, v]) => `<button type="button" data-theme-pick="${k}" aria-pressed="${k === cardTheme}" class="${v.locked && !unlocked() ? 'locked' : ''}"><i class="sw" style="background:linear-gradient(135deg, ${v.bg[0]}, ${v.bg[1]})"></i>${v.label}</button>`).join('')}</div>
             <div class="seg" role="group" aria-label="尺寸">${Object.entries(FORMATS).map(([k, v]) => `<button type="button" data-format-pick="${k}" aria-pressed="${k === cardFormat}">${v.label}</button>`).join('')}</div>
           </div>
           <div class="toolbar" style="margin-top:12px"><button class="btn" type="button" id="makeCards">產生字卡</button><button class="btn ghost" type="button" id="dlAll" hidden>全部下載</button></div>
@@ -1613,6 +1647,7 @@
         <div class="share-section invite">
           <h3>邀請朋友一起測</h3>
           <p class="hint">把你的專屬連結傳給朋友。朋友透過你的連結、字卡 QR Code 或分享頁開始測驗，都會記下是你推薦的。</p>
+          <div id="refProgress"></div>
           <div class="invite-box" id="inviteText">${esc(inviteText())}</div>
           <div class="toolbar" style="margin-top:10px">
             <button class="btn" type="button" id="copyInvite">複製邀請文字</button>
@@ -1652,10 +1687,16 @@
   }
 
   function bindShareCard() {
+    renderReferralProgress();
+    refreshReferrals();
     if ($('editProfile')) $('editProfile').addEventListener('click', () => { editingProfile = true; render(); window.scrollTo(0, 0); });
     $('makeCards').addEventListener('click', makeCards);
     $('dlAll').addEventListener('click', downloadAll);
     document.querySelectorAll('[data-theme-pick]').forEach((b) => b.addEventListener('click', () => {
+      if (THEMES[b.dataset.themePick].locked && !unlocked()) {
+        toast(`邀請 ${referral.goal} 位朋友完成測驗，就能解鎖「金箔」限定風格`);
+        return;
+      }
       cardTheme = b.dataset.themePick;
       document.querySelectorAll('[data-theme-pick]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       if (lastCards.length) makeCards();
@@ -1745,7 +1786,37 @@
       c: { love: '#c8485e', good: '#c98a24', need: '#2b8a7e', paid: '#4a5bb8' },
     },
   };
+  THEMES.gold = {
+    label: '金箔', locked: true, bg: ['#1c1712', '#3b2d18'], ink: '#f7ecd4', muted: '#d2bd92', panel: 'rgba(255,236,200,0.08)', line: 'rgba(246,226,180,0.24)',
+    glow: 0.3, blend: 'screen', alpha: '4d', qrDark: '#1c1712', qrLight: '#f7ecd4', grain: 0.08, foil: true,
+    c: { love: '#eaa79f', good: '#f0c46a', need: '#9fd3b9', paid: '#aab5ef' },
+  };
   const FORMATS = { post: { w: 1080, h: 1350, label: '貼文 4:5' }, story: { w: 1080, h: 1920, label: '限時動態 9:16' } };
+
+  // ---------- referral reward ----------
+  const referral = { count: null, goal: 3, reward: '金色限定字卡與完整版職涯報告' };
+  const unlocked = () => referral.count !== null && referral.count >= referral.goal;
+  async function refreshReferrals() {
+    if (shareMode || state.isSample || !state.profile.consent) return;
+    try {
+      const res = await fetch(`/ikigai/referrals/${state.rid}`);
+      if (!res.ok) return;
+      Object.assign(referral, await res.json());
+      if (unlocked() && !state.events.some((e) => e.type === '解鎖獎勵')) { logEvent('解鎖獎勵', `${referral.count} 位朋友`); save(true); }
+      renderReferralProgress();
+    } catch (err) { /* offline: leave the progress hidden */ }
+  }
+  function renderReferralProgress() {
+    const box = $('refProgress');
+    if (!box || referral.count === null) return;
+    const pct = Math.min(100, (referral.count / referral.goal) * 100);
+    box.innerHTML = unlocked()
+      ? `<div class="ref-done"><b>已解鎖：${esc(referral.reward)}</b><span>已有 ${referral.count} 位朋友透過你完成測驗。字卡多了「金箔」風格，「下載完整版報告」也已開放。</span></div>`
+      : `<div class="ref-progress"><div class="ref-head"><b>邀請 ${referral.goal} 位朋友完成測驗，解鎖${esc(referral.reward)}</b><span>${referral.count}/${referral.goal}</span></div><span class="track"><b style="width:${pct}%"></b></span></div>`;
+    document.querySelectorAll('[data-theme-pick="gold"]').forEach((b) => { b.classList.toggle('locked', !unlocked()); b.title = unlocked() ? '' : `邀請 ${referral.goal} 位朋友即可解鎖`; });
+    if ($('pdfBtn')) $('pdfBtn').textContent = unlocked() ? '下載完整版報告' : '匯出 PDF 報告';
+  }
+
   let cardTheme = 'dawn';
   let cardFormat = 'post';
 
@@ -1821,6 +1892,22 @@
     ctx.fillStyle = ctx.createPattern(grain(), 'repeat');
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
+    if (t.foil) {
+      const foil = ctx.createLinearGradient(0, 0, W, H);
+      foil.addColorStop(0, '#f6dfa0'); foil.addColorStop(0.5, '#b8873a'); foil.addColorStop(1, '#f2d38a');
+      ctx.strokeStyle = foil;
+      ctx.lineWidth = 6;
+      roundRect(ctx, 34, 34, W - 68, H - 68, 36);
+      ctx.stroke();
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, 48, 48, W - 96, H - 96, 28);
+      ctx.stroke();
+      ctx.fillStyle = '#e9c97c';
+      ctx.font = font(800, 22);
+      ctx.textAlign = 'center';
+      ctx.fillText('LIMITED EDITION', W / 2, 76);
+      ctx.textAlign = 'left';
+    }
     // Brand line
     CIRCLES.forEach((c, i) => {
       const [dx, dy] = [[0, -11], [-11, 0], [11, 0], [0, 11]][i];
@@ -2443,6 +2530,7 @@
 
   // ---------- PDF report ----------
   function printReport() {
+    if (unlocked()) logEvent('下載完整版報告');
     logEvent('匯出 PDF 報告');
     save(true);
     const dir = mainDir();
@@ -2473,6 +2561,7 @@
       <section><h2>四個圈</h2><table>${CIRCLES.map(listRow).join('')}</table>${state.note ? `<p>補充說明：${esc(state.note)}</p>` : ''}</section>
       <section><h2>交集</h2><table>${regions.map(([name, items]) => `<tr><th>${name}</th><td>${items.map((it) => esc(it.text)).join('、') || '—'}</td></tr>`).join('')}</table></section>
       ${careerReportHtml()}
+      ${unlocked() ? careerAdvancedHtml() : ''}
       ${dir ? `<section><h2>生涯規劃</h2>
         <table>${state.plan.dirs.map((d) => `<tr><th>${d.id === dir.id ? '主要方向' : '其他方向'}</th><td><b>${esc(d.title)}</b>　契合度 ${fitOf(d)}/20（${CIRCLES.map((c) => `${c.short} ${d.s[c.key]}`).join('、')}）</td></tr>`).join('')}
         ${HORIZONS.map((h) => (state.plan.goals[h.key] ? `<tr><th>${h.label}目標</th><td>${esc(state.plan.goals[h.key])}</td></tr>` : '')).join('')}</table>

@@ -32,7 +32,15 @@
   }
   let cfgP = null;
   let cfgNow = null; // the same, once it has arrived (for things drawn without waiting)
-  const config = () => { if (!cfgP) cfgP = call('GET', 'config').catch(() => null).then((c) => { cfgNow = c; return c; }); return cfgP; };
+  // no config: 'none' — this site has no member service (a static copy, like the web preview: 404), or 'down' — it is
+  // there but not reachable right now (offline, a timeout, a server error)
+  let cfgWhy = null;
+  const config = () => {
+    if (!cfgP) {
+      cfgP = call('GET', 'config').catch((e) => { cfgWhy = e && e.status === 404 ? 'none' : 'down'; return null; }).then((c) => { cfgNow = c; return c; });
+    }
+    return cfgP;
+  };
   // 驗證碼: which kinds of account (Email / phone) the server can send a code to
   const kindOf = (account) => (/@/.test(String(account)) ? 'email' : 'phone');
   const canVerify = (cfg, kind) => !!(cfg && cfg.verify && cfg.verify[kind]);
@@ -577,7 +585,7 @@
           h('button', { class: 'btn btn-sm btn-primary', onclick: () => App.navigate('login') }, '登入')),
         App.livePill('acct-live'));
     },
-    logout, refreshMe, refreshSoon: () => maybeRefresh(), call, available: async () => !!(await config()), ensureConsent, exportMine,
+    logout, refreshMe, refreshSoon: () => maybeRefresh(), call, available: async () => !!(await config()), noService: () => cfgWhy === 'none', ensureConsent, exportMine,
     config,
     verifySheet,
     needVerify,

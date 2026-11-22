@@ -20,11 +20,13 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
 (async () => {
   const b = await chromium.launch();
   const ctxs = [];
-  const mk = async ({ width = 390, height = 844, time = NOW, scheme = 'light', motion = 'no-preference', sample = true } = {}) => {
+  const mk = async ({ width = 390, height = 844, time = NOW, scheme = 'light', motion = 'no-preference', sample = true, apiDown = false } = {}) => {
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', colorScheme: scheme, reducedMotion: motion });
     ctxs.push(c);
     await c.clock.install({ time: new Date(time) });
     await c.addInitScript(() => { window.__noShareMoments = true; window.open = () => null; });
+    // a real member service that can't be reached right now (offline): the API calls fail without an answer
+    if (apiDown) await c.addInitScript(() => { const f = window.fetch.bind(window); window.fetch = (u, o) => (/\/api\//.test(String(u)) ? Promise.reject(new TypeError('Failed to fetch')) : f(u, o)); });
     const p = await c.newPage();
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
@@ -179,12 +181,22 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
   await go(dark, 'groupbuy', null, 1300);
   await axe(dark, '正在開團 (dark)');
 
-  /* ---------- without 範例資料: nothing pretend ---------- */
+  /* ---------- the web preview: the samples right away; never while a real service is only unreachable ---------- */
   const real = await mk({ sample: false });
-  await go(real, 'island', null, 1600);
-  ok('a real setup with no member service: no tiles on the island', await S(real, () => { const r = document.querySelector('.isl .gb-rail'); return !r || r.hidden; }));
+  await go(real, 'island', null, 1800);
+  ok('the web preview (a site with no member service, config groupbuyPreview on): the samples show without loading 範例資料', (await tiles(real)).length === 3);
+  await go(real, 'groupbuy', null, 1300);
+  ok('…正在開團 lists them, marked as samples', (await S(real, () => document.querySelectorAll('.gb-deal .tag').length)) === 3 && /這些是範例團購/.test(await flat(real, '#view')));
+  await go(real, 'home', null, 600);
+  ok('…and 首頁 stays as it was (no tiles, no sample group-buy card)', await S(real, () => !document.querySelector('[data-card="groupbuy"]') && !document.querySelector('#view .gb-rail')));
+  await S(real, () => { window.BRAND.groupbuyPreview = false; });
+  await go(real, 'island', null, 1800);
+  ok('the brand turns the preview off: a real setup with no member service shows no tiles', await S(real, () => { const r = document.querySelector('.isl .gb-rail'); return !r || r.hidden; }));
   await go(real, 'groupbuy', null, 1300);
   ok('…and 正在開團 says there is none', /目前沒有進行中的團購/.test(await flat(real, '#view')));
+  const down = await mk({ sample: false, apiDown: true });
+  await go(down, 'island', null, 1800);
+  ok('a real member service only unreachable for a moment (offline): no samples, even with the preview on', await S(down, () => { const r = document.querySelector('.isl .gb-rail'); return (!r || r.hidden) && window.BRAND.groupbuyPreview === true; }));
 
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   for (const c of ctxs) await c.close().catch(() => {});

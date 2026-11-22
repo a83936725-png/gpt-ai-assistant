@@ -22,6 +22,9 @@ window.BRAND = {
   liveStats: { showOnlineFrom: 1, showRegisteredFrom: 1 },
   // 團購「正在開團」的參加人數：真實的總數，達到這個人數才顯示（太少時先不顯示）
   groupbuyStatsFrom: 3,
+  // 網頁預覽：網站沒有會員伺服器時（例如預覽版），一打開就顯示 3 個標「範例」的限時團購，可以試開團、跟團。
+  // 接上會員伺服器後只會顯示真的團購（這裡不用改）；伺服器暫時連不上時也不會顯示範例。
+  groupbuyPreview: true,
   // 開團時「公開這一團」預設要不要勾（公開的團會出現在「正在開團」，其他媽媽可以直接跟團；開團的人可以隨時取消公開）
   groupbuyPublicDefault: true,
   // 常見好物：品牌自家商品放在「產後媽媽」分類並標示「品牌」；show: false 可隱藏

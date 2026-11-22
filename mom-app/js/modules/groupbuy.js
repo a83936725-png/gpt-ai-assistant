@@ -7,8 +7,9 @@
  *   好孕島 限時團購入口  好孕島左側一排小圖（像遊戲盤面邊上的活動圖示）：成團了／我的團（揪團中）／朋友揪的團（等你）／
  *                       還沒參加的團購（限時），每個都有每秒跳的倒數，點了直接看；‹ 收起來（今天）；放不下就只留 🛒 小頁籤
  *   首頁卡 'groupbuy'    成團了（看折扣碼）／我的團進度／朋友揪的團／有新的團購（範例團購不上首頁）
- *   範例團購             載入範例資料、又沒有會員服務時（例如網頁預覽版）：三個標「範例」的團購，可以試開團、看倒數、
- *                       模擬朋友跟團到成團；全部只在這支手機，不會送出，折扣碼也不是真的
+ *   範例團購             沒有會員服務時（例如網頁預覽版），載入範例資料、或品牌在 config.js 開了 groupbuyPreview：三個標
+ *                       「範例」的團購，可以試開團、看倒數、模擬朋友跟團到成團；全部只在這支手機，不會送出，折扣碼也
+ *                       不是真的。會員服務只是暫時連不上時不會出現
  *   App.groupbuy = { load, live, listItem, brandCard, pendingTeam, homeItem, islandRail, railItems, endOf, clock } */
 (function () {
   const App = window.App;
@@ -100,7 +101,11 @@
   // Three sample group-buys, made fresh around the current time so the countdowns are always running; she can start a
   // team, watch it count down and 「模擬朋友跟團」 until it is full. Everything says 範例, nothing leaves the phone, and
   // the code is not a real one. With a member service (a real setup) these never appear.
-  const isSample = () => { const s = store.state; return s.sampleData === true || (s.sampleData === undefined && !!(s.starter && s.starter.demo)); };
+  const sampleData = () => { const s = store.state; return s.sampleData === true || (s.sampleData === undefined && !!(s.starter && s.starter.demo)); };
+  // the web preview: the brand's config turns the samples on for a site with no member service at all (never while a
+  // real service is only unreachable for a moment)
+  const preview = () => B().groupbuyPreview === true && !!(App.account && App.account.noService && App.account.noService());
+  const isSample = () => sampleData() || preview();
   function sampleCampaigns(now) {
     const tw = new Date(now + TW);
     const day0 = Date.UTC(tw.getUTCFullYear(), tw.getUTCMonth(), tw.getUTCDate()) - TW; // today 00:00 in Taiwan

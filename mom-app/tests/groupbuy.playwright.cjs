@@ -175,7 +175,10 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     ok('…the page shows the three samples and says they are samples', (await S(H, () => document.querySelectorAll('.gb-deal .tag').length)) === 3 && /這些是範例團購/.test(await text(H, '#view')));
     await S(H, () => { const s = App.store.defaults(); s.onboarded = true; s.onboardedAt = '2026-01-01'; s.profile.stage = 'baby'; App.store.replace(s); });
     await H.goto(`${process.env.STATIC_BASE}#/me`); await H.waitForTimeout(1500);
-    ok('static host, her own data (no 範例資料): no 團購揪團 in 我的', !/團購揪團/.test(await text(H, '#view')));
+    ok('static host, her own data: the web preview (config groupbuyPreview) still lists the samples', /3 個團購進行中（範例）/.test(await text(H, '#view')));
+    await S(H, () => { window.BRAND.groupbuyPreview = false; });
+    await H.goto(`${process.env.STATIC_BASE}#/home`); await H.goto(`${process.env.STATIC_BASE}#/me`); await H.waitForTimeout(1500);
+    ok('…with the preview off: no 團購揪團 in 我的', !/團購揪團/.test(await text(H, '#view')));
     await H.goto(`${process.env.STATIC_BASE}#/groupbuy`); await H.waitForTimeout(1500);
     ok('…and the page itself says there is none', /目前沒有進行中的團購/.test(await text(H, '#view')));
     await H.context().close();

@@ -330,11 +330,85 @@ const jpegSize = (buf) => {
   /* ---------- 7. sharing where the phone can share files ---------- */
   const Q = await mk({ share: true });
   await go(Q, 'monthly', null, 1300);
-  await Q.click('.mo-tile[data-m="1"]'); await Q.waitForTimeout(900);
-  await Q.click('.sheet .mo-share'); await Q.waitForTimeout(1500);
+  await Q.click('.mo-tile[data-m="1"]'); await painted(Q);
+  await Q.click('.sheet .mo-share');
+  // making the JPEG can take several seconds on a busy machine (the 0.9.1 battery missed it at a fixed 1.5 s):
+  // wait for the share and the thank-you themselves, not a fixed time
+  await Q.waitForFunction(() => !!window.__shared, null, { timeout: 8000 }).catch(() => {});
+  await Q.waitForFunction(() => /謝謝分享/.test((document.querySelector('.toast-wrap') || {}).innerText || ''), null, { timeout: 3000 }).catch(() => {});
   const sh = await S(Q, () => window.__shared || null);
   ok('分享 hands the phone a JPEG and a short line', sh && sh.name === 'yijia-month-01.jpg' && sh.type === 'image/jpeg' && sh.size > 20000 && sh.text === '小乖滿月了 📸', JSON.stringify(sh));
   ok('…and thanks her', /謝謝分享/.test(await toast(Q)), await toast(Q));
+
+  // a second tap while the picture is made; a share while the share sheet is open; an older phone that says no
+  const waitToast = (p, src, ms = 8000) => p.waitForFunction((x) => new RegExp(x).test((document.querySelector('.toast-wrap') || {}).innerText || ''), src, { timeout: ms }).then(() => true, () => false);
+  const clearToasts = (p) => S(p, () => document.querySelectorAll('.toast').forEach((t) => t.remove()));
+  const tapToast = (p) => p.click('.toast-action', { timeout: 5000 }).then(() => true, () => false);
+  await S(Q, () => {
+    window.__calls = 0; window.__dl = 0; window.__shared = null;
+    const click = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function c() { if (this.hasAttribute('download')) { window.__dl += 1; return undefined; } return click.call(this); };
+    let open = false; // like a real phone: another share while the sheet is open is refused
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: async (d) => {
+        if (open) throw new DOMException('An earlier share has not yet completed.', 'InvalidStateError');
+        open = true; window.__calls += 1; window.__shared = { name: d.files[0].name };
+        await new Promise((r) => setTimeout(r, 800)); open = false;
+      },
+    });
+  });
+  await clearToasts(Q);
+  await Q.click('.sheet .mo-share');
+  const during = await S(Q, () => ({ text: document.querySelector('.sheet .mo-share').textContent, busy: document.querySelector('.sheet .mo-share').getAttribute('aria-busy'), save: document.querySelector('.sheet .mo-save').getAttribute('aria-busy') }));
+  await Q.click('.sheet .mo-share', { force: true }); await Q.click('.sheet .mo-save', { force: true });
+  await Q.waitForFunction(() => window.__calls > 0 && !document.querySelector('.sheet .mo-share[aria-busy]'), null, { timeout: 10000 }).catch(() => {});
+  const twice = await S(Q, () => ({ calls: window.__calls, dl: window.__dl, toast: (document.querySelector('.toast-wrap') || {}).innerText || '', text: document.querySelector('.sheet .mo-share').textContent }));
+  ok('分享 says 「做圖中…」 while the picture is made, and 存圖片 waits too', during.text === '做圖中…' && during.busy === 'true' && during.save === 'true', JSON.stringify(during));
+  ok('…tapping again meanwhile (分享 or 存圖片) shares once and downloads nothing', twice.calls === 1 && twice.dl === 0 && !/不能直接分享|已先下載/.test(twice.toast) && twice.text === '📤 分享', JSON.stringify(twice));
+  const openTwice = await S(Q, async () => {
+    const blob = new Blob([new Uint8Array(30000)], { type: 'image/jpeg' });
+    const first = App.share.sharePicture(blob, 'a.jpg');
+    const second = await App.share.sharePicture(blob, 'a.jpg');
+    return { first: await first, second, dl: window.__dl };
+  });
+  ok('a share while the share sheet is open does nothing (it used to download and say 「不能分享」)', openTwice.first === 'shared' && openTwice.second === 'open' && openTwice.dl === 0, JSON.stringify(openTwice));
+  // an older phone: the picture took longer than the phone allows after a tap, so it says no
+  await S(Q, () => {
+    window.__shared = null; window.__tries = 0;
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: async (d) => {
+        window.__tries += 1;
+        if (window.__tries === 1) throw new DOMException('Must be handling a user gesture to perform a share request.', 'NotAllowedError');
+        window.__shared = { name: d.files[0].name, text: d.text || '', title: d.title || '' };
+      },
+    });
+  });
+  await clearToasts(Q);
+  await Q.click('.sheet .mo-share');
+  await waitToast(Q, '圖片做好了');
+  const late = await S(Q, () => ({ toast: document.querySelector('.toast-wrap').innerText, action: (document.querySelector('.toast-action') || {}).textContent, dl: window.__dl, shared: window.__shared }));
+  ok('an older phone that says no after a slow picture: 「圖片做好了」 with 分享 (no download, no 「不能分享」)', /圖片做好了/.test(late.toast) && late.action === '分享' && late.dl === 0 && !late.shared && !/不能直接分享/.test(late.toast), JSON.stringify(late));
+  await tapToast(Q);
+  await waitToast(Q, '謝謝分享', 4000);
+  const late2 = await S(Q, () => ({ toast: document.querySelector('.toast-wrap').innerText, dl: window.__dl, shared: window.__shared }));
+  ok('…that tap shares it, with the line and the thanks', !!late2.shared && late2.shared.name === 'yijia-month-01.jpg' && late2.shared.text === '小乖滿月了 📸' && /謝謝分享/.test(late2.toast) && late2.dl === 0, JSON.stringify(late2));
+  await S(Q, () => { window.__shared = null; window.__tries = 0; });
+  await clearToasts(Q);
+  await Q.click('.sheet .mo-save');
+  await waitToast(Q, '圖片做好了');
+  const lateSave = await S(Q, () => ({ action: (document.querySelector('.toast-action') || {}).textContent, dl: window.__dl }));
+  await tapToast(Q);
+  await Q.waitForFunction(() => !!window.__shared, null, { timeout: 4000 }).catch(() => {});
+  const saved = await S(Q, () => window.__shared);
+  ok('存圖片 on that phone: 「圖片做好了」 with 儲存, which hands it to the phone', lateSave.action === '儲存' && lateSave.dl === 0 && !!saved && saved.name === 'yijia-month-01.jpg' && saved.title === '寶寶月照', JSON.stringify({ lateSave, saved }));
+  await S(Q, () => { Object.defineProperty(navigator, 'share', { configurable: true, value: async () => { throw new DOMException('not allowed', 'NotAllowedError'); } }); });
+  await clearToasts(Q);
+  await Q.click('.sheet .mo-share'); await waitToast(Q, '圖片做好了');
+  await tapToast(Q); await waitToast(Q, '已先下載', 4000);
+  const still = await S(Q, () => ({ dl: window.__dl, toast: document.querySelector('.toast-wrap').innerText }));
+  ok('…and if it still says no after that tap, the picture is downloaded with a line saying so', still.dl === 1 && /已先下載/.test(still.toast), JSON.stringify(still));
   await closeSheets(Q);
   ok('sw.js caches the 月照 files', await S(Q, async () => { const t = await (await fetch('sw.js')).text(); return t.includes("'js/modules/monthly.js'") && t.includes("'css/monthly.css'"); }));
 

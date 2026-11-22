@@ -244,6 +244,8 @@ p { margin: 0 0 .5em; }
 }
 .btn:active { transform: scale(.97); }
 .btn[disabled] { opacity: .45; pointer-events: none; }
+.btn.is-busy { opacity: .7; cursor: progress; }
+.btn.is-busy:active { transform: none; }
 .btn-primary { background: var(--c-primary); color: var(--c-primary-ink); }
 .btn-accent { background: var(--c-accent-ink); color: var(--c-surface); }
 .btn-ghost { background: transparent; border-color: var(--c-border); }

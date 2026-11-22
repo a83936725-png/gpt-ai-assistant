@@ -260,6 +260,18 @@
     requestAnimationFrame(() => t.classList.add('show'));
     setTimeout(hide, ms);
   }
+  // a button whose work takes a moment (making a picture): it says so, and taps meanwhile (on it or on `also`) do nothing
+  async function busy(btn, work, { label = '做圖中…', also = [] } = {}) {
+    const all = [btn, ...also].filter(Boolean);
+    if (!btn || all.some((x) => x.getAttribute('aria-busy') === 'true')) return undefined;
+    const text = btn.textContent;
+    all.forEach((x) => { x.setAttribute('aria-busy', 'true'); x.classList.add('is-busy'); });
+    btn.textContent = label;
+    try { return await work(); } finally {
+      btn.textContent = text;
+      all.forEach((x) => { x.removeAttribute('aria-busy'); x.classList.remove('is-busy'); });
+    }
+  }
 
   function confirm(msg, { ok = '確定', cancel = '取消', danger = false } = {}) {
     return new Promise((resolve) => {
@@ -381,6 +393,6 @@
   App.h = h;
   App.s = s;
   App.ui = {
-    h, s, append, sheet, toast, haptic, celebrate, burst, reducedMotion, confirm, field, seg, steps, stepper, empty, card, progress, ICONS, icon,
+    h, s, append, sheet, toast, busy, haptic, celebrate, burst, reducedMotion, confirm, field, seg, steps, stepper, empty, card, progress, ICONS, icon,
   };
 }());

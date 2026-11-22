@@ -75,7 +75,9 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   await S(P, () => App.timers.start('sleep')); await go(P, 'home', 700);
   const asleep = await S(P, () => { const el = document.querySelector('.hero-avatar'); return { cls: el.className, eyes: !!el.querySelector('.qb-eyes'), bubble: !!el.querySelector('.qb-bubble'), zzz: !!document.querySelector('.hero-fx.sleep'), breathe: getComputedStyle(el.querySelector('svg')).animationName }; });
   ok('sleep timer running: eyes closed, a little bubble, breathing (with the z z z)', /qb-sleep/.test(asleep.cls) && !asleep.eyes && asleep.bubble && asleep.zzz && asleep.breathe === 'qbBreathe', JSON.stringify(asleep));
-  await S(P, () => { App.timers.cancel('sleep'); App.timers.start('breast'); }); await go(P, 'home', 700);
+  // this page runs on the real clock: in the middle of the night 親餵 opens 夜奶陪伴 by itself (0.9.1) and covers 首頁,
+  // which is what this file looks at; the 0.9.1 battery ran at 03:00 and stopped here. 夜奶陪伴 has its own tests.
+  await S(P, () => { App.store.update((s) => { s.settings.nightCompanion = false; }); App.timers.cancel('sleep'); App.timers.start('breast'); }); await go(P, 'home', 700);
   ok('親餵 timer running: happy eyes (with the hearts)', await S(P, () => /qb-feed/.test(document.querySelector('.hero-avatar').className) && !!document.querySelector('.hero-fx.feed')));
   await S(P, () => App.timers.cancel('breast')); await go(P, 'home', 700);
   await P.click('.quick-tile[data-type="diaper"] .qt-plus'); await P.waitForTimeout(150);

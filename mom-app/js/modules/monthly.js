@@ -356,25 +356,26 @@
   const toJpeg = (cv) => new Promise((res) => cv.toBlob((bl) => res(bl), 'image/jpeg', 0.92));
 
   /* ---------------- saving and sharing ---------------- */
-  async function deliver(how, blob, fileName, words) {
-    if (!blob) { ui.toast('圖片做不出來，請再試一次'); return false; }
+  // done() runs once the picture has left the app (shared, saved or downloaded), also after 「圖片做好了・分享」
+  async function deliver(how, blob, fileName, words, done = () => {}) {
+    if (!blob) { ui.toast('圖片做不出來，請再試一次'); return; }
     if (how === 'share') {
-      const file = typeof File === 'function' ? new File([blob], fileName, { type: 'image/jpeg' }) : null;
-      if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], text: words });
-          const pts = App.share.record ? App.share.record('more', 'monthly') : 0;
-          ui.toast(`謝謝分享 💜${pts ? ` 好孕點數 +${pts}` : ''}`);
-          return true;
-        } catch (e) { if (e && e.name === 'AbortError') return false; }
-      }
+      const thanks = () => {
+        const pts = App.share.record ? App.share.record('more', 'monthly') : 0;
+        ui.toast(`謝謝分享 💜${pts ? ` 好孕點數 +${pts}` : ''}`);
+        done();
+      };
+      const r = await App.share.sharePicture(blob, fileName, { text: words, onShared: thanks });
+      if (r === 'shared') { thanks(); return; }
+      if (r !== 'none') return; // closed, already open, or 「圖片做好了・分享」 is waiting for her tap
       App.share.downloadBlob(blob, fileName);
       ui.toast('這台裝置不能直接分享圖片，已先下載，可以從相簿傳到 LINE');
-      return true;
+      done();
+      return;
     }
-    const r = await App.share.saveImage(blob, fileName, '寶寶月照');
+    const r = await App.share.saveImage(blob, fileName, '寶寶月照', done);
     if (r === 'downloaded') ui.toast('圖片已下載');
-    return r !== 'cancel';
+    if (r !== 'cancel') done();
   }
 
   /* ---------------- the editor (a sheet over the screen) ---------------- */
@@ -469,8 +470,9 @@
         sync(); paint(); ui.toast('已刪除這張月照');
       },
     }, '🗑 刪除這張月照');
-    const saveBtn = h('button', { type: 'button', class: 'btn btn-soft grow mo-save', onclick: () => out('save') }, '💾 存圖片');
-    const shareBtn = h('button', { type: 'button', class: 'btn btn-primary grow mo-share', onclick: () => out('share') }, '📤 分享');
+    // making the full-size picture takes a moment (about a second, longer on an older phone): the button says so
+    const saveBtn = h('button', { type: 'button', class: 'btn btn-soft grow mo-save', onclick: () => ui.busy(saveBtn, () => out('save'), { also: [shareBtn] }) }, '💾 存圖片');
+    const shareBtn = h('button', { type: 'button', class: 'btn btn-primary grow mo-share', onclick: () => ui.busy(shareBtn, () => out('share'), { also: [saveBtn] }) }, '📤 分享');
 
     function sync() {
       pickBtn.textContent = st.photo ? '🖼 換一張照片' : '📷 選一張照片';
@@ -484,8 +486,8 @@
       if (!img) { if (!st.photo) file.click(); else ui.toast('照片還在讀取，請再按一次'); return; }
       commit();
       const blob = await toJpeg(await drawCard(spec(), 1));
-      const ok = await deliver(how, blob, `yijia-month-${String(m).padStart(2, '0')}.jpg`, `${cleanName(st.name) || '寶寶'}${reached(L)} 📸`);
-      if (ok) store.update((s) => { const sl = (ensure(s).babies[b.id] || {})[m]; if (sl) sl.out = C.dateKey(); });
+      await deliver(how, blob, `yijia-month-${String(m).padStart(2, '0')}.jpg`, `${cleanName(st.name) || '寶寶'}${reached(L)} 📸`,
+        () => store.update((s) => { const sl = (ensure(s).babies[b.id] || {})[m]; if (sl) sl.out = C.dateKey(); }));
     }
 
     file.addEventListener('change', async () => {
@@ -600,6 +602,8 @@
       const blob = await toJpeg(await drawCollage(await collageSpec(b, months, title, st.qr), 1));
       await deliver(how, blob, `yijia-year-${year}.jpg`, `${title} 📸`);
     };
+    const colSave = h('button', { type: 'button', class: 'btn btn-soft grow mo-save', onclick: () => ui.busy(colSave, () => out('save'), { also: [colShare] }) }, '💾 存圖片');
+    const colShare = h('button', { type: 'button', class: 'btn btn-primary grow mo-share', onclick: () => ui.busy(colShare, () => out('share'), { also: [colSave] }) }, '📤 分享');
     const sheet = ui.sheet({
       title: `🧩 ${title}`,
       body: h('div', { class: 'mo-ed' },
@@ -608,9 +612,7 @@
         h('label', { class: 'check-row mo-qr' },
           h('input', { type: 'checkbox', checked: st.qr, onchange: (e) => { st.qr = e.target.checked; store.update((s) => { ensure(s).qr = st.qr; }); paint(); } }),
           h('span', { class: 'small' }, '角落放邀請 QR（朋友掃描就能一起用）'))),
-      footer: h('div', { class: 'row gap' },
-        h('button', { type: 'button', class: 'btn btn-soft grow mo-save', onclick: () => out('save') }, '💾 存圖片'),
-        h('button', { type: 'button', class: 'btn btn-primary grow mo-share', onclick: () => out('share') }, '📤 分享')),
+      footer: h('div', { class: 'row gap' }, colSave, colShare),
     });
     paint();
     return sheet;

@@ -194,9 +194,24 @@ const pngSize = (buf) => (buf.slice(1, 4).toString() === 'PNG' ? { w: buf.readUI
   ok('320 px: the slide fits', fits);
   for (let i = 0; i < 14; i += 1) { if ((await slide(Q)).id === 'end') break; await Q.click('.rc-next'); await Q.waitForTimeout(150); } // eslint-disable-line no-await-in-loop
   await shot(Q, 'recap-end-small');
-  await Q.click('.rc-share'); await Q.waitForTimeout(1500);
+  await S(Q, () => { // count every call; the first one stays "open" a moment, like a real share sheet
+    window.__calls = 0; window.__dl = 0;
+    const click = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function c() { if (this.hasAttribute('download')) { window.__dl += 1; return undefined; } return click.call(this); };
+    const real = navigator.share;
+    Object.defineProperty(navigator, 'share', { configurable: true, value: async (d) => { window.__calls += 1; await real(d); await new Promise((r) => setTimeout(r, 600)); } });
+  });
+  await Q.click('.rc-share');
+  const busyNow = await S(Q, () => ({ text: document.querySelector('.rc-share').textContent, busy: document.querySelector('.rc-share').getAttribute('aria-busy'), save: document.querySelector('.rc-save').getAttribute('aria-busy') }));
+  await Q.click('.rc-share', { force: true }); await Q.click('.rc-save', { force: true }); // a second tap, and 存圖片, while it is made
+  // making the card can take a few seconds on a busy machine: wait for the share itself, not a fixed time
+  await Q.waitForFunction(() => !!window.__shared, null, { timeout: 8000 }).catch(() => {});
+  await Q.waitForFunction(() => !document.querySelector('.rc-share[aria-busy]'), null, { timeout: 8000 }).catch(() => {});
   const sh = await S(Q, () => window.__shared || null);
   ok('分享回顧卡 hands the phone the picture and the text', sh && sh.name === 'yijia-recap-now.png' && sh.size > 30000 && /喝奶 \d+ 次/.test(sh.text), JSON.stringify(sh).slice(0, 200));
+  const after = await S(Q, () => ({ calls: window.__calls, dl: window.__dl, text: document.querySelector('.rc-share').textContent }));
+  ok('…the button says 「做圖中…」 meanwhile; tapping again (or 存圖片) shares once and downloads nothing',
+    busyNow.text === '做圖中…' && busyNow.busy === 'true' && busyNow.save === 'true' && after.calls === 1 && after.dl === 0 && after.text === '📤 分享回顧卡', JSON.stringify({ busyNow, after }));
   await axe(Q, 'recap end, small phone');
 
   ok('no page errors', !errs.length, errs.join(' | '));

@@ -573,7 +573,10 @@
         if (file && navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
         else data.url = link({ path: p.path, params: p.params, channel: ch === 'ig' ? 'instagram' : 'native', campaign: p.campaign });
         if (navigator.share && (ch === 'more' || data.files)) {
-          try { await navigator.share(data); thanks(record(ch, p.campaign)); } catch (e) { if (e && e.name !== 'AbortError') ui.toast('無法分享，請改用其他方式'); }
+          const done = () => thanks(record(ch, p.campaign));
+          const no = () => ui.toast('無法分享，請改用其他方式');
+          const r = await shareSheet(data, { msg: data.files ? '圖片做好了 💜' : '準備好了 💜', onShared: done, onFail: no });
+          if (r === 'shared') done(); else if (r === 'none') no();
           return;
         }
         if (ch === 'ig') { // desktop / no Web Share: download the card + copy caption
@@ -868,16 +871,47 @@
       return drawQR(ctx, url, 0, 0, size) ? cv.toDataURL('image/png') : '';
     } catch (e) { return ''; }
   }
-  // save a generated picture: the phone's share sheet (「儲存影像」, LINE…) when it takes files, otherwise a download
-  async function saveImage(blob, name, title = '') {
-    const file = typeof File === 'function' ? new File([blob], name, { type: blob.type || 'image/png' }) : null;
-    if (file && navigator.canShare && navigator.share && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title }); return 'shared'; } catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
+  /* The phone's share sheet. A phone opens it only just after a tap; when making the picture took longer
+     (an older phone), it says no: the picture is kept and a toast offers 「分享」 again, and that fresh tap opens it.
+     A second tap while a share sheet is already open does nothing (it used to download the picture as well).
+     → 'shared' | 'cancel' (she closed it) | 'open' (one is open already) | 'late' (the toast is waiting) | 'none' (cannot share this) */
+  const shareWhy = (e) => { const n = e && e.name; return n === 'AbortError' ? 'cancel' : n === 'InvalidStateError' ? 'open' : n === 'NotAllowedError' ? 'late' : 'none'; };
+  async function shareSheet(data, { msg = '圖片做好了 💜', action = '分享', onShared = null, onFail = null } = {}) {
+    try { await navigator.share(data); return 'shared'; } catch (e) {
+      const r = shareWhy(e);
+      if (r === 'late') {
+        ui.toast(msg, {
+          action, ms: 9000,
+          onAction: async () => {
+            try { await navigator.share(data); if (onShared) onShared(); } catch (e2) { const r2 = shareWhy(e2); if (r2 !== 'cancel' && r2 !== 'open' && onFail) onFail(); }
+          },
+        });
+      }
+      return r;
     }
+  }
+  // a picture made just now → the share sheet (as above); 'none' when this phone cannot share pictures
+  async function sharePicture(blob, name, { text = '', title = '', action = '分享', onShared = null } = {}) {
+    const file = typeof File === 'function' ? new File([blob], name, { type: blob.type || 'image/png' }) : null;
+    if (!(file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] }))) return 'none';
+    const data = { files: [file] };
+    if (text) data.text = text;
+    if (title) data.title = title;
+    return shareSheet(data, {
+      action, onShared,
+      onFail: () => { downloadBlob(blob, name); ui.toast('這台裝置沒有打開分享，圖片已先下載，可以從相簿傳到 LINE'); },
+    });
+  }
+  // save a generated picture: the phone's share sheet (「儲存影像」, LINE…) when it takes files, otherwise a download.
+  // → 'shared' | 'downloaded' | 'cancel' (closed, already open, or 「圖片做好了・儲存」 waiting: onDone runs if that tap saves it)
+  async function saveImage(blob, name, title = '', onDone = null) {
+    const r = await sharePicture(blob, name, { title, action: '儲存', onShared: onDone });
+    if (r === 'shared') return 'shared';
+    if (r !== 'none') return 'cancel';
     downloadBlob(blob, name); return 'downloaded';
   }
   App.share = {
-    open, link, render, cards, moment, checkMoments, momentLine, qr, saveImage, button, record, bonus, code: () => ensure(store.state).code, inviteText,
+    open, link, render, cards, moment, checkMoments, momentLine, qr, saveImage, sharePicture, button, record, bonus, code: () => ensure(store.state).code, inviteText,
     copyText, downloadBlob, CUSTOMS, REWARDS,
     // drawing pieces for cards with their own layout (家族週報)
     draw: {

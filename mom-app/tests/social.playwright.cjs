@@ -100,7 +100,9 @@ const AV_B = {
   ok('A sees B\'s chibi beside the island name plate', map.imgs >= 1 && await seesB(A), JSON.stringify(map));
   ok('the chip says how many moms are on this island (no "null")', /孕中期島 \d+ 位媽媽/.test(map.chip) && !/null|undefined/.test(map.chip), map.chip);
   await A.screenshot({ path: `${process.env.SHOT_DIR || '/tmp'}/social-map.png` }).catch(() => {});
-  // tap the neighbour on the map
+  // tap the neighbour on the map (first take away the 💜 to collect, if one is floating: it appears at a random spot
+  // and once landed right on the chibis, so the tap collected the heart instead; the hearts have their own tests)
+  await S(A, () => document.querySelectorAll('.isl-heart').forEach((x) => x.remove()));
   const box = await S(A, () => { const r = document.querySelector('.isl-ibanner[data-island="preg2"] .isl-ib-nb .isl-hit'); if (!r) return null; const bb = r.getBoundingClientRect(); return { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 }; });
   if (box) { await A.mouse.click(box.x, box.y); await A.waitForTimeout(900); }
   const res = await topSheet(A);

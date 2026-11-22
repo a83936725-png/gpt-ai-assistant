@@ -203,15 +203,13 @@
     if (!blob) { ui.toast('回顧卡做不出來，請再試一次'); return; }
     const name = `yijia-recap-${r.kind}.png`;
     if (how === 'share') {
-      const file = typeof File === 'function' ? new File([blob], name, { type: 'image/png' }) : null;
-      if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], text: text(b, r) });
-          const pts = App.share.record ? App.share.record('more', 'recap') : 0;
-          ui.toast(`謝謝分享 💜${pts ? ` 好孕點數 +${pts}` : ''}`);
-          return;
-        } catch (e) { if (e && e.name === 'AbortError') return; }
-      }
+      const thanks = () => {
+        const pts = App.share.record ? App.share.record('more', 'recap') : 0;
+        ui.toast(`謝謝分享 💜${pts ? ` 好孕點數 +${pts}` : ''}`);
+      };
+      const s = await App.share.sharePicture(blob, name, { text: text(b, r), onShared: thanks });
+      if (s === 'shared') { thanks(); return; }
+      if (s !== 'none') return; // closed, already open, or 「圖片做好了・分享」 is waiting for her tap
     }
     const res = await App.share.saveImage(blob, name, '成長回顧');
     if (res === 'downloaded') ui.toast(how === 'share' ? '這台裝置不能直接分享圖片，已先下載，可以從相簿傳到 LINE' : '回顧卡已下載');
@@ -272,10 +270,11 @@
       }
       if (s.sub) kids.push(h('p', { class: 'rc-sub' }, s.sub));
       if (s.end) {
-        kids.push(h('div', { class: 'rc-actions' },
-          h('button', { class: 'btn btn-primary btn-block rc-share', onclick: (e) => { e.stopPropagation(); deliver('share', b, r); } }, '📤 分享回顧卡'),
-          h('div', { class: 'row gap' },
-            h('button', { class: 'btn btn-soft grow rc-save', onclick: (e) => { e.stopPropagation(); deliver('save', b, r); } }, '💾 存圖片'),
+        // making the card takes a moment: the button says so, and a second tap meanwhile does nothing
+        const shareB = h('button', { class: 'btn btn-primary btn-block rc-share', onclick: (e) => { e.stopPropagation(); ui.busy(shareB, () => deliver('share', b, r), { also: [saveB] }); } }, '📤 分享回顧卡');
+        const saveB = h('button', { class: 'btn btn-soft grow rc-save', onclick: (e) => { e.stopPropagation(); ui.busy(saveB, () => deliver('save', b, r), { also: [shareB] }); } }, '💾 存圖片');
+        kids.push(h('div', { class: 'rc-actions' }, shareB,
+          h('div', { class: 'row gap' }, saveB,
             h('button', { class: 'btn btn-soft grow rc-again', onclick: (e) => { e.stopPropagation(); go(0); } }, '↺ 再看一次'))));
       }
       stage.append(h('div', { class: 'rc-card' }, kids));

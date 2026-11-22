@@ -195,7 +195,7 @@
     $('rows').innerHTML = list.map((r) => `
       <tr data-id="${esc(r.id)}" aria-selected="${r.id === selected}" tabindex="0">
         <td class="num">${fmt(r.updatedAt)}</td>
-        <td><b>${esc(r.name)}</b></td>
+        <td><b>${esc(r.name)}</b>${r.mailedAt ? ' <span class="pill ok">已寄報告</span>' : ''}</td>
         <td>${esc(r.contact)}${r.contact && r.email ? '<br>' : ''}${esc(r.email)}</td>
         <td><span class="pill${r.step === '生涯規劃' ? ' ok' : ''}">${esc(r.step)}</span></td>
         <td>${esc(r.center.join('、')) || '—'}</td>
@@ -209,7 +209,7 @@
     renderRows();
     $('detail').innerHTML = '<p class="empty">載入中…</p>';
     try {
-      const { record: r, summary: s } = await (await api(`records/${encodeURIComponent(id)}`)).json();
+      const { record: r, summary: s, mail } = await (await api(`records/${encodeURIComponent(id)}`)).json();
       const inCircle = (k) => r.items.filter((it) => it.c[k]).map((it) => it.text);
       const main = r.plan.dirs.find((d) => d.main) || r.plan.dirs[0];
       $('detail').innerHTML = `
@@ -218,6 +218,7 @@
           <dt>手機／LINE</dt><dd>${esc(r.profile.contact) || '—'}</dd>
           <dt>Email</dt><dd>${esc(r.profile.email) || '—'}</dd>
           <dt>同意時間</dt><dd>${fmt(r.profile.consentAt)}</dd>
+          <dt>報告寄送</dt><dd>${mail ? `已寄 ${mail.count} 次，最後 ${fmt(mail.lastSentAt)}` : '尚未寄送'}</dd>
           <dt>開始時間</dt><dd>${fmt(r.startedAt)}</dd>
           <dt>最後更新</dt><dd>${fmt(r.updatedAt)}</dd>
           <dt>目前步驟</dt><dd>${esc(s.step)}</dd>

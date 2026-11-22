@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.18.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: the details form now asks for name and email (phone/LINE optional), and the full report is emailed to the visitor: type, circles, overlaps, careers, skills, 90-day preparation for the top three careers, plan and analysis, with a referral link. Visitors can resend it; at most once per 10 minutes. Sends through Gmail/SMTP (`IKIGAI_SMTP_USER`, `IKIGAI_SMTP_PASS`) or Resend (`RESEND_API_KEY`, `IKIGAI_MAIL_FROM`)
+- IKIGAI: the admin page shows whether and when each client's report was emailed
+
 ## 4.17.0 (2026-11-22)
 
 ### New Features

@@ -458,7 +458,7 @@
   <nav class="progress" id="progress" aria-label="步驟"></nav>
   <main id="view"></main>
 
-  <footer>填寫內容會自動儲存在這台裝置。看結果前，您可以選擇留下基本資料；同意後，填寫內容會提供給本服務的顧問，用於生涯諮詢與後續聯繫，不會提供給其他第三方。</footer>
+  <footer>填寫內容會自動儲存在這台裝置。看結果前請留下姓名與 Email；同意後，填寫內容會提供給本服務的顧問，用於寄送報告、生涯諮詢與後續聯繫，不會提供給其他第三方。</footer>
 </div>
 
 <div class="nav" id="nav" hidden><div class="nav-inner" id="navInner"></div></div>
@@ -746,7 +746,8 @@
         actions: state.plan.actions.map((a) => ({ text: a.text, h: a.h, done: a.done })),
       },
       insights: {
-        careers: ins.careers.map((c) => ({ name: c.name, circles: c.circles })),
+        archetype: (({ name, tagline, strengths, advice }) => ({ name, tagline, strengths, advice }))(archetype()),
+        careers: ins.careers.map((c) => ({ name: c.name, circles: c.circles, skills: c.skills, items: c.items })),
         paths: ins.paths.map((p) => ({ title: p.title, career: p.career.name })),
         skills: ins.skills.map((x) => x.name),
         weakest: ins.weakest.key,
@@ -786,6 +787,33 @@
     }
   });
 
+  // ---------- report email ----------
+  let mailEnabled = false;
+  fetch('/ikigai/mail-status').then((r) => r.json()).then((d) => {
+    mailEnabled = Boolean(d.enabled);
+    if (!shareMode && (state.step === 'result' || state.step === 'plan')) render();
+  }).catch(() => {});
+  async function sendReport(auto) {
+    if (!canSync()) return;
+    const btn = $('mailBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '寄送中…'; }
+    try {
+      clearTimeout(syncTimer);
+      // Save first so the email is built from the latest answers.
+      await fetch('/ikigai/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(recordPayload()) });
+      const res = await fetch('/ikigai/report-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: state.rid }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '報告寄送失敗，請稍後再試');
+      logEvent('寄送完整報告', data.to);
+      save(true);
+      toast(`完整報告已寄到 ${data.to}，沒收到請查看垃圾郵件`);
+    } catch (err) {
+      if (!auto || !/剛寄出/.test(err.message)) toast(err.message);
+    } finally {
+      if ($('mailBtn')) { $('mailBtn').disabled = false; $('mailBtn').textContent = '寄完整報告到信箱'; }
+    }
+  }
+
   // ---------- basic info form (shown once, before the results) ----------
   let editingProfile = false;
   function renderProfileForm() {
@@ -795,19 +823,19 @@
         <div class="card">
           <div class="eyebrow" style="--c:var(--text)">看結果前</div>
           <h2>留下您的基本資料</h2>
-          <p class="hint">顧問會依您的結果提供後續建議與聯繫。姓名必填，手機／LINE ID 和 Email 至少填一項。</p>
+          <p class="hint">${mailEnabled ? '填好後，<b>完整報告會寄到您的 Email</b>，包含建議職業、需要加強的能力和 90 天準備計畫。' : '顧問會依您的結果提供後續建議與聯繫。'}</p>
           <form class="profile-form" id="profileForm" novalidate>
             <label class="f" for="pfName">姓名</label>
             <input type="text" id="pfName" maxlength="40" autocomplete="name" value="${esc(p.name)}" required>
-            <label class="f" for="pfContact">手機或 LINE ID <span>選填其一</span></label>
+            <label class="f" for="pfEmail">Email <span>${mailEnabled ? '完整報告會寄到這裡' : '必填'}</span></label>
+            <input type="email" id="pfEmail" maxlength="120" autocomplete="email" inputmode="email" value="${esc(p.email)}" required>
+            <label class="f" for="pfContact">手機或 LINE ID <span>選填</span></label>
             <input type="tel" id="pfContact" maxlength="80" autocomplete="tel" value="${esc(p.contact)}">
-            <label class="f" for="pfEmail">Email <span>選填其一</span></label>
-            <input type="email" id="pfEmail" maxlength="120" autocomplete="email" value="${esc(p.email)}">
             <label class="consent" for="pfConsent"><input type="checkbox" id="pfConsent" ${p.consent ? 'checked' : ''}>
-              <span>我同意將以上基本資料與本次填寫的內容提供給本服務的顧問，用於生涯諮詢與後續聯繫。資料不會提供給其他第三方，我可以隨時要求刪除。</span></label>
+              <span>我同意將以上基本資料與本次填寫的內容提供給本服務的顧問，用於寄送報告、生涯諮詢與後續聯繫。資料不會提供給其他第三方，我可以隨時要求刪除。</span></label>
             <p class="form-error" id="pfError" role="alert"></p>
             <div class="row" style="display:flex;gap:10px;flex-wrap:wrap">
-              <button class="btn" type="submit">${editingProfile ? '儲存' : '看我的結果'}</button>
+              <button class="btn" type="submit">${editingProfile ? '儲存' : mailEnabled ? '看結果並寄送完整報告' : '看我的結果'}</button>
               ${editingProfile ? '<button class="btn ghost" type="button" id="pfCancel">取消</button>' : ''}
             </div>
           </form>
@@ -818,7 +846,7 @@
       const name = $('pfName').value.replace(/\s+/g, ' ').trim();
       const contact = $('pfContact').value.replace(/\s+/g, ' ').trim();
       const email = $('pfEmail').value.trim();
-      const err = !name ? '請填寫姓名' : (!contact && !email) ? '請至少留下手機／LINE ID 或 Email' : (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) ? 'Email 格式不正確' : !$('pfConsent').checked ? '請勾選同意，才能提供您的結果' : '';
+      const err = !name ? '請填寫姓名' : !email ? '請填寫 Email' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? 'Email 格式不正確' : !$('pfConsent').checked ? '請勾選同意，才能提供您的結果' : '';
       if (err) { $('pfError').textContent = err; return; }
       const first = !state.profile.consent;
       state.profile = { name: name.slice(0, 40), contact: contact.slice(0, 80), email: email.slice(0, 120), consent: true, consentAt: state.profile.consentAt || Date.now() };
@@ -827,7 +855,8 @@
       editingProfile = false;
       animateResult = true;
       save();
-      syncNow();
+      if (first && mailEnabled) sendReport(true);
+      else syncNow();
       render();
       window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
     });
@@ -1668,6 +1697,11 @@
           <div id="linkBox"></div>
           <p class="fine">連結裡直接包含你的清單內容，任何拿到連結的人都看得到，請只分享給信任的人。</p>
         </div>`}
+        ${readOnly || !state.profile.consent || !mailEnabled || !state.profile.email ? '' : `<div class="share-section">
+          <h3>完整報告寄到信箱</h3>
+          <p class="hint">寄到 <b>${esc(state.profile.email)}</b>，內容包含人格類型、四個圈、建議職業、需要加強的能力、90 天準備計畫和生涯規劃。完成生涯規劃後再寄一次，報告會更完整。</p>
+          <button class="btn" type="button" id="mailBtn">寄完整報告到信箱</button>
+        </div>`}
         ${readOnly || !state.profile.consent ? '' : `<div class="share-section">
           <h3>我的基本資料</h3>
           <div class="me-line"><span>${esc(state.profile.name)}${state.profile.contact ? ` · ${esc(state.profile.contact)}` : ''}${state.profile.email ? ` · ${esc(state.profile.email)}` : ''}</span><button class="btn ghost small" type="button" id="editProfile">修改</button></div>
@@ -1689,6 +1723,7 @@
   function bindShareCard() {
     renderReferralProgress();
     refreshReferrals();
+    if ($('mailBtn')) $('mailBtn').addEventListener('click', () => sendReport(false));
     if ($('editProfile')) $('editProfile').addEventListener('click', () => { editingProfile = true; render(); window.scrollTo(0, 0); });
     $('makeCards').addEventListener('click', makeCards);
     $('dlAll').addEventListener('click', downloadAll);

@@ -6,7 +6,7 @@ import { validateLineSignature } from '../middleware/index.js';
 import storage from '../storage/index.js';
 import { fetchVersion, getVersion } from '../utils/index.js';
 import { getStoredImage, setPublicOrigin } from '../utils/upload-image.js';
-import ikigai from '../web/ikigai.js';
+import ikigai, { sendPage, servesHome } from '../web/ikigai.js';
 
 const app = express();
 
@@ -38,6 +38,10 @@ app.use(express.json({
 app.use('/ikigai', ikigai);
 
 app.get('/', async (req, res) => {
+  if (servesHome(req)) {
+    sendPage(req, res);
+    return;
+  }
   if (config.APP_URL) {
     res.redirect(config.APP_URL);
     return;

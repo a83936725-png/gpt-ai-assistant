@@ -1,5 +1,29 @@
 # Changelog
 
+## 4.14.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: career suggestions on the result page, PDF report, copied text and share view, built in without AI: up to six careers with the circles they cover, three paths (stable, passion, side project), skills to strengthen, the weakest circle, and a 1-month to 12-month plan. Careers can be added to the career plan and the plan steps to the action list
+- IKIGAI: 深度解析 now also covers suggested careers, skills to strengthen and a staged career plan; `IKIGAI_MAX_TOKENS` defaults to 1800
+
+## 4.13.1 (2026-11-21)
+
+### Changes
+
+- IKIGAI: the site root shows the IKIGAI page to browsers (other clients still get the JSON status), so the address can be just a domain
+- IKIGAI: visitors no longer see AI or vendor wording. The buttons are now 「深度解析」 and 「產生建議計畫」, the copy-prompt buttons are removed, and failures show a plain message with a short code (see the troubleshooting table in [docs/IKIGAI-WEB.zh-TW.md](docs/IKIGAI-WEB.zh-TW.md))
+
+## 4.13.0 (2026-11-21)
+
+### New Features
+
+- IKIGAI: redesigned page. Adds a welcome screen with a sample, a progress bar that marks finished steps, step transitions, a sticky bottom bar (and arrow keys), prompt questions on each step, undo after removing an item, colour toggle buttons in the match step, result counts with a next-step tip, an animated diagram, AI loading progress, and "copy prompt" to use any AI assistant when the AI analysis is unavailable
+- IKIGAI: each circle is sized by how many items it holds, with a proportion legend
+- IKIGAI: step 7 career plan: up to three directions scored against the four circles (fit out of 20), 30-day / 90-day / 1-year goals, and an action checklist with progress; `POST /ikigai/plan` fills goals and actions with AI
+- IKIGAI: share and export: 1080 × 1350 share cards (PNG, download or share), a read-only share link that keeps the data in the URL, and an A4 PDF report through the print dialog
+- IKIGAI: demo of the whole flow in [docs/IKIGAI-WEB.zh-TW.md](docs/IKIGAI-WEB.zh-TW.md)
+
 ## 4.12.1 (2026-11-20)
 
 ### Bug Fixes

@@ -4,24 +4,31 @@
 
 ### New Features
 
-- Travel eSIM: a store flow built for phones. Region chips and flag tiles, a plan sheet with daily, total and unlimited plans (each with who it suits, its throttled speed and typical uses), day and quantity steppers, a cart button, checkout and a success page. Days are filled in from the next trip
+- Travel: a travel and eSIM web app at `/travel/`. The home page reads like a travel magazine: a cover for the next trip, a day-by-day itinerary preview, a 2025–2026 summary and a world map that colors the countries visited in each year
+- Travel: an itinerary planner. Drag items to reorder them or move them to another day; each place opens a photo, video, map and booking links; a budget adds tickets and eSIM automatically; to-dos are generated from the trip (eSIM, entry forms, tickets)
+- Travel: nearby recommendations scored by distance, the visitor's favorite travel elements, season and flight time, with attractions, ticket prices (free or approximate adult price), official tourism sites and Google Maps
+- Travel eSIM: a store flow built for phones. Region chips and flag tiles, a plan sheet with daily, total and unlimited plans (each with who it suits, its throttled speed and typical uses), day and quantity steppers, a cart button, checkout and a success page. Days are filled in from the next trip. Prices are samples; purchases link to `TRAVEL_ESIM_URL`
 - Travel eSIM: "help me choose" quiz (destination, days, uses, travellers) that recommends a plan and how many cards to buy
 - Travel eSIM: My eSIM with in use / waiting / expired tabs and a three-step tracker per card (get, install, activate). Install timing is advised from the flight length (install on departure day for short flights, after arrival for long ones)
 - Travel eSIM: share a card with a friend through LINE; the friend opens the link, sees "a friend sent you an eSIM" and claims it
 - Travel eSIM: install sheet with a pre-install checklist, suggested label names (destination plus date) to copy, one-tap iPhone install (when activation data is available) and warnings before installing a card twice or installing a friend's card on your own phone
 - Travel eSIM: illustrated install guide for iPhone and Android with phone-screen mockups that use the card's label, auto-play, a settings checklist for arrival, cautions and troubleshooting. `TRAVEL_GUIDE_VIDEO_URL` adds a link to your own video
+- Travel: year-in-review with badges, a shareable 1080×1350 travel card, and import of trips from a Google Maps Timeline export
+- Travel: optional AI itinerary (`POST /travel/api/advise`), limited per IP per hour (`TRAVEL_RATE_LIMIT`)
 - Travel: dialogs open as bottom sheets on phones and close with a downward swipe
 
 ## 4.19.0 (2026-11-22)
 
 ### New Features
 
-- Travel: a travel and eSIM web app at `/travel/`. The home page reads like a travel magazine: a cover for the next trip, a day-by-day itinerary preview, a 2025–2026 summary and a world map that colors the countries visited in each year
-- Travel: an itinerary planner. Drag items to reorder them or move them to another day; each place opens a photo, video, map and booking links; a budget adds tickets and eSIM automatically; to-dos are generated from the trip (eSIM, entry forms, tickets)
-- Travel: nearby recommendations scored by distance, the visitor's favorite travel elements, season and flight time, with attractions, ticket prices (free or approximate adult price), official tourism sites and Google Maps
-- Travel: an eSIM store with plans suggested from the next trip, a data usage calculator, a phone compatibility check, install steps and FAQ. Prices are samples; purchases link to `TRAVEL_ESIM_URL`
-- Travel: year-in-review with badges, a shareable 1080×1350 travel card, and import of trips from a Google Maps Timeline export
-- Travel: optional AI itinerary (`POST /travel/api/advise`), limited per IP per hour (`TRAVEL_RATE_LIMIT`)
+- IKIGAI: ability analysis and rankings on the result page, share page, PDF and emailed report: an IKIGAI fit index (0–100), a ranking of nine abilities, career match percentages, circle strengths, top three strengths, abilities to develop, core assets and skill priorities
+- IKIGAI: a three-stage career roadmap (0–3 months, 3–12 months, 1–3 years) with weekly habits and a risk reminder; its steps can be added to the action list
+- IKIGAI: a new "ability ranking" share card (7 cards in total)
+- IKIGAI: the admin list and CSV show each client's fit index and top strengths
+
+### Improvements
+
+- IKIGAI: circle names and counts are drawn inside their circles in every diagram and card, sized to fit each circle
 
 ## 4.18.0 (2026-11-22)
 

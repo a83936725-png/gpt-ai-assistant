@@ -115,7 +115,7 @@
     <div class="layout">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>更新時間</th><th>姓名</th><th>聯絡方式</th><th>進度</th><th>IKIGAI 中心</th><th>主要方向</th><th>推薦</th></tr></thead>
+          <thead><tr><th>更新時間</th><th>姓名</th><th>聯絡方式</th><th>進度</th><th>契合指數</th><th>IKIGAI 中心</th><th>主要方向</th><th>推薦</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
@@ -198,10 +198,11 @@
         <td><b>${esc(r.name)}</b>${r.mailedAt ? ' <span class="pill ok">已寄報告</span>' : ''}</td>
         <td>${esc(r.contact)}${r.contact && r.email ? '<br>' : ''}${esc(r.email)}</td>
         <td><span class="pill${r.step === '生涯規劃' ? ' ok' : ''}">${esc(r.step)}</span></td>
+        <td class="num">${r.fitIndex ?? '—'}${r.topAbilities && r.topAbilities.length ? `<br><span class="msg" style="font-size:12px">${esc(r.topAbilities.join('、'))}</span>` : ''}</td>
         <td>${esc(r.center.join('、')) || '—'}</td>
         <td>${esc(r.mainDirection) || '—'}</td>
         <td class="ref">${r.referrals ? `<b>帶來 ${r.referrals} 位</b>` : ''}${r.referrals && r.referrerName ? '<br>' : ''}${r.referrerName ? `由 ${esc(r.referrerName)} 推薦` : (r.referredBy ? '由他人推薦' : '')}${!r.referrals && !r.referredBy ? '—' : ''}</td>
-      </tr>`).join('') || `<tr><td colspan="7" class="empty">${rows.length ? '沒有符合的客戶。' : '還沒有客戶資料。客戶在網站留下基本資料後，就會出現在這裡。'}</td></tr>`;
+      </tr>`).join('') || `<tr><td colspan="8" class="empty">${rows.length ? '沒有符合的客戶。' : '還沒有客戶資料。客戶在網站留下基本資料後，就會出現在這裡。'}</td></tr>`;
   }
 
   async function showDetail(id) {
@@ -231,6 +232,11 @@
         <div class="circles">${CIRCLES.map(([k, l, c]) => `<div class="circle" style="--c:${c}"><b>${l}（${inCircle(k).length}）</b><p>${esc(inCircle(k).join('、')) || '—'}</p></div>`).join('')}</div>
         <h3>IKIGAI 中心</h3><p style="margin:0">${esc(s.center.join('、')) || '—'}</p>
         ${r.note ? `<h3>補充說明</h3><p style="margin:0">${esc(r.note)}</p>` : ''}
+        ${r.insights.analysis ? `<h3>能力分析</h3>
+        <p style="margin:0">IKIGAI 契合指數 <b>${r.insights.analysis.index}</b>／100（${esc(r.insights.analysis.level)}）　四圈平衡度 ${r.insights.analysis.balance}</p>
+        ${r.insights.analysis.abilities.length ? `<p style="margin:6px 0 0">能力排名：${r.insights.analysis.abilities.map((x, i) => `${i + 1}. ${esc(x.name)} ${x.score}`).join('　')}</p>` : ''}
+        ${r.insights.analysis.careers.length ? `<p style="margin:6px 0 0">職業契合度：${r.insights.analysis.careers.map((x, i) => `${i + 1}. ${esc(x.name)} ${x.match}%`).join('　')}</p>` : ''}
+        ${r.insights.analysis.roadmap.length ? `<ul class="plain">${r.insights.analysis.roadmap.map((st) => `<li><b>${esc(st.title)}</b>（${esc(st.when)}）${esc(st.goal)}</li>`).join('')}</ul>` : ''}` : ''}
         <h3>職涯建議</h3>
         ${r.insights.careers.length ? `<ul class="plain">${r.insights.careers.map((c) => `<li>${esc(c.name)} <span class="msg">（${c.circles.map((k) => CIRCLES.find((x) => x[0] === k)[1]).join('、')}）</span></li>`).join('')}</ul>` : '<p class="msg">—</p>'}
         ${r.insights.paths.length ? `<p style="margin:6px 0 0">${r.insights.paths.map((p) => `<span class="pill">${esc(p.title)}</span> ${esc(p.career)}`).join('　')}</p>` : ''}

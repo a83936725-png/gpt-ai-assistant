@@ -119,6 +119,13 @@ const DAY = '2026-11-23T14:12:00+08:00';
   ok('a daytime feed does not open it', !(await D.$('.nt')));
   await S(D, () => { App.navigate('home'); App.refresh(); }); await D.waitForTimeout(700);
   ok('…and the banner has no 夜奶陪伴 button in the daytime', !(await D.$('.nt-open-btn')));
+  await S(D, () => App.night.open()); await D.waitForTimeout(400);
+  ok('opened by hand at 14:12 it says 下午 14:12 (not 晚上)', /下午 14:12/.test((await night(D)).text), (await night(D)).text);
+  await S(D, () => App.night.close());
+  const E = await mk({ at: '2026-12-20T05:40:00+08:00' }); // before a winter sunrise: still 深夜 for the app
+  ok('05:40 in winter is still 深夜 (before sunrise)', await S(E, () => App.night.isNow()));
+  await S(E, () => App.timers.start('breast', { side: 'R' })); await E.waitForTimeout(1200);
+  ok('…and the screen says 清晨 05:40, not 晚上', /清晨 05:40/.test(((await night(E)) || {}).text || ''), JSON.stringify(await night(E)));
   const W = await mk({ width: 320, height: 568 }); // the static copy: no member server
   await S(W, () => App.timers.start('breast', { side: 'L' })); await W.waitForTimeout(1500);
   n = await night(W);

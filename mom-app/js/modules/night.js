@@ -19,6 +19,8 @@
     '天亮之前，你已經很努力了',
   ];
   const isNow = (d = new Date()) => !!(App.isLate && App.isLate(d));
+  // 凌晨 03:12, 清晨 05:40 (before a winter sunrise), 晚上 23:05 — and right for any hour it is opened by hand
+  const partOfDay = (d) => { const hr = d.getHours(); return hr < 5 ? '凌晨' : hr < 8 ? '清晨' : hr < 11 ? '早上' : hr < 14 ? '中午' : hr < 18 ? '下午' : '晚上'; };
   const autoOn = () => (store.state.settings || {}).nightCompanion !== false;
   const feedKey = (babyId) => { const act = store.state.active || {}; return Object.keys(act).find((k) => /^feed(@|$)/.test(k) && act[k] && (!babyId || (act[k].babyId || babyId) === babyId)) || null; };
   let root = null; let lock = null; let wordT = 0; let liveT = 0; let unsub = null; let prevFocus = null;
@@ -67,7 +69,7 @@
     body.innerHTML = '';
     // DOM append() would print a left-out part (null) as the word "null": leave those out first
     body.append(...[
-      h('div', { class: 'nt-time' }, `${now.getHours() < 5 ? '凌晨' : '晚上'} ${C.fmtTime(now)}`),
+      h('div', { class: 'nt-time' }, `${partOfDay(now)} ${C.fmtTime(now)}`),
       t ? h('div', { class: 'nt-what' }, `${b && (store.state.babies || []).length > 1 ? `${b.name}・` : ''}親餵中・${t.side === 'L' ? '左' : '右'}邊`) : h('div', { class: 'nt-what' }, last ? `上一餐 ${C.fmtTime(last.start)}（${C.ago(last.start)}）` : '準備餵奶了嗎？'),
       t ? h('div', { class: 'nt-clock', dataset: { clock: t.start }, role: 'timer', 'aria-label': '餵奶計時' }, C.fmtClock(now - new Date(t.start).getTime())) : null,
       t ? h('div', { class: 'nt-sides', role: 'group', 'aria-label': '換邊' },

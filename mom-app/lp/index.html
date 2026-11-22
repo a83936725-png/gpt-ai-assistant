@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>易家做媽媽 試閱本</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="易家做媽媽：從備孕、懷孕到育兒的手機小幫手。夜奶陪伴、交接卡、寶寶月照、成長回顧、好孕島，還有一個現在就能玩的試玩版。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap">
+<link rel="stylesheet" href="lp.css">
+</head>
+<body>
+<!-- 易家做媽媽 試閱本 — the landing page. A magazine in front (cover, contents, a day in the life, six spreads that
+     each show one animated card pattern), the real app behind (a live sandbox the visitor can use).
+     data-app: where the app's index.html is, for the live sandbox. data-app-link: the app link for 打開 App and the QR. -->
+<div class="mag" lang="zh-Hant-TW" data-app="../index.html" data-app-link="../index.html">
+
+<header class="cover" id="top">
+  <div class="wrap cover-in">
+    <div class="cover-top">
+      <span>易家滴雞精 出品</span>
+      <span class="cover-vol">試閱本 VOL. 0.9<span class="sl">／</span>2026 冬</span>
+    </div>
+    <h1 class="masthead"><span>易家</span><span>做媽媽</span></h1>
+    <p class="cover-v" aria-hidden="true">陪你從備孕到育兒</p>
+    <figure class="cover-fig">
+      <div class="phone phone-back"><img src="img/shot-home.jpg" width="585" height="1266" alt="易家做媽媽首頁：今天的餵奶、尿布、睡眠紀錄，和「接下來」大約幾點會想喝奶" fetchpriority="high"></div>
+      <div class="phone phone-front"><img src="img/shot-night.jpg" width="585" height="1266" alt="夜奶陪伴畫面：凌晨 03:12，親餵左邊，大字計時 12:48，左右換邊和「餵完了」按鈕"></div>
+      <figcaption>App 實際畫面・範例資料</figcaption>
+    </figure>
+    <div class="cover-text">
+      <p class="cover-dek"><span>從備孕、懷孕到育兒的手機小幫手。</span><span>這一期，我們跟著一位媽媽，用它過完一天。</span></p>
+      <ol class="cover-lines">
+        <li><a href="#day-0312"><b>03:12</b><span>夜奶的時候，有一盞燈陪你</span></a></li>
+        <li><a href="#day-0730"><b>07:30</b><span>一張交接卡，換爸爸接手</span></a></li>
+        <li><a href="#island"><b>好孕島</b><span>35 個站點，從備孕走到上小學</span></a></li>
+        <li><a href="#monthly"><b>月照</b><span>每個月一張，存在手機裡</span></a></li>
+      </ol>
+      <div class="cover-cta">
+        <a class="btn btn-plum" href="#try">直接試玩 App<span aria-hidden="true">→</span></a>
+        <a class="btn btn-line" href="#toc">看本期目錄</a>
+      </div>
+    </div>
+    <p class="cover-price"><span>定價</span><b>0</b><span>元</span><small>不用註冊<br>打開就能用</small></p>
+  </div>
+</header>
+
+<nav class="bar" aria-label="頁面導覽">
+  <div class="bar-in">
+    <a class="bar-logo" href="#top">易家做媽媽</a>
+    <span class="bar-now" id="bar-now">本期目錄</span>
+    <a class="bar-try" href="#try">試玩 App</a>
+  </div>
+</nav>
+
+<main>
+<section class="toc" id="toc" aria-labelledby="toc-h" data-title="本期目錄">
+  <div class="wrap toc-in">
+    <h2 class="toc-h" id="toc-h">本期目錄</h2>
+    <ol class="toc-list">
+      <li><a href="#day"><span class="toc-n">04</span><span class="toc-t">一位媽媽的 24 小時</span><span class="toc-d">夜奶、交接、接下來、月照、回顧</span></a></li>
+      <li><a href="#start"><span class="toc-n">10</span><span class="toc-t">三步上手</span><span class="toc-d">不用註冊、不用下載</span></a></li>
+      <li><a href="#care"><span class="toc-n">12</span><span class="toc-t">看不見的貼心</span><span class="toc-d">預測、加密、成長曲線</span></a></li>
+      <li><a href="#logs"><span class="toc-n">14</span><span class="toc-t">七種紀錄</span><span class="toc-d">單手一按就記好</span></a></li>
+      <li><a href="#island"><span class="toc-n">16</span><span class="toc-t">好孕島</span><span class="toc-d">邊逛邊學的衛教小島</span></a></li>
+      <li><a href="#monthly"><span class="toc-n">18</span><span class="toc-t">寶寶月照</span><span class="toc-d">四種相框</span></a></li>
+      <li><a href="#share"><span class="toc-n">20</span><span class="toc-t">分享卡</span><span class="toc-d">七種顏色</span></a></li>
+      <li class="toc-hot"><a href="#try"><span class="toc-n">22</span><span class="toc-t">試玩：真的 App</span><span class="toc-d">現在就能點</span></a></li>
+      <li><a href="#promise"><span class="toc-n">26</span><span class="toc-t">我們的承諾</span><span class="toc-d">你的資料，留在你手上</span></a></li>
+    </ol>
+  </div>
+</section>
+
+<section class="day" id="day" aria-labelledby="day-h" data-title="一位媽媽的 24 小時">
+  <div class="wrap">
+    <p class="run"><span>P.04</span>專題</p>
+    <header class="feat-head">
+      <h2 class="feat-title" id="day-h">一位媽媽的 <em>24</em> 小時</h2>
+      <p class="feat-dek">小美的寶寶小乖兩個多月大。我們跟著她用易家做媽媽過完一天——<mark>人物是虛構的，畫面都是 App 的真實畫面。</mark></p>
+    </header>
+    <ol class="stops">
+      <li class="stop stop-night" id="day-0312" data-scene="night">
+        <div class="stop-time"><time datetime="03:12">03:12</time><span>凌晨</span></div>
+        <div class="stop-body">
+          <h3>夜奶陪伴</h3>
+          <p>深夜按下親餵，畫面自動換成暗暗暖暖的陪伴模式：大大的計時、左右一按就換邊，還有輕輕的一句「記得喝口水」。有會員服務時，會告訴你現在還有幾位媽媽也醒著——是真實的人數，不是編的。</p>
+          <button class="go" type="button" data-go="night">在試玩裡打開夜奶陪伴<span aria-hidden="true">→</span></button>
+          <aside class="stop-aside" aria-label="畫面上輪流出現的話">
+            <p class="aside-h">每二十秒換一句</p>
+            <ul class="aside-words"><li>慢慢來，寶寶在你懷裡很安心</li><li>記得喝口水</li><li>肩膀放鬆，深呼吸一下</li><li>天亮之前，你已經很努力了</li></ul>
+          </aside>
+        </div>
+        <figure class="stop-fig reveal"><div class="phone"><img src="img/shot-night.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="夜奶陪伴：凌晨 03:12，親餵中・左邊，計時 12:48"></div></figure>
+      </li>
+      <li class="stop" id="day-0730">
+        <div class="stop-time"><time datetime="07:30">07:30</time><span>清晨</span></div>
+        <div class="stop-body">
+          <h3>交接卡</h3>
+          <p>換爸爸顧寶寶。上一餐幾點、喝了多少、尿布、睡多久、正在計時的項目，一張卡講清楚，還能留一句交代。開了家人共用，按一下就傳到爸爸手機。</p>
+          <button class="go" type="button" data-go="handoff">在試玩裡打開交接卡<span aria-hidden="true">→</span></button>
+          <aside class="stop-aside" aria-label="交接卡上有什麼">
+            <p class="aside-h">一張卡上有</p>
+            <ul class="aside-chips"><li>上次餵奶</li><li>下一餐大約</li><li>尿布</li><li>睡眠</li><li>正在計時</li><li>母乳庫存</li><li>交代事項</li></ul>
+          </aside>
+        </div>
+        <figure class="stop-fig reveal"><div class="phone"><img src="img/shot-handoff.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="交接卡：上次餵奶、下次大約幾點、尿布、睡眠、母乳庫存和交代事項"></div></figure>
+      </li>
+      <li class="stop" id="day-1100">
+        <div class="stop-time"><time datetime="11:00">11:00</time><span>上午</span></div>
+        <div class="stop-body">
+          <h3>接下來</h3>
+          <p>首頁直接告訴你「接下來」：大概幾點會想喝奶、什麼時候該準備哄睡。是從你自己的紀錄算出來的參考，寶寶說了算。</p>
+          <button class="go" type="button" data-go="home">在試玩裡看首頁<span aria-hidden="true">→</span></button>
+          <aside class="stop-aside" aria-label="首頁一鍵紀錄">
+            <p class="aside-h">首頁的一鍵紀錄</p>
+            <ul class="aside-chips"><li>親餵</li><li>瓶餵</li><li>尿布</li><li>睡眠</li><li>擠奶</li><li>體溫</li></ul>
+          </aside>
+        </div>
+        <figure class="stop-fig reveal"><div class="phone"><img src="img/shot-home.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="首頁：寶寶卡片、六個一鍵紀錄按鈕和「接下來」預測"></div></figure>
+      </li>
+      <li class="stop" id="day-1600">
+        <div class="stop-time"><time datetime="16:00">16:00</time><span>下午</span></div>
+        <div class="stop-body">
+          <h3>寶寶月照</h3>
+          <p>每個月的這一天，App 提醒你拍一張。選一個相框、寫一句話，身高體重自動放上去。照片只存在你的手機。</p>
+          <button class="go" type="button" data-go="monthly">在試玩裡打開月照<span aria-hidden="true">→</span></button>
+          <aside class="stop-aside" aria-label="月照的相框">
+            <p class="aside-h">四種相框</p>
+            <ul class="aside-chips"><li>奶油</li><li>花圈</li><li>拍立得</li><li>夜空</li></ul>
+          </aside>
+        </div>
+        <figure class="stop-fig stop-frame reveal"><img src="img/frame-wreath.jpg" width="540" height="675" loading="lazy" decoding="async" alt="花圈相框月照：2 個月的小乖，5.2 公斤、57.2 公分，「會發出咕咕、啊等聲音了」"></figure>
+      </li>
+      <li class="stop" id="day-2130">
+        <div class="stop-time"><time datetime="21:30">21:30</time><span>晚上</span></div>
+        <div class="stop-body">
+          <h3>成長回顧</h3>
+          <p>滿月、百日、第一年，手機裡的紀錄自己變成一段故事：半夜起來餵了幾次、換了幾片尿布、第一次發出「咕咕」聲是哪一天。在手機上做，不會上傳。</p>
+          <button class="go" type="button" data-go="recap">在試玩裡看成長回顧<span aria-hidden="true">→</span></button>
+          <aside class="stop-aside" aria-label="回顧裡的頁面">
+            <p class="aside-h">回顧會講到</p>
+            <ul class="aside-chips"><li>喝了幾次奶</li><li>陪了幾個深夜</li><li>換了幾片尿布</li><li>睡了多久</li><li>長大了多少</li><li>每一個第一次</li></ul>
+          </aside>
+        </div>
+        <figure class="stop-fig reveal"><div class="phone"><img src="img/shot-recap.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="成長回顧：你在半夜起來餵奶 24 次"></div></figure>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- 01 編號裝置展示 (numbered device showcase): three phones with big numerals; the highlight walks 01 → 02 → 03 -->
+<section class="spread" id="start" aria-labelledby="start-h" data-title="三步上手" data-pattern="01">
+  <div class="wrap">
+    <p class="run"><span>P.10</span>使用說明</p>
+    <header class="spread-head">
+      <h2 id="start-h">三步上手</h2>
+      <p class="dek">不用註冊、不用下載。打開網址就能用，喜歡再加到手機主畫面。</p>
+      <p class="pnote">卡片 01・編號裝置展示 <i>numbered device showcase</i></p>
+    </header>
+    <ol class="devices" data-loop>
+      <li class="device" style="--i:0">
+        <span class="dev-n" aria-hidden="true">01</span>
+        <div class="dev-shot"><div class="phone"><img src="img/shot-start.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="第一次打開：開始使用，或先看看範例資料"></div></div>
+        <div class="dev-t"><h3>打開就能用</h3><p>第一次打開，可以先看範例資料，或花一分鐘填寶寶的名字和生日。</p></div>
+      </li>
+      <li class="device" style="--i:1">
+        <span class="dev-n" aria-hidden="true">02</span>
+        <div class="dev-shot"><div class="phone"><img src="img/shot-home.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="首頁的一鍵紀錄按鈕"></div></div>
+        <div class="dev-t"><h3>一鍵記錄</h3><p>餵奶、尿布、睡眠都在首頁，單手一按就記好；計時中的項目一直留在最上面。</p></div>
+      </li>
+      <li class="device" style="--i:2">
+        <span class="dev-n" aria-hidden="true">03</span>
+        <div class="dev-shot"><div class="phone"><img src="img/shot-handoff.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="交接卡"></div></div>
+        <div class="dev-t"><h3>全家一起顧</h3><p>交接卡一張講清楚。開啟家人共用，全家手機上的紀錄都一樣，而且端對端加密。</p></div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- 02 抽象賣點卡 (abstract feature cards): each idea drawn as a small looping diagram instead of a screenshot -->
+<section class="spread spread-tint" id="care" aria-labelledby="care-h" data-title="看不見的貼心" data-pattern="02">
+  <div class="wrap">
+    <p class="run"><span>P.12</span>功能</p>
+    <header class="spread-head">
+      <h2 id="care-h">看不見的貼心</h2>
+      <p class="dek">有些功能不會一直跳出來，但每天都在幫忙。</p>
+      <p class="pnote">卡片 02・抽象賣點卡 <i>abstract feature cards</i></p>
+    </header>
+    <div class="ideas">
+      <article class="idea" data-loop>
+        <svg class="art art-gauge" viewBox="0 0 200 200" role="img" aria-labelledby="g-t">
+          <title id="g-t">接下來：下一餐大約 14:40，約 35 分鐘後</title>
+          <g class="ticks" aria-hidden="true"></g>
+          <circle class="g-track" cx="100" cy="100" r="70"/>
+          <circle class="g-arc" cx="100" cy="100" r="70" pathLength="100" transform="rotate(-90 100 100)"/>
+          <text class="g-k" x="100" y="82" text-anchor="middle">下一餐</text>
+          <text class="g-v" x="100" y="114" text-anchor="middle">14:40</text>
+          <text class="g-s" x="100" y="138" text-anchor="middle">約 35 分後</text>
+        </svg>
+        <h3><span class="idea-n">A</span>接下來</h3>
+        <p>從你最近的紀錄，推算下一餐、下一次想睡的大約時間。只是參考，寶寶說了算。</p>
+      </article>
+      <article class="idea" data-loop>
+        <svg class="art art-lock" viewBox="0 0 240 170" role="img" aria-labelledby="l-t">
+          <title id="l-t">家人共用：紀錄在媽媽手機上鎖好才送出，經過伺服器時是亂碼，到爸爸手機才解開</title>
+          <g class="l-server" aria-hidden="true">
+            <rect x="96" y="14" width="48" height="30" rx="6"/>
+            <line x1="104" y1="24" x2="136" y2="24"/><line x1="104" y1="33" x2="128" y2="33"/>
+            <text x="120" y="60" text-anchor="middle">伺服器</text>
+          </g>
+          <line class="l-wire" x1="64" y1="104" x2="176" y2="104"/>
+          <g class="l-phone"><rect x="18" y="66" width="46" height="80" rx="9"/><text x="41" y="162" text-anchor="middle">媽媽</text></g>
+          <g class="l-phone"><rect x="176" y="66" width="46" height="80" rx="9"/><text x="199" y="162" text-anchor="middle">爸爸</text></g>
+          <g class="l-pkt">
+            <rect x="10" y="88" width="62" height="32" rx="6"/>
+            <text class="l-plain" x="41" y="109" text-anchor="middle">瓶餵 120</text>
+            <text class="l-code" x="41" y="109" text-anchor="middle">9f·3a·c1</text>
+          </g>
+        </svg>
+        <h3><span class="idea-n">B</span>端對端加密</h3>
+        <p>家人共用時，紀錄在你的手機上先鎖好才送出；伺服器收到的只是一串看不懂的亂碼。</p>
+      </article>
+      <article class="idea" data-loop>
+        <svg class="art art-grow" viewBox="0 0 240 170" role="img" aria-labelledby="w-t">
+          <title id="w-t">成長曲線：寶寶的體重落在 WHO 參考範圍裡，出生 3.12 公斤、1 個月 4.25 公斤、2 個月 5.2 公斤</title>
+          <g class="w-grid" aria-hidden="true">
+            <line x1="24" y1="140" x2="224" y2="140"/>
+            <text x="24" y="156">0</text><text x="74" y="156">1</text><text x="124" y="156">2</text><text x="174" y="156">3</text><text x="210" y="156">4 月</text>
+          </g>
+          <path class="w-band" d="M24 102.3 L74 81.7 L124 62.9 L174 47.4 L224 35.4 L224 86.9 L174 95.4 L124 105.7 L74 119.4 L24 133.1 Z"/>
+          <path class="w-mid" d="M24 119.4 L74 102.3 L124 86.9 L174 74.9 L224 64.6"/>
+          <path class="w-line" d="M24 120.8 L74 101.4 L124 85.2" pathLength="100"/>
+          <circle class="w-dot" style="--d:0" cx="24" cy="120.8" r="4.5"/>
+          <circle class="w-dot" style="--d:1" cx="74" cy="101.4" r="4.5"/>
+          <circle class="w-dot" style="--d:2" cx="124" cy="85.2" r="4.5"/>
+          <text class="w-lbl" x="132" y="80">5.2 kg</text>
+        </svg>
+        <h3><span class="idea-n">C</span>成長曲線</h3>
+        <p>身高、體重、頭圍畫成曲線，對照 WHO 兒童生長標準的參考範圍。</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- 03 弧形扇卡 (arc fan): seven record types held like a hand of cards; one rises at a time; tap one to log it below -->
+<section class="spread" id="logs" aria-labelledby="logs-h" data-title="七種紀錄" data-pattern="03">
+  <div class="wrap">
+    <p class="run"><span>P.14</span>紀錄</p>
+    <header class="spread-head">
+      <h2 id="logs-h">七種紀錄，一把扇子</h2>
+      <p class="dek">最常用的七種紀錄。點一張，下面的試玩 App 就幫你打開那一種。</p>
+      <p class="pnote">卡片 03・弧形扇卡 <i>arc fan cards</i></p>
+    </header>
+    <div class="fan-stage arc-stage" data-loop>
+      <ul class="fan arc" aria-label="七種紀錄">
+        <li style="--i:0;--c:#e7809a"><button type="button" data-go="log:breast"><span class="fc-ico" aria-hidden="true">🤱</span><b>親餵</b><span class="fc-s">左 12 分・右 10 分</span></button></li>
+        <li style="--i:1;--c:#ef9b4b"><button type="button" data-go="log:bottle"><span class="fc-ico" aria-hidden="true">🍼</span><b>瓶餵</b><span class="fc-s">母乳 120 ml</span></button></li>
+        <li style="--i:2;--c:#b878cf"><button type="button" data-go="log:pump"><span class="fc-ico" aria-hidden="true">🥛</span><b>擠奶</b><span class="fc-s">左 60・右 50 ml</span></button></li>
+        <li style="--i:3;--c:#d9ab2a"><button type="button" data-go="log:diaper"><span class="fc-ico" aria-hidden="true">🧷</span><b>尿布</b><span class="fc-s">濕＋便便・黃色</span></button></li>
+        <li style="--i:4;--c:#6476d6"><button type="button" data-go="log:sleep"><span class="fc-ico" aria-hidden="true">😴</span><b>睡眠</b><span class="fc-s">2 小時 30 分</span></button></li>
+        <li style="--i:5;--c:#df6656"><button type="button" data-go="log:temp"><span class="fc-ico" aria-hidden="true">🌡️</span><b>體溫</b><span class="fc-s">36.9°C・耳溫</span></button></li>
+        <li style="--i:6;--c:#4fa77a"><button type="button" data-go="log:food"><span class="fc-ico" aria-hidden="true">🥣</span><b>副食品</b><span class="fc-s">米糊・第一口</span></button></li>
+      </ul>
+    </div>
+    <p class="fan-note">另外還有用藥、看診，和母乳庫存、疫苗、發展里程碑。</p>
+  </div>
+</section>
+
+<!-- 04 立體環視卡 (3D ring): the islands stand in a ring that turns slowly; drag it, or use the arrows -->
+<section class="spread spread-island" id="island" aria-labelledby="island-h" data-title="好孕島" data-pattern="04">
+  <div class="wrap">
+    <p class="run"><span>P.16</span>衛教</p>
+    <header class="spread-head">
+      <h2 id="island-h">好孕島</h2>
+      <p class="dek">把衛教做成一座座小島：備孕、懷孕、生產、坐月子到育兒，一共 35 個站點。每一站有重點小卡和打卡清單，很多站還有小測驗。</p>
+      <p class="pnote">卡片 04・立體環視卡 <i>3D ring carousel</i></p>
+    </header>
+    <div class="ring-stage" data-loop tabindex="0" aria-label="好孕島站點，可以左右拖動或用方向鍵轉動" aria-roledescription="輪播">
+      <ul class="ring">
+        <li class="spot" data-stage="prep"><span class="sp-ico" aria-hidden="true">🍊</span><b>葉酸果園</b><span class="sp-tag">備孕</span><span class="sp-d">備孕的第一站：把營養底子打好，從葉酸開始。</span></li>
+        <li class="spot" data-stage="prep"><span class="sp-ico" aria-hidden="true">🏋️</span><b>爸爸備孕健身房</b><span class="sp-tag">備孕</span><span class="sp-d">備孕不是媽媽一個人的事，爸爸也要一起練。</span></li>
+        <li class="spot" data-stage="preg"><span class="sp-ico" aria-hidden="true">🍃</span><b>害喜小屋</b><span class="sp-tag">懷孕</span><span class="sp-d">害喜不舒服？慢慢來，小口小口照顧自己。</span></li>
+        <li class="spot" data-stage="preg"><span class="sp-ico" aria-hidden="true">🤰</span><b>產檢診所</b><span class="sp-tag">懷孕</span><span class="sp-d">每一次產檢，都是和寶寶的約會。</span></li>
+        <li class="spot" data-stage="preg"><span class="sp-ico" aria-hidden="true">👣</span><b>胎動小站</b><span class="sp-tag">懷孕</span><span class="sp-d">寶寶在肚子裡踢踢你，每天一起數一數。</span></li>
+        <li class="spot" data-stage="preg"><span class="sp-ico" aria-hidden="true">🎒</span><b>待產包倉庫</b><span class="sp-tag">懷孕</span><span class="sp-d">包包準備好，隨時出發都不慌。</span></li>
+        <li class="spot" data-stage="birth"><span class="sp-ico" aria-hidden="true">🗼</span><b>產房燈塔</b><span class="sp-tag">生產</span><span class="sp-d">要生了嗎？燈塔幫你分辨什麼時候該出發。</span></li>
+        <li class="spot" data-stage="pp"><span class="sp-ico" aria-hidden="true">♨️</span><b>月子溫泉</b><span class="sp-tag">坐月子</span><span class="sp-d">辛苦了！月子期間，先把自己照顧好。</span></li>
+        <li class="spot" data-stage="baby"><span class="sp-ico" aria-hidden="true">🍼</span><b>哺乳咖啡館</b><span class="sp-tag">育兒</span><span class="sp-d">親餵、瓶餵、擠奶，找到最適合你們的方式。</span></li>
+        <li class="spot" data-stage="baby"><span class="sp-ico" aria-hidden="true">😴</span><b>睡眠森林</b><span class="sp-tag">育兒</span><span class="sp-d">安全地睡、好好地睡，全家都能多睡一點。</span></li>
+        <li class="spot" data-stage="baby"><span class="sp-ico" aria-hidden="true">🥣</span><b>副食品廚房</b><span class="sp-tag">育兒</span><span class="sp-d">第一口副食品，寶寶的美食冒險開始了！</span></li>
+        <li class="spot" data-stage="baby"><span class="sp-ico" aria-hidden="true">👟</span><b>學步小路</b><span class="sp-tag">育兒</span><span class="sp-d">搖搖晃晃踏出第一步，每一步都值得拍手。</span></li>
+      </ul>
+    </div>
+    <div class="ring-ctl">
+      <button type="button" class="rc-btn" data-ring="-1" aria-label="上一站">←</button>
+      <span class="ring-now" aria-live="polite"></span>
+      <button type="button" class="rc-btn" data-ring="1" aria-label="下一站">→</button>
+    </div>
+  </div>
+</section>
+
+<!-- 05 精選畫廊卡 (featured gallery): one frame large, three small; every few seconds the next one takes the stage -->
+<section class="spread" id="monthly" aria-labelledby="monthly-h" data-title="寶寶月照" data-pattern="05">
+  <div class="wrap">
+    <p class="run"><span>P.18</span>紀念</p>
+    <header class="spread-head">
+      <h2 id="monthly-h">寶寶月照</h2>
+      <p class="dek">每個月一張。奶油、花圈、拍立得、夜空四種相框，可以寫一句話，身高體重自動放上去。照片只存在你的手機。</p>
+      <p class="pnote">卡片 05・精選畫廊卡 <i>featured gallery cards</i></p>
+    </header>
+    <div class="gal" data-loop>
+      <figure class="gal-main">
+        <img class="gm on" src="img/frame-cream.jpg" width="540" height="675" loading="lazy" decoding="async" alt="奶油相框月照：2 個月的小乖，5.2 公斤、57.2 公分">
+        <img class="gm" src="img/frame-wreath.jpg" width="540" height="675" loading="lazy" decoding="async" alt="花圈相框月照：2 個月的小乖" aria-hidden="true">
+        <img class="gm" src="img/frame-polaroid.jpg" width="540" height="675" loading="lazy" decoding="async" alt="拍立得相框月照：2 個月的小乖" aria-hidden="true">
+        <img class="gm" src="img/frame-night.jpg" width="540" height="675" loading="lazy" decoding="async" alt="夜空相框月照：2 個月的小乖" aria-hidden="true">
+      </figure>
+      <div class="gal-side">
+        <p class="gal-cap" aria-live="polite"><b>奶油</b><span>溫柔的米色，像一本相簿。</span></p>
+        <div class="gal-thumbs" role="group" aria-label="選相框">
+          <button type="button" class="gt" aria-pressed="true" data-name="奶油" data-desc="溫柔的米色，像一本相簿。"><img src="img/frame-cream.jpg" width="540" height="675" loading="lazy" decoding="async" alt=""><span>奶油</span><i class="gt-bar" aria-hidden="true"></i></button>
+          <button type="button" class="gt" aria-pressed="false" data-name="花圈" data-desc="一圈小花，滿月、收涎都很適合。"><img src="img/frame-wreath.jpg" width="540" height="675" loading="lazy" decoding="async" alt=""><span>花圈</span><i class="gt-bar" aria-hidden="true"></i></button>
+          <button type="button" class="gt" aria-pressed="false" data-name="拍立得" data-desc="貼一條紙膠帶，像手作相簿。"><img src="img/frame-polaroid.jpg" width="540" height="675" loading="lazy" decoding="async" alt=""><span>拍立得</span><i class="gt-bar" aria-hidden="true"></i></button>
+          <button type="button" class="gt" aria-pressed="false" data-name="夜空" data-desc="月亮和星星，晚上看也不刺眼。"><img src="img/frame-night.jpg" width="540" height="675" loading="lazy" decoding="async" alt=""><span>夜空</span><i class="gt-bar" aria-hidden="true"></i></button>
+        </div>
+        <p class="gal-note">月照會提醒你每個月拍一張，一年後拼成一張成長拼貼。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 彩虹扇卡 (rainbow fan): the seven share-card colours in a rainbow arch; a wave runs through them -->
+<section class="spread spread-tint" id="share" aria-labelledby="share-h" data-title="分享卡" data-pattern="06">
+  <div class="wrap">
+    <p class="run"><span>P.20</span>分享</p>
+    <header class="spread-head">
+      <h2 id="share-h">七種顏色的分享卡</h2>
+      <p class="dek">寶寶的新技能、成長日記、每天的滴雞精時光打卡，挑一個顏色就能存圖或傳 LINE。<mark>用藥、體溫、看診這些健康紀錄，不會出現在分享卡上。</mark></p>
+      <p class="pnote">卡片 06・彩虹扇卡 <i>rainbow fan cards</i></p>
+    </header>
+    <div class="fan-stage rainbow-stage" data-loop>
+      <ul class="fan rainbow" aria-label="七種分享卡顏色">
+        <li style="--i:0"><button type="button" aria-pressed="false"><img src="img/share-rose.jpg" width="360" height="640" loading="lazy" decoding="async" alt="莓果色分享卡：小乖的新技能"><span>莓果</span></button></li>
+        <li style="--i:1"><button type="button" aria-pressed="false"><img src="img/share-peach.jpg" width="360" height="640" loading="lazy" decoding="async" alt="蜜桃色分享卡：小乖 2 個月 14 天"><span>蜜桃</span></button></li>
+        <li style="--i:2"><button type="button" aria-pressed="false"><img src="img/share-cream.jpg" width="360" height="640" loading="lazy" decoding="async" alt="奶茶色分享卡：滴雞精時光連續 3 天"><span>奶茶</span></button></li>
+        <li style="--i:3"><button type="button" aria-pressed="false"><img src="img/share-green.jpg" width="360" height="640" loading="lazy" decoding="async" alt="薄荷色分享卡：小乖的新技能"><span>薄荷</span></button></li>
+        <li style="--i:4"><button type="button" aria-pressed="false"><img src="img/share-sky.jpg" width="360" height="640" loading="lazy" decoding="async" alt="霧藍色分享卡：小乖 2 個月 14 天"><span>霧藍</span></button></li>
+        <li style="--i:5"><button type="button" aria-pressed="false"><img src="img/share-night.jpg" width="360" height="640" loading="lazy" decoding="async" alt="夜空色分享卡：滴雞精時光連續 3 天"><span>夜空</span></button></li>
+        <li style="--i:6"><button type="button" aria-pressed="false"><img src="img/share-purple.jpg" width="360" height="640" loading="lazy" decoding="async" alt="紫芋色分享卡：小乖 2 個月 14 天"><span>紫芋</span></button></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- the product part: the real app, live, on sample data that never reaches the visitor's own app -->
+<section class="try" id="try" aria-labelledby="try-h" data-title="試玩">
+  <div class="wrap try-in">
+    <div class="try-side">
+      <p class="run"><span>P.22</span>實際操作</p>
+      <h2 id="try-h">真的 App，現在就能玩</h2>
+      <p class="try-lead">這是完整的易家做媽媽，放了虛構的媽媽「小美」和寶寶「小乖」兩週的範例紀錄。隨便點、隨便記，都只存在這個試玩裡，不會跑進你自己的 App。</p>
+      <div class="panel" aria-labelledby="tasks-h">
+        <div class="panel-top">
+          <h3 id="tasks-h">試玩任務</h3>
+          <span class="panel-state" id="try-state" data-s="idle">準備中</span>
+        </div>
+        <div class="prog" aria-hidden="true"><i id="try-bar"></i></div>
+        <p class="prog-t" id="try-count" aria-live="polite">完成 0／5</p>
+        <ol class="tasks" id="tasks">
+          <li data-task="diaper"><span class="tk" aria-hidden="true"></span><span class="tt">記一筆尿布</span><button type="button" class="tgo" data-go="log:diaper">帶我去</button></li>
+          <li data-task="feed"><span class="tk" aria-hidden="true"></span><span class="tt">開始一次親餵計時</span><button type="button" class="tgo" data-go="feed">帶我去</button></li>
+          <li data-task="handoff"><span class="tk" aria-hidden="true"></span><span class="tt">打開交接卡</span><button type="button" class="tgo" data-go="handoff">帶我去</button></li>
+          <li data-task="recap"><span class="tk" aria-hidden="true"></span><span class="tt">看「到今天」的成長回顧</span><button type="button" class="tgo" data-go="recap">帶我去</button></li>
+          <li data-task="night"><span class="tk" aria-hidden="true"></span><span class="tt">打開夜奶陪伴</span><button type="button" class="tgo" data-go="night">帶我去</button></li>
+        </ol>
+        <div class="panel-foot">
+          <button type="button" class="btn btn-line btn-sm" id="try-reset">重新開始</button>
+          <a class="btn btn-line btn-sm" id="try-new" href="../index.html?sandbox=1#/home" target="_blank" rel="noopener">開新分頁玩</a>
+        </div>
+      </div>
+      <p class="try-tip">在手機上：手指放在框框外面滑，就能繼續往下看。</p>
+    </div>
+    <div class="try-device">
+      <div class="phone phone-live">
+        <iframe id="try-frame" title="易家做媽媽試玩版" tabindex="0"></iframe>
+        <div class="try-poster" id="try-poster">
+          <img src="img/shot-home.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="">
+          <button type="button" class="btn btn-plum" id="try-start">開始試玩</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="promise" id="promise" aria-labelledby="promise-h" data-title="我們的承諾">
+  <div class="wrap promise-in">
+    <h2 class="promise-h" id="promise-h">我們的承諾</h2>
+    <ol class="promise-list">
+      <li><b>紀錄預設只存在你的手機。</b>不用登入也能用；換手機時，可以匯出備份檔帶走。</li>
+      <li><b>照片留在手機裡。</b>月照、超音波照片都存在你的手機；Q 版頭像也是在手機上畫出來的。</li>
+      <li><b>家人共用是端對端加密。</b>鑰匙只放在邀請連結裡，伺服器收到的是看不懂的亂碼。</li>
+      <li><b>健康紀錄不上分享卡。</b>用藥、體溫、看診不會出現在分享卡，也不會出現在交接卡傳出去的 LINE 文字裡。</li>
+      <li><b>衛教內容附出處。</b>每一則小知識都能點開來源看原文。App 只是參考，身體不舒服請找醫師。</li>
+    </ol>
+  </div>
+</section>
+</main>
+
+<footer class="back" id="get" data-title="封底">
+  <div class="wrap back-in">
+    <div class="back-text">
+      <p class="run run-inv"><span>封底</span>帶走</p>
+      <h2>把易家做媽媽放進口袋</h2>
+      <ol class="a2hs">
+        <li><b>iPhone</b>用 Safari 打開 → 下方「分享」→「加入主畫面」</li>
+        <li><b>Android</b>用 Chrome 打開 → 右上角「⋮」→「加到主畫面」或「安裝應用程式」</li>
+      </ol>
+      <a class="btn btn-paper" id="open-app" href="../index.html">打開 App<span aria-hidden="true">→</span></a>
+    </div>
+    <figure class="qr">
+      <div class="qr-box" id="qr" role="img" aria-label="打開易家做媽媽的 QR code"></div>
+      <figcaption>用手機相機掃一下</figcaption>
+    </figure>
+  </div>
+  <div class="wrap"><div class="colophon">
+    <span>易家做媽媽・易家滴雞精</span>
+    <span>畫面是 App 的範例資料，人物是虛構的。</span>
+    <span>App 內容僅供參考，不能取代醫師的建議。</span>
+    <button type="button" class="notes-btn" id="notes-btn" aria-pressed="false">設計筆記：顯示卡片名稱</button>
+  </div></div>
+</footer>
+</div>
+<script src="lp.js"></script>
+</body>
+</html>

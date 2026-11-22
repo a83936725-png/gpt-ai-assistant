@@ -61,6 +61,29 @@ const buildReport = (record, { siteUrl }) => {
       ${type.advice ? `<p style="margin:0;font-size:14px;color:#6d665f">給你的一句話：${esc(type.advice)}</p>` : ''}
     </div>`);
   }
+  const an = ins.analysis;
+  const bar = (label, value, color, tail) => `<tr><td style="padding:5px 8px 5px 0;font-size:14px;white-space:nowrap;width:120px">${label}</td><td style="padding:5px 0"><div style="background:#efe9df;border-radius:6px;height:10px"><div style="background:${color};width:${Math.max(3, value)}%;height:10px;border-radius:6px"></div></div></td><td style="padding:5px 0 5px 10px;font-size:13px;color:#6d665f;text-align:right;white-space:nowrap;width:48px">${tail}</td></tr>`;
+  if (an) {
+    parts.push(h2('能力分析與排名'));
+    parts.push(`<div style="padding:16px 18px;border-radius:14px;background:#f2f7f6">
+      <p style="margin:0;font-size:13px;color:#6d665f">IKIGAI 契合指數</p>
+      <p style="margin:2px 0 4px;font-size:34px;font-weight:800;color:#1f1c1a">${an.index}<span style="font-size:15px;color:#6d665f"> / 100</span>&nbsp;&nbsp;<span style="font-size:17px">${esc(an.level)}</span></p>
+      <p style="margin:0;font-size:13px;color:#6d665f">四圈平衡度 ${an.balance}</p></div>`);
+    if (an.abilities.length) {
+      parts.push('<h3 style="margin:18px 0 6px;font-size:16px">能力排名</h3>');
+      parts.push(`<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">${an.abilities.map((x, i) => bar(`${i + 1}. ${esc(x.name)}`, x.score, i < 3 ? '#dd9324' : '#b9b2a8', x.score)).join('')}</table>`);
+    }
+    if (an.careers.length) {
+      parts.push('<h3 style="margin:18px 0 6px;font-size:16px">職業契合度排名</h3>');
+      parts.push(`<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">${an.careers.map((x, i) => bar(`${i + 1}. ${esc(x.name)}`, x.match, '#23988b', `${x.match}%`)).join('')}</table>`);
+    }
+    parts.push(table([
+      an.strong.length ? row('前三強項', an.strong.map((x) => `<b>${esc(x.name)}</b>：${esc(x.use)}`).join('<br>')) : '',
+      an.grow.length ? row('可以發展', an.grow.map((x) => `<b>${esc(x.name)}</b>：${esc(x.tip)}`).join('<br>')) : '',
+      an.assets.length ? row('核心資產', an.assets.map((x, i) => `${i + 1}. ${esc(x.text)}（${x.n} 圈）`).join('<br>')) : '',
+      an.priorities.length ? row('補強順序', an.priorities.map((x) => `[${esc(x.level)}] ${esc(x.name)}`).join('<br>')) : '',
+    ].join('')));
+  }
   parts.push(h2('你的四個圈'));
   parts.push(table(KEYS.map((k) => row(`<span style="color:${COLOR[k]};font-weight:700">●</span> ${SHORT[k]}（${inCircle(k).length}）`, esc(inCircle(k).join('、')) || '—')).join('')));
   parts.push(h2('交集'));
@@ -99,6 +122,19 @@ const buildReport = (record, { siteUrl }) => {
     });
   }
 
+  if (an && an.roadmap.length) {
+    parts.push(h2('三階段生涯規劃建議'));
+    const tint = ['#dc4f67', '#dd9324', '#4f63d6'];
+    an.roadmap.forEach((st, i) => {
+      parts.push(`<div style="margin:12px 0 0;padding:14px 16px;border-radius:12px;background:#faf7f2;border-left:4px solid ${tint[i] || '#23988b'}">
+        <p style="margin:0;font-size:16px;font-weight:800">${i + 1}. ${esc(st.title)}&nbsp;&nbsp;<span style="font-size:13px;font-weight:400;color:#6d665f">${esc(st.when)}</span></p>
+        <p style="margin:6px 0;font-size:15px;font-weight:700">${esc(st.goal)}</p>
+        <ul style="margin:0;padding-left:20px;font-size:14.5px">${st.actions.map((x) => `<li style="margin:3px 0">${esc(x)}</li>`).join('')}</ul></div>`);
+    });
+    if (an.habits.length) parts.push(`<p style="margin:14px 0 0;font-size:15px"><b>每週好習慣：</b>${an.habits.map(esc).join('；')}</p>`);
+    if (an.risk) parts.push(`<p style="margin:8px 0 0;font-size:15px"><b>風險提醒：</b>${esc(an.risk)}</p>`);
+  }
+
   if (main) {
     parts.push(h2('你的生涯規劃'));
     parts.push(table([
@@ -131,7 +167,10 @@ const buildReport = (record, { siteUrl }) => {
     '',
     ...KEYS.map((k) => `【${SHORT[k]}】${inCircle(k).join('、') || '—'}`),
     `IKIGAI 中心：${center.join('、') || '—'}`,
+    an ? `IKIGAI 契合指數：${an.index}/100（${an.level}）` : '',
+    an && an.abilities.length ? `能力排名：${an.abilities.map((x, i) => `${i + 1}.${x.name}`).join(' ')}` : '',
     ins.careers.length ? `建議職業：${ins.careers.map((c) => c.name).join('、')}` : '',
+    ...(an ? an.roadmap.map((st) => `【${st.title} ${st.when}】${st.goal}`) : []),
     ins.skills.length ? `需要加強：${ins.skills.join('、')}` : '',
     main ? `主要方向：${main.title}` : '',
     '',

@@ -32,6 +32,29 @@ const readText = async (stream) => {
  * @param {Object} body
  * @param {{ country?: string, city?: string, userAgent?: string }} meta Added by the server.
  */
+const take = (v, n) => (Array.isArray(v) ? v.slice(0, n) : []);
+const pct = (v) => Math.min(100, Math.max(0, Math.round(Number(v)) || 0));
+/** Ability analysis, rankings and the staged roadmap computed in the browser. */
+const sanitizeAnalysis = (a) => {
+  if (!a || typeof a !== 'object') return null;
+  return {
+    index: pct(a.index),
+    level: str(a.level, 30),
+    balance: pct(a.balance),
+    abilities: take(a.abilities, 9).map((x) => ({ name: str(x?.name, 20), score: pct(x?.score) })).filter((x) => x.name),
+    careers: take(a.careers, 6).map((x) => ({ name: str(x?.name, 40), match: pct(x?.match) })).filter((x) => x.name),
+    strong: take(a.strong, 3).map((x) => ({ name: str(x?.name, 20), use: str(x?.use, 80) })).filter((x) => x.name),
+    grow: take(a.grow, 3).map((x) => ({ name: str(x?.name, 20), tip: str(x?.tip, 80) })).filter((x) => x.name),
+    assets: take(a.assets, 5).map((x) => ({ text: str(x?.text, 60), n: Math.min(4, Math.max(1, Number(x?.n) || 1)) })).filter((x) => x.text),
+    priorities: take(a.priorities, 8).map((x) => ({ name: str(x?.name, 40), level: str(x?.level, 6) })).filter((x) => x.name),
+    roadmap: take(a.roadmap, 3).map((x) => ({
+      title: str(x?.title, 20), when: str(x?.when, 20), goal: str(x?.goal, 80), actions: take(x?.actions, 5).map((y) => str(y, 120)).filter(Boolean),
+    })).filter((x) => x.title),
+    habits: take(a.habits, 4).map((x) => str(x, 80)).filter(Boolean),
+    risk: str(a.risk, 120),
+  };
+};
+
 export const sanitizeRecord = (body, meta = {}) => {
   if (!body || typeof body !== 'object') throw new IkigaiInputError('沒有資料');
   if (!isId(body.id)) throw new IkigaiInputError('資料編號不正確');
@@ -88,6 +111,7 @@ export const sanitizeRecord = (body, meta = {}) => {
         .map((x) => ({ title: str(x?.title, 20), career: str(x?.career, 40) })).filter((x) => x.career),
       skills: (Array.isArray(insights.skills) ? insights.skills : []).slice(0, 8).map((s) => str(s, 40)).filter(Boolean),
       weakest: KEYS.includes(insights.weakest) ? insights.weakest : '',
+      analysis: sanitizeAnalysis(insights.analysis),
     },
     ai: text(body.ai, 8000),
     referredBy: isId(body.referredBy) && body.referredBy !== body.id ? body.referredBy : '',
@@ -251,6 +275,8 @@ export const summarize = (r) => {
     circles: Object.fromEntries(KEYS.map((k) => [k, inCircle(k)])),
     center,
     careers: r.insights.careers.map((c) => c.name),
+    fitIndex: r.insights.analysis ? r.insights.analysis.index : null,
+    topAbilities: r.insights.analysis ? r.insights.analysis.abilities.slice(0, 3).map((x) => x.name) : [],
     mainDirection: main ? main.title : '',
     goals: r.plan.goals,
     actionsDone: r.plan.actions.filter((a) => a.done).length,
@@ -270,11 +296,11 @@ const fmt = (ms) => (ms ? new Date(ms).toISOString().replace('T', ' ').slice(0, 
 
 export const toCsv = (records, { referrals = new Map(), names = new Map() } = {}) => {
   const head = ['建立時間 (UTC)', '更新時間 (UTC)', '姓名', '手機/LINE', 'Email', '目前步驟', '熱愛', '擅長', '世界需要', '報酬',
-    'IKIGAI 中心', '建議職業', '主要方向', '30 天目標', '90 天目標', '1 年目標', '行動完成', '補充說明', '推薦人', '來源', '帶來人數', '地區', '裝置'];
+    'IKIGAI 中心', '建議職業', '契合指數', '前三強項', '主要方向', '30 天目標', '90 天目標', '1 年目標', '行動完成', '補充說明', '推薦人', '來源', '帶來人數', '地區', '裝置'];
   const rows = records.map(summarize).map((s) => [
     fmt(s.startedAt), fmt(s.updatedAt), s.name, s.contact, s.email, s.step,
     s.circles.love.join('、'), s.circles.good.join('、'), s.circles.need.join('、'), s.circles.paid.join('、'),
-    s.center.join('、'), s.careers.join('、'), s.mainDirection, s.goals.d30, s.goals.d90, s.goals.y1,
+    s.center.join('、'), s.careers.join('、'), s.fitIndex ?? '', s.topAbilities.join('、'), s.mainDirection, s.goals.d30, s.goals.d90, s.goals.y1,
     `${s.actionsDone}/${s.actionsTotal}`, s.note, names.get(s.referredBy) || (s.referredBy ? '（已刪除）' : ''), s.source,
     referrals.get(s.id) || 0, s.location, s.device,
   ]);

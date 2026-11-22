@@ -395,6 +395,31 @@
   .banner p { margin: 0; }
   .plan-read .goal-box { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
   .plan-read .goal-box b { display: block; font-size: 13px; color: var(--muted); }
+  .career-list { display: grid; gap: 14px; }
+  .career-detail { border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: grid; gap: 10px; }
+  .cd-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+  .cd-no { width: 34px; height: 34px; border-radius: 50%; display: grid; place-content: center; background: var(--text); color: var(--surface); font-weight: 800; }
+  .cd-title { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  .cd-title b { font-size: 18px; }
+  .cd-match { display: grid; text-align: right; font-size: 12px; color: var(--muted); }
+  .cd-match b { font-size: 20px; color: var(--need); font-variant-numeric: tabular-nums; }
+  .cd-why { margin: 0; font-size: 14.5px; color: var(--muted); }
+  .cd-label { display: block; font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 6px; width: 100%; }
+  .cd-skills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .skill-tag { font-size: 13.5px; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--love) 12%, transparent); border: 1px dashed color-mix(in srgb, var(--love) 50%, transparent); }
+  .skill-tag.have { background: color-mix(in srgb, var(--need) 14%, transparent); border: 1px solid color-mix(in srgb, var(--need) 45%, transparent); }
+  .cd-gaps ul, .cd-advice ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 14.5px; }
+  .cd-gaps { background: color-mix(in srgb, var(--good) 10%, transparent); border-radius: 12px; padding: 10px 12px; }
+  .cd-detail-btn { justify-self: start; }
+  .weeks { width: 100%; border-collapse: collapse; font-size: 14px; margin: 6px 0 4px; }
+  .weeks th, .weeks td { text-align: left; vertical-align: top; padding: 9px 10px; border-top: 1px solid var(--border); }
+  .weeks th { white-space: nowrap; color: var(--muted); font-weight: 700; width: 7.5em; }
+  .weeks td b { display: block; margin-bottom: 2px; }
+  .weeks td small { display: block; color: var(--muted); margin-top: 3px; }
+  .phase .checks { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--surface); font-size: 13.5px; }
+  .phase .checks b { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 3px; }
+  .phase .time { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+  @media (max-width: 560px) { .weeks th { width: 5.5em; } }
   /* ability analysis and roadmap */
   .score-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: center; margin: 4px 0 8px; }
   .score-ring { width: 138px; aspect-ratio: 1; border-radius: 50%; display: grid; place-content: center; text-align: center;
@@ -589,7 +614,7 @@
   let state = load();
   let filter = null;
   let matchFilter = 'all';
-  let aiAvailable = true;
+  let aiAvailable = false; // turned on only when /ikigai/status reports AI is enabled
   let aiError = null;
   let aiBusy = false;
   let planBusy = false;
@@ -793,11 +818,13 @@
       },
       insights: {
         archetype: (({ name, tagline, strengths, advice }) => ({ name, tagline, strengths, advice }))(archetype()),
-        careers: ins.careers.map((c) => ({ name: c.name, circles: c.circles, skills: c.skills, items: c.items })),
+        careers: ins.careers.map((c) => ({
+          name: c.name, circles: c.circles, skills: c.skills, items: c.items, match: c.match, have: c.have, gaps: c.gaps, advice: [...c.advice, c.firstStep],
+        })),
         paths: ins.paths.map((p) => ({ title: p.title, career: p.career.name })),
         skills: ins.skills.map((x) => x.name),
         weakest: ins.weakest.key,
-        analysis: (({ index, level, balance, abilities, careers, strong, grow, assets, priorities, roadmap, habits, risk }) => ({
+        analysis: (({ index, level, balance, abilities, careers, strong, grow, assets, priorities, roadmap, weeks, habits, risk }) => ({
           index, level, balance,
           abilities: abilities.filter((x) => x.score).map((x) => ({ name: x.name, score: x.score })),
           careers: careers.map((c) => ({ name: c.name, match: c.match })),
@@ -805,7 +832,8 @@
           grow: grow.map((x) => ({ name: x.name, tip: x.grow })),
           assets: assets.map((x) => ({ text: x.text, n: x.circles.length })),
           priorities: priorities.map((x) => ({ name: x.name, level: x.level })),
-          roadmap: roadmap.map((st) => ({ title: st.title, when: st.when, goal: st.goal, actions: st.actions })),
+          roadmap: roadmap.map((st) => ({ title: st.title, when: st.when, goal: st.goal, actions: st.actions, checks: st.checks, time: st.time })),
+          weeks: weeks.map((w) => ({ when: w.when, title: w.title, tasks: w.tasks, output: w.output })),
           habits, risk,
         }))(analysis()),
       },
@@ -1181,7 +1209,7 @@
             </div>`).join('') || '<p class="empty">沒有符合的項目。</p>'}</div>` : '<p class="empty">還沒有任何項目，請先回到前面四步填寫。</p>'}
           <h3>補充說明（選填）</h3>
           <label class="sr-only" for="note">補充說明</label>
-          <textarea id="note" maxlength="300" placeholder="例如：目前職業、年資、想轉換的方向、時間或經濟限制。深度解析時會參考。">${esc(state.note)}</textarea>
+          <textarea id="note" maxlength="300" placeholder="例如：目前職業、年資、想轉換的方向、時間或經濟限制。會一起寫進你的報告。">${esc(state.note)}</textarea>
         </div>
       </section>`;
     let noteTimer;
@@ -1294,11 +1322,7 @@
         ${analysisCardHtml()}
         ${careerCardHtml()}
         ${roadmapCardHtml()}
-        <div class="card" id="aiCard">
-          <h2>深度解析</h2>
-          <p class="hint">依你的四個圈，寫出更完整的解析：四個交集、可能的 IKIGAI 方向、建議職業、需要加強的能力，和分階段的職業規劃。</p>
-          <div id="aiBox">${aiBlock()}</div>
-        </div>
+        <div id="aiSlot">${aiCardHtml()}</div>
         ${shareCardHtml()}
       </section>`;
     if (animateResult) countUp($('view'));
@@ -1321,8 +1345,23 @@
     const clear = $('clearFilter');
     if (clear) clear.addEventListener('click', () => { filter = null; refreshRegions(); });
   }
-  function refreshAi() { if (!$('aiBox')) return; $('aiBox').innerHTML = aiBlock(); bindAi(); }
+  // The analysis card only shows while the server has AI turned on (IKIGAI_AI_ENABLED).
+  function aiCardHtml() {
+    if (!aiAvailable) return '';
+    return `<div class="card" id="aiCard">
+          <h2>深度解析</h2>
+          <p class="hint">依你的四個圈，寫出更完整的解析：四個交集、可能的 IKIGAI 方向、建議職業、需要加強的能力，和分階段的職業規劃。</p>
+          <div id="aiBox">${aiBlock()}</div>
+        </div>`;
+  }
+  function refreshAi() {
+    if ($('aiSlot')) { $('aiSlot').innerHTML = aiCardHtml(); if ($('aiBtn')) bindAi(); return; }
+    if (!$('aiBox')) return;
+    $('aiBox').innerHTML = aiBlock();
+    bindAi();
+  }
   function bindAi() {
+    if (!$('aiBtn')) return;
     $('aiBtn').addEventListener('click', runAi);
     if ($('aiRetry')) $('aiRetry').addEventListener('click', runAi);
   }
@@ -1389,6 +1428,73 @@
     paid: '研究市場行情：找 5 個相關職缺或服務，看要求的能力和收費方式。',
   };
 
+  // How to build each skill a suggested career needs (first matching pattern wins).
+  const SKILL_TIPS = [
+    [/編輯|校對/, '幫朋友的文章做校對和改寫，練習抓錯字、順句子和下標題。'],
+    [/SEO/, '學關鍵字研究，寫 4 篇以關鍵字為主題的文章，追蹤搜尋流量。'],
+    [/廣告投放/, '用小預算（例如 1,000 元）投一次廣告，比較不同素材的成效。'],
+    [/成效數據|數位行銷/, '學會 Google Analytics 基本報表，替一個網站或帳號做月報。'],
+    [/社群經營|社群/, '經營一個社群帳號 8 週，每週看數據調整一次內容。'],
+    [/個人品牌/, '固定在一個平台每週發文，3 個月後檢視追蹤數和互動。'],
+    [/企劃書|提案寫作|內容企劃|腳本/, '寫一份完整企劃書（目標、對象、預算、時程），請有經驗的人給意見。'],
+    [/寫作|文案|新聞/, '每週寫 2 篇並請有經驗的人修改，3 個月累積 10 篇作品。'],
+    [/ESG|碳盤查/, '讀 2 份企業永續報告，練習整理成一頁重點和改善建議。'],
+    [/簡報/, '練習 5 分鐘簡報並錄影檢討，在讀書會或公司實際分享一次。'],
+    [/引導/, '帶一次小組討論或工作坊，練習提問、控場和收斂結論。'],
+    [/課程設計|教學設計/, '把一個主題做成 30 分鐘小課，實際教 3 個人並收回饋。'],
+    [/教育科技|數位工具/, '學會 3 個常用工具（例如 Canva、Notion、Google 表單），用它們完成一個小專案。'],
+    [/SQL|資料處理/, '學 SQL 基本查詢，用公開資料庫練習 20 題。'],
+    [/視覺化/, '用 Excel 或 Looker Studio 把一份公開資料做成圖表儀表板。'],
+    [/統計/, '讀完一本統計入門（平均、分布、相關），用自己的資料算一次。'],
+    [/Excel/, '學會樞紐分析表和常用函數，做一份每月報表。'],
+    [/商業分析/, '挑一家公司寫一頁分析：客群、收入來源、競爭者和機會。'],
+    [/財務報表/, '讀懂一家上市公司的三大報表，整理成一頁重點。'],
+    [/財務管理|成本/, '替自己或一個小專案做 3 個月的收支表，找出可以省下的成本。'],
+    [/研究方法|資料整理/, '選一個問題做小型研究：設計 10 題問卷、收 30 份回覆並寫結論。'],
+    [/Figma/, '跟著教學用 Figma 重做 2 個 App 畫面，再設計一個自己的。'],
+    [/視覺設計/, '學排版、配色和字體原則，每週做一張練習作品。'],
+    [/使用者研究|需求訪談/, '訪談 5 位使用者，整理成一份需求洞察報告。'],
+    [/拍攝/, '每週拍一組主題照片，請攝影同好給回饋。'],
+    [/剪輯/, '每週剪一支 1 分鐘短影音，8 週後比較進步。'],
+    [/音樂製作/, '用軟體完成一首 1 分鐘的作品，上傳並收集回饋。'],
+    [/遊戲設計/, '設計一個簡單的桌遊或小遊戲，找 5 個人試玩並修改。'],
+    [/Git/, '把自己的專案放上 GitHub，練習分支、合併和寫說明文件。'],
+    [/系統設計/, '畫出一個你熟悉服務的系統架構圖，請工程師朋友指正。'],
+    [/程式/, '跟著線上課程做一個小專案，完成後放上 GitHub。'],
+    [/銷售/, '試著賣出一個小產品或服務，記錄成交和被拒絕的原因。'],
+    [/談判/, '在採購、接案或租屋時練習議價，事後寫下哪裡可以更好。'],
+    [/客戶關係/, '用試算表整理 20 位潛在客戶，每兩週追蹤一次。'],
+    [/定價/, '研究 5 個同業的價格，替自己的服務訂出 3 種方案。'],
+    [/電商/, '開一個小賣場上架 3 項商品，走完一次從上架到出貨的流程。'],
+    [/專案管理/, '主動負責一個小專案，練習排時程、分工和回報進度。'],
+    [/時間管理/, '用每週計畫表安排 4 週，檢討哪些時間被浪費、怎麼改。'],
+    [/活動企劃/, '辦一場 10～20 人的小活動，從報名到檢討全部自己來。'],
+    [/跨部門|溝通協調/, '參與一個跨團隊合作，負責整理會議紀錄和追進度。'],
+    [/組織發展/, '研究一家公司的組織架構和培訓制度，寫一頁改善建議。'],
+    [/面談/, '模擬 5 次面談，練習結構化提問和記錄重點。'],
+    [/勞動法規|法規|法律|合約/, '讀完相關法規重點，找 3 個實際案例練習判斷。'],
+    [/助人技巧|提問|傾聽/, '每週做一次一對一深談，記錄問了什麼、聽到什麼、下次怎麼問更好。'],
+    [/同理|衝突/, '遇到意見不合時練習先複述對方的想法，再說自己的觀點。'],
+    [/心理學/, '讀一本心理學入門書，或修一門線上課程並寫心得。'],
+    [/證照|教練/, '查清楚需要的證照，排定 3～6 個月的考照時程。'],
+    [/食品|營養|運動科學|照顧技術|動物照護|術語|知識/, '找一門有結業證書的課程，3 個月內完成並把重點整理成筆記。'],
+    [/外語/, '每天 30 分鐘練習，3 個月後報名一次檢定確認程度。'],
+    [/翻譯/, '每週翻譯一篇文章，和專業譯本比對差異。'],
+    [/問題拆解|邏輯|系統思考/, '每週拆解一個真實問題，寫下原因、選項和你的建議。'],
+    [/料理/, '每週練一道菜並記錄配方，3 個月後辦一次試吃會。'],
+    [/工藝|樂理|演奏/, '每週固定練習並記錄成品，3 個月後辦一次小型發表。'],
+    [/行程規劃|導覽/, '替朋友規劃一次一日遊並實際帶隊，收集回饋。'],
+    [/社區|募資|政策/, '參與一個在地或公益專案，先從協助者做起。'],
+  ];
+  const skillTip = (name) => (SKILL_TIPS.find(([re]) => re.test(name)) || [null, '找一門入門課，搭配一個小作品練習，再請業內人士給回饋。'])[1];
+  // Advice for each circle a career does not cover yet.
+  const CAREER_GAP = {
+    love: (n) => `還不確定自己喜不喜歡：先接一個「${n}」相關的小任務試做，確認做得開心再投入。`,
+    good: (n) => `能力還需要補強：照下面「要補足的能力」練 2～3 個月，再用作品證明你能勝任「${n}」。`,
+    need: (n) => `想清楚為誰服務：訪談 3 位可能的客戶或使用者，找出「${n}」能幫他們解決什麼問題。`,
+    paid: (n) => `確認收入來源：查 5 個「${n}」的職缺薪資或接案行情，算算多久能達到你要的收入。`,
+  };
+
   function careerInsights() {
     const byCareer = new Map();
     state.items.forEach((it) => {
@@ -1406,21 +1512,26 @@
         });
       });
     });
-    // At most two careers from the same group, so one strong item does not crowd out the rest.
-    const perGroup = new Map();
-    const careers = [...byCareer.values()]
+    // Three careers, preferring different groups so one strong item does not crowd out the rest.
+    const sorted = [...byCareer.values()]
       .map((c) => ({ ...c, items: [...c.items], circles: KEYS.filter((k) => c.circles.has(k)), skills: [...c.skills] }))
-      .sort((a, b) => b.circles.length - a.circles.length || b.score - a.score)
-      .filter((c) => {
-        const n = perGroup.get(c.entryIdx) || 0;
-        perGroup.set(c.entryIdx, n + 1);
-        return n < 2;
-      })
-      .slice(0, 6);
+      .sort((a, b) => b.circles.length - a.circles.length || b.score - a.score);
+    const careers = [];
+    sorted.forEach((c) => { if (careers.length < 3 && !careers.some((x) => x.entryIdx === c.entryIdx)) careers.push(c); });
+    sorted.forEach((c) => { if (careers.length < 3 && !careers.includes(c)) careers.push(c); });
 
     // Skills the top careers need that the visitor has not listed as a strength.
     const strengths = inCircle('good').map((it) => it.text.toLowerCase());
     const has = (skill) => strengths.some((g) => skill.toLowerCase().includes(g) || g.includes(skill.toLowerCase().slice(0, 2)));
+    careers.forEach((c) => {
+      c.have = c.skills.filter(has);
+      c.gaps = c.skills.filter((x) => !has(x)).map((name) => ({ name, tip: skillTip(name) }));
+      const covered = c.skills.length ? c.have.length / c.skills.length : 0;
+      c.match = Math.min(98, Math.round(40 + (c.circles.length / 4) * 35 + covered * 15 + (Math.min(3, c.items.length) / 3) * 10));
+      c.advice = KEYS.filter((k) => !c.circles.includes(k)).map((k) => CAREER_GAP[k](c.name));
+      if (!c.advice.length) c.advice.push(`四個圈都符合，是最值得優先投入的方向：直接開始累積「${c.name}」的作品和實績。`);
+      c.firstStep = `這週就做：找 3 個「${c.name}」的職缺或案子，圈出你還沒有的要求`;
+    });
     const need = new Map();
     careers.slice(0, 3).forEach((c) => c.skills.forEach((s) => { if (!has(s)) need.set(s, [...(need.get(s) || []), c.name]); }));
     const skills = [...need.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 6).map(([name, forCareers]) => ({ name, forCareers }));
@@ -1510,13 +1621,7 @@
     const circles = CIRCLES.map((c, i) => ({ key: c.key, short: c.short, n: counts[i], pct: Math.round((counts[i] / Math.max(1, ...counts)) * 100) }))
       .sort((a, b) => b.n - a.n);
 
-    const strengths = inCircle('good').map((it) => it.text.toLowerCase());
-    const has = (skill) => strengths.some((g) => skill.toLowerCase().includes(g) || g.includes(skill.toLowerCase().slice(0, 2)));
-    const careers = ins.careers.map((c) => {
-      const covered = c.skills.length ? c.skills.filter(has).length / c.skills.length : 0;
-      const match = Math.min(98, Math.round(40 + (c.circles.length / 4) * 35 + covered * 15 + (Math.min(3, c.items.length) / 3) * 10));
-      return { name: c.name, circles: c.circles, match };
-    }).sort((a, b) => b.match - a.match);
+    const careers = ins.careers.map((c) => ({ name: c.name, circles: c.circles, match: c.match })).sort((a, b) => b.match - a.match);
 
     const assets = state.items.slice().sort((a, b) => circlesOf(b).length - circlesOf(a).length).slice(0, 5)
       .map((it) => ({ text: it.text, circles: circlesOf(it) }));
@@ -1533,29 +1638,52 @@
 
     const goal = careers[0] ? careers[0].name : (mainDir() ? mainDir().title : '你的方向');
     const backup = careers[1] ? careers[1].name : '';
+    const third = careers[2] ? careers[2].name : '';
     const s1 = priorities[0] ? priorities[0].name : '核心技能';
     const s2 = priorities[1] ? priorities[1].name : '作品集';
+    const s3 = priorities[2] ? priorities[2].name : '';
     const best = strong[0] ? strong[0].name : '你的強項';
     const weak = ins.weakest;
     const roadmap = [
-      { key: 'explore', h: 'd30', when: '0～3 個月', title: '探索驗證期', goal: `確認「${goal}」是不是真的適合你`, actions: [
-        `訪談 2～3 位正在做「${goal}」的人，問他們的一天和收入`,
-        '整理 5 個相關職缺或案子，列出共同要求的能力',
-        `用「${best}」做一個週末小實驗，看自己做得開不開心`,
-        GAP_ADVICE[weak.key],
-      ] },
-      { key: 'build', h: 'd90', when: '3～12 個月', title: '能力建立期', goal: '補齊關鍵能力，做出能證明實力的作品', actions: [
-        `系統學習「${s1}」，每週固定投入 3～5 小時`,
-        `補強「${s2}」，完成 2～3 個能公開展示的作品`,
-        '用作品接第一個案子、專案或志工機會，拿到真實回饋',
-        '每季回顧一次：哪些事最投入、哪些最有收入',
-      ] },
-      { key: 'grow', h: 'y1', when: '1～3 年', title: '定位深耕期', goal: `在「${goal}」建立專業定位與穩定收入`, actions: [
-        '建立個人品牌：固定在一個平台分享專業內容',
-        '累積 3 個代表作品或成功案例，作為轉職或提高報價的依據',
-        '設定收入目標，評估全職、兼職或自行接案哪種最適合',
-        backup ? `保留備案：持續關注「${backup}」，作為第二條路` : '保留一條備案路線，降低轉換風險',
-      ] },
+      { key: 'explore', h: 'd30', when: '0～3 個月', title: '探索驗證期', goal: `確認「${goal}」是不是真的適合你`,
+        time: '每週 3～5 小時：平日 2 次各 1 小時，週末 2 小時',
+        actions: [
+          `訪談 2～3 位正在做「${goal}」的人，問他們的一天、收入和入行方式`,
+          `整理「${goal}」${backup ? `和「${backup}」` : ''}各 5 個職缺或案子，列出共同要求的能力`,
+          `用「${best}」做一個週末小實驗，看自己做得開不開心`,
+          `開始學「${s1}」的基礎，每週寫一篇學習筆記`,
+          GAP_ADVICE[weak.key],
+        ],
+        checks: ['完成 2 次以上的業內訪談', `決定主要方向（${goal}${backup ? ` 或 ${backup}` : ''}）`, '寫下 3 個要補足的能力和學習順序'] },
+      { key: 'build', h: 'd90', when: '3～12 個月', title: '能力建立期', goal: '補齊關鍵能力，做出能證明實力的作品',
+        time: '每週 5～8 小時：平日每天 30～60 分鐘學習，週末半天做作品',
+        actions: [
+          `系統學習「${s1}」${s2 ? `和「${s2}」` : ''}，完成一門完整課程`,
+          `完成 2～3 個能公開展示的「${goal}」作品，整理成作品集`,
+          s3 ? `補強「${s3}」，用在下一個作品裡` : '把作品分享到社群或作品平台，收集回饋',
+          '用作品接第一個案子、專案或志工機會，拿到真實回饋',
+          '每季回顧一次：哪些事最投入、哪些最有收入，調整方向',
+        ],
+        checks: ['作品集有 3 件作品', '完成第一個真實案子或專案', '至少 1 位業內人士認可你的作品'] },
+      { key: 'grow', h: 'y1', when: '1～3 年', title: '定位深耕期', goal: `在「${goal}」建立專業定位與穩定收入`,
+        time: '視轉換方式：全職投入，或在本業之外每週 8～10 小時經營',
+        actions: [
+          '建立個人品牌：固定在一個平台分享專業內容，每月至少 2 篇',
+          '累積 3 個代表作品或成功案例，作為轉職或提高報價的依據',
+          '設定收入目標，評估全職、兼職或自行接案哪種最適合',
+          '加入相關社群或公會，建立 10 位以上的業內人脈',
+          backup ? `保留備案：持續關注「${backup}」${third ? `和「${third}」` : ''}，作為第二條路` : '保留一條備案路線，降低轉換風險',
+        ],
+        checks: ['有穩定的收入來源（工作或固定客戶）', '別人提到這個領域會想到你', '收入達到你設定的目標'] },
+    ];
+    // Two-week blocks for the first 12 weeks.
+    const weeks = [
+      { when: '第 1～2 週', title: '認識職業', tasks: [`列出 ${[goal, backup, third].filter(Boolean).map((x) => `「${x}」`).join('、')}各 5 個職缺或案子`, '圈出共同要求的能力和你還沒有的部分'], output: '一份「職業需求對照表」' },
+      { when: '第 3～4 週', title: '訪談驗證', tasks: [`找 2～3 位「${goal}」從業者聊 30 分鐘`, '試做一個相關的小任務，記錄做的感受'], output: '決定主要方向' },
+      { when: '第 5～6 週', title: `補能力：${s1}`, tasks: [`學習「${s1}」的基礎`, skillTip(s1)], output: '一份學習筆記和練習成果' },
+      { when: '第 7～8 週', title: `補能力：${s2}`, tasks: [`學習「${s2}」`, skillTip(s2)], output: '能拿出來展示的練習作品' },
+      { when: '第 9～10 週', title: '做作品', tasks: [`完成一個和「${goal}」相關、可以公開的作品`, '請 2 位業內人士給回饋並修改'], output: '作品集第一件作品' },
+      { when: '第 11～12 週', title: '投入市場', tasks: ['更新履歷、自我介紹和作品集頁面', '投遞或洽談 5 個機會，回顧 12 週成果並訂下一季計畫'], output: '第一個面試、案子或合作機會' },
     ];
     const habits = [
       `每天 30 分鐘練習「${s1}」`,
@@ -1563,7 +1691,7 @@
       '每月和一位業內人士聊天，擴展人脈',
     ];
     return {
-      index, level, levelTip, balance, circles, abilities, strong, grow, careers, assets, priorities, roadmap, habits,
+      index, level, levelTip, balance, circles, abilities, strong, grow, careers, assets, priorities, roadmap, weeks, habits,
       risk: RISK_TIPS[weak.key], weakest: weak, crossPct: total ? Math.round((state.items.filter((it) => circlesOf(it).length > 1).length / total) * 100) : 0,
     };
   }
@@ -1620,14 +1748,18 @@
     const a = analysis();
     return `
       <div class="card" id="roadmapCard">
-        <h2>三階段生涯規劃建議</h2>
-        <p class="hint">依你的建議職業、強項和最需要補強的圈，排出從現在到 3 年後的路線。</p>
+        <h2>詳細生涯規劃</h2>
+        <p class="hint">依你的 3 個建議職業、強項和要補足的能力，排出從現在到 3 年後的路線，以及前 12 週每兩週要做的事。</p>
         <div class="roadmap">${a.roadmap.map((st, i) => `
           <div class="phase" style="--i:${i}">
             <div class="phase-head"><span class="phase-no">${i + 1}</span><div><b>${st.title}</b><span>${st.when}</span></div></div>
             <p class="phase-goal">${esc(st.goal)}</p>
             <ul>${st.actions.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+            <div class="checks"><b>完成這個階段的檢核點</b>${st.checks.map((x) => `☐ ${esc(x)}`).join('<br>')}</div>
+            <p class="time">時間安排：${esc(st.time)}</p>
           </div>`).join('')}</div>
+        <h3>前 12 週詳細行動表</h3>
+        <table class="weeks">${a.weeks.map((w) => `<tr><th>${w.when}</th><td><b>${esc(w.title)}</b>${w.tasks.map((x) => `・${esc(x)}`).join('<br>')}<small>完成後你會有：${esc(w.output)}</small></td></tr>`).join('')}</table>
         <div class="an-grid">
           <div><h3>每週好習慣</h3><ul class="plain-list">${a.habits.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>
           <div><h3>風險提醒</h3><p class="gap" style="margin:0">${esc(a.risk)}</p></div>
@@ -1649,8 +1781,10 @@
         <tr><th>核心資產</th><td>${a.assets.map((x, i) => `${i + 1}. ${esc(x.text)}（${x.circles.length} 圈）`).join('　')}</td></tr>
         ${a.priorities.length ? `<tr><th>補強順序</th><td>${a.priorities.map((x) => `[${x.level}] ${esc(x.name)}`).join('　')}</td></tr>` : ''}
       </table>
-      <h3>三階段生涯規劃建議</h3>
-      <table>${a.roadmap.map((st) => `<tr><th>${st.title}<br><small>${st.when}</small></th><td><b>${esc(st.goal)}</b><br>${st.actions.map((x) => `・${esc(x)}`).join('<br>')}</td></tr>`).join('')}</table>
+      <h3>詳細生涯規劃</h3>
+      <table>${a.roadmap.map((st) => `<tr><th>${st.title}<br><small>${st.when}</small></th><td><b>${esc(st.goal)}</b><br>${st.actions.map((x) => `・${esc(x)}`).join('<br>')}<br><small>檢核點：${st.checks.map(esc).join('；')}｜時間：${esc(st.time)}</small></td></tr>`).join('')}</table>
+      <h3>前 12 週詳細行動表</h3>
+      <table>${a.weeks.map((w) => `<tr><th>${w.when}</th><td><b>${esc(w.title)}</b>：${w.tasks.map(esc).join('；')}（成果：${esc(w.output)}）</td></tr>`).join('')}</table>
       <p>每週好習慣：${a.habits.map(esc).join('；')}</p>
       <p>風險提醒：${esc(a.risk)}</p>
     </section>`;
@@ -1666,22 +1800,31 @@
         <p class="hint">目前的項目還對應不到具體職業。試著寫得更具體一點，例如把「電腦」寫成「寫程式」、把「幫助人」寫成「教學」或「心理健康支持」。</p>${gap}</div>`;
     }
     const careerRows = ins.careers.map((c, i) => `
-      <div class="career">
-        <div class="career-head"><b>${esc(c.name)}</b><span class="ccs" aria-label="符合 ${c.circles.length} 個圈">${circleChips(c.circles)}</span></div>
-        <p>因為你寫了：${c.items.map(esc).join('、')}</p>
+      <div class="career-detail">
+        <div class="cd-head">
+          <span class="cd-no">${i + 1}</span>
+          <div class="cd-title"><b>${esc(c.name)}</b><span class="ccs" aria-label="符合 ${c.circles.length} 個圈">${circleChips(c.circles)}</span></div>
+          <span class="cd-match"><b>${c.match}%</b>契合度</span>
+        </div>
+        <p class="cd-why">為什麼適合：你寫了「${c.items.map(esc).join('、')}」，符合${c.circles.map((k) => BY_KEY[k].short).join('、')}。</p>
+        <div class="cd-skills">
+          <span class="cd-label">需要的能力</span>
+          ${c.skills.map((x) => `<span class="skill-tag${c.have.includes(x) ? ' have' : ''}">${c.have.includes(x) ? '✓ ' : ''}${esc(x)}</span>`).join('')}
+        </div>
+        ${c.gaps.length ? `<div class="cd-gaps"><span class="cd-label">要補足的能力與方法</span>
+          <ul>${c.gaps.map((g) => `<li><b>${esc(g.name)}</b>：${esc(g.tip)}</li>`).join('')}</ul></div>`
+    : '<p class="cd-why">需要的能力你大多已經具備，重點是累積作品和實績。</p>'}
+        <div class="cd-advice"><span class="cd-label">給你的建議</span>
+          <ul>${c.advice.map((x) => `<li>${esc(x)}</li>`).join('')}<li><b>${esc(c.firstStep)}</b></li></ul></div>
         ${readOnly ? '' : `<button class="btn ghost small" type="button" data-addcareer="${i}">加入生涯規劃</button>`}
       </div>`).join('');
     const pathRows = ins.paths.map((p) => `<div class="path"><span class="path-tag">${p.title}</span><b>${esc(p.career.name)}</b><p>${esc(p.how)}</p></div>`).join('');
-    const skillRows = ins.skills.map((s) => `<li><b>${esc(s.name)}</b><span>${s.forCareers.map(esc).join('、')}需要</span></li>`).join('');
     return `
       <div class="card" id="careerCard">
-        <h2>職涯建議</h2>
-        <p class="hint">依你寫的項目和四個圈的交集整理。符合的圈越多，越接近你的 IKIGAI。</p>
-        <h3>建議職業</h3>
-        <div class="careers">${careerRows}</div>
+        <h2>3 個建議職業</h2>
+        <p class="hint">依你寫的項目和四個圈的交集挑出最適合的 3 個。打勾的是你已具備的能力，其餘是要補足的。</p>
+        <div class="career-list">${careerRows}</div>
         ${pathRows ? `<h3>可以往哪個方向走</h3><div class="paths">${pathRows}</div>` : ''}
-        <h3>需要加強的能力</h3>
-        ${skillRows ? `<ul class="skills">${skillRows}</ul>` : '<p class="hint">建議職業需要的能力，你大多已經寫在「擅長」裡了。</p>'}
         ${ins.owned.length ? `<p class="fine">你已具備：${ins.owned.map(esc).join('、')}</p>` : ''}
         ${gap}
         <p class="fine">建議僅供參考，實際選擇請依自己的情況與市場狀況判斷。</p>
@@ -1706,7 +1849,9 @@
     }));
     if ($('addTimeline')) {
       $('addTimeline').addEventListener('click', () => {
-        const added = analysis().roadmap.flatMap((st) => st.actions.slice(0, 3).map((x) => addAction(x.slice(0, 80), st.h))).filter(Boolean).length;
+        const an = analysis();
+        const steps = [...an.weeks.map((w) => [`${w.when}：${w.title}（${w.output}）`, 'd90']), ...an.roadmap.slice(1).flatMap((st) => st.actions.slice(0, 2).map((x) => [x, 'y1']))];
+        const added = steps.map(([x, h]) => addAction(x.slice(0, 80), h)).filter(Boolean).length;
         save();
         toast(added ? `已加入 ${added} 項行動` : '這些步驟已經在行動清單裡了', added ? { label: '前往', run: () => go('plan') } : null);
         renderProgress();
@@ -1718,7 +1863,10 @@
     const ins = careerInsights();
     if (!ins.careers.length) return '';
     return `<section><h2>職涯建議</h2>
-      <table>${ins.careers.map((c) => `<tr><th>${esc(c.name)}</th><td>符合：${c.circles.map((k) => BY_KEY[k].short).join('、')}　依據：${c.items.map(esc).join('、')}</td></tr>`).join('')}</table>
+      <table>${ins.careers.map((c) => `<tr><th>${esc(c.name)}<br><small>契合度 ${c.match}%</small></th><td>符合：${c.circles.map((k) => BY_KEY[k].short).join('、')}　依據：${c.items.map(esc).join('、')}
+        <br>需要的能力：${c.skills.map((x) => (c.have.includes(x) ? `✓${esc(x)}` : esc(x))).join('、')}
+        ${c.gaps.length ? `<br>要補足：${c.gaps.map((g) => `<b>${esc(g.name)}</b>（${esc(g.tip)}）`).join('；')}` : ''}
+        <br>建議：${[...c.advice, c.firstStep].map(esc).join('；')}</td></tr>`).join('')}</table>
       ${ins.paths.length ? `<h3>可以往哪個方向走</h3><table>${ins.paths.map((p) => `<tr><th>${p.title}</th><td><b>${esc(p.career.name)}</b>　${esc(p.how)}</td></tr>`).join('')}</table>` : ''}
       ${ins.skills.length ? `<h3>需要加強的能力</h3><table>${ins.skills.map((s) => `<tr><th>${esc(s.name)}</th><td>${s.forCareers.map(esc).join('、')}需要</td></tr>`).join('')}</table>` : ''}
       <p>最需要補強的圈：${ins.weakest.short}。${GAP_ADVICE[ins.weakest.key]}</p>
@@ -1855,7 +2003,7 @@
           <h2>${dir ? `「${esc(dir.title)}」的目標` : '目標'}</h2>
           <p class="hint">目標要具體、可以衡量，例如「發表 4 篇文章」比「多寫作」好。</p>
           <div class="goals">${HORIZONS.map((h) => `<div class="goal"><label for="g-${h.key}">${h.label}</label><textarea id="g-${h.key}" data-goal="${h.key}" maxlength="200" placeholder="${h.key === 'd30' ? '這個月要完成什麼？' : h.key === 'd90' ? '三個月後要看到什麼成果？' : '一年後希望在哪裡？'}">${esc(state.plan.goals[h.key])}</textarea></div>`).join('')}</div>
-          <div id="planBox" style="margin-top:14px">${planBlock()}</div>
+          <div id="planBox" style="margin-top:14px">${aiAvailable ? planBlock() : ''}</div>
         </div>
         <div class="card">
           <h2>行動清單</h2>
@@ -1868,7 +2016,11 @@
     bindShareCard();
   }
 
-  function refreshPlanBlock() { if (!$('planBox')) return; $('planBox').innerHTML = planBlock(); bindPlanAi(); }
+  function refreshPlanBlock() {
+    if (!$('planBox')) return;
+    $('planBox').innerHTML = aiAvailable ? planBlock() : '';
+    if (aiAvailable) bindPlanAi();
+  }
   function refreshActions() {
     $('actionsBox').innerHTML = actionsHtml();
     bindActions();
@@ -1876,6 +2028,7 @@
     renderNav();
   }
   function bindPlanAi() {
+    if (!$('planAi')) return;
     $('planAi').addEventListener('click', runPlan);
     if ($('planRetry')) $('planRetry').addEventListener('click', runPlan);
   }
@@ -1975,7 +2128,7 @@
           <div class="opts">
             <label for="shareName">顯示名稱</label>
             <input type="text" id="shareName" maxlength="20" placeholder="選填，例如：小安" value="${esc(state.name)}">
-            <label><input type="checkbox" id="shareAi" ${state.ai ? 'checked' : 'disabled'}> 包含深度解析</label>
+            <label${state.ai ? '' : ' hidden'}><input type="checkbox" id="shareAi" ${state.ai ? 'checked' : 'disabled'}> 包含深度解析</label>
             <label><input type="checkbox" id="sharePlan" ${hasPlan ? 'checked' : 'disabled'}> 包含生涯規劃</label>
           </div>
           <div class="toolbar" style="margin-top:10px"><button class="btn" type="button" id="makeLink">產生分享連結</button></div>

@@ -81,6 +81,9 @@ const ANALYSIS = {
   roadmap: [{
     title: '探索驗證期', when: '0～3 個月', goal: '確認方向', actions: ['訪談 2 位業內人士'],
   }],
+  weeks: [{
+    when: '第 1～2 週', title: '認識職業', tasks: ['列出 5 個職缺'], output: '職業需求對照表',
+  }],
   habits: ['每天 30 分鐘練習'],
   risk: '收入還不穩定前不要裸辭。',
 };
@@ -226,10 +229,11 @@ test('report email goes to the saved address with the full report', async () => 
   expect(sent[0].to).toEqual('ming@example.com');
   expect(sent[0].subject).toContain('王小明');
   expect(sent[0].subject).toContain('熱情創作者');
-  expect(sent[0].html).toContain('前三個建議職業的準備方式');
+  expect(sent[0].html).toContain('要補足的能力');
   expect(sent[0].html).toContain('能力分析與排名');
-  expect(sent[0].html).toContain('三階段生涯規劃建議');
+  expect(sent[0].html).toContain('詳細生涯規劃');
   expect(sent[0].text).toContain('IKIGAI 契合指數：72/100');
+  expect(sent[0].html).toContain('前 12 週詳細行動表');
   expect(sent[0].html).toContain(`ref=${RECORD.id}`);
   expect(sent[0].html).not.toContain('<script');
   // A second send right away is refused; the admin sees the status.
@@ -255,6 +259,7 @@ test('ability analysis is cleaned up, stored and shown to the consultant', async
   expect(a.index).toEqual(100);
   expect(a.abilities).toEqual(ANALYSIS.abilities);
   expect(a.roadmap).toEqual([]);
+  expect(a.weeks).toEqual(ANALYSIS.weeks);
   expect(a.extra).toBeUndefined();
   const { records } = await (await admin('records')).json();
   expect(records[0].fitIndex).toEqual(100);

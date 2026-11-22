@@ -428,5 +428,6 @@
 
   App.social = {
     api, isReady: () => apiOk, me: () => live.me, forgetAll, forIsland, subscribe, look, poll, mapOpened, mapChip, openResidents, openSettings, openJoin, unread, publicAv, chibi, soc, upd, call, REACT,
+    people: () => live.people.slice(), react, // 夜奶陪伴: wave to a mom who is awake
   };
 }());

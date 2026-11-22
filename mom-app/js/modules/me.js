@@ -284,9 +284,12 @@
         if (mode.dataset.value === 'replace') {
           if (!(await ui.confirm('用備份檔取代這台裝置上的所有資料？'))) return;
           // keep my own invite code, login, and 島上的媽媽 identity + 祝福牆 keys (the backup's walls are added to mine)
-          store.replace({
-            ...data, share: store.state.share || data.share, auth: store.state.auth, social: keepSocial(store.state.social, data.social), family: store.state.family || null,
-          });
+          const next = {
+            ...data, share: store.state.share || data.share, auth: store.state.auth, social: keepSocial(store.state.social, data.social),
+          };
+          const fam = store.state.family || data.family; // 家人共用: this phone's family (or the backup's, restoring her own phone)
+          if (fam) next.family = fam; else delete next.family;
+          store.replace(next);
           if (App.family && store.state.family) App.family.rebase(); // 家人共用: the next sync merges, it never deletes the family's records
           if (App.media) await App.media.prune(); // photos of the replaced data go; the backup's own photos stay
         } else mergeState(data);

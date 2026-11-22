@@ -316,6 +316,8 @@
     }
     ui.toast(`🔔 ${title}：${body}`, 5000);
   }
+  // when this phone gets reminders from the server (手機通知), they are not shown twice: only a note while it is open
+  const say = (title, body) => (App.push && App.push.remindsHere() ? (document.visibilityState === 'visible' ? ui.toast(`🔔 ${title}：${body}`, 5000) : null) : notify(title, body));
   function checkReminders() {
     const s = store.state;
     const n = getN();
@@ -333,16 +335,16 @@
         const due = pred ? pred.next.getTime() : new Date(last.start).getTime() + (r.minutes || 180) * C.MIN;
         if (now.getTime() >= due && n.feed !== last.id) {
           n.feed = last.id; setN(n);
-          notify('餵奶提醒', `${pred ? '差不多是寶寶平常喝奶的時間了・' : ''}距離上次餵奶 ${C.fmtDuration(now - new Date(last.start))}`);
+          say('餵奶提醒', `${pred ? '差不多是寶寶平常喝奶的時間了・' : ''}距離上次餵奶 ${C.fmtDuration(now - new Date(last.start))}`);
         }
       }
       if (r.type === 'appt' && pastTime && n.appt !== today) {
         const items = upcomingAppointments(now);
-        if (items.length) { n.appt = today; setN(n); notify('預約提醒', items.join('、')); }
+        if (items.length) { n.appt = today; setN(n); say('預約提醒', items.join('、')); }
       }
       if (r.type === 'chicken' && pastTime && n.chicken !== today && !s.chicken.log[today]) {
         n.chicken = today; setN(n);
-        notify('滴雞精時光', '休息一下，溫熱一杯給自己 💜');
+        say('滴雞精時光', '休息一下，溫熱一杯給自己 💜');
       }
     });
   }
@@ -383,9 +385,10 @@
     title: '提醒設定',
     render(el) {
       const perm = 'Notification' in window ? Notification.permission : 'unsupported';
+      if (App.push) el.append(App.push.card()); // 手機通知: also when the app is closed (members)
       el.append(h('section', { class: 'card soft' },
-        h('div', { class: 'card-title' }, '🔔 通知權限'),
-        h('p', { class: 'small muted' }, perm === 'granted' ? '已開啟通知。' : perm === 'denied' ? '通知被封鎖了，請到瀏覽器設定開啟。' : perm === 'unsupported' ? '這個瀏覽器不支援通知，提醒會以畫面訊息顯示。' : '開啟通知，才能在背景收到提醒。iPhone 請先「加入主畫面」再開啟。'),
+        h('div', { class: 'card-title' }, '🔔 App 開著時的通知'),
+        h('p', { class: 'small muted' }, perm === 'granted' ? '已開啟：App 開著或在背景時，到時間會跳出通知。' : perm === 'denied' ? '通知被封鎖了，請到瀏覽器設定開啟。' : perm === 'unsupported' ? '這個瀏覽器不支援通知，提醒會以畫面訊息顯示。' : '開啟後，App 開著或在背景時，到時間會跳出通知。iPhone 請先「加入主畫面」再開啟。'),
         perm === 'default' ? h('button', { class: 'btn btn-sm btn-primary mt', onclick: async () => { await Notification.requestPermission(); App.refresh(); } }, '開啟通知') : null));
       store.state.reminders.forEach((r) => {
         const toggle = h('input', { type: 'checkbox', class: 'switch', checked: r.enabled, 'aria-label': r.label });
@@ -411,7 +414,7 @@
           }[r.type]),
           h('div', { class: 'mt' }, control)));
       });
-      el.append(h('p', { class: 'disclaimer' }, '目前提醒在 App 開著或在背景時運作；App 完全關閉時也能收到的推播通知，會在之後的版本加入。'));
+      el.append(h('p', { class: 'disclaimer' }, '開啟上面的「手機通知」（會員），App 關著也會收到提醒；沒有開啟時，提醒在 App 開著或在背景時運作。'));
     },
   });
 

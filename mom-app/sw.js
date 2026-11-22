@@ -6,7 +6,7 @@ const ASSETS = [
   'js/core.js', 'js/vendor/qrcode.js', 'js/store.js', 'js/media.js', 'js/ui.js', 'js/app.js',
   'js/data/log-types.js', 'js/data/island-data.js', 'js/data/health-data.js', 'js/data/pregnancy-data.js', 'js/data/journey-data.js', 'js/data/outing-data.js', 'js/data/faq-data.js', 'js/data/extras-data.js', 'js/data/goods-data.js', 'js/data/sources-data.js',
   'js/modules/home.js', 'js/modules/babylog.js', 'js/modules/milk.js', 'js/modules/avatar.js', 'js/modules/qban.js', 'js/modules/island.js', 'js/modules/diary.js',
-  'js/modules/health.js', 'js/modules/pregnancy.js', 'js/modules/journey.js', 'js/modules/outing.js', 'js/modules/monitor.js', 'js/modules/search.js', 'js/modules/extras.js', 'js/modules/goods.js', 'js/modules/share.js', 'js/modules/privacy.js', 'js/modules/account.js', 'js/modules/gift.js', 'js/modules/starter.js', 'js/modules/groupbuy.js', 'js/modules/social.js', 'js/modules/wall.js', 'js/modules/circle.js', 'js/modules/weekly.js', 'js/modules/monthly.js', 'js/modules/admin.js', 'js/modules/brand.js', 'js/modules/me.js', 'js/modules/sources.js',
+  'js/modules/health.js', 'js/modules/pregnancy.js', 'js/modules/journey.js', 'js/modules/outing.js', 'js/modules/monitor.js', 'js/modules/search.js', 'js/modules/extras.js', 'js/modules/goods.js', 'js/modules/share.js', 'js/modules/privacy.js', 'js/modules/account.js', 'js/modules/gift.js', 'js/modules/starter.js', 'js/modules/groupbuy.js', 'js/modules/social.js', 'js/modules/wall.js', 'js/modules/circle.js', 'js/modules/weekly.js', 'js/modules/monthly.js', 'js/modules/admin.js', 'js/modules/push.js', 'js/modules/brand.js', 'js/modules/me.js', 'js/modules/sources.js',
   'assets/logo.svg', 'assets/logo-full.svg', 'assets/icon.svg', 'assets/icon-192.png', 'assets/icon-512.png',
 ];
 self.addEventListener('install', (e) => {
@@ -25,7 +25,23 @@ self.addEventListener('fetch', (e) => {
       : fetch(req).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); } return res; }).catch(() => caches.match(req))),
   );
 });
+// 手機通知 from the member server: {title, body, url ('#/…'), tag}
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (er) { d = { body: e.data ? e.data.text() : '' }; }
+  const url = typeof d.url === 'string' && d.url.startsWith('#/') ? d.url : '#/home';
+  e.waitUntil(self.registration.showNotification(d.title || '易家做媽媽', {
+    body: d.body || '', icon: 'assets/icon-192.png', badge: 'assets/icon-192.png', tag: d.tag || undefined, renotify: !!d.tag, data: { url },
+  }));
+});
+// a tapped notification opens its page: in the app that is already open, or a new window
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  e.waitUntil(self.clients.matchAll({ type: 'window' }).then((list) => (list[0] ? list[0].focus() : self.clients.openWindow('./'))));
+  const hash = (e.notification.data && e.notification.data.url) || '#/home';
+  const target = new URL(`./${hash}`, self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    const w = list.find((c) => c.url.startsWith(self.registration.scope)) || list[0];
+    if (w) { w.postMessage({ type: 'open', url: hash }); return w.focus(); }
+    return self.clients.openWindow(target);
+  }));
 });

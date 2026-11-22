@@ -130,7 +130,13 @@
   setTimeout(refreshMe, 800);
   // keep 「已成功邀請 N 位」 fresh when the user comes back to 我的 or 邀請好友
   const maybeRefresh = () => { if (token() && Date.now() - lastRefresh > 10000) setTimeout(refreshMe, 0); };
-  function logout({ quiet = false } = {}) { mode = 'login'; store.update((s) => { delete s.auth; }); if (!quiet) ui.toast('已登出（手機上的紀錄都還在）'); }
+  function logout({ quiet = false } = {}) {
+    mode = 'login';
+    const pp = store.state.settings && store.state.settings.push; // 手機通知 stop on this phone with the account
+    if (pp && pp.endpoint && store.state.auth) { call('POST', 'push/unsubscribe', { endpoint: pp.endpoint }).catch(() => {}); if (App.push) App.push.forgetHere(); }
+    store.update((s) => { delete s.auth; if (s.settings && s.settings.push) s.settings.push = null; });
+    if (!quiet) ui.toast('已登出（手機上的紀錄都還在）');
+  }
 
   /* ---- 個資：同意、下載、刪除 ---- */
   const MKT_LABEL = () => `我願意收到${B().brandName || '品牌'}的優惠與活動訊息（可隨時關閉）`;

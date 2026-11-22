@@ -359,3 +359,11 @@ body.late .quick-edit-row { margin-top: 28px; }
 .pw-col.on .pw-bar { background: var(--t-pump); }
 .pw-col.on .pw-day { font-weight: 800; color: var(--c-text); }
 .pw-day { color: var(--c-text-2); }
+
+/* 手機通知 (提醒設定) */
+.push-card .switch-row { padding: 8px 0; gap: 12px; }
+.push-topic > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.push-sub { display: block; }
+.push-why { margin-bottom: 0; }
+.gb-push { display: flex; justify-content: center; margin-top: 10px; }
+.push-offer { min-height: 44px; }

@@ -113,7 +113,7 @@ const publicCampaign = ({
 }) => ({ ...c, startsAt: Number.isFinite(startMs) ? startMs : null, endsAt: endMs });
 
 export function mountGroupbuy(router, {
-  store, now, over, clientIp, wrap, currentUser, env, needVerify = () => false, metrics = { count: async () => {} },
+  store, now, over, clientIp, wrap, currentUser, env, needVerify = () => false, metrics = { count: async () => {} }, notify = async () => 0,
 }) {
   const campaigns = loadCampaigns(env, now());
   const byId = new Map(campaigns.map((c) => [c.id, c]));
@@ -162,6 +162,19 @@ export function mountGroupbuy(router, {
     const key = `gb-op:${cid}:${uid}`;
     if (!(await store.claimOnce(key, 15, t))) return null;
     try { return await fn(); } finally { await store.clearFlag(key); }
+  }
+  // 手機通知 for the others in the team (who opted in): someone joined, one more to go, or it is full
+  async function news(team, c, n, joiner, t) {
+    try {
+      const others = Object.keys(await store.hgetAllJson(`gb:m:${team.id}`, t)).filter((id) => id !== joiner);
+      if (!others.length) return;
+      const left = c.size - n;
+      const url = `#/groupbuy?${encodeURIComponent(JSON.stringify({ team: team.id }))}`;
+      const p = n >= c.size
+        ? { title: '成團了！🎉', body: `「${c.title}」成團了，折扣碼可以用囉` }
+        : { title: left === 1 ? '差 1 人就成團！' : '有人加入你的團', body: `「${c.title}」現在 ${n}/${c.size} 人${left === 1 ? '，再找 1 位朋友就成團' : ''}` };
+      await notify(others, 'gb', { ...p, url, tag: `gb-${team.id}` });
+    } catch (e) { /* a notification never gets in the way of joining */ }
   }
   // totals per campaign for 「正在開團」: teams started, members in them, teams that filled up (never who)
   async function stat(cid, field, by) {
@@ -294,9 +307,10 @@ export function mountGroupbuy(router, {
       await stat(c.id, 'people', 1); await metrics.count('gb_join');
       if (n === c.size) { team.doneAt = t; await store.setJson(`gb:t:${team.id}`, team, ttlSec(c, t), t); await stat(c.id, 'done', 1); await metrics.count('gb_done'); }
       await pubSet(team, c, n, t); await feed(team, c, n === c.size ? 'done' : 'join', n, t);
-      return { status: 200, body: { team: await teamView(team, t, user), done: n === c.size } };
+      return { status: 200, body: { team: await teamView(team, t, user), done: n === c.size }, n };
     });
     if (!out) { fail(res, 409, 'busy'); return; }
+    if (out.n) await news(team, c, out.n, user.id, t);
     res.status(out.status).json(out.body);
   }));
 

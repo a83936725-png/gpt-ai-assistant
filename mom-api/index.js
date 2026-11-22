@@ -20,6 +20,7 @@
  *   /circle/*                    同週好孕圈 (weekly question, mood, cheers) — see circle.js
  *   /groupbuy/*                  團購揪團 stage 1: teams for the brand's group-buys, a discount code once full — see
  *                                groupbuy.js (no payment, no address)
+ *   /push/*                      手機通知 (Web Push; optional LINE messages) — see push.js
  *   GET /admin/stats             品牌數據 for the brand's dashboard (X-Admin-Key = MOM_ADMIN_KEY): daily counts only,
  *                                never who — see metrics.js
  *
@@ -39,6 +40,7 @@ import { mountCircle } from './circle.js';
 import { mountInvite, inviteInfo, normCode } from './invite.js';
 import { mountGroupbuy } from './groupbuy.js';
 import { makeMetrics, mountAdmin, dayStart as twDayStart } from './metrics.js';
+import { mountPush } from './push.js';
 import { makeSender, makeVerify } from './verify.js';
 import { POLICY_VERSION } from './policy.js';
 import {
@@ -66,7 +68,7 @@ const LIMITS = {
 };
 
 export function createMomRouter({
-  store = storeFromEnv(), env = process.env, http = axios, now = () => Date.now(),
+  store = storeFromEnv(), env = process.env, http = axios, now = () => Date.now(), pushSender = null,
 } = {}) {
   const router = express.Router();
   const prodLike = env.NODE_ENV === 'production' || !!env.VERCEL;
@@ -203,6 +205,7 @@ export function createMomRouter({
   });
   let statsCache = null; // /stats is cached briefly to save database calls; a new sign-up clears it
   let groupbuy = null; // set when the group-buy routes are mounted (below): its teams are part of my data
+  let push = null; // 手機通知 (below)
   const forgetHooks = []; // more of my data to remove with my account (notifications, family)
   const statsHooks = []; // more numbers for 品牌數據 (notifications, family)
   const needAuth = (res) => { if (!authOn) { res.status(503).json({ error: 'not_configured' }); return true; } return false; };
@@ -213,6 +216,8 @@ export function createMomRouter({
     social: true,
     policy: POLICY_VERSION,
     verify: authOn ? verify.config() : { email: false, phone: false }, // which kinds of account confirm a code
+    push: authOn && push ? push.publicKey() : null, // 手機通知: the VAPID public key
+    lineNotify: !!(authOn && push && push.lineOn),
   }));
 
   router.post('/auth/register', wrap(async (req, res) => {
@@ -325,6 +330,7 @@ export function createMomRouter({
       marketing: user.marketing ? { on: !!user.marketing.on, at: iso(user.marketing.at) } : { on: false, at: null },
       referrals: await store.countReferrals(user.code),
       groupBuys: groupbuy ? await groupbuy.exportFor(user) : [],
+      notifications: push ? await push.exportFor(user) : null,
       note: '懷孕、寶寶與健康紀錄只存在你的手機，伺服器沒有這些資料。',
     });
   }));
@@ -358,6 +364,7 @@ export function createMomRouter({
     if (fresh && await over('presence-new', clientIp(req), LIMITS.presenceNew)) { res.status(429).json({ error: 'too_many' }); return; }
     await store.touchPresence(sid, now());
     if (fresh) await metrics.count('open'); // the app was opened (or came back after an hour)
+    if (push) await push.maybeRun(); // reminders that are due, at most once a minute (a cron can do it too)
     res.json({ ok: true });
   }));
 
@@ -467,8 +474,13 @@ export function createMomRouter({
     needVerify: verify.needVerify,
     metrics,
   });
+  push = mountPush(router, {
+    store, now, over, wrap, currentUser, env, metrics, http, sender: pushSender,
+  });
+  forgetHooks.push((u) => push.forget(u));
+  statsHooks.push(async () => ({ push: { on: push.on, line: push.lineOn } }));
   groupbuy = mountGroupbuy(router, {
-    store, now, over, clientIp, wrap, currentUser, env, needVerify: verify.needVerify, metrics,
+    store, now, over, clientIp, wrap, currentUser, env, needVerify: verify.needVerify, metrics, notify: (uids, topic, p) => push.notify(uids, topic, p),
   });
   mountAdmin(router, {
     store,

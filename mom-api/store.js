@@ -165,6 +165,12 @@ export class MemoryStore {
 
   async zcountSince(key, since) { const m = this.zsets.get(key); if (!m) return 0; let n = 0; m.forEach((sc) => { if (sc >= since) n += 1; }); return n; }
 
+  // members with min <= score <= max, lowest score first: [{ member, score }]
+  async zrange(key, min, max, limit = 100) {
+    const m = this.zsets.get(key); if (!m) return [];
+    return [...m].filter(([, sc]) => sc >= min && sc <= max).sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1)).slice(0, limit).map(([member, score]) => ({ member, score }));
+  }
+
   async ztrim(key, before) { const m = this.zsets.get(key); if (m) m.forEach((sc, k) => { if (sc < before) m.delete(k); }); }
 
   async zscore(key, member) { const m = this.zsets.get(key); return m && m.has(member) ? m.get(member) : null; }
@@ -325,6 +331,14 @@ export class RedisRestStore {
   }
 
   async zcountSince(key, since) { return Number(await this.cmd('ZCOUNT', `mom:x:${key}`, since, '+inf')) || 0; }
+
+  async zrange(key, min, max, limit = 100) {
+    const b = (v) => (v === -Infinity ? '-inf' : v === Infinity ? '+inf' : v); // eslint-disable-line no-nested-ternary
+    const r = (await this.cmd('ZRANGEBYSCORE', `mom:x:${key}`, b(min), b(max), 'WITHSCORES', 'LIMIT', 0, limit)) || [];
+    const out = [];
+    for (let i = 0; i < r.length; i += 2) out.push({ member: r[i], score: Number(r[i + 1]) });
+    return out;
+  }
 
   async ztrim(key, before) { await this.cmd('ZREMRANGEBYSCORE', `mom:x:${key}`, '-inf', `(${before}`); }
 

@@ -720,6 +720,7 @@
         h('button', { class: 'btn btn-soft btn-block gb-more', onclick: () => invite(team, c) }, '📤 其他方式（分享卡、IG…）'),
         team.mine ? pubSwitch(team) : null,
         !team.mine || team.count <= 1 ? h('button', { class: 'link-btn small gb-leave', onclick: () => leave(team) }, team.mine ? '取消這一團' : '退出這一團') : null);
+      if (App.push && !(live && live.sample)) { const slot = h('div', { class: 'gb-push' }); actions.append(slot); App.push.offer(slot, { text: '有人加入、成團時通知我' }); }
     } else if (mine && mine.id !== team.id) {
       actions.append(h('p', { class: 'small' }, `你已經在「${teamName(mine)}」了（每個團購只能跟一團）。`),
         h('button', { class: 'btn btn-soft btn-block', onclick: () => App.navigate('groupbuy', { team: mine.id }) }, '看我的團'));

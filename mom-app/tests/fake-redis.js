@@ -59,6 +59,12 @@ export function fakeRedis({ now } = {}) {
         const rows = [...z(a[0])].filter(([, s]) => inRange(s, a[2], a[1])).sort((x, y) => y[1] - x[1]).map(([k]) => k);
         return lim >= 0 ? rows.slice(Number(a[lim + 1]), Number(a[lim + 1]) + Number(a[lim + 2])) : rows;
       }
+      case 'ZRANGEBYSCORE': {
+        const lim = a.indexOf('LIMIT');
+        const rows = [...z(a[0])].filter(([, s]) => inRange(s, a[1], a[2])).sort((x, y) => x[1] - y[1] || (x[0] < y[0] ? -1 : 1));
+        const cut = lim >= 0 ? rows.slice(Number(a[lim + 1]), Number(a[lim + 1]) + Number(a[lim + 2])) : rows;
+        return a.includes('WITHSCORES') ? cut.flatMap(([k, s]) => [k, String(s)]) : cut.map(([k]) => k);
+      }
       case 'HSET': hm(a[0]).set(String(a[1]), String(a[2])); return 1;
       case 'HGET': return hm(a[0]).has(a[1]) ? String(hm(a[0]).get(a[1])) : null;
       case 'HGETALL': return [...hm(a[0])].flat();

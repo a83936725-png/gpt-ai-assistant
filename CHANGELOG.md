@@ -1,5 +1,16 @@
 # Changelog
 
+## 4.20.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: exactly three suggested careers, each with a match score, why it fits, the skills it needs (with the ones the visitor already has ticked), what to build and how, and advice for the circles it does not cover yet
+- IKIGAI: a more detailed plan: checkpoints and weekly time for each of the three stages, and a 12-week action table in two-week blocks; all of it is in the PDF and the emailed report
+
+### Improvements
+
+- IKIGAI: the AI analysis and AI plan buttons only show while `IKIGAI_AI_ENABLED` is on, so visitors never see an error when the OpenAI quota runs out
+
 ## 4.19.0 (2026-11-22)
 
 ### New Features

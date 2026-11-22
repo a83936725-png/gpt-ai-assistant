@@ -39,7 +39,7 @@
       label: '擠奶', icon: '🥛', color: 'var(--t-pump)', group: 'pump', timed: true,
       summary: (l) => {
         const d = l.data || {};
-        const total = (Number(d.left) || 0) + (Number(d.right) || 0) || Number(d.ml) || 0;
+        const total = App.pumpMl(l);
         const side = d.left || d.right ? `（左 ${d.left || 0}／右 ${d.right || 0}）` : '';
         return `${total} ml${side}${d.stored ? '・已入庫' : ''}`;
       },
@@ -86,6 +86,8 @@
     other: { label: '其他', icon: '📝', color: 'var(--t-other)', group: 'care', summary: (l) => l.note || '備註' },
   };
   App.LOG_ORDER = ['breast', 'bottle', 'pump', 'diaper', 'sleep', 'temp', 'food', 'med', 'visit', 'bath', 'other'];
+  // how much one 擠奶 gave: both sides, or the total when only that was written
+  App.pumpMl = (l) => { const d = (l && l.data) || {}; return (Number(d.left) || 0) + (Number(d.right) || 0) || Number(d.ml) || 0; };
   App.POO = { AMOUNT: POO_AMOUNT, TEXTURE: POO_TEXTURE, COLOR: POO_COLOR };
   App.logSummary = (l) => {
     const t = App.LOG_TYPES[l.type];

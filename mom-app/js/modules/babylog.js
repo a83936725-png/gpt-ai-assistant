@@ -126,10 +126,11 @@
 
   /* ================= undo helper ================= */
   // Run `fn` (which saves something), then offer 復原 that restores logs + milk inventory exactly as before.
+  // label: the words, or a function of what was saved (for words that need the saved amount)
   function withUndo(label, fn) {
     const before = { logs: store.state.logs.map((l) => l.id), milk: JSON.parse(JSON.stringify(store.state.milk)) };
     const result = fn();
-    ui.toast(label, {
+    ui.toast(typeof label === 'function' ? label(result) : label, {
       action: '復原',
       onAction: () => store.update((s) => {
         s.logs = s.logs.filter((l) => before.logs.includes(l.id));
@@ -252,18 +253,65 @@
         return { data: { ...data, kind: kind.dataset.value, ml: ml.getValue() } };
       };
     } else if (type === 'pump') {
-      const dur = ui.stepper({ value: data.durationMin || preset.durationMin || 15, step: 1, unit: '分' });
-      const left = ui.stepper({ value: data.left || 0, step: 10, unit: 'ml' });
-      const right = ui.stepper({ value: data.right || 0, step: 10, unit: 'ml' });
+      // 擠奶: the amount first (what she wants to keep) — each side or just the total, a usual amount in one tap, the
+      // last session's amounts to start from, the total and the day so far as she goes; the timer is one button above
+      if (!isEdit && !timers.get('pump') && !preset.durationMin) {
+        body.append(h('button', {
+          class: 'btn btn-soft btn-block mb pump-timer',
+          onclick: () => { timers.start('pump'); sh.close(); ui.toast('開始擠奶計時，擠完按「完成」記奶量'); },
+        }, '⏱ 開始擠奶（計時）'), h('div', { class: 'section-title small' }, '或直接記奶量'));
+      }
+      const prev = !isEdit ? (lastOf('pump') || {}).data || {} : {};
+      const src = isEdit ? data : prev;
+      const hadSides = !!(Number(src.left) || Number(src.right));
+      let mode = hadSides || !Number(src.ml) ? 'sides' : 'total';
+      const prevTotal = App.pumpMl({ data: prev });
+      const totalLine = h('div', { class: 'pump-total', role: 'status' });
+      const SIDE_ML = [30, 50, 60, 80, 100, 120];
+      const TOTAL_ML = [60, 90, 120, 150, 180, 240];
+      let refresh = () => {}; // (set below, once everything exists)
+      const amount = (v) => ui.stepper({ value: v, step: 10, unit: 'ml', onChange: () => refresh() });
+      const left = amount(hadSides ? Number(src.left) || 0 : 0);
+      const right = amount(hadSides ? Number(src.right) || 0 : 0);
+      const total = amount(hadSides ? 0 : Number(src.ml) || 0);
+      const chipRow = (st, vals, label) => h('div', { class: 'chips pump-chips', role: 'group', 'aria-label': `${label}常用奶量` },
+        vals.map((v) => h('button', { type: 'button', class: 'chip', dataset: { ml: v }, 'aria-label': `${label} ${v} ml`, onclick: () => { st.setValue(v); refresh(); } }, `${v}`)));
+      const sidesBox = h('div', { class: 'pump-sides' },
+        ui.field('左側', h('div', null, left, chipRow(left, SIDE_ML, '左側'))),
+        ui.field('右側', h('div', null, right, chipRow(right, SIDE_ML, '右側'))));
+      const totalBox = h('div', { class: 'pump-totalbox' }, ui.field('奶量', h('div', null, total, chipRow(total, TOTAL_ML, '總量'))));
+      const cur = () => (mode === 'sides' ? left.getValue() + right.getValue() : total.getValue());
+      const modeSeg = ui.seg([{ value: 'sides', label: '左右分開' }, { value: 'total', label: '只記總量' }], mode, (v) => {
+        if (v === 'total' && mode === 'sides') total.setValue(left.getValue() + right.getValue());
+        mode = v; refresh();
+      }, { small: true });
+      const dur = ui.stepper({ value: data.durationMin || preset.durationMin || prev.durationMin || 15, step: 1, unit: '分' });
+      refresh = () => {
+        sidesBox.hidden = mode !== 'sides'; totalBox.hidden = mode !== 'total';
+        [[left, sidesBox.querySelectorAll('.pump-chips')[0]], [right, sidesBox.querySelectorAll('.pump-chips')[1]], [total, totalBox.querySelector('.pump-chips')]].forEach(([st, row]) => {
+          row.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', Number(c.dataset.ml) === st.getValue()));
+        });
+        // the day of this session so far (not counting this one when it is being edited)
+        const day = new Date(startIn.value || Date.now());
+        const others = store.logsOn(day).filter((l) => l.type === 'pump' && l.id !== log.id);
+        const isToday = C.dateKey(day) === C.dateKey();
+        totalLine.replaceChildren(h('b', { class: 'num' }, `合計 ${cur()} ml`),
+          !isEdit && prevTotal ? h('span', { class: 'muted' }, `・上次 ${prevTotal} ml`) : null,
+          h('span', { class: 'muted' }, `・${isToday ? '今天' : '這天'}累計 ${C.sum(others, App.pumpMl) + cur()} ml（${others.length + 1} 次）`));
+      };
+      startIn.addEventListener('change', () => refresh());
       const store1 = h('input', { type: 'checkbox', checked: !isEdit });
       const where = ui.seg([{ value: 'fridge', label: '冷藏' }, { value: 'freezer', label: '冷凍' }, { value: 'room', label: '室溫' }], 'fridge', null, { small: true });
-      body.append(ui.field('開始時間', startIn), ui.field('時長', dur), h('div', { class: 'grid-2' }, ui.field('左側', left), ui.field('右側', right)));
+      body.append(ui.field('開始時間', startIn), ui.field('記法', modeSeg), sidesBox, totalBox, totalLine, ui.field('時長', dur));
       if (!isEdit) body.append(h('label', { class: 'check-row' }, store1, h('span', null, '存入母乳庫存')), ui.field('存放方式', where));
+      refresh();
       collect = () => {
-        const total = left.getValue() + right.getValue();
-        const out = { data: { ...data, durationMin: dur.getValue(), left: left.getValue(), right: right.getValue(), ml: total }, end: new Date(new Date(startIn.value).getTime() + dur.getValue() * C.MIN).toISOString() };
-        if (!isEdit && store1.checked && total > 0 && App.milk) {
-          App.milk.addBag({ ml: total, pumpedAt: new Date(startIn.value).toISOString(), storage: where.dataset.value });
+        const L = mode === 'sides' ? left.getValue() : 0;
+        const R = mode === 'sides' ? right.getValue() : 0;
+        const ml = mode === 'sides' ? L + R : total.getValue();
+        const out = { data: { ...data, durationMin: dur.getValue(), left: L, right: R, ml }, end: new Date(new Date(startIn.value).getTime() + dur.getValue() * C.MIN).toISOString() };
+        if (!isEdit && store1.checked && ml > 0 && App.milk) {
+          App.milk.addBag({ ml, pumpedAt: new Date(startIn.value).toISOString(), storage: where.dataset.value });
           out.data.stored = true;
         }
         return out;
@@ -343,7 +391,8 @@
     const saveNew = () => {
       if (!startIn.value) { ui.toast('請填時間'); return; }
       sh.close();
-      withUndo(`已記錄${def.label}`, () => {
+      // 擠奶 says how much (and whether it went into 母乳庫存)
+      withUndo(type === 'pump' ? (entry) => `已記錄擠奶・${entry ? App.logSummary(entry) : ''}` : `已記錄${def.label}`, () => {
         const extra = collect();
         const patch = { start: new Date(startIn.value).toISOString(), note: noteIn.value.trim(), ...extra };
         if (patch.data === undefined) patch.data = data;
@@ -473,6 +522,7 @@
     { value: 'diaper', label: '尿布', types: ['diaper'] },
     { value: 'sleep', label: '睡眠', types: ['sleep'] },
     { value: 'health', label: '健康', types: ['temp', 'med', 'visit', 'bath', 'other'] },
+    { value: 'pump', label: '擠奶', types: ['pump'] },
   ];
 
   function renderBabyLog(el) {
@@ -507,9 +557,12 @@
       sumChip('🧷', `${s.diaperCount} 次`, `💧${s.wet} 💩${s.dirty}`),
       // 8.5 小時 fits the tile; 8 小時 30 分 wrapped over three lines
       sumChip('😴', !s.sleepMs ? '0' : s.sleepMs >= C.HOUR ? `${(s.sleepMs / C.HOUR).toFixed(1).replace(/\.0$/, '')} 小時` : C.fmtDuration(s.sleepMs), '睡眠')));
+    const pumps = logs.filter((l) => l.type === 'pump');
+    if (pumps.length) el.append(pumpDayLine(pumps));
     el.append(dayStrip(viewDay, logs));
 
     el.append(h('div', { class: 'mt' }, ui.seg(FILTERS, filter, (v) => { filter = v; App.refresh(); }, { small: true })));
+    if (filter === 'pump') el.append(pumpWeek(viewDay));
     const f = FILTERS.find((x) => x.value === filter);
     const shown = f.types ? logs.filter((l) => f.types.includes(l.type)) : logs;
     if (!shown.length) el.append(ui.empty('🌙', isToday ? '今天還沒有紀錄，按右下角＋開始吧！' : '這天沒有紀錄'));
@@ -602,6 +655,35 @@
     ui.toast(`已開啟 LINE，摘要也已複製${pts ? `・好孕點數 +${pts}` : ''}`);
   }
   App.babylog.daySummaryText = daySummaryText;
+
+  /* ---------- 擠奶: the day's amount, and the last 7 days ---------- */
+  function pumpDayLine(pumps) {
+    const L = C.sum(pumps, (l) => Number(l.data?.left) || 0); const R = C.sum(pumps, (l) => Number(l.data?.right) || 0);
+    return h('button', { class: 'pump-day', onclick: () => { filter = 'pump'; App.refresh(); }, 'aria-label': `擠奶 ${pumps.length} 次，共 ${C.sum(pumps, App.pumpMl)} ml，看擠奶紀錄` },
+      h('span', { 'aria-hidden': 'true' }, '🥛'), h('b', { class: 'num' }, `擠奶 ${pumps.length} 次・${C.sum(pumps, App.pumpMl)} ml`),
+      L || R ? h('span', { class: 'small muted num' }, `（左 ${L}／右 ${R}）`) : null,
+      h('span', { class: 'chev', 'aria-hidden': 'true' }, '›'));
+  }
+  function pumpWeek(endDay) {
+    const end = C.parseKey(endDay);
+    const days = [...Array(7)].map((_, i) => C.addDays(end, i - 6)).map((d) => {
+      const ls = store.logsOn(d).filter((l) => l.type === 'pump');
+      return { d, ml: C.sum(ls, App.pumpMl), n: ls.length };
+    });
+    const max = Math.max(1, ...days.map((x) => x.ml));
+    const withData = days.filter((x) => x.n);
+    const sessions = C.sum(withData, (x) => x.n);
+    return ui.card({ class: 'pump-week' },
+      h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '🥛 近 7 天擠奶量'),
+        withData.length ? h('span', { class: 'small muted' }, `平均 ${Math.round(C.sum(withData, (x) => x.ml) / withData.length)} ml／天`) : null),
+      h('div', { class: 'pw-bars', role: 'img', 'aria-label': days.map((x) => `${C.fmtDate(x.d, false)} ${x.ml} ml`).join('，') },
+        days.map((x) => h('div', { class: `pw-col${C.dateKey(x.d) === endDay ? ' on' : ''}` },
+          h('div', { class: 'pw-area' }, // the amount sits right on top of its bar (bars up to 80%, room for the number)
+            h('span', { class: 'pw-ml num' }, x.ml ? String(x.ml) : ''),
+            h('span', { class: 'pw-bar', style: { height: `${Math.round((x.ml / max) * 80)}%` } })),
+          h('span', { class: 'pw-day tiny' }, C.WEEKDAYS[x.d.getDay()])))),
+      h('div', { class: 'tiny muted' }, withData.length ? `${sessions} 次・每次平均 ${Math.round(C.sum(withData, (x) => x.ml) / Math.max(1, sessions))} ml` : '這 7 天還沒有擠奶紀錄。'));
+  }
 
   const sumChip = (ico, a, b) => h('div', { class: 'sum-chip' }, h('span', { class: 'sum-ico' }, ico), h('div', null, h('div', { class: 'bold num' }, a), h('div', { class: 'tiny muted' }, b)));
 

@@ -338,3 +338,24 @@ body.late .quick-edit-row { margin-top: 28px; }
 .home-more .chev { color: var(--c-text-2); font-size: 16px; flex: none; }
 /* .home-more-cards: no display rule, so its [hidden] keeps working; the slots inside bring their own margin */
 .home-more-off { margin-top: 8px; }
+
+/* ---------- 擠奶: 記奶量 (form), today's amount on the tile, the day line and the 7 days in 紀錄 ---------- */
+.pump-timer { min-height: 48px; }
+.pump-chips { margin-top: 8px; gap: 6px; }
+.pump-chips .chip { min-width: 46px; justify-content: center; font-variant-numeric: tabular-nums; }
+.pump-sides[hidden], .pump-totalbox[hidden] { display: none; }
+.pump-total { margin: 2px 0 14px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--t-pump) 14%, var(--c-surface)); line-height: 1.5; }
+.pump-total b { font-size: 17px; }
+.qt-pump { color: var(--c-text); font-weight: 700; }
+.pump-day { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; margin: 0 0 10px; padding: 8px 12px; border: 1px solid var(--c-border); border-radius: 14px;
+  background: var(--c-surface); color: var(--c-text); font: inherit; text-align: left; cursor: pointer; flex-wrap: wrap; }
+.pump-day .chev { margin-left: auto; color: var(--c-text-2); font-size: 18px; }
+.pump-week { margin-top: 12px; }
+.pw-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 10px 0 6px; }
+.pw-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pw-area { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; width: 100%; height: 110px; }
+.pw-ml { font-size: 11px; line-height: 1.2; color: var(--c-text-2); }
+.pw-bar { flex: none; width: 70%; min-height: 3px; border-radius: 6px 6px 2px 2px; background: color-mix(in srgb, var(--t-pump) 55%, var(--c-surface)); }
+.pw-col.on .pw-bar { background: var(--t-pump); }
+.pw-col.on .pw-day { font-weight: 800; color: var(--c-text); }
+.pw-day { color: var(--c-text-2); }

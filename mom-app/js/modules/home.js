@@ -108,7 +108,7 @@
     bottle: { label: '瓶餵', plusHint: '同上次', short: '記錄' },
     diaper: { label: '尿布', plusHint: '濕尿布', short: '濕尿布' },
     sleep: { label: '睡眠', active: 'sleep', plusHint: '開始計時', short: '計時' },
-    pump: { label: '擠奶', active: 'pump', plusHint: '開始計時', short: '計時' },
+    pump: { label: '擠奶', active: 'pump', plusHint: '記奶量', short: '奶量' }, // ＋ opens 記奶量 (the timer is in there)
     temp: { label: '體溫', plusHint: '量體溫', short: '量體溫' },
     food: { label: '副食品', plusHint: '記一筆', short: '記錄' },
     med: { label: '用藥', plusHint: '記一筆', short: '記錄' },
@@ -171,7 +171,9 @@
       const running = q.active && App.timers.get(q.active); // this baby's timer (twins each have their own)
       const todayCount = today.filter((l) => l.type === q.type).length;
       let sub;
+      const pumpToday = q.type === 'pump' ? C.sum(today.filter((l) => l.type === 'pump'), App.pumpMl) : 0;
       if (running) sub = h('span', { class: 'qt-running' }, '● 計時中');
+      else if (pumpToday) sub = h('span', { class: 'qt-pump' }, `今天 ${pumpToday} ml`); // 擠奶: how much today, at a glance
       else if (last) sub = h('span', { dataset: { ago: last.start } }, C.ago(last.start));
       else sub = h('span', { class: 'faint' }, '尚無紀錄');
       const extra = q.type === 'breast' && last?.data?.lastSide && !running ? `・上次${last.data.lastSide === 'L' ? '左' : '右'}` : '';
@@ -186,10 +188,12 @@
           class: 'qt-plus', 'aria-label': plusLabel, title: plusLabel,
           onclick: (e) => {
             if (!quickTapOk(q.type)) return;
-            if (running || ['breast', 'sleep', 'pump'].includes(q.type)) shiftUntil = Date.now() + 400; // timer banner appears / goes
+            if (running || ['breast', 'sleep'].includes(q.type)) shiftUntil = Date.now() + 400; // timer banner appears / goes
             const at = e.currentTarget.getBoundingClientRect(); // before the screen updates
             const n0 = store.logsOn(new Date()).length;
-            if (running) App.timers.stopWithUndo(q.type); else App.babylog.quickLog(q.type);
+            if (running) App.timers.stopWithUndo(q.type);
+            else if (q.type === 'pump') App.babylog.openAdd('pump'); // 擠奶: the amount is the point (one tap away)
+            else App.babylog.quickLog(q.type);
             // logged (not a form that opened instead): a little puff from the button, and today's count pops
             if (!document.body.classList.contains('has-sheet')) {
               ui.burst(at, def.icon);

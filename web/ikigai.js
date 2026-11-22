@@ -14,6 +14,7 @@ import {
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
 const PAGE_PATH = path.join(process.cwd(), 'web', 'ikigai.html');
 const ADMIN_PATH = path.join(process.cwd(), 'web', 'ikigai-admin.html');
+const QR_PATH = path.join(process.cwd(), 'web', 'vendor', 'qrcode.js');
 const WINDOW_MS = 60 * 60 * 1000;
 
 let page;
@@ -81,6 +82,15 @@ router.get('/', sendPage);
  * so the address can be just the domain. Other clients keep the JSON status.
  */
 const servesHome = (req) => config.IKIGAI_ENABLED && !config.APP_URL && req.accepts(['json', 'html']) === 'html';
+
+// QR code generator (MIT, Kazuhiko Arase) used by the share cards.
+let qrScript;
+router.get('/qrcode.js', (req, res) => {
+  if (!qrScript) qrScript = readFileSync(QR_PATH, 'utf8');
+  res.set('Content-Type', 'application/javascript; charset=utf-8');
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.send(qrScript);
+});
 
 router.get('/status', (req, res) => {
   res.json({ ai: config.IKIGAI_AI_ENABLED && Boolean(config.OPENAI_COMPLETION_API_KEY || config.APP_ENV !== 'production') });
@@ -204,7 +214,13 @@ const adminRoute = (fn) => async (req, res) => {
 
 router.get('/admin/api/records', requireAdmin, adminRoute(async (req, res) => {
   const records = await listRecords();
-  res.json({ storage: config.IKIGAI_BLOB_TOKEN ? 'blob' : 'memory', records: records.map(summarize) });
+  const names = new Map(records.map((r) => [r.id, r.profile.name]));
+  const referrals = new Map();
+  records.forEach((r) => { if (r.referredBy) referrals.set(r.referredBy, (referrals.get(r.referredBy) || 0) + 1); });
+  res.json({
+    storage: config.IKIGAI_BLOB_TOKEN ? 'blob' : 'memory',
+    records: records.map((r) => ({ ...summarize(r), referrals: referrals.get(r.id) || 0, referrerName: names.get(r.referredBy) || '' })),
+  });
 }));
 
 router.get('/admin/api/records/:id', requireAdmin, adminRoute(async (req, res) => {
@@ -213,7 +229,8 @@ router.get('/admin/api/records/:id', requireAdmin, adminRoute(async (req, res) =
     res.status(404).json({ code: 'not_found', error: '找不到這筆資料' });
     return;
   }
-  res.json({ record, summary: summarize(record) });
+  const referrer = record.referredBy ? await getRecord(record.referredBy).catch(() => null) : null;
+  res.json({ record, summary: { ...summarize(record), referrerName: referrer ? referrer.profile.name : '' } });
 }));
 
 router.delete('/admin/api/records/:id', requireAdmin, adminRoute(async (req, res) => {
@@ -225,7 +242,10 @@ router.get('/admin/api/export.csv', requireAdmin, adminRoute(async (req, res) =>
   const records = await listRecords();
   res.set('Content-Type', 'text/csv; charset=utf-8');
   res.set('Content-Disposition', `attachment; filename="ikigai-clients-${new Date().toISOString().slice(0, 10)}.csv"`);
-  res.send(toCsv(records));
+  const referrals = new Map();
+  records.forEach((r) => { if (r.referredBy) referrals.set(r.referredBy, (referrals.get(r.referredBy) || 0) + 1); });
+  const names = new Map(records.map((r) => [r.id, r.profile.name]));
+  res.send(toCsv(records, { referrals, names }));
 }));
 
 export {

@@ -373,6 +373,14 @@
   .opts input[type="text"] { flex: 0 1 200px; padding: 8px 12px; }
   .fine { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
 
+  .card-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .card-opts .sw { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 6px; vertical-align: -2px; border: 1px solid var(--border); }
+  .cards-grid.story { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cards-grid.story .card-prev img { aspect-ratio: 9 / 16; }
+  .card-prev .row { align-items: center; }
+  .card-prev .cap { font-size: 13px; color: var(--muted); margin-right: auto; }
+  .invite-box { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; font-size: 14.5px; overflow-wrap: anywhere; }
+
   /* Shared view */
   .banner { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: color-mix(in srgb, var(--paid) 12%, transparent); border-radius: 14px; padding: 12px 16px; margin: 18px 0 16px; }
   .banner p { margin: 0; }
@@ -447,6 +455,7 @@
 <div class="nav" id="nav" hidden><div class="nav-inner" id="navInner"></div></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div class="report" id="report"></div>
+<script src="/ikigai/qrcode.js"></script>
 <input type="file" id="importFile" accept="application/json,.json" class="sr-only" aria-hidden="true" tabindex="-1">
 
 <script>
@@ -519,6 +528,7 @@
   const blank = () => ({
     items: [], note: '', step: 'intro', ai: '', name: '', plan: blankPlan(),
     rid: newRid(), startedAt: Date.now(), profile: blankProfile(), events: [], isSample: false,
+    referredBy: '', source: '',
   });
   let shareMode = false;
   let state = load();
@@ -604,6 +614,8 @@
     }
     if (Array.isArray(data?.events)) s.events = data.events.filter((e) => e && Number.isFinite(e.t) && typeof e.type === 'string').slice(-300);
     s.isSample = data?.isSample === true;
+    if (typeof data?.referredBy === 'string' && /^[a-z0-9]{12,40}$/.test(data.referredBy)) s.referredBy = data.referredBy;
+    s.source = str(data?.source, 20);
     if (ORDER.includes(data?.step)) s.step = data.step;
     return s;
   }
@@ -732,6 +744,8 @@
       },
       ai: state.ai,
       events: state.events,
+      referredBy: state.referredBy,
+      source: state.source,
     };
   }
   let syncTimer = null;
@@ -1586,11 +1600,25 @@
       <div class="card" id="shareCard">
         <h2>分享與匯出</h2>
         <div class="share-section">
-          <h3>字卡</h3>
-          <p class="hint">產生 IG 直式字卡（1080 × 1350），可以下載${navigator.share ? '或直接分享' : ''}。${hasPlan ? '' : '完成「生涯規劃」後會多一張計畫字卡。'}</p>
-          <button class="btn" type="button" id="makeCards">產生字卡</button>
+          <h3>分享字卡</h3>
+          <p class="hint">${readOnly ? '' : `你是「<b>${esc(archetype().name)}</b>」。`}選一種風格和尺寸，產生 ${hasPlan ? 6 : 5} 張字卡，每張都有 QR Code，朋友一掃就能測。${hasPlan ? '' : '完成「生涯規劃」後會多一張計畫字卡。'}</p>
+          <div class="card-opts">
+            <div class="seg" role="group" aria-label="風格">${Object.entries(THEMES).map(([k, v]) => `<button type="button" data-theme-pick="${k}" aria-pressed="${k === cardTheme}"><i class="sw" style="background:linear-gradient(135deg, ${v.bg[0]}, ${v.bg[1]})"></i>${v.label}</button>`).join('')}</div>
+            <div class="seg" role="group" aria-label="尺寸">${Object.entries(FORMATS).map(([k, v]) => `<button type="button" data-format-pick="${k}" aria-pressed="${k === cardFormat}">${v.label}</button>`).join('')}</div>
+          </div>
+          <div class="toolbar" style="margin-top:12px"><button class="btn" type="button" id="makeCards">產生字卡</button><button class="btn ghost" type="button" id="dlAll" hidden>全部下載</button></div>
           <div class="cards-grid" id="cardsGrid"></div>
         </div>
+        ${readOnly ? '' : `
+        <div class="share-section invite">
+          <h3>邀請朋友一起測</h3>
+          <p class="hint">把你的專屬連結傳給朋友。朋友透過你的連結、字卡 QR Code 或分享頁開始測驗，都會記下是你推薦的。</p>
+          <div class="invite-box" id="inviteText">${esc(inviteText())}</div>
+          <div class="toolbar" style="margin-top:10px">
+            <button class="btn" type="button" id="copyInvite">複製邀請文字</button>
+            ${navigator.share ? '<button class="btn ghost" type="button" id="shareInvite">分享給朋友</button>' : ''}
+          </div>
+        </div>`}
         ${readOnly ? '' : `
         <div class="share-section">
           <h3>分享連結</h3>
@@ -1626,6 +1654,27 @@
   function bindShareCard() {
     if ($('editProfile')) $('editProfile').addEventListener('click', () => { editingProfile = true; render(); window.scrollTo(0, 0); });
     $('makeCards').addEventListener('click', makeCards);
+    $('dlAll').addEventListener('click', downloadAll);
+    document.querySelectorAll('[data-theme-pick]').forEach((b) => b.addEventListener('click', () => {
+      cardTheme = b.dataset.themePick;
+      document.querySelectorAll('[data-theme-pick]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      if (lastCards.length) makeCards();
+    }));
+    document.querySelectorAll('[data-format-pick]').forEach((b) => b.addEventListener('click', () => {
+      cardFormat = b.dataset.formatPick;
+      document.querySelectorAll('[data-format-pick]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      if (lastCards.length) makeCards();
+    }));
+    if ($('copyInvite')) {
+      $('copyInvite').addEventListener('click', () => { logEvent('邀請朋友', '複製'); save(true); copy(inviteText(), '已複製邀請文字，貼到 LINE 或 IG 就能分享'); });
+      if ($('shareInvite')) {
+        $('shareInvite').addEventListener('click', () => {
+          logEvent('邀請朋友', '分享');
+          save(true);
+          navigator.share({ title: 'IKIGAI 生涯羅盤', text: inviteText() }).catch(() => {});
+        });
+      }
+    }
     $('pdfBtn').addEventListener('click', printReport);
     $('copyBtn').addEventListener('click', () => { logEvent('複製文字'); save(true); copy(asText(), '已複製，可以貼到 LINE 或筆記'); });
     if ($('shareName')) {
@@ -1646,14 +1695,64 @@
     });
   }
 
+  // ---------- personality type ----------
+  const ARCHETYPES = {
+    ikigai: { name: 'IKIGAI 實踐者', en: 'THE INTEGRATOR', tagline: '熱愛、擅長、需要與報酬，已經在你身上交會。', strengths: ['方向清楚', '熱情變價值', '行動力強'], advice: '把中心的那件事做深、做久，讓更多人看見你的價值。' },
+    passion: { name: '熱情創作者', en: 'THE CREATOR', tagline: '做喜歡的事時，你也做得特別好。', strengths: ['投入', '創造力', '自我驅動'], advice: '找出誰需要你的作品，誰願意為它付費。' },
+    mission: { name: '使命實踐家', en: 'THE CHANGEMAKER', tagline: '你在意的事，正是世界缺少的。', strengths: ['同理心', '價值感', '影響力'], advice: '把熱情練成專業，讓善意也能養活自己。' },
+    profession: { name: '專業職人', en: 'THE EXPERT', tagline: '你的能力，市場已經願意買單。', strengths: ['專業', '穩定', '值得信賴'], advice: '找回讓你心動的部分，別讓工作只剩下工作。' },
+    vocation: { name: '天職開拓者', en: 'THE PATHFINDER', tagline: '你看得見需求，也知道怎麼讓它有價值。', strengths: ['洞察力', '務實', '解決問題'], advice: '把自己的熱愛放進去，會走得更遠。' },
+    love: { name: '探索夢想家', en: 'THE DREAMER', tagline: '你心裡有很多熱愛，正在找一個出口。', strengths: ['好奇心', '熱情', '想像力'], advice: '挑一件最愛的事，刻意練成你的強項。' },
+    good: { name: '潛力技術家', en: 'THE CRAFTSMAN', tagline: '你手上有能力，正等待屬於你的舞台。', strengths: ['學得快', '執行力', '專注'], advice: '想一想：這些能力可以幫上誰？' },
+    need: { name: '社會關懷者', en: 'THE CAREGIVER', tagline: '你總是先看見別人的需要。', strengths: ['同理', '責任感', '溫暖'], advice: '把關心變成一項專業，幫助更多人。' },
+    paid: { name: '務實行動派', en: 'THE ACHIEVER', tagline: '你知道價值在哪裡，也願意去爭取。', strengths: ['務實', '效率', '目標感'], advice: '留點時間給真正喜歡的事，動力會更持久。' },
+  };
+  const PAIR_KEYS = { passion: ['love', 'good'], mission: ['love', 'need'], profession: ['good', 'paid'], vocation: ['need', 'paid'] };
+  function archetype() {
+    if (state.items.some((it) => hasAll(it, KEYS))) return { key: 'ikigai', ...ARCHETYPES.ikigai };
+    const pairs = Object.entries(PAIR_KEYS).map(([key, keys]) => [key, state.items.filter((it) => hasAll(it, keys)).length]);
+    const [bestPair, n] = pairs.reduce((a, b) => (b[1] > a[1] ? b : a));
+    if (n > 0) return { key: bestPair, ...ARCHETYPES[bestPair] };
+    const big = CIRCLES.slice().sort((a, b) => inCircle(b.key).length - inCircle(a.key).length)[0].key;
+    return { key: big, ...ARCHETYPES[big] };
+  }
+  const topItems = (n) => state.items.slice().sort((a, b) => circlesOf(b).length - circlesOf(a).length).slice(0, n).map((it) => it.text);
+
+  // ---------- referral links ----------
+  const siteOrigin = () => location.origin;
+  const inviteUrl = (src) => `${siteOrigin()}/?ref=${state.rid}&src=${src}`;
+  const shortHost = () => location.host;
+  function inviteText() {
+    return `我剛做完 IKIGAI 生涯羅盤，原來我是「${archetype().name}」！用四個圈找出適合自己的方向，大約 15 分鐘，推薦你也測測看 👉 ${inviteUrl('invite')}`;
+  }
+
   // ---------- cards (canvas) ----------
   const FONT = '"PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Heiti TC", sans-serif';
-  const INK = '#1d1c1a';
-  const MUTED = '#6b665e';
+  const THEMES = {
+    dawn: {
+      label: '晨光', bg: ['#fdf8f3', '#efe7f6'], ink: '#1f1c1a', muted: '#6d665f', panel: 'rgba(255,255,255,0.74)', line: 'rgba(31,28,26,0.10)',
+      glow: 0.22, blend: 'multiply', alpha: '59', qrDark: '#1f1c1a', qrLight: '#ffffff', grain: 0.05,
+      c: { love: '#dc4f67', good: '#dd9324', need: '#23988b', paid: '#4f63d6' },
+    },
+    night: {
+      label: '夜空', bg: ['#12142a', '#2c1e40'], ink: '#f6f2ea', muted: '#bcb5cc', panel: 'rgba(255,255,255,0.08)', line: 'rgba(255,255,255,0.16)',
+      glow: 0.36, blend: 'screen', alpha: '52', qrDark: '#12142a', qrLight: '#f6f2ea', grain: 0.07,
+      c: { love: '#f27c90', good: '#f2b552', need: '#4ec6b7', paid: '#8796f3' },
+    },
+    washi: {
+      label: '和紙', bg: ['#f3ead9', '#e1d0b4'], ink: '#2b2418', muted: '#6f624e', panel: 'rgba(255,253,247,0.6)', line: 'rgba(43,36,24,0.15)',
+      glow: 0.16, blend: 'multiply', alpha: '55', qrDark: '#2b2418', qrLight: '#fbf6ec', grain: 0.09,
+      c: { love: '#c8485e', good: '#c98a24', need: '#2b8a7e', paid: '#4a5bb8' },
+    },
+  };
+  const FORMATS = { post: { w: 1080, h: 1350, label: '貼文 4:5' }, story: { w: 1080, h: 1920, label: '限時動態 9:16' } };
+  let cardTheme = 'dawn';
+  let cardFormat = 'post';
+
   function wrapLines(ctx, text, maxW, maxLines) {
     const lines = [];
     let line = '';
-    [...text].forEach((ch) => {
+    [...String(text)].forEach((ch) => {
       if (ch === '\n') { lines.push(line); line = ''; return; }
       if (ctx.measureText(line + ch).width > maxW && line) { lines.push(line); line = ch; } else line += ch;
     });
@@ -1679,198 +1778,500 @@
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
   }
-  function cardBase(title, subtitle) {
+  const font = (weight, size) => `${weight} ${size}px ${FONT}`;
+
+  let grainTile = null;
+  function grain() {
+    if (grainTile) return grainTile;
+    grainTile = document.createElement('canvas');
+    grainTile.width = 180;
+    grainTile.height = 180;
+    const g = grainTile.getContext('2d');
+    const img = g.createImageData(180, 180);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.random() * 255;
+      img.data[i] = v; img.data[i + 1] = v; img.data[i + 2] = v; img.data[i + 3] = Math.random() * 255;
+    }
+    g.putImageData(img, 0, 0);
+    return grainTile;
+  }
+
+  // Background, brand line and the QR footer shared by every card. Returns the content box.
+  function cardFrame(t, W, H, eyebrow) {
     const cv = document.createElement('canvas');
-    cv.width = 1080;
-    cv.height = 1350;
+    cv.width = W;
+    cv.height = H;
     const ctx = cv.getContext('2d');
-    ctx.fillStyle = '#f6f5f2';
-    ctx.fillRect(0, 0, 1080, 1350);
-    // Brand mark
+    const bg = ctx.createLinearGradient(0, 0, W * 0.4, H);
+    bg.addColorStop(0, t.bg[0]);
+    bg.addColorStop(1, t.bg[1]);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    // Soft colour glows in the corners, one per circle.
+    [[0.05, 0.08, 'love'], [0.98, 0.2, 'need'], [0.1, 0.78, 'good'], [0.95, 0.92, 'paid']].forEach(([fx, fy, k]) => {
+      const r = W * 0.62;
+      const g = ctx.createRadialGradient(W * fx, H * fy, 0, W * fx, H * fy, r);
+      g.addColorStop(0, `${t.c[k]}${Math.round(t.glow * 255).toString(16).padStart(2, '0')}`);
+      g.addColorStop(1, `${t.c[k]}00`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    });
+    ctx.save();
+    ctx.globalAlpha = t.grain;
+    ctx.fillStyle = ctx.createPattern(grain(), 'repeat');
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    // Brand line
     CIRCLES.forEach((c, i) => {
-      const [dx, dy] = [[0, -12], [-12, 0], [12, 0], [0, 12]][i];
-      ctx.globalAlpha = 0.6;
-      ctx.fillStyle = c.hex;
-      ctx.beginPath(); ctx.arc(104 + dx, 96 + dy, 16, 0, Math.PI * 2); ctx.fill();
+      const [dx, dy] = [[0, -11], [-11, 0], [11, 0], [0, 11]][i];
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = t.c[c.key];
+      ctx.beginPath(); ctx.arc(100 + dx, 92 + dy, 15, 0, Math.PI * 2); ctx.fill();
     });
     ctx.globalAlpha = 1;
-    ctx.fillStyle = INK;
-    ctx.font = `700 30px ${FONT}`;
-    ctx.fillText('IKIGAI 生き甲斐', 140, 107);
-    ctx.font = `800 64px ${FONT}`;
-    drawText(ctx, title, 80, 220, 920, 76, 2);
-    if (subtitle) { ctx.fillStyle = MUTED; ctx.font = `400 32px ${FONT}`; ctx.fillText(subtitle, 80, 286); }
-    return { cv, ctx };
+    ctx.fillStyle = t.ink;
+    ctx.font = font(800, 30);
+    ctx.fillText('IKIGAI', 134, 103);
+    ctx.fillStyle = t.muted;
+    ctx.font = font(500, 26);
+    ctx.fillText('生涯羅盤', 248, 103);
+    if (eyebrow) {
+      ctx.textAlign = 'right';
+      ctx.fillText(eyebrow, W - 80, 103);
+      ctx.textAlign = 'left';
+    }
+    // Footer with QR code and invitation
+    const fh = 250;
+    const fy = H - fh;
+    ctx.strokeStyle = t.line;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(80, fy); ctx.lineTo(W - 80, fy); ctx.stroke();
+    const qrSize = 168;
+    const qx = W - 80 - qrSize;
+    const qy = fy + 40;
+    drawQr(ctx, qx, qy, qrSize, inviteUrl('card'), t);
+    ctx.fillStyle = t.ink;
+    ctx.font = font(800, 40);
+    ctx.fillText('你的 IKIGAI 是什麼？', 80, fy + 96);
+    ctx.fillStyle = t.muted;
+    ctx.font = font(500, 28);
+    ctx.fillText('掃描 QR Code，15 分鐘找到方向', 80, fy + 144);
+    ctx.font = font(600, 26);
+    ctx.fillText(shortHost(), 80, fy + 190);
+    return { cv, ctx, top: 170, bottom: fy - 40 };
   }
-  function cardFooter(ctx) {
-    ctx.fillStyle = MUTED;
-    ctx.font = `400 26px ${FONT}`;
-    ctx.fillText(`${today()} · 用四個圈找出人生方向`, 80, 1290);
+
+  function drawQr(ctx, x, y, size, url, t) {
+    roundRect(ctx, x, y, size, size, 18);
+    ctx.fillStyle = t.qrLight;
+    ctx.fill();
+    if (typeof window.qrcode !== 'function') return;
+    try {
+      const qr = window.qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      const n = qr.getModuleCount();
+      const pad = 14;
+      const cell = (size - pad * 2) / n;
+      ctx.fillStyle = t.qrDark;
+      for (let r = 0; r < n; r += 1) {
+        for (let c = 0; c < n; c += 1) {
+          if (qr.isDark(r, c)) ctx.fillRect(x + pad + c * cell, y + pad + r * cell, Math.ceil(cell), Math.ceil(cell));
+        }
+      }
+    } catch (err) { /* leave the panel blank if the link is too long */ }
   }
-  function drawVenn(ctx, cx, cy, size, radii) {
+
+  function drawVenn(ctx, t, cx, cy, size, radii, opts = {}) {
     const k = size / 400;
     const pos = (key) => [cx + (CENTERS[key][0] - 200) * k, cy + (CENTERS[key][1] - 200) * k];
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalCompositeOperation = t.blend;
     CIRCLES.forEach((c) => {
       const [x, y] = pos(c.key);
-      ctx.beginPath(); ctx.arc(x, y, radii[c.key] * k, 0, Math.PI * 2);
-      ctx.fillStyle = `${c.hex}55`; ctx.fill();
+      const r = radii[c.key] * k;
+      const g = ctx.createRadialGradient(x, y, r * 0.1, x, y, r);
+      g.addColorStop(0, `${t.c[c.key]}${t.alpha}`);
+      g.addColorStop(1, `${t.c[c.key]}${Math.max(16, parseInt(t.alpha, 16) - 26).toString(16)}`);
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = g; ctx.fill();
     });
     ctx.restore();
     CIRCLES.forEach((c) => {
       const [x, y] = pos(c.key);
       ctx.beginPath(); ctx.arc(x, y, radii[c.key] * k, 0, Math.PI * 2);
-      ctx.strokeStyle = c.hex; ctx.lineWidth = 3; ctx.stroke();
+      ctx.strokeStyle = t.c[c.key]; ctx.lineWidth = 3; ctx.stroke();
     });
-    // Circle names sit just outside each circle so they never cover the overlaps.
-    ctx.fillStyle = INK;
-    CIRCLES.forEach((c) => {
-      const [x, y] = pos(c.key);
-      const rr = radii[c.key] * k;
-      const n = `${inCircle(c.key).length} 項`;
-      const place = {
-        love: { x, y: y - rr - 56, align: 'center' },
-        paid: { x, y: y + rr + 46, align: 'center' },
-        good: { x: x - rr - 18, y: y - 4, align: 'right' },
-        need: { x: x + rr + 18, y: y - 4, align: 'left' },
-      }[c.key];
-      ctx.textAlign = place.align;
-      ctx.fillStyle = INK;
-      ctx.font = `700 40px ${FONT}`;
-      ctx.fillText(c.short, place.x, place.y);
-      ctx.fillStyle = MUTED;
-      ctx.font = `400 28px ${FONT}`;
-      ctx.fillText(n, place.x, place.y + 38);
-    });
-    ctx.textAlign = 'center';
-    ctx.fillStyle = INK;
-    ctx.font = `800 ${Math.round(30 * k)}px ${FONT}`;
-    ctx.fillText('IKIGAI', cx, cy + 10);
-    ctx.textAlign = 'left';
-  }
-  function drawIkigaiCard() {
-    const { cv, ctx } = cardBase(`${owner()} IKIGAI`, `熱愛 ${inCircle('love').length} · 擅長 ${inCircle('good').length} · 世界需要 ${inCircle('need').length} · 報酬 ${inCircle('paid').length}`);
-    drawVenn(ctx, 540, 690, 640, radiiFrom(countWeights()));
-    const center = state.items.filter((it) => hasAll(it, KEYS)).map((it) => it.text);
-    const near = state.items.filter((it) => circlesOf(it).length === 3).map((it) => it.text);
-    ctx.fillStyle = INK;
-    ctx.font = `700 34px ${FONT}`;
-    ctx.fillText('IKIGAI 中心', 80, 1116);
-    ctx.font = `400 34px ${FONT}`;
-    let y = drawText(ctx, center.length ? center.join('、') : (near.length ? `接近中心：${near.join('、')}` : '還在探索中'), 80, 1164, 920, 46, 2);
-    const dir = mainDir();
-    if (dir && y < 1240) {
-      ctx.fillStyle = MUTED; ctx.font = `400 30px ${FONT}`;
-      y = drawText(ctx, `生涯方向：${dir.title}`, 80, y + 8, 920, 40, 1);
-    }
-    cardFooter(ctx);
-    return cv;
-  }
-  function drawPairsCard() {
-    const { cv, ctx } = cardBase('四個交集', '每一格是同時屬於兩個圈的項目');
-    const boxes = PAIRS.slice(0, 4);
-    boxes.forEach((p, i) => {
-      const x = 80 + (i % 2) * 470;
-      const y = 340 + Math.floor(i / 2) * 430;
-      roundRect(ctx, x, y, 450, 400, 28);
-      ctx.fillStyle = '#ffffff'; ctx.fill();
-      ctx.fillStyle = BY_KEY[p.keys[0]].hex;
-      ctx.fillRect(x, y + 40, 8, 80);
-      ctx.fillStyle = INK; ctx.font = `800 40px ${FONT}`;
-      ctx.fillText(p.short, x + 36, y + 80);
-      ctx.fillStyle = MUTED; ctx.font = `400 24px ${FONT}`;
-      ctx.fillText(`${BY_KEY[p.keys[0]].short} × ${BY_KEY[p.keys[1]].short}`, x + 36, y + 118);
-      const items = state.items.filter((it) => hasAll(it, p.keys)).map((it) => it.text);
-      ctx.fillStyle = INK; ctx.font = `400 32px ${FONT}`;
-      drawText(ctx, items.length ? items.join('、') : '—', x + 36, y + 180, 380, 46, 5);
-    });
-    cardFooter(ctx);
-    return cv;
-  }
-  function drawPlanCard() {
-    const dir = mainDir();
-    const { cv, ctx } = cardBase(`${owner()}生涯計畫`, '');
-    ctx.fillStyle = MUTED; ctx.font = `400 30px ${FONT}`;
-    ctx.fillText('主要方向', 80, 300);
-    ctx.fillStyle = INK; ctx.font = `800 48px ${FONT}`;
-    let y = drawText(ctx, dir.title, 80, 360, 920, 58, 2);
-    // Fit bars
-    y += 10;
-    CIRCLES.forEach((c, i) => {
-      const x = 80 + i * 232;
-      ctx.fillStyle = MUTED; ctx.font = `400 24px ${FONT}`;
-      ctx.fillText(`${c.short} ${dir.s[c.key]}/5`, x, y + 20);
-      roundRect(ctx, x, y + 36, 200, 14, 7); ctx.fillStyle = '#e8e4dd'; ctx.fill();
-      roundRect(ctx, x, y + 36, 200 * (dir.s[c.key] / 5), 14, 7); ctx.fillStyle = c.hex; ctx.fill();
-    });
-    y += 110;
-    HORIZONS.forEach((h) => {
-      const goal = state.plan.goals[h.key];
-      if (!goal) return;
-      ctx.fillStyle = MUTED; ctx.font = `700 26px ${FONT}`;
-      ctx.fillText(h.label, 80, y);
-      ctx.fillStyle = INK; ctx.font = `400 32px ${FONT}`;
-      y = drawText(ctx, goal, 200, y, 800, 42, 2) + 22;
-    });
-    const acts = state.plan.actions.slice(0, 7);
-    if (acts.length) {
-      y += 10;
-      ctx.fillStyle = INK; ctx.font = `700 30px ${FONT}`;
-      const done = state.plan.actions.filter((a) => a.done).length;
-      ctx.fillText(`行動清單（完成 ${done}/${state.plan.actions.length}）`, 80, y);
-      y += 52;
-      ctx.font = `400 30px ${FONT}`;
-      acts.forEach((a) => {
-        if (y > 1230) return;
-        roundRect(ctx, 80, y - 26, 30, 30, 6);
-        ctx.strokeStyle = a.done ? '#1f7a4f' : '#9a948a'; ctx.lineWidth = 3; ctx.stroke();
-        if (a.done) { ctx.fillStyle = '#1f7a4f'; ctx.font = `800 26px ${FONT}`; ctx.fillText('✓', 85, y - 2); ctx.font = `400 30px ${FONT}`; }
-        ctx.fillStyle = a.done ? MUTED : INK;
-        const label = `${a.text}`;
-        ctx.fillText(wrapLines(ctx, label, 840, 1)[0], 130, y);
-        y += 50;
+    if (opts.labels !== false) {
+      CIRCLES.forEach((c) => {
+        const [x, y] = pos(c.key);
+        const rr = radii[c.key] * k;
+        const place = {
+          love: { x, y: y - rr - 50, align: 'center' },
+          paid: { x, y: y + rr + 46, align: 'center' },
+          good: { x: x - rr - 16, y: y - 4, align: 'right' },
+          need: { x: x + rr + 16, y: y - 4, align: 'left' },
+        }[c.key];
+        ctx.textAlign = place.align;
+        ctx.fillStyle = t.ink;
+        ctx.font = font(800, 36);
+        ctx.fillText(c.short, place.x, place.y);
+        if (opts.counts !== false) {
+          ctx.fillStyle = t.muted;
+          ctx.font = font(500, 26);
+          ctx.fillText(`${inCircle(c.key).length} 項`, place.x, place.y + 34);
+        }
       });
     }
-    cardFooter(ctx);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = t.ink;
+    ctx.font = font(900, Math.round(30 * k));
+    ctx.fillText('IKIGAI', cx, cy + 10 * k);
+    ctx.textAlign = 'left';
+  }
+
+  function pill(ctx, t, x, y, text, color, size = 30) {
+    ctx.font = font(700, size);
+    const w = ctx.measureText(text).width + size * 1.3;
+    const h = size * 1.75;
+    roundRect(ctx, x, y, w, h, h / 2);
+    ctx.fillStyle = color ? `${color}2e` : t.panel;
+    ctx.fill();
+    ctx.strokeStyle = color || t.line;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = t.ink;
+    ctx.fillText(text, x + size * 0.65, y + h * 0.66);
+    return w;
+  }
+  function panel(ctx, t, x, y, w, h) {
+    roundRect(ctx, x, y, w, h, 28);
+    ctx.fillStyle = t.panel;
+    ctx.fill();
+    ctx.strokeStyle = t.line;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // 1. Personality type
+  function cardType(t, W, H) {
+    const a = archetype();
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '人格類型');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 40);
+    ctx.fillStyle = t.muted;
+    ctx.font = font(600, 32);
+    ctx.fillText(`${owner()} IKIGAI 人格類型`, 80, y);
+    y += story ? 130 : 112;
+    ctx.fillStyle = t.ink;
+    ctx.font = font(900, a.name.length > 6 ? 92 : 112);
+    ctx.fillText(a.name, 76, y);
+    y += 58;
+    ctx.fillStyle = t.muted;
+    ctx.font = font(700, 28);
+    ctx.fillText(a.en.split('').join(String.fromCharCode(8202)), 82, y);
+    y += story ? 80 : 66;
+    ctx.fillStyle = t.ink;
+    ctx.font = font(500, 40);
+    y = drawText(ctx, a.tagline, 80, y, W - 160, 56, 2);
+    const vSize = story ? 640 : 330;
+    const vy = y + (story ? 60 : 6) + vSize / 2;
+    drawVenn(ctx, t, W / 2, vy, vSize, radiiFrom(countWeights()), { labels: story, counts: false });
+    y = vy + vSize / 2 + (story ? 90 : 26);
+    let x = 80;
+    a.strengths.forEach((s, i) => { x += pill(ctx, t, x, y, s, t.c[KEYS[i]], 30) + 16; });
+    y += story ? 90 : 76;
+    const ph = Math.min(150, bottom - y);
+    if (ph > 90) {
+      panel(ctx, t, 80, y, W - 160, ph);
+      ctx.fillStyle = t.muted; ctx.font = font(700, 26);
+      ctx.fillText('給你的一句話', 116, y + 50);
+      ctx.fillStyle = t.ink; ctx.font = font(600, 32);
+      drawText(ctx, a.advice, 116, y + 100, W - 232, 44, ph > 130 ? 2 : 1);
+    }
     return cv;
   }
 
+  // 2. IKIGAI map
+  function cardMap(t, W, H) {
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '四圈地圖');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.ink; ctx.font = font(900, 76);
+    ctx.fillText(`${owner()} IKIGAI`, 76, y);
+    y += 54;
+    ctx.fillStyle = t.muted; ctx.font = font(500, 30);
+    ctx.fillText(CIRCLES.map((c) => `${c.short} ${inCircle(c.key).length}`).join('　'), 80, y);
+    const vSize = story ? 720 : 560;
+    const vy = y + (story ? 130 : 90) + vSize / 2;
+    drawVenn(ctx, t, W / 2, vy, vSize, radiiFrom(countWeights()));
+    y = vy + vSize / 2 + (story ? 130 : 90);
+    const center = state.items.filter((it) => hasAll(it, KEYS)).map((it) => it.text);
+    const near = state.items.filter((it) => circlesOf(it).length === 3).map((it) => it.text);
+    const ph = Math.min(story ? 260 : 170, bottom - y);
+    if (ph > 100) {
+      panel(ctx, t, 80, y, W - 160, ph);
+      ctx.fillStyle = t.muted; ctx.font = font(700, 26);
+      ctx.fillText(center.length ? 'IKIGAI 中心' : '最接近中心', 116, y + 50);
+      ctx.fillStyle = t.ink; ctx.font = font(800, 38);
+      drawText(ctx, (center.length ? center : near.length ? near : topItems(3)).join('、') || '還在探索中', 116, y + 104, W - 232, 52, story ? 3 : 1);
+    }
+    return cv;
+  }
+
+  // 3. Talents and careers
+  function cardCareers(t, W, H) {
+    const ins = careerInsights();
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '職涯建議');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.ink; ctx.font = font(900, 72);
+    ctx.fillText('我的天賦與職涯', 76, y);
+    y += 56;
+    ctx.fillStyle = t.muted; ctx.font = font(500, 30);
+    ctx.fillText(`天賦關鍵字：${topItems(3).join('・') || '—'}`, 80, y);
+    y += story ? 80 : 50;
+    const careers = ins.careers.slice(0, story ? 4 : 3);
+    const rowH = story ? 150 : 128;
+    careers.forEach((c, i) => {
+      panel(ctx, t, 80, y, W - 160, rowH - 18);
+      ctx.fillStyle = t.muted; ctx.font = font(800, 30);
+      ctx.fillText(`0${i + 1}`, 112, y + 66);
+      ctx.fillStyle = t.ink; ctx.font = font(800, 42);
+      ctx.fillText(wrapLines(ctx, c.name, 520, 1)[0], 180, y + 70);
+      let cx = W - 112;
+      CIRCLES.slice().reverse().forEach((cc) => {
+        const on = c.circles.includes(cc.key);
+        ctx.beginPath(); ctx.arc(cx, y + 56, 13, 0, Math.PI * 2);
+        ctx.fillStyle = on ? t.c[cc.key] : t.line; ctx.fill();
+        cx -= 36;
+      });
+      y += rowH;
+    });
+    if (!careers.length) {
+      ctx.fillStyle = t.ink; ctx.font = font(600, 36);
+      y = drawText(ctx, '寫得更具體一點，就能看到建議職業。', 80, y + 40, W - 160, 50, 2);
+    }
+    y += story ? 40 : 14;
+    if (ins.skills.length && y < bottom - 120) {
+      ctx.fillStyle = t.muted; ctx.font = font(700, 28);
+      ctx.fillText('接下來要加強', 80, y + 30);
+      y += 56;
+      let x = 80;
+      ins.skills.slice(0, 4).forEach((s) => {
+        ctx.font = font(700, 28);
+        const w = ctx.measureText(s.name).width + 36;
+        if (x + w > W - 80) { x = 80; y += 66; }
+        if (y > bottom - 50) return;
+        x += pill(ctx, t, x, y, s.name, t.c.paid, 28) + 14;
+      });
+      y += 80;
+    }
+    if (ins.paths.length && y < bottom - 80) {
+      ctx.fillStyle = t.muted; ctx.font = font(700, 28);
+      ctx.fillText('可以往哪個方向走', 80, y + 10);
+      y += 30;
+      ins.paths.slice(0, 3).forEach((p) => {
+        if (y > bottom - 50) return;
+        ctx.fillStyle = t.muted; ctx.font = font(700, 26);
+        ctx.fillText(p.title, 80, y + 38);
+        ctx.fillStyle = t.ink; ctx.font = font(800, 32);
+        ctx.fillText(p.career.name, 250, y + 38);
+        y += 56;
+      });
+      y += 20;
+    }
+    if (story && y < bottom - 170) {
+      panel(ctx, t, 80, y, W - 160, 150);
+      ctx.fillStyle = t.muted; ctx.font = font(700, 26);
+      ctx.fillText(`最需要補強：${ins.weakest.short}`, 116, y + 50);
+      ctx.fillStyle = t.ink; ctx.font = font(600, 30);
+      drawText(ctx, GAP_ADVICE[ins.weakest.key], 116, y + 98, W - 232, 40, 2);
+    }
+    return cv;
+  }
+
+  // 4. 30-day challenge
+  function cardChallenge(t, W, H) {
+    const ins = careerInsights();
+    const dir = mainDir();
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '30 天挑戰');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.ink; ctx.font = font(900, 80);
+    ctx.fillText('我的 30 天挑戰', 76, y);
+    y += 60;
+    ctx.fillStyle = t.muted; ctx.font = font(600, 32);
+    y = drawText(ctx, `目標方向：${dir ? dir.title : (ins.careers[0] ? ins.careers[0].name : archetype().name)}`, 80, y, W - 160, 44, 1);
+    y += story ? 60 : 30;
+    const want = story ? 6 : 4;
+    const seen = new Set();
+    const list = [];
+    const add = (text, done = false) => {
+      if (list.length >= want || !text || seen.has(text)) return;
+      seen.add(text);
+      list.push({ text, done });
+    };
+    // 30-day actions first, then the rest of the plan, the staged plan and general first steps.
+    state.plan.actions.filter((a) => a.h === 'd30').forEach((a) => add(a.text, a.done));
+    state.plan.actions.filter((a) => a.h !== 'd30').forEach((a) => add(a.text, a.done));
+    ins.timeline.forEach((st) => add(st.what.replace(/^[^：]+：/, '')));
+    ['訪談 2 位正在做這件事的人', '每天花 30 分鐘練習一項能力', '完成一個可以展示的小作品', '把成果分享給 3 個朋友', '整理作品集並更新履歷', '回顧一個月的進度並調整'].forEach((x) => add(x));
+    const rowH = story ? 170 : 132;
+    list.forEach((s, i) => {
+      if (y + rowH > bottom + 10) return;
+      panel(ctx, t, 80, y, W - 160, rowH - 18);
+      const bx = 112;
+      const by = y + (rowH - 18) / 2 - 22;
+      roundRect(ctx, bx, by, 44, 44, 12);
+      ctx.strokeStyle = s.done ? t.c.need : t.muted; ctx.lineWidth = 4; ctx.stroke();
+      if (s.done) {
+        ctx.strokeStyle = t.c.need; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.moveTo(bx + 10, by + 23); ctx.lineTo(bx + 19, by + 32); ctx.lineTo(bx + 35, by + 13); ctx.stroke();
+      }
+      ctx.fillStyle = t.muted; ctx.font = font(700, 24);
+      ctx.fillText(`DAY ${[1, 7, 14, 21, 28, 30][i] || 30}`, 186, y + 46);
+      ctx.fillStyle = s.done ? t.muted : t.ink; ctx.font = font(700, 34);
+      ctx.fillText(wrapLines(ctx, s.text, W - 330, 1)[0], 186, y + 90);
+      y += rowH;
+    });
+    if (y < bottom - 60) {
+      ctx.fillStyle = t.ink; ctx.font = font(800, 34);
+      ctx.fillText('一起挑戰？掃描 QR Code 開始 →', 80, Math.min(bottom - 10, y + 56));
+    }
+    return cv;
+  }
+
+  // 5. Four overlaps
+  function cardPairs(t, W, H) {
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '四個交集');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.ink; ctx.font = font(900, 76);
+    ctx.fillText('我的四個交集', 76, y);
+    y += story ? 80 : 50;
+    const gap = 24;
+    const bw = (W - 160 - gap) / 2;
+    const bh = Math.min(story ? 560 : 440, (bottom - y - gap) / 2);
+    PAIRS.slice(0, 4).forEach((p, i) => {
+      const x = 80 + (i % 2) * (bw + gap);
+      const yy = y + Math.floor(i / 2) * (bh + gap);
+      panel(ctx, t, x, yy, bw, bh);
+      ctx.fillStyle = t.c[p.keys[0]];
+      roundRect(ctx, x + 30, yy + 36, 10, 74, 5); ctx.fill();
+      ctx.fillStyle = t.ink; ctx.font = font(900, 46);
+      ctx.fillText(p.short, x + 58, yy + 82);
+      ctx.fillStyle = t.muted; ctx.font = font(600, 24);
+      ctx.fillText(`${BY_KEY[p.keys[0]].short} × ${BY_KEY[p.keys[1]].short}`, x + 58, yy + 118);
+      const items = state.items.filter((it) => hasAll(it, p.keys)).map((it) => it.text);
+      ctx.fillStyle = t.ink; ctx.font = font(600, 32);
+      drawText(ctx, items.join('、') || '—', x + 36, yy + 182, bw - 72, 46, Math.max(1, Math.floor((bh - 200) / 46)));
+    });
+    return cv;
+  }
+
+  // 6. Career plan
+  function cardPlan(t, W, H) {
+    const dir = mainDir();
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '生涯計畫');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.muted; ctx.font = font(600, 30);
+    ctx.fillText(`${owner()}生涯計畫`, 80, y);
+    y += 82;
+    ctx.fillStyle = t.ink; ctx.font = font(900, 64);
+    y = drawText(ctx, dir.title, 76, y, W - 160, 78, 2) + 10;
+    CIRCLES.forEach((c, i) => {
+      const x = 80 + i * 232;
+      ctx.fillStyle = t.muted; ctx.font = font(600, 24);
+      ctx.fillText(`${c.short} ${dir.s[c.key]}/5`, x, y + 20);
+      roundRect(ctx, x, y + 36, 200, 14, 7); ctx.fillStyle = t.line; ctx.fill();
+      roundRect(ctx, x, y + 36, 200 * (dir.s[c.key] / 5), 14, 7); ctx.fillStyle = t.c[c.key]; ctx.fill();
+    });
+    y += story ? 130 : 100;
+    HORIZONS.forEach((h) => {
+      const goal = state.plan.goals[h.key];
+      if (!goal || y > bottom - 100) return;
+      panel(ctx, t, 80, y, W - 160, story ? 150 : 116);
+      ctx.fillStyle = t.muted; ctx.font = font(800, 26);
+      ctx.fillText(h.label, 112, y + 48);
+      ctx.fillStyle = t.ink; ctx.font = font(600, 32);
+      drawText(ctx, goal, 112, y + 92, W - 224, 42, story ? 2 : 1);
+      y += story ? 168 : 132;
+    });
+    const done = state.plan.actions.filter((a) => a.done).length;
+    if (state.plan.actions.length && y < bottom - 60) {
+      ctx.fillStyle = t.ink; ctx.font = font(800, 32);
+      ctx.fillText(`行動進度 ${done}/${state.plan.actions.length}`, 80, y + 40);
+      roundRect(ctx, 80, y + 64, W - 160, 18, 9); ctx.fillStyle = t.line; ctx.fill();
+      roundRect(ctx, 80, y + 64, Math.max(18, (W - 160) * (done / state.plan.actions.length)), 18, 9); ctx.fillStyle = t.c.need; ctx.fill();
+    }
+    return cv;
+  }
+
+  const CARD_LIST = [
+    { key: 'type', label: '人格類型', draw: cardType },
+    { key: 'map', label: '四圈地圖', draw: cardMap },
+    { key: 'careers', label: '天賦與職涯', draw: cardCareers },
+    { key: 'challenge', label: '30 天挑戰', draw: cardChallenge },
+    { key: 'pairs', label: '四個交集', draw: cardPairs },
+    { key: 'plan', label: '生涯計畫', draw: cardPlan, needsPlan: true },
+  ];
+
   const toBlob = (cv) => new Promise((resolve) => cv.toBlob(resolve, 'image/png'));
+  let lastCards = [];
   async function makeCards() {
-    logEvent('產生字卡');
     const btn = $('makeCards');
     btn.disabled = true;
     btn.textContent = '產生中…';
+    logEvent('產生字卡', `${THEMES[cardTheme].label}・${FORMATS[cardFormat].label}`);
+    save(true);
     cardUrls.forEach((u) => URL.revokeObjectURL(u));
     cardUrls = [];
-    const list = [['ikigai', '我的 IKIGAI', drawIkigaiCard], ['pairs', '四個交集', drawPairsCard]];
-    if (mainDir()) list.push(['plan', '生涯計畫', drawPlanCard]);
+    const t = THEMES[cardTheme];
+    const { w, h } = FORMATS[cardFormat];
     try {
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
-      const cards = await Promise.all(list.map(async ([key, label, draw]) => {
-        const blob = await toBlob(draw());
+      const list = CARD_LIST.filter((c) => !c.needsPlan || mainDir());
+      lastCards = [];
+      for (const c of list) {
+        // eslint-disable-next-line no-await-in-loop
+        const blob = await toBlob(c.draw(t, w, h));
         const url = URL.createObjectURL(blob);
         cardUrls.push(url);
-        return { key, label, blob, url };
-      }));
+        lastCards.push({ ...c, blob, url });
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, 0));
+      }
       const grid = $('cardsGrid');
-      grid.innerHTML = cards.map((c, i) => `
+      grid.className = `cards-grid ${cardFormat}`;
+      grid.innerHTML = lastCards.map((c, i) => `
         <div class="card-prev">
           <img src="${c.url}" alt="${c.label}字卡預覽">
-          <div class="row">
+          <div class="row"><span class="cap">${c.label}</span>
             <button class="btn ghost small" type="button" data-dl="${i}">下載</button>
             ${navigator.canShare ? `<button class="btn ghost small" type="button" data-share="${i}">分享</button>` : ''}
           </div>
         </div>`).join('');
-      grid.querySelectorAll('[data-dl]').forEach((b) => b.addEventListener('click', () => download(cards[b.dataset.dl].blob, `ikigai-${cards[b.dataset.dl].key}.png`)));
-      grid.querySelectorAll('[data-share]').forEach((b) => b.addEventListener('click', () => shareFile(cards[b.dataset.share])));
+      grid.querySelectorAll('[data-dl]').forEach((b) => b.addEventListener('click', () => {
+        const c = lastCards[b.dataset.dl];
+        download(c.blob, `ikigai-${c.key}-${cardFormat}.png`);
+      }));
+      grid.querySelectorAll('[data-share]').forEach((b) => b.addEventListener('click', () => shareFile(lastCards[b.dataset.share])));
+      $('dlAll').hidden = false;
       btn.textContent = '重新產生字卡';
     } catch (err) {
       toast('字卡產生失敗，請再試一次');
       btn.textContent = '產生字卡';
     } finally {
       btn.disabled = false;
+    }
+  }
+  async function downloadAll() {
+    for (const c of lastCards) {
+      download(c.blob, `ikigai-${c.key}-${cardFormat}.png`);
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, 400));
     }
   }
   function download(blob, filename) {
@@ -1887,8 +2288,10 @@
   }
   async function shareFile(card) {
     const file = new File([card.blob], `ikigai-${card.key}.png`, { type: 'image/png' });
+    logEvent('分享字卡', card.label);
+    save(true);
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: `${owner()} IKIGAI` }); } catch (e) { /* cancelled */ }
+      try { await navigator.share({ files: [file], title: `${owner()} IKIGAI`, text: inviteText() }); } catch (e) { /* cancelled */ }
     } else {
       download(card.blob, file.name);
     }
@@ -1918,7 +2321,7 @@
   }
   // Compact form: items as [text, circle bitmask], plan as arrays.
   function packShare(includeAi, includePlan) {
-    const pack = { v: 1, n: state.name, i: state.items.map((it) => [it.text, KEYS.reduce((m, k, b) => m | (it.c[k] ? 1 << b : 0), 0)]) };
+    const pack = { v: 1, r: state.rid, n: state.name, i: state.items.map((it) => [it.text, KEYS.reduce((m, k, b) => m | (it.c[k] ? 1 << b : 0), 0)]) };
     if (state.note) pack.t = state.note;
     if (includeAi && state.ai) pack.a = state.ai;
     const dir = mainDir();
@@ -1934,6 +2337,7 @@
   }
   function unpackShare(pack) {
     const data = {
+      rid: pack.r,
       name: pack.n,
       note: pack.t,
       ai: pack.a,
@@ -1956,7 +2360,7 @@
     state.name = $('shareName').value.trim().slice(0, 20);
     save(true);
     const code = await encodeShare(packShare($('shareAi').checked, $('sharePlan').checked));
-    const url = `${location.origin}${location.pathname}#s=${code}`;
+    const url = `${location.origin}${location.pathname}?ref=${state.rid}&src=share#s=${code}`;
     $('linkBox').innerHTML = `
       <div class="link-row"><label class="sr-only" for="shareUrl">分享連結</label><input type="text" id="shareUrl" readonly value="${esc(url)}">
       <button class="btn" type="button" id="copyLink">複製</button>${navigator.share ? '<button class="btn ghost" type="button" id="shareLink">分享</button>' : ''}</div>
@@ -2010,9 +2414,11 @@
     $('ownBtn').addEventListener('click', leaveShare);
   }
   function leaveShare() {
+    const sharer = state.rid;
     shareMode = false;
     history.replaceState(null, '', location.pathname);
     state = load();
+    applyReferral(sharer, 'share');
     filter = null;
     lastStep = 'result';
     render();
@@ -2296,6 +2702,22 @@
     if (state.step === 'result') refreshAi();
     if (state.step === 'plan') refreshPlanBlock();
   }).catch(() => {});
+
+  // Remember who invited this visitor (first invite wins), then tidy the address bar.
+  function applyReferral(ref, src) {
+    if (!ref || !/^[a-z0-9]{12,40}$/.test(ref) || ref === state.rid || state.referredBy) return;
+    state.referredBy = ref;
+    state.source = String(src || 'link').slice(0, 20);
+    logEvent('透過推薦進入', state.source);
+    save(true);
+  }
+  const incoming = new URLSearchParams(location.search);
+  const incomingRef = incoming.get('ref');
+  const incomingSrc = incoming.get('src');
+  if (incomingRef) {
+    if (!location.hash.startsWith('#s=')) applyReferral(incomingRef, incomingSrc);
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
 
   if (location.hash.startsWith('#s=')) enterShare();
   else render();

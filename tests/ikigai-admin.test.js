@@ -7,11 +7,13 @@ let server;
 let base;
 let clearMemoryRecords;
 let resetRateLimit;
+let setTestTransport;
 
 beforeAll(async () => {
   const { default: app } = await import('../api/index.js');
   ({ clearMemoryRecords } = await import('../utils/ikigai-records.js'));
   ({ resetRateLimit } = await import('../web/ikigai.js'));
+  ({ setTestTransport } = await import('../utils/ikigai-mailer.js'));
   server = app.listen(0);
   await new Promise((resolve) => { server.once('listening', resolve); });
   base = `http://127.0.0.1:${server.address().port}`;
@@ -22,6 +24,7 @@ afterAll(() => new Promise((resolve) => { server.close(resolve); }));
 beforeEach(() => {
   clearMemoryRecords();
   resetRateLimit();
+  setTestTransport(null);
 });
 
 const RECORD = {
@@ -171,4 +174,56 @@ test('GET /ikigai/referrals/:rid counts friends who left their details', async (
   expect((await (await fetch(`${base}/ikigai/referrals/${RECORD.id}`)).json()).count).toEqual(2);
   await admin('records/friend000000000002', { method: 'DELETE' });
   expect((await (await fetch(`${base}/ikigai/referrals/${RECORD.id}`)).json()).count).toEqual(1);
+});
+
+const sendReport = (id) => fetch(`${base}/ikigai/report-email`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
+});
+
+test('report email is off until mail is configured', async () => {
+  expect(await (await fetch(`${base}/ikigai/mail-status`)).json()).toEqual({ enabled: false });
+  await post(RECORD);
+  expect((await sendReport(RECORD.id)).status).toEqual(503);
+});
+
+test('report email goes to the saved address with the full report', async () => {
+  const sent = [];
+  setTestTransport(async (m) => { sent.push(m); });
+  expect((await sendReport(RECORD.id)).status).toEqual(404);
+  await post({
+    ...RECORD,
+    insights: {
+      ...RECORD.insights,
+      careers: [{
+        name: '文案企劃', circles: ['love', 'good'], skills: ['文案寫作', 'SEO'], items: ['寫作'],
+      }],
+      archetype: {
+        name: '熱情創作者', tagline: '做喜歡的事時，你也做得特別好。', strengths: ['投入'], advice: '找出誰需要你的作品。',
+      },
+    },
+  });
+  const res = await sendReport(RECORD.id);
+  expect(res.status).toEqual(200);
+  expect(sent).toHaveLength(1);
+  expect(sent[0].to).toEqual('ming@example.com');
+  expect(sent[0].subject).toContain('王小明');
+  expect(sent[0].subject).toContain('熱情創作者');
+  expect(sent[0].html).toContain('前三個建議職業的準備方式');
+  expect(sent[0].html).toContain(`ref=${RECORD.id}`);
+  expect(sent[0].html).not.toContain('<script');
+  // A second send right away is refused; the admin sees the status.
+  expect((await sendReport(RECORD.id)).status).toEqual(429);
+  const { mail } = await (await admin(`records/${RECORD.id}`)).json();
+  expect(mail.count).toEqual(1);
+  const { records } = await (await admin('records')).json();
+  expect(records[0].mailedAt).toBeGreaterThan(0);
+});
+
+test('report email escapes what visitors typed', async () => {
+  const sent = [];
+  setTestTransport(async (m) => { sent.push(m); });
+  await post({ ...RECORD, items: [{ text: '<img src=x onerror=alert(1)>', c: { love: true, good: true } }] });
+  await sendReport(RECORD.id);
+  expect(sent[0].html).not.toContain('<img src=x');
+  expect(sent[0].html).toContain('&lt;img src=x');
 });

@@ -8,8 +8,11 @@ import analyzeIkigai, {
 } from '../utils/analyze-ikigai.js';
 import moderateContent from '../utils/moderate-content.js';
 import {
-  countReferrals, deleteRecord, getRecord, listRecords, sanitizeRecord, saveRecord, summarize, toCsv,
+  countReferrals, deleteRecord, getMailStatus, getRecord, listMailed, listRecords, sanitizeRecord, saveRecord,
+  setMailStatus, summarize, toCsv,
 } from '../utils/ikigai-records.js';
+import { mailConfigured, sendMail } from '../utils/ikigai-mailer.js';
+import buildReport from '../utils/ikigai-report.js';
 
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
 const PAGE_PATH = path.join(process.cwd(), 'web', 'ikigai.html');
@@ -191,6 +194,59 @@ router.get('/referrals/:rid', async (req, res) => {
   }
 });
 
+// ---------- report email ----------
+
+const MAIL_GAP_MS = 10 * 60 * 1000;
+const mails = new Map();
+const isMailLimited = (ip, now = Date.now()) => {
+  const recent = (mails.get(ip) || []).filter((time) => now - time < WINDOW_MS);
+  recent.push(now);
+  mails.set(ip, recent);
+  return recent.length > 10;
+};
+const siteUrlOf = (req) => {
+  if (config.IKIGAI_SITE_URL) return config.IKIGAI_SITE_URL.replace(/\/+$/, '');
+  const proto = (req.get('x-forwarded-proto') || req.protocol).split(',')[0].trim();
+  return `${proto}://${req.get('host')}`;
+};
+
+router.get('/mail-status', (req, res) => {
+  res.json({ enabled: mailConfigured() });
+});
+
+// Emails the full report to the address the visitor saved. The content comes only from their stored record.
+router.post('/report-email', async (req, res) => {
+  if (!mailConfigured()) {
+    res.status(503).json({ code: 'mail_disabled', error: '目前還不能寄送報告' });
+    return;
+  }
+  if (isMailLimited(getClientIp(req))) {
+    res.status(429).json({ code: 'too_many_requests', error: '寄送次數太多，請稍後再試' });
+    return;
+  }
+  try {
+    const record = await getRecord(req.body?.id);
+    if (!record || !record.profile.email) {
+      res.status(404).json({ code: 'not_found', error: '找不到你的資料，請先留下 Email' });
+      return;
+    }
+    const status = await getMailStatus(record.id);
+    if (status && Date.now() - status.lastSentAt < MAIL_GAP_MS) {
+      res.status(429).json({ code: 'recently_sent', error: '報告剛寄出，10 分鐘後才能再寄一次' });
+      return;
+    }
+    const { subject, html, text } = buildReport(record, { siteUrl: siteUrlOf(req) });
+    await sendMail({
+      to: record.profile.email, subject, html, text,
+    });
+    await setMailStatus(record.id, { to: record.profile.email, lastSentAt: Date.now(), count: (status?.count || 0) + 1 });
+    res.json({ ok: true, to: record.profile.email });
+  } catch (err) {
+    console.error(`[ikigai] report email: ${err.response?.status || err.code || ''} ${err.message}`);
+    res.status(502).json({ code: 'mail_error', error: '報告寄送失敗，請稍後再試' });
+  }
+});
+
 // ---------- admin ----------
 
 const sameSecret = (a, b) => {
@@ -229,13 +285,16 @@ const adminRoute = (fn) => async (req, res) => {
 };
 
 router.get('/admin/api/records', requireAdmin, adminRoute(async (req, res) => {
-  const records = await listRecords();
+  const [records, mailed] = await Promise.all([listRecords(), listMailed()]);
   const names = new Map(records.map((r) => [r.id, r.profile.name]));
   const referrals = new Map();
   records.forEach((r) => { if (r.referredBy) referrals.set(r.referredBy, (referrals.get(r.referredBy) || 0) + 1); });
   res.json({
     storage: config.IKIGAI_BLOB_TOKEN ? 'blob' : 'memory',
-    records: records.map((r) => ({ ...summarize(r), referrals: referrals.get(r.id) || 0, referrerName: names.get(r.referredBy) || '' })),
+    mail: mailConfigured(),
+    records: records.map((r) => ({
+      ...summarize(r), referrals: referrals.get(r.id) || 0, referrerName: names.get(r.referredBy) || '', mailedAt: mailed.get(r.id) || null,
+    })),
   });
 }));
 
@@ -245,8 +304,11 @@ router.get('/admin/api/records/:id', requireAdmin, adminRoute(async (req, res) =
     res.status(404).json({ code: 'not_found', error: '找不到這筆資料' });
     return;
   }
-  const referrer = record.referredBy ? await getRecord(record.referredBy).catch(() => null) : null;
-  res.json({ record, summary: { ...summarize(record), referrerName: referrer ? referrer.profile.name : '' } });
+  const [referrer, mail] = await Promise.all([
+    record.referredBy ? getRecord(record.referredBy).catch(() => null) : null,
+    getMailStatus(record.id).catch(() => null),
+  ]);
+  res.json({ record, mail, summary: { ...summarize(record), referrerName: referrer ? referrer.profile.name : '' } });
 }));
 
 router.delete('/admin/api/records/:id', requireAdmin, adminRoute(async (req, res) => {

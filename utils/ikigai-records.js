@@ -71,8 +71,19 @@ export const sanitizeRecord = (body, meta = {}) => {
     },
     insights: {
       careers: (Array.isArray(insights.careers) ? insights.careers : []).slice(0, 6)
-        .map((c) => ({ name: str(c?.name, 40), circles: (Array.isArray(c?.circles) ? c.circles : []).filter((k) => KEYS.includes(k)) }))
+        .map((c) => ({
+          name: str(c?.name, 40),
+          circles: (Array.isArray(c?.circles) ? c.circles : []).filter((k) => KEYS.includes(k)),
+          skills: (Array.isArray(c?.skills) ? c.skills : []).slice(0, 6).map((x) => str(x, 40)).filter(Boolean),
+          items: (Array.isArray(c?.items) ? c.items : []).slice(0, 6).map((x) => str(x, 60)).filter(Boolean),
+        }))
         .filter((c) => c.name),
+      archetype: insights.archetype && typeof insights.archetype === 'object' ? {
+        name: str(insights.archetype.name, 30),
+        tagline: str(insights.archetype.tagline, 80),
+        strengths: (Array.isArray(insights.archetype.strengths) ? insights.archetype.strengths : []).slice(0, 3).map((x) => str(x, 20)).filter(Boolean),
+        advice: str(insights.archetype.advice, 80),
+      } : null,
       paths: (Array.isArray(insights.paths) ? insights.paths : []).slice(0, 3)
         .map((x) => ({ title: str(x?.title, 20), career: str(x?.career, 40) })).filter((x) => x.career),
       skills: (Array.isArray(insights.skills) ? insights.skills : []).slice(0, 8).map((s) => str(s, 40)).filter(Boolean),
@@ -185,9 +196,38 @@ export const deleteRecord = async (id) => {
   await del(pathOf(id), { token: config.IKIGAI_BLOB_TOKEN });
 };
 
+// Report-email status lives beside the record, so page saves never overwrite it.
+const memoryMail = new Map();
+const MAIL = 'ikigai/mail/';
+
+export const getMailStatus = async (id) => {
+  if (!isId(id)) return null;
+  if (!useBlob()) return memoryMail.get(id) || null;
+  const result = await get(`${MAIL}${id}.json`, { access: 'private', useCache: false, token: config.IKIGAI_BLOB_TOKEN });
+  return result ? JSON.parse(await readText(result.stream)) : null;
+};
+
+export const setMailStatus = async (id, status) => {
+  if (!useBlob()) {
+    memoryMail.set(id, status);
+    return;
+  }
+  await put(`${MAIL}${id}.json`, JSON.stringify(status), {
+    access: 'private', allowOverwrite: true, addRandomSuffix: false, contentType: 'application/json', token: config.IKIGAI_BLOB_TOKEN,
+  });
+};
+
+/** Ids of records whose report was emailed, with the time of the last send. */
+export const listMailed = async () => {
+  if (!useBlob()) return new Map([...memoryMail.entries()].map(([id, s]) => [id, s.lastSentAt]));
+  const page = await list({ prefix: MAIL, limit: 1000, token: config.IKIGAI_BLOB_TOKEN });
+  return new Map(page.blobs.map((b) => [b.pathname.slice(MAIL.length).replace(/\.json$/, ''), new Date(b.uploadedAt).getTime()]));
+};
+
 export const clearMemoryRecords = () => {
   memory.clear();
   memoryRefs.clear();
+  memoryMail.clear();
 };
 
 const STEP_LABELS = {

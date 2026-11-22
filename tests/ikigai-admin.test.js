@@ -68,6 +68,23 @@ const RECORD = {
   events: [{ t: 1795300000000, type: '前往', detail: '熱愛' }],
 };
 
+const ANALYSIS = {
+  index: 72,
+  level: '方向清楚，持續累積',
+  balance: 88,
+  abilities: [{ name: '教學引導', score: 100 }, { name: '文字內容', score: 75 }],
+  careers: [{ name: '文案企劃', match: 83 }],
+  strong: [{ name: '教學引導', use: '能把會的東西教給別人。' }],
+  grow: [{ name: '商業行銷', tip: '試著賣出一個小東西。' }],
+  assets: [{ text: '寫作', n: 4 }],
+  priorities: [{ name: 'SEO', level: '優先' }],
+  roadmap: [{
+    title: '探索驗證期', when: '0～3 個月', goal: '確認方向', actions: ['訪談 2 位業內人士'],
+  }],
+  habits: ['每天 30 分鐘練習'],
+  risk: '收入還不穩定前不要裸辭。',
+};
+
 const post = (body) => fetch(`${base}/ikigai/records`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
 });
@@ -200,6 +217,7 @@ test('report email goes to the saved address with the full report', async () => 
       archetype: {
         name: '熱情創作者', tagline: '做喜歡的事時，你也做得特別好。', strengths: ['投入'], advice: '找出誰需要你的作品。',
       },
+      analysis: ANALYSIS,
     },
   });
   const res = await sendReport(RECORD.id);
@@ -209,6 +227,9 @@ test('report email goes to the saved address with the full report', async () => 
   expect(sent[0].subject).toContain('王小明');
   expect(sent[0].subject).toContain('熱情創作者');
   expect(sent[0].html).toContain('前三個建議職業的準備方式');
+  expect(sent[0].html).toContain('能力分析與排名');
+  expect(sent[0].html).toContain('三階段生涯規劃建議');
+  expect(sent[0].text).toContain('IKIGAI 契合指數：72/100');
   expect(sent[0].html).toContain(`ref=${RECORD.id}`);
   expect(sent[0].html).not.toContain('<script');
   // A second send right away is refused; the admin sees the status.
@@ -217,6 +238,29 @@ test('report email goes to the saved address with the full report', async () => 
   expect(mail.count).toEqual(1);
   const { records } = await (await admin('records')).json();
   expect(records[0].mailedAt).toBeGreaterThan(0);
+});
+
+test('ability analysis is cleaned up, stored and shown to the consultant', async () => {
+  await post({
+    ...RECORD,
+    insights: {
+      ...RECORD.insights,
+      analysis: {
+        ...ANALYSIS, index: 250, abilities: [...ANALYSIS.abilities, { name: '', score: 5 }], roadmap: 'not a list', extra: 'dropped',
+      },
+    },
+  });
+  const { record } = await (await admin(`records/${RECORD.id}`)).json();
+  const a = record.insights.analysis;
+  expect(a.index).toEqual(100);
+  expect(a.abilities).toEqual(ANALYSIS.abilities);
+  expect(a.roadmap).toEqual([]);
+  expect(a.extra).toBeUndefined();
+  const { records } = await (await admin('records')).json();
+  expect(records[0].fitIndex).toEqual(100);
+  expect(records[0].topAbilities).toEqual(['教學引導', '文字內容']);
+  const csv = Buffer.from(await (await admin('export.csv')).arrayBuffer()).toString('utf8');
+  expect(csv).toContain('"教學引導、文字內容"');
 });
 
 test('report email escapes what visitors typed', async () => {

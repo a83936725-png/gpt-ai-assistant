@@ -1,5 +1,18 @@
 # Changelog
 
+## 4.19.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: ability analysis and rankings on the result page, share page, PDF and emailed report: an IKIGAI fit index (0–100), a ranking of nine abilities, career match percentages, circle strengths, top three strengths, abilities to develop, core assets and skill priorities
+- IKIGAI: a three-stage career roadmap (0–3 months, 3–12 months, 1–3 years) with weekly habits and a risk reminder; its steps can be added to the action list
+- IKIGAI: a new "ability ranking" share card (7 cards in total)
+- IKIGAI: the admin list and CSV show each client's fit index and top strengths
+
+### Improvements
+
+- IKIGAI: circle names and counts are drawn inside their circles in every diagram and card, sized to fit each circle
+
 ## 4.18.0 (2026-11-22)
 
 ### New Features

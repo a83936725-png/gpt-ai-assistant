@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.15.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: visitors leave a name and a phone/LINE ID or email, and agree to share, before the results. Their answers, career suggestions, plan, analysis and an activity log are saved to a private Vercel Blob store (`IKIGAI_BLOB_READ_WRITE_TOKEN`)
+- IKIGAI: admin page at `/ikigai/admin` (password `IKIGAI_ADMIN_PASSWORD`) with stats, search, each client's full record and activity log, CSV export for Excel, and delete
+
 ## 4.14.0 (2026-11-22)
 
 ### New Features

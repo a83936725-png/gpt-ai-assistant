@@ -45,7 +45,7 @@ const replies = async (text, userId = MOCK_USER_01, groupId = undefined) => {
 test('starts a practice for staff and relays what they say', async () => {
   expect(await replies('練習接待')).toEqual(['start:']);
   expect(calls[0]).toEqual({
-    url: 'https://expo.test/api/rpc', fn: 'api_trainerLine', args: ['test-secret', 'start', MOCK_USER_01, ''],
+    url: 'https://expo.test/api/rpc', fn: 'api_trainerLine', args: ['test-secret', 'start', MOCK_USER_01, '', 'user'],
   });
   expect(await replies('媽咪辛苦了，先坐一下')).toEqual(['say:媽咪辛苦了，先坐一下']);
   expect(await replies('結束練習！')).toEqual(['end:']);
@@ -60,10 +60,41 @@ test('after the practice ends, messages go back to customer service', async () =
   expect(calls).toEqual([]);
 }, TIMEOUT);
 
+test('starting can name the scenario, and 「開始練習」 also starts', async () => {
+  expect(await replies('練習接待 中期 猶豫')).toEqual(['start:中期 猶豫']);
+  await replies('結束練習');
+  calls = [];
+  expect(await replies('開始練習')).toEqual(['start:']);
+  expect(calls[0].args[1]).toBe('start');
+}, TIMEOUT);
+
+test('a sentence that only begins with the command is not a command', async () => {
+  await replies('練習接待');
+  calls = [];
+  expect(await replies('練習接待的時候要先倒原味嗎')).toEqual(['say:練習接待的時候要先倒原味嗎']);
+}, TIMEOUT);
+
 test('「繼續練習」 picks the practice up again after the bot restarts', async () => {
   await replies('繼續練習');
   expect(calls[0].args[1]).toBe('resume');
   expect(await replies('我懂，可以先從入門組開始')).toEqual(['say:我懂，可以先從入門組開始']);
+}, TIMEOUT);
+
+test('「快問快答」 starts the free drill, and 「下一題」 asks for the next card', async () => {
+  expect(await replies('快問快答')).toEqual(['drill:']);
+  expect(await replies('我懂，一包不到 100 塊')).toEqual(['say:我懂，一包不到 100 塊']);
+  expect(await replies('下一題！')).toEqual(['next:']);
+  expect(await replies('結束練習')).toEqual(['end:']);
+  expect(calls.map(({ args }) => args[1])).toEqual(['drill', 'say', 'next', 'end']);
+  calls = [];
+  expect(await replies('快問快答 換個說法')).toEqual(['drill:換個說法']);
+  expect(calls[0].args).toEqual(['test-secret', 'drill', MOCK_USER_01, '換個說法', 'user']);
+}, TIMEOUT);
+
+test('customers who send the drill words are not sent to the drill', async () => {
+  await replies('快問快答', MOCK_USER_02);
+  await replies('下一題', MOCK_USER_02);
+  expect(calls).toEqual([]);
 }, TIMEOUT);
 
 test('only staff on TRAINER_USER_IDS can practise, and not in groups', async () => {

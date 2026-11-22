@@ -1,4 +1,5 @@
 import config from '../../config/index.js';
+import { t } from '../../locales/index.js';
 import Context from '../context.js';
 
 /**
@@ -13,6 +14,10 @@ export const TRAINER_COMMANDS = Object.freeze({
   結束練習: 'end',
   繼續練習: 'resume',
   放棄練習: 'quit',
+  // Quick drill without AI: the expo site sends a card, staff answer, the site shows the suggested
+  // wording. Free, because nothing here or there calls a model.
+  快問快答: 'drill',
+  下一題: 'next',
 });
 
 const ACTIVE_MS = 2 * 60 * 60 * 1000;
@@ -48,7 +53,21 @@ const setActive = (userId, on) => {
  * @returns {string}
  */
 const typedText = (context) => context.event.text.replaceAll('　', ' ').trim();
-const commandOf = (text) => TRAINER_COMMANDS[text.replace(/[。！？!?.\s]+$/, '')];
+
+/**
+ * Starting can name the scenario: 「練習接待 中期 猶豫」 practises with a hesitant mum in mid
+ * pregnancy. 「開始練習」 also starts. 「快問快答 換個說法」 picks the drill's deck the same way.
+ * @param {string} text
+ * @returns {{op: string, rest: string} | null}
+ */
+const parseCommand = (text) => {
+  const start = text.match(/^(?:練習接待|開始練習)(?:\s+(.*))?$/);
+  if (start) return { op: 'start', rest: (start[1] || '').trim() };
+  const drill = text.match(/^快問快答(?:\s+(.*))?$/);
+  if (drill) return { op: 'drill', rest: (drill[1] || '').trim() };
+  const op = TRAINER_COMMANDS[text.replace(/[。！？!?.\s]+$/, '')];
+  return op ? { op, rest: '' } : null;
+};
 
 const isEnabled = () => Boolean(config.TRAINER_RPC_URL && config.TRAINER_SECRET);
 
@@ -60,20 +79,23 @@ const check = (context) => isEnabled()
   && context.event.isText
   && !context.event.isGroup
   && config.TRAINER_USER_IDS.includes(context.userId)
-  && Boolean(commandOf(typedText(context)) || isActive(context.userId));
+  && Boolean(parseCommand(typedText(context)) || isActive(context.userId));
 
 /**
  * @param {Object} param
  * @param {string} param.op start, say, end, resume or quit.
  * @param {string} param.userId
  * @param {string} param.text
+ * @param {string} param.name LINE display name, so the manager can see who practised.
  * @returns {Promise<{active: boolean, text: string}>}
  */
-const callTrainer = async ({ op, userId, text }) => {
+const callTrainer = async ({
+  op, userId, text, name,
+}) => {
   const res = await fetch(config.TRAINER_RPC_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fn: 'api_trainerLine', args: [config.TRAINER_SECRET, op, userId, text] }),
+    body: JSON.stringify({ fn: 'api_trainerLine', args: [config.TRAINER_SECRET, op, userId, text, name] }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   const body = await res.json();
@@ -92,9 +114,14 @@ const callTrainer = async ({ op, userId, text }) => {
 const exec = (context) => check(context) && (
   async () => {
     const text = typedText(context);
-    const op = commandOf(text) || 'say';
+    const command = parseCommand(text);
+    const op = command ? command.op : 'say';
     try {
-      const result = await callTrainer({ op, userId: context.userId, text: op === 'say' ? text : '' });
+      // The profile lookup falls back to a placeholder name when LINE does not answer; send no name then.
+      const name = context.source && context.source.name !== t('__SOURCE_NAME_SOMEONE') ? context.source.name || '' : '';
+      const result = await callTrainer({
+        op, userId: context.userId, text: command ? command.rest : text, name,
+      });
       setActive(context.userId, result.active);
       context.pushText(result.text);
     } catch (err) {

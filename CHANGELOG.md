@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.20.0 (2026-11-22)
+
+### New Features
+
+- Travel eSIM: a store flow built for phones. Region chips and flag tiles, a plan sheet with daily, total and unlimited plans (each with who it suits, its throttled speed and typical uses), day and quantity steppers, a cart button, checkout and a success page. Days are filled in from the next trip
+- Travel eSIM: "help me choose" quiz (destination, days, uses, travellers) that recommends a plan and how many cards to buy
+- Travel eSIM: My eSIM with in use / waiting / expired tabs and a three-step tracker per card (get, install, activate). Install timing is advised from the flight length (install on departure day for short flights, after arrival for long ones)
+- Travel eSIM: share a card with a friend through LINE; the friend opens the link, sees "a friend sent you an eSIM" and claims it
+- Travel eSIM: install sheet with a pre-install checklist, suggested label names (destination plus date) to copy, one-tap iPhone install (when activation data is available) and warnings before installing a card twice or installing a friend's card on your own phone
+- Travel eSIM: illustrated install guide for iPhone and Android with phone-screen mockups that use the card's label, auto-play, a settings checklist for arrival, cautions and troubleshooting. `TRAVEL_GUIDE_VIDEO_URL` adds a link to your own video
+- Travel: dialogs open as bottom sheets on phones and close with a downward swipe
+
 ## 4.19.0 (2026-11-22)
 
 ### New Features

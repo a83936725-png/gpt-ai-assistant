@@ -73,7 +73,9 @@ router.get('/', (req, res, next) => {
 Object.keys(FILES).filter(Boolean).forEach((key) => router.get(`/${key}`, sendFile(key)));
 
 router.get('/api/status', (req, res) => {
-  res.json({ ai: aiAvailable(), brand: config.TRAVEL_BRAND, esimUrl: config.TRAVEL_ESIM_URL });
+  res.json({
+    ai: aiAvailable(), brand: config.TRAVEL_BRAND, esimUrl: config.TRAVEL_ESIM_URL, guideVideo: config.TRAVEL_GUIDE_VIDEO_URL,
+  });
 });
 
 router.post('/api/advise', async (req, res) => {

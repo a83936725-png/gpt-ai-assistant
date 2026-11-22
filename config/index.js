@@ -90,6 +90,7 @@ const config = Object.freeze({
   TRAVEL_AI_ENABLED: env.TRAVEL_AI_ENABLED !== 'false',
   TRAVEL_BRAND: env.TRAVEL_BRAND || '旅圖 eSIM',
   TRAVEL_ESIM_URL: env.TRAVEL_ESIM_URL || 'https://www.ccesim.com/',
+  TRAVEL_GUIDE_VIDEO_URL: env.TRAVEL_GUIDE_VIDEO_URL || null,
   TRAVEL_MAX_TOKENS: Number(env.TRAVEL_MAX_TOKENS) || 1500,
   TRAVEL_TIMEOUT: Number(env.TRAVEL_TIMEOUT) || 50000,
   TRAVEL_RATE_LIMIT: Number(env.TRAVEL_RATE_LIMIT) || 10,

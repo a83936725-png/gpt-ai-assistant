@@ -197,6 +197,36 @@
     amsterdam: '阿姆斯特丹', santorini: '聖托里尼島', lisbon: '里斯本', istanbul: '伊斯坦堡', cappadocia: '卡帕多細亞', dubai: '杜拜',
   };
 
+  // eSIM 方案類型（示意）。k 是相對每日 1GB 參考價的倍數；總量型的 k 是整包價格倍數。
+  const PLAN_TYPES = {
+    daily: {
+      label: '每日定量', note: '每天 0 點（當地時間）重置流量，用完當天降速，隔天恢復',
+      options: [
+        { size: '1', name: '每日 1GB', persona: '輕量社交', speed: '128kbps', k: 1, icon: '📍', desc: '地圖導航、LINE 文字訊息、查餐廳評價，大多數自由行夠用。', tags: ['Google 地圖', 'LINE 訊息', '網頁搜尋'] },
+        { size: '2', name: '每日 2GB', persona: '打卡分享', speed: '256kbps', k: 1.5, icon: '📸', desc: '每天上傳照片、滑 IG／FB、偶爾視訊報平安。', tags: ['IG／FB 打卡', '上傳照片', '短時間視訊'] },
+        { size: '3', name: '每日 3GB', persona: '影音工作', speed: '384kbps', k: 1.9, icon: '🎬', desc: '看影片、開視訊會議，或分享熱點給一位同行的人。', tags: ['YouTube', '視訊會議', '熱點分享'] },
+      ],
+    },
+    total: {
+      label: '總量型', note: '一次給足，用完即止、不每日重置。可以前幾天只開地圖，最後一天把剩下的流量用完',
+      options: [
+        { size: '5', name: '5GB', persona: '短程輕量', days: 15, k: 4.6, icon: '🧳', desc: '3～5 天的短程旅行，主要用地圖和通訊軟體。', tags: ['短程', '省錢'] },
+        { size: '10', name: '10GB', persona: '一週剛好', days: 30, k: 7.5, icon: '🗓️', desc: '一週左右的旅行，每天使用量不固定也不怕。', tags: ['一週', '彈性'] },
+        { size: '20', name: '20GB', persona: '長途重度', days: 30, k: 12, icon: '🌍', desc: '兩週以上或同行共用熱點。', tags: ['長途', '共用熱點'] },
+      ],
+    },
+    unl: {
+      label: '吃到飽', note: '每天不限流量，適合重度使用與熱點分享',
+      options: [
+        { size: 'std', name: '標準吃到飽', persona: 'CP 值之選', k: 2.3, icon: '⚡', desc: '全程 4G 不限量；當地網路壅塞時，速度可能較慢。', tags: ['不限量', '4G'] },
+        { size: 'pro', name: '高速優先吃到飽', persona: '旗艦', k: 3.2, icon: '⭐', premium: true, desc: '5G／4G 高速優先線路，熱門景點、跨年活動現場也比較穩。', perks: ['網路壅塞時優先連線', '低延遲，適合直播與視訊', '熱點分享更穩定'], tags: ['5G', '優先線路'] },
+      ],
+    },
+  };
+
+  // 使用期限（示意，請改成官網條款）。
+  const POLICY = { claimDays: 540, installDays: 180, activateDays: 30 };
+
   const HOMES = {
     TPE: { name: '台北', lat: 25.08, lng: 121.23, n: '158' },
     RMQ: { name: '台中', lat: 24.26, lng: 120.62, n: '158' },
@@ -204,6 +234,6 @@
   };
 
   global.TRAVEL_DATA = {
-    ELEMENTS, REGIONS, RATES, COUNTRIES, DESTS, PACKS, HOMES, WIKI,
+    ELEMENTS, REGIONS, RATES, COUNTRIES, DESTS, PACKS, HOMES, WIKI, PLAN_TYPES, POLICY,
   };
 }(typeof window !== 'undefined' ? window : globalThis));

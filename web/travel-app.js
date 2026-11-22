@@ -1,7 +1,7 @@
 /* 旅圖 eSIM：前端邏輯。資料存在瀏覽器 localStorage（示範版），地圖用 d3 + world-atlas。 */
 (function main() {
   const {
-    ELEMENTS, REGIONS, RATES, COUNTRIES, DESTS, PACKS, HOMES, WIKI,
+    ELEMENTS, REGIONS, RATES, COUNTRIES, DESTS, PACKS, HOMES, WIKI, PLAN_TYPES, POLICY,
   } = window.TRAVEL_DATA;
 
   const CONFIG = {
@@ -77,14 +77,17 @@
   let orders = store.get('orders', []);
   let wish = store.get('wish', []);
   const settings = {
-    year: 'all', home: 'TPE', theme: '', usage: { maps: 2, social: 1.5, video: 0.5, share: 0 }, ...store.get('settings', {}),
+    year: 'all', home: 'TPE', theme: '', uses: ['maps', 'social'], people: 1, ...store.get('settings', {}),
   };
+  let cart = store.get('cart', []);
+  let pendingGift = null;
+  let guideState = null;
   const recState = {
     origin: null, tags: [], month: new Date().getMonth() + 1, hours: 0, fee: 'any', unvisited: false, gps: null,
   };
   const home = () => HOMES[settings.home] || HOMES.TPE;
   const save = () => {
-    store.set('user', user); store.set('trips', trips); store.set('orders', orders); store.set('wish', wish); store.set('settings', settings);
+    store.set('user', user); store.set('trips', trips); store.set('orders', orders); store.set('wish', wish); store.set('settings', settings); store.set('cart', cart);
   };
 
   // ---------- trip helpers
@@ -169,22 +172,36 @@
   const ticketTotal = (d) => sum(d.spots, toTwd);
   const freeCount = (d) => d.spots.filter((s) => s.fee === 0).length;
 
-  // ---------- eSIM pricing
-  const DAILY = { 1: { label: '每日 1GB', k: 1 }, 2: { label: '每日 2GB', k: 1.55 }, unl: { label: '每日吃到飽*', k: 2.3 } };
-  const TOTAL = { 3: { label: '3GB／7 天', k: 3.2, days: 7 }, 5: { label: '5GB／15 天', k: 4.6, days: 15 }, 10: { label: '10GB／30 天', k: 7.5, days: 30 }, 20: { label: '20GB／30 天', k: 12, days: 30 } };
+  // ---------- eSIM plans, pricing and card states
   const target = (key) => (PACKS[key] ? { ...PACKS[key], key, pack: true } : { ...COUNTRIES[key], key, icon: flag(key) });
-  const nice = (v) => Math.max(49, Math.ceil(v / 10) * 10 - 1);
-  const planPrice = (key, plan) => {
+  const nice = (v) => Math.max(29, Math.ceil(v / 10) * 10 - 1);
+  const planOpt = (plan) => PLAN_TYPES[plan.type]?.options.find((o) => o.size === String(plan.size)) || PLAN_TYPES.daily.options[1];
+  const planDays = (plan) => (plan.type === 'total' ? planOpt(plan).days : plan.days);
+  const planPrice = (key, plan, qty = 1) => {
     const { base } = target(key);
-    if (plan.kind === 'daily') return nice(base * plan.days * DAILY[plan.size].k);
-    return nice(base * TOTAL[plan.size].k);
+    const o = planOpt(plan);
+    return (plan.type === 'total' ? nice(base * o.k) : nice(base * plan.days * o.k)) * qty;
   };
-  const planLabel = (key, plan) => `${target(key).name} ${plan.kind === 'daily' ? `${plan.days} 天 ${DAILY[plan.size].label}` : TOTAL[plan.size].label}`;
-  const usagePerDay = () => {
-    const u = settings.usage;
-    return u.maps * 0.03 + u.social * 0.3 + u.video * 0.7 + u.share * 0.8;
+  const planSpec = (plan) => (plan.type === 'total' ? `${planOpt(plan).name}・${planOpt(plan).days} 天內有效` : `${plan.days} 天・${planOpt(plan).name}`);
+  const planLabel = (key, plan) => `${target(key).name} ${planSpec(plan)}`;
+  const fromPrice = (key) => nice(target(key).base * PLAN_TYPES.daily.options[0].k);
+  const USES = {
+    maps: { label: '地圖導航、LINE 訊息', icon: '🗺️', gb: 0.3 },
+    social: { label: 'IG／FB 打卡、上傳照片', icon: '📸', gb: 0.8 },
+    video: { label: '看影片、追劇', icon: '🎬', gb: 1.5 },
+    work: { label: '視訊會議、遠端工作', icon: '💻', gb: 1 },
+    share: { label: '分享熱點給同行的人', icon: '📶', gb: 0 },
   };
-  const sizeForUsage = () => { const g = usagePerDay(); if (g <= 0.8) return '1'; if (g <= 1.7) return '2'; return 'unl'; };
+  const usagePerDay = (uses = settings.uses, people = settings.people) => {
+    const base = uses.reduce((s, k) => s + (USES[k]?.gb || 0), 0) || 0.3;
+    return base + (uses.includes('share') ? 0.8 * Math.max(0, people - 1) : 0);
+  };
+  const pickForUsage = (gb = usagePerDay()) => {
+    if (gb <= 0.9) return { type: 'daily', size: '1' };
+    if (gb <= 1.8) return { type: 'daily', size: '2' };
+    if (gb <= 2.8) return { type: 'daily', size: '3' };
+    return { type: 'unl', size: gb > 4 ? 'pro' : 'std' };
+  };
 
   // Smallest pack (or single country) that covers every country of a journey.
   const coverFor = (codes) => {
@@ -199,18 +216,69 @@
     if (!next) return null;
     const key = coverFor(next.map((t) => country(t.n).code));
     const days = daysBetween(next[0].start, next[next.length - 1].end);
-    return {
-      journey: next, key, plan: { kind: 'daily', size: sizeForUsage(), days: Math.min(30, days) },
-    };
+    return { journey: next, key, plan: { ...pickForUsage(), days: Math.min(30, days) } };
   };
-  const orderStatus = (o) => {
-    const linked = trips.filter((t) => o.tripIds?.includes(t.id));
-    if (!linked.length) return o.installed ? ['active', '已安裝'] : ['pending', '待安裝'];
-    const { start } = linked[0]; const { end } = linked[linked.length - 1];
-    if (end < TODAY) return ['done', '已使用完畢'];
-    if (start <= TODAY) return ['active', '使用中'];
-    return o.installed ? ['active', '已安裝・待出發'] : ['pending', '待安裝'];
+
+  const orderTrips = (o) => sortTrips(trips.filter((t) => o.tripIds?.includes(t.id)));
+  const ordersFor = (tripId) => orders.filter((o) => o.tripIds?.includes(tripId));
+  const LONG_REGIONS = ['europe', 'america', 'oceania', 'mideast'];
+  const isShortHaul = (o) => {
+    const ts = orderTrips(o);
+    if (ts.length) return Math.max(...ts.map((t) => DEST[t.dest]?.hours || (LONG_REGIONS.includes(country(t.n).region) ? 12 : 4))) <= 5;
+    return !(['EU', 'NA', 'ANZ', 'GLOBAL'].includes(o.key) || LONG_REGIONS.includes(COUNTRIES[o.key]?.region));
   };
+  const installAdvice = (o) => {
+    const [t] = orderTrips(o);
+    if (isShortHaul(o)) return `短程航線：建議${t && isUpcoming(t) ? ` ${md(t.start)} ` : ''}出發當天在機場連 Wi-Fi 安裝，落地後開啟數據漫遊就能上網。`;
+    return `長程航線：建議抵達${t ? ` ${t.city} ` : '當地'}後，連機場 Wi-Fi 再安裝，避免轉機途中提前開始計算天數。`;
+  };
+  const CARD_STATE = {
+    unclaimed: { label: '待領取', tab: 'pending', cls: 'pending', step: 0 },
+    shared: { label: '待親友領取', tab: 'pending', cls: 'pending', step: 0 },
+    claimed: { label: '待安裝', tab: 'pending', cls: 'pending', step: 1 },
+    installed: { label: '已安裝・待出發', tab: 'pending', cls: 'ready', step: 2 },
+    active: { label: '使用中', tab: 'active', cls: 'active', step: 3 },
+    expired: { label: '已到期', tab: 'expired', cls: 'done', step: 3 },
+  };
+  function cardState(o, c) {
+    const ts = orderTrips(o);
+    const end = ts.length ? ts[ts.length - 1].end : null;
+    const start = ts[0]?.start;
+    if (end && end < TODAY) return 'expired';
+    if (c.activatedAt) return addDays(c.activatedAt, planDays(o.plan) - 1) < TODAY ? 'expired' : 'active';
+    if (c.installed && start && start <= TODAY) return 'active';
+    if (c.installed) return 'installed';
+    if (c.claimed) return 'claimed';
+    if (c.sharedAt) return 'shared';
+    return 'unclaimed';
+  }
+  const ORDER_RANK = ['active', 'installed', 'claimed', 'unclaimed', 'shared', 'expired'];
+  const orderState = (o) => {
+    const states = o.cards.map((c) => cardState(o, c));
+    return CARD_STATE[ORDER_RANK.find((s) => states.includes(s)) || 'unclaimed'];
+  };
+  const orderStatus = (o) => [orderState(o).cls, orderState(o).label];
+  const orderNo = (date) => `TM${date.replace(/-/g, '')}${String(Math.floor(Math.random() * 9000) + 1000)}`;
+  const makeOrder = ({ key, plan, qty = 1, tripIds = [], at = TODAY, gift = null }) => ({
+    id: `o-${uid()}`, orderNo: orderNo(at), key, plan, qty, price: planPrice(key, plan, qty), tripIds, at, title: planLabel(key, plan),
+    cards: Array.from({ length: qty }, (_, i) => ({ id: `c-${uid()}`, n: i + 1, claimed: Boolean(gift), installed: false, sharedAt: null, activatedAt: null, gift: Boolean(gift), from: gift?.from || '' })),
+  });
+  // Orders saved by the first version had one implicit card and a `kind` field.
+  function migrateOrders() {
+    orders.forEach((o) => {
+      if (o.plan?.kind) {
+        const { kind, size, days } = o.plan;
+        if (kind === 'total') o.plan = { type: 'total', size: ['5', '10', '20'].includes(String(size)) ? String(size) : '5', days };
+        else o.plan = size === 'unl' ? { type: 'unl', size: 'std', days } : { type: 'daily', size: String(size), days };
+      }
+      if (!o.cards) {
+        o.qty = 1;
+        o.cards = [{ id: `c-${uid()}`, n: 1, claimed: Boolean(o.installed), installed: Boolean(o.installed), sharedAt: null, activatedAt: null }];
+      }
+      if (!o.orderNo) o.orderNo = orderNo(o.at || TODAY);
+      o.title = planLabel(o.key, o.plan);
+    });
+  }
 
   // ---------- demo data
   const demoTrip = (dest, start, end, tags, gb) => {
@@ -237,11 +305,14 @@
     journeys(trips).forEach((j) => {
       const key = coverFor(j.map((t) => country(t.n).code));
       const days = daysBetween(j[0].start, j[j.length - 1].end);
-      const plan = { kind: 'daily', size: '2', days };
-      orders.push({
-        id: `o-${j[0].id}`, key, plan, title: planLabel(key, plan), price: planPrice(key, plan), tripIds: j.map((t) => t.id), installed: false, total: days * 2, at: j[0].start,
-      });
+      const upcoming = isUpcoming(j[0]);
+      // The coming trip is a family order: two cards, the second shared with a friend.
+      const o = makeOrder({ key, plan: { type: 'daily', size: '2', days }, qty: upcoming ? 2 : 1, tripIds: j.map((t) => t.id), at: upcoming ? addDays(TODAY, -1) : addDays(j[0].start, -7) });
+      if (upcoming) o.cards[1].sharedAt = `${addDays(TODAY, -1)}T21:23`;
+      else o.cards.forEach((c) => { c.claimed = true; c.installed = true; c.activatedAt = j[0].start; });
+      orders.push(o);
     });
+    cart = [];
     save();
   }
 
@@ -252,10 +323,14 @@
     $('#avatar').textContent = (user?.name || '旅').slice(0, 1);
     renderAll();
     if (!world) loadWorld();
+    if (pendingGift) openGift(pendingGift);
   }
   function showLogin() {
     $('#app').hidden = true;
     $('#login').hidden = false;
+    $('#cart-fab').hidden = true;
+    $('#login-gift').hidden = !pendingGift;
+    if (pendingGift) $('#login-gift').innerHTML = `🎁 <b>${esc(pendingGift.f)}</b> 送你一張 ${esc(target(pendingGift.k).name)} eSIM，登入後就能領取。`;
     $('#login-name').value = user?.name || '';
   }
   $('#login-demo').addEventListener('click', () => {
@@ -480,12 +555,36 @@
 
   // ---------- modal
   const modal = $('#modal');
-  function openModal(title, html) {
+  function openModal(title, html, opts = {}) {
     $('#modal-title').innerHTML = title;
     $('#modal-body').innerHTML = html;
+    modal.classList.toggle('tall', opts.sheet === 'tall');
     if (!modal.open) modal.showModal();
-    $('#modal-body').scrollTop = 0;
+    modal.scrollTop = 0;
   }
+  // On phones the dialog is a bottom sheet: drag its header down to close it.
+  (function sheetDrag() {
+    const head = $('.modal-head');
+    let startY = null;
+    head.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button') || window.innerWidth > 640) return;
+      startY = e.clientY;
+      head.setPointerCapture(e.pointerId);
+    });
+    head.addEventListener('pointermove', (e) => {
+      if (startY == null) return;
+      modal.style.transform = `translateY(${Math.max(0, e.clientY - startY)}px)`;
+    });
+    const end = (e) => {
+      if (startY == null) return;
+      const moved = e.clientY - startY;
+      startY = null;
+      modal.style.transform = '';
+      if (moved > 90) modal.close();
+    };
+    head.addEventListener('pointerup', end);
+    head.addEventListener('pointercancel', end);
+  }());
   modal.addEventListener('click', (e) => { if (e.target === modal || e.target.closest('[data-close]')) modal.close(); });
   // In-page confirmation (browser confirm() dialogs are blocked in embedded previews).
   function askConfirm(title, message, action, onYes) {
@@ -730,7 +829,7 @@
     const d = DEST[id];
     const c = COUNTRIES[d.c];
     const days = Math.max(3, Math.min(7, Math.round(d.hours / 2) + 3));
-    const pick = { kind: 'daily', size: sizeForUsage(), days };
+    const pick = { ...pickForUsage(), days };
     openModal(`✨ ${flag(d.c)} ${esc(d.name)} ${days} 天行程`, `
       <div class="row"><label class="small muted" for="ai-days">天數</label><select class="input" id="ai-days" style="width:auto">${[2, 3, 4, 5, 6, 7, 8, 10].map((n) => `<option ${n === days ? 'selected' : ''}>${n}</option>`).join('')}</select>
         <span class="spacer"></span>${CONFIG.ai ? '<button class="btn sm primary" id="ai-run">請 AI 客製</button>' : ''}</div>
@@ -776,148 +875,612 @@
     }
   }
 
-  // ---------- eSIM store
+  // ---------- eSIM store: browse → plan → cart → checkout → my eSIM (claim → install → activate) → share
+  const UA = navigator.userAgent || '';
+  const IS_IOS = /iPhone|iPad|iPod/.test(UA);
+  const IS_ANDROID = /Android/.test(UA);
+  let esimRegion = 'hot';
+  let esimTab = null;
   let planState = null;
-  function openPlan(key, preset) {
-    if (!key) { go('esim'); return; }
-    const t = target(key);
-    const pick = smartPick();
-    planState = {
-      key, kind: 'daily', size: sizeForUsage(), days: 5, ...(pick?.key === key ? pick.plan : {}), ...preset,
-    };
-    const covers = t.pack ? t.countries.map((c) => `${flag(c)} ${COUNTRIES[c].name}`).join('、') : '';
-    openModal(`${t.icon} ${esc(t.name)} eSIM`, `
-      <div class="seg" id="kind-seg"><button data-kind="daily">每日方案</button><button data-kind="total">總量方案</button></div>
-      <div id="plan-opts"></div>
-      <div class="row" style="justify-content:space-between;align-items:flex-end">
-        <div><div class="small muted" id="plan-label"></div><div class="price">NT$<span id="plan-price"></span></div></div>
-        <div class="small muted" style="text-align:right">流量試算：每天約 ${usagePerDay().toFixed(1)} GB<br>建議 ${DAILY[sizeForUsage()].label}</div>
-      </div>
-      <ul class="small" style="margin:0;padding-left:18px;display:grid;gap:4px">
-        <li>✅ 熱點分享・4G／5G（依當地網路）</li>
-        <li>✅ 抵達後連上當地網路才開始計算天數，購買後 180 天內啟用</li>
-        ${t.pack ? `<li>✅ 適用：${covers}</li>` : `<li>✅ 常見合作網路：${esc(t.ops)}（以官網為準）</li>`}
-        <li class="muted">* 吃到飽方案每日高速流量用完後降速</li>
-      </ul>
-      <div class="actions">
-        <button class="btn primary" id="plan-add">加入我的 eSIM（示範）</button>
-        <a class="btn accent" href="${CONFIG.esimUrl}" target="_blank" rel="noopener">到官網購買 ↗</a>
-      </div>
-      <p class="notice">示意價格，正式價格與方案內容以官網為準。示範版不會扣款。</p>`);
-    $$('#kind-seg button').forEach((b) => b.addEventListener('click', () => {
-      planState.kind = b.dataset.kind;
-      planState.size = planState.kind === 'daily' ? sizeForUsage() : '5';
-      renderPlan();
-    }));
-    $('#plan-add').addEventListener('click', addOrder);
-    renderPlan();
+  const HOT = ['JP', 'KR', 'TH', 'VN', 'SG', 'HK', 'MO', 'MY', 'US', 'FR', 'GB', 'AU'];
+  const REGION_CHIPS = [['hot', '精選熱門'], ['jk', '日韓'], ['sea', '東南亞'], ['hkmo', '港澳'], ['europe', '歐洲'], ['america', '美洲'], ['oceania', '大洋洲'], ['mideast', '中東'], ['packs', '多國方案'], ['all', '全部']];
+  const REGION_CODES = { jk: ['JP', 'KR'], sea: ['TH', 'VN', 'SG', 'MY', 'ID', 'PH', 'KH', 'MV'], hkmo: ['HK', 'MO'] };
+  const inRegion = (code, c, r) => {
+    if (r === 'hot') return HOT.includes(code);
+    if (r === 'all') return true;
+    if (REGION_CODES[r]) return REGION_CODES[r].includes(code);
+    return c.region === r;
+  };
+  const allCards = () => orders.flatMap((o) => (o.cards || []).map((c) => ({ o, c, st: cardState(o, c) })));
+  const findCard = (ref) => {
+    const [oid, cid] = String(ref).split(':');
+    const o = orders.find((x) => x.id === oid);
+    return { o, c: o?.cards.find((x) => x.id === cid) };
+  };
+  const lineBtn = (label, attrs) => `<button class="btn line" ${attrs}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.1.8.2.9.5.1.3.1.7 0 1l-.1.9c0 .3-.2 1 .9.5s5.9-3.5 8-6C21.4 14.2 22 12.7 22 11c0-4.4-4.5-8-10-8z" fill="currentColor"/></svg>${label}</button>`;
+
+  function stepsHtml(st, shared) {
+    const { step } = CARD_STATE[st];
+    const items = [['取得 eSIM', shared && step === 0 ? '等待親友領取' : '領取安裝資料'], ['安裝到手機', '依建議時機安裝'], ['抵達開通', '開啟數據漫遊']];
+    return `<ol class="track">${items.map(([t, sub], i) => {
+      let cls = 'todo';
+      if (i < step || st === 'expired') cls = 'done';
+      else if (i === step) cls = 'now';
+      return `<li class="${cls}"><span class="dot">${cls === 'done' ? '✓' : i + 1}</span><b>${t}</b><small>${cls === 'done' ? '完成' : sub}</small></li>`;
+    }).join('')}</ol>`;
   }
-  function renderPlan() {
-    const p = planState;
-    $$('#kind-seg button').forEach((b) => b.classList.toggle('on', b.dataset.kind === p.kind));
-    if (p.kind === 'daily') {
-      if (!DAILY[p.size]) p.size = '2';
-      $('#plan-opts').innerHTML = `<div class="grid" style="grid-template-columns:repeat(3,1fr);gap:8px">${Object.entries(DAILY).map(([k, v]) => `<button class="plan-opt ${p.size === k ? 'on' : ''}" data-size="${k}"><b>${v.label}</b><div class="small muted">NT$${fmt(planPrice(p.key, { ...p, size: k }))}</div></button>`).join('')}</div>
-        <div class="row" style="margin-top:10px"><span>天數</span><span class="spacer"></span><button class="btn sm" data-days="-1">－</button><b style="min-width:52px;text-align:center">${p.days} 天</b><button class="btn sm" data-days="1">＋</button></div>`;
-    } else {
-      if (!TOTAL[p.size]) p.size = '5';
-      $('#plan-opts').innerHTML = `<div class="grid" style="grid-template-columns:repeat(2,1fr);gap:8px">${Object.entries(TOTAL).map(([k, v]) => `<button class="plan-opt ${String(p.size) === k ? 'on' : ''}" data-size="${k}"><b>${v.label}</b><div class="small muted">NT$${fmt(planPrice(p.key, { kind: 'total', size: k }))}</div></button>`).join('')}</div>`;
-    }
-    $$('#plan-opts [data-size]').forEach((b) => b.addEventListener('click', () => { p.size = b.dataset.size; renderPlan(); }));
-    $$('#plan-opts [data-days]').forEach((b) => b.addEventListener('click', () => { p.days = Math.max(1, Math.min(30, p.days + Number(b.dataset.days))); renderPlan(); }));
-    $('#plan-label').textContent = planLabel(p.key, p);
-    $('#plan-price').textContent = fmt(planPrice(p.key, p));
+  function cardActions(o, c, st) {
+    const ref = `${o.id}:${c.id}`;
+    if (st === 'unclaimed') return `<button class="btn primary" data-claim="${ref}">⬇ 取得 eSIM</button>${lineBtn('分享給親友', `data-share="${ref}"`)}`;
+    if (st === 'shared') return `${lineBtn('再送一次分享連結', `data-share="${ref}"`)}<button class="btn" data-claim="${ref}">改成自己用</button>`;
+    if (st === 'claimed') return `<button class="btn primary" data-install="${ref}">${IS_ANDROID ? '安裝 eSIM' : '一鍵安裝到 iPhone'}</button><button class="btn" data-guide-card="${ref}">圖文教學</button>`;
+    if (st === 'installed') return `<button class="btn primary" data-activate="${ref}">我已抵達，開始使用</button><button class="btn" data-guide-card="${ref}">抵達後怎麼設定</button>`;
+    if (st === 'active') return `<button class="btn" data-guide-card="${ref}">連不上網？</button><button class="btn" data-plan="${o.key}">加購天數</button>`;
+    return `<button class="btn" data-plan="${o.key}">再買一次</button>`;
   }
-  function addOrder() {
-    const p = planState;
-    const plan = { kind: p.kind, size: p.size, days: p.kind === 'daily' ? p.days : TOTAL[p.size].days };
-    const pick = smartPick();
-    const tripIds = pick?.key === p.key ? pick.journey.map((t) => t.id) : [];
-    orders.push({
-      id: `o-${uid()}`, key: p.key, plan, title: planLabel(p.key, plan), price: planPrice(p.key, plan), tripIds, installed: false,
-      total: p.kind === 'daily' ? (DAILY[p.size].k > 2 ? 99 : Number(p.size)) * p.days : Number(p.size), at: TODAY,
-    });
-    save();
-    modal.close();
-    renderEsim(); renderHero(); renderCover();
-    if (currentTab === 'plan') renderPlanner();
-    toast('已加入我的 eSIM（示範，未扣款）');
+  function esimCardHtml(o, c, st) {
+    const t = target(o.key);
+    const S = CARD_STATE[st];
+    const ts = orderTrips(o);
+    const used = st === 'expired' ? sum(ts, (x) => Number(x.gb)) / (o.qty || 1) : 0;
+    let total = 0;
+    if (o.plan.type === 'total') total = Number(o.plan.size);
+    else if (o.plan.type === 'daily') total = Number(o.plan.size) * o.plan.days;
+    return `<article class="esim-card">
+      <div class="esim-top">
+        <span class="flag-tile">${t.icon}</span>
+        <div class="grow">
+          <div class="row" style="gap:6px"><b class="esim-name">${esc(t.name)}</b><span class="status ${S.cls}">${S.label}</span>${o.qty > 1 ? `<span class="chip sm">第 ${c.n} 張（共 ${o.qty} 張）</span>` : ''}${c.gift ? `<span class="chip sm">🎁 ${esc(c.from || '親友')}送的</span>` : ''}</div>
+          <div class="small muted">${esc(planSpec(o.plan))}${ts.length ? `・${ts.map(tripLabel).join(' → ')}` : ''}</div>
+          <div class="small muted">${c.installed ? `手機上的名稱：<b>${esc(labelOf(o, c))}</b>` : `購買日期 ${o.at}`}</div>
+        </div>
+        <button class="icon-btn" data-card-open="${o.id}:${c.id}" aria-label="詳細資訊">⋯</button>
+      </div>
+      ${st === 'shared' ? '<div class="banner good">👥 已分享給親友，等待領取</div>' : ''}
+      ${['unclaimed', 'claimed', 'shared'].includes(st) ? `<div class="banner warn">⏰ ${esc(installAdvice(o))}</div>` : ''}
+      ${stepsHtml(st, st === 'shared')}
+      ${st === 'expired' && used && total ? `<div><div class="usage"><div style="width:${Math.min(100, (used / total) * 100)}%"></div></div><div class="small muted" style="margin-top:4px">用了 ${used.toFixed(1)} GB／${total} GB</div></div>` : ''}
+      <div class="actions two">${cardActions(o, c, st)}</div>
+    </article>`;
   }
   function renderWallet() {
-    const list = [...orders].sort((a, b) => b.at.localeCompare(a.at));
-    $('#wallet').innerHTML = list.length ? list.map((o) => {
-      const [cls, label] = orderStatus(o);
-      const linked = trips.filter((t) => o.tripIds?.includes(t.id));
-      const used = sum(linked, (t) => Number(t.gb));
-      const pct = o.total ? Math.min(100, (used / o.total) * 100) : 0;
-      return `<div class="card trip"><div class="flag">${target(o.key).icon}</div><div class="grow">
-        <div class="row"><b>${esc(o.title)}</b><span class="status ${cls}">${label}</span></div>
-        <div class="small muted">${linked.length ? linked.map(tripLabel).join(' → ') : `購買於 ${o.at}`}・NT$${fmt(o.price)}</div>
-        ${cls === 'done' && used ? `<div class="usage" style="margin-top:6px"><div style="width:${pct}%"></div></div><div class="small muted">用了 ${used.toFixed(1)} GB</div>` : ''}
-        ${cls === 'pending' ? '<div class="small" style="margin-top:4px">📩 QR Code 會在付款完成後寄到 Email，建議出發前一天在 Wi-Fi 下安裝</div>' : ''}
-      </div>${cls === 'pending' ? `<button class="btn sm" data-installed="${o.id}">已安裝</button>` : ''}</div>`;
-    }).join('') : '<div class="card muted">還沒有 eSIM。新增行程後會自動推薦適合的方案。</div>';
+    const cards = allCards();
+    const counts = { active: 0, pending: 0, expired: 0 };
+    cards.forEach(({ st }) => { counts[CARD_STATE[st].tab] += 1; });
+    if (!esimTab) esimTab = counts.pending || !counts.active ? 'pending' : 'active';
+    const tabs = [['active', '使用中'], ['pending', '待啟用'], ['expired', '已到期']];
+    $('#esim-tabs').innerHTML = tabs.map(([k, l]) => `<button data-esim-tab="${k}" class="${esimTab === k ? 'on' : ''}">${l}${counts[k] ? `<span class="count">${counts[k]}</span>` : ''}</button>`).join('');
+    const list = cards.filter(({ st }) => CARD_STATE[st].tab === esimTab)
+      .sort((a, b) => (esimTab === 'expired' ? b.o.at.localeCompare(a.o.at) : a.o.at.localeCompare(b.o.at)) || a.c.n - b.c.n);
+    const empty = { active: '目前沒有使用中的 eSIM。', pending: '沒有待啟用的 eSIM。', expired: '還沒有到期的 eSIM。' };
+    $('#wallet').innerHTML = list.length ? list.map(({ o, c, st }) => esimCardHtml(o, c, st)).join('')
+      : `<div class="empty"><div class="empty-icon">✈️</div><b>暫無資料</b><span class="muted small">${empty[esimTab]}</span><button class="btn primary" data-scroll="esim-shop">前往挑選方案</button></div>`;
   }
-  let esimRegion = 'hot';
   function renderEsim() {
     $('#esim-site').href = CONFIG.esimUrl;
-    const pick = smartPick();
-    $('#smart-pick').innerHTML = pick ? `<div class="next-trip"><div style="font-size:28px">🎯</div><div style="flex:1;min-width:200px">
-      <b>為你的下一趟推薦：${esc(planLabel(pick.key, pick.plan))}</b>
-      <div class="small">${pick.journey.map(tripLabel).join(' → ')}・${md(pick.journey[0].start)} 出發${pick.journey.length > 1 ? `・跨 ${pick.journey.length} 地一張搞定` : ''}・依你的流量習慣（每天約 ${usagePerDay().toFixed(1)} GB）</div></div>
-      <button class="btn sm" data-plan="${pick.key}">NT$${fmt(planPrice(pick.key, pick.plan))} 查看</button></div>` : '';
     renderWallet();
-    const regions = [['hot', '🔥 熱門'], ['asia', '亞洲'], ['europe', '歐洲'], ['america', '美洲'], ['oceania', '大洋洲'], ['mideast', '中東'], ['packs', '🌐 多國方案']];
-    $('#esim-regions').innerHTML = regions.map(([k, v]) => `<button class="chip ${esimRegion === k ? 'on' : ''}" data-region="${k}">${v}</button>`).join('');
+    const pick = smartPick();
+    const bought = pick && pick.journey.some((t) => ordersFor(t.id).length);
+    $('#smart-pick').innerHTML = pick && !bought ? `<div class="pick"><span class="flag-tile">${target(pick.key).icon}</span><div class="grow">
+      <span class="kicker muted">為你的下一趟推薦</span><b>${esc(planLabel(pick.key, pick.plan))}</b>
+      <div class="small muted">${pick.journey.map(tripLabel).join(' → ')}・${md(pick.journey[0].start)} 出發${pick.journey.length > 1 ? `・跨 ${pick.journey.length} 地一張搞定` : ''}</div></div>
+      <button class="btn primary" data-plan="${pick.key}">NT$${fmt(planPrice(pick.key, pick.plan))}</button></div>` : '';
+    $('#esim-regions').innerHTML = REGION_CHIPS.map(([k, v]) => `<button class="chip lg ${esimRegion === k ? 'on' : ''}" data-region="${k}">${v}</button>`).join('');
     const q = $('#esim-search').value.trim();
-    const hot = ['JP', 'KR', 'TH', 'VN', 'SG', 'HK', 'US', 'FR', 'GB', 'AU'];
     let items;
     if (esimRegion === 'packs' && !q) {
-      items = Object.keys(PACKS).map((k) => ({ key: k, ...PACKS[k], sub: `${PACKS[k].countries.length} 國` }));
+      items = Object.keys(PACKS).map((k) => ({ key: k, icon: PACKS[k].icon, name: PACKS[k].name, sub: `${PACKS[k].countries.length} 國` }));
     } else {
-      const inRegion = (code, c) => (esimRegion === 'hot' ? hot.includes(code) : c.region === esimRegion);
-      const matches = (code, c) => (q ? c.name.includes(q) || code.toLowerCase() === q.toLowerCase() : inRegion(code, c));
+      const matches = (code, c) => (q ? c.name.includes(q) || code.toLowerCase() === q.toLowerCase() : inRegion(code, c, esimRegion));
       items = Object.entries(COUNTRIES).filter(([code, c]) => c.base && matches(code, c))
-        .map(([code, c]) => ({
-          key: code, icon: flag(code), name: c.name, sub: REGIONS[c.region],
-        }));
-      if (q) items.push(...Object.keys(PACKS).filter((k) => PACKS[k].name.includes(q)).map((k) => ({ key: k, ...PACKS[k], sub: '多國' })));
+        .sort((a, b) => (esimRegion === 'hot' ? HOT.indexOf(a[0]) - HOT.indexOf(b[0]) : 0))
+        .map(([code, c]) => ({ key: code, icon: flag(code), name: c.name }));
+      if (q) items.push(...Object.keys(PACKS).filter((k) => PACKS[k].name.includes(q)).map((k) => ({ key: k, icon: PACKS[k].icon, name: PACKS[k].name })));
     }
-    $('#esim-grid').innerHTML = items.length ? items.map((it) => `<button class="country" data-plan="${it.key}"><span class="flag">${it.icon}</span><span><b>${esc(it.name)}</b><small>${esc(it.sub)}・NT$${fmt(planPrice(it.key, { kind: 'daily', size: '1', days: 1 }))} 起/天</small></span></button>`).join('')
-      : '<p class="muted">找不到這個國家，試試多國方案或全球通用。</p>';
-    renderCalc();
+    $('#esim-count').textContent = items.length ? `${items.length} 個地區` : '';
+    $('#esim-grid').innerHTML = items.length ? items.map((it) => `<button class="flag-btn" data-plan="${it.key}"><span class="flag-tile lg">${it.icon}</span><b>${esc(it.name)}</b><small>NT$${fmt(fromPrice(it.key))} 起</small></button>`).join('')
+      : '<p class="muted">找不到這個國家，試試「多國方案」或「全球通用」。</p>';
+    renderCartFab();
   }
   $('#esim-search').addEventListener('input', () => renderEsim());
-  function renderCalc() {
-    const u = settings.usage;
-    const rows = [['maps', '🗺️ 地圖導航', '小時/天', 6], ['social', '📸 社群滑手機', '小時/天', 6], ['video', '🎬 看影片', '小時/天', 4], ['share', '👨‍👩‍👧 熱點分享給', '人', 4]];
-    $('#calc').innerHTML = `${rows.map(([k, label, unit, max]) => `<div><div class="row"><span>${label}</span><span class="spacer"></span><b>${u[k]} ${unit}</b></div>
-      <input type="range" min="0" max="${max}" step="0.5" value="${u[k]}" data-usage="${k}" aria-label="${label}"></div>`).join('')}
-      <div class="ticket-sum"><span>每天約 <b>${usagePerDay().toFixed(1)} GB</b></span><b>建議 ${DAILY[sizeForUsage()].label}</b></div>`;
-    $$('#calc [data-usage]').forEach((r) => r.addEventListener('change', (e) => {
-      settings.usage[e.target.dataset.usage] = Number(e.target.value); save(); renderEsim();
-    }));
+
+  // Plan sheet
+  function orderTripsEnd(ids) { return sortTrips(trips.filter((t) => ids.includes(t.id))).pop()?.end || TODAY; }
+  function openPlan(key, preset = {}) {
+    if (!key) { go('esim'); return; }
+    const pick = smartPick();
+    const fromTrip = pick?.key === key;
+    planState = {
+      key, ...pickForUsage(), days: fromTrip ? pick.plan.days : 5, qty: 1, tripIds: fromTrip ? pick.journey.map((t) => t.id) : [], ...preset,
+    };
+    openModal(`${target(key).icon} ${esc(target(key).name)}`, '<div id="plan-sheet"></div>', { sheet: 'tall' });
+    renderPlanSheet();
   }
-  const STEPS = {
-    ios: ['付款後收到 QR Code（Email／App 內都看得到）', '出發前一天連上 Wi-Fi：設定 → 行動服務 → 加入 eSIM → 使用 QR Code 掃描', '把新的 eSIM 標籤取名為「旅遊」，主要號碼保留台灣門號', '抵達後：行動數據選「旅遊」，並在旅遊 eSIM 開啟「數據漫遊」', '台灣門號關閉數據漫遊，簡訊與電話照常可收'],
-    android: ['付款後收到 QR Code（Email／App 內都看得到）', '出發前一天連上 Wi-Fi：設定 → 網路和網際網路 → SIM 卡 → 新增 eSIM／下載 SIM', '掃描 QR Code，將 eSIM 命名為「旅遊」', '抵達後：行動數據改用旅遊 eSIM，並開啟「漫遊」', '台灣門號關閉漫遊，保留簡訊與通話'],
+  function renderPlanSheet() {
+    const p = planState;
+    const t = target(p.key);
+    const type = PLAN_TYPES[p.type];
+    if (!type.options.some((o) => o.size === String(p.size))) p.size = type.options[p.type === 'daily' ? 1 : 0].size;
+    const trip = p.tripIds.length ? trips.find((x) => x.id === p.tripIds[0]) : null;
+    const optHtml = (o) => {
+      const price = p.type === 'total' ? planPrice(p.key, { type: 'total', size: o.size }) : planPrice(p.key, { type: p.type, size: o.size, days: p.days });
+      const on = String(p.size) === o.size;
+      return `<button class="plan-card ${on ? 'on' : ''} ${o.premium ? 'premium' : ''}" data-size="${o.size}" aria-pressed="${on}">
+        <span class="icon-tile">${o.icon}</span>
+        <span class="grow"><span class="row" style="gap:6px"><b class="plan-name">${esc(o.name)}</b><span class="persona">${esc(o.persona)}</span></span>
+          <span class="desc">${esc(o.desc)}</span>
+          ${o.perks ? `<span class="perks">${o.perks.map((x) => `<span>✓ ${esc(x)}</span>`).join('')}</span>` : ''}
+          <span class="hashes">${o.tags.map((x) => `<span>#${esc(x)}</span>`).join('')}</span></span>
+        <span class="plan-price">${o.speed ? `<small class="speed">超量降速<br>${o.speed}</small>` : ''}${o.days ? `<small class="speed">${o.days} 天內有效</small>` : ''}<b>NT$${fmt(price)}</b></span>
+      </button>`;
+    };
+    const dayChips = [3, 5, 7, 10, 15, 30];
+    const total = planPrice(p.key, p, p.qty);
+    $('#plan-sheet').innerHTML = `
+      <div class="small muted">${t.pack ? `適用：${t.countries.map((c) => `${flag(c)} ${COUNTRIES[c].name}`).join('、')}` : `可連網路：${esc(t.ops)}（以官網為準）`}</div>
+      ${trip ? `<div class="banner info">🧳 已依你的行程帶入：${esc(trip.city)} ${md(trip.start)}–${md(orderTripsEnd(p.tripIds))}，共 ${p.days} 天</div>` : ''}
+      <div><h3>選擇最適合你的連網方式</h3><p class="small muted" style="margin:2px 0 0">不確定？<button class="link" data-guide="quiz">回答 3 題幫你挑</button></p></div>
+      <div class="seg seg-lg seg-full" id="type-seg">${Object.entries(PLAN_TYPES).map(([k, v]) => `<button data-type="${k}" class="${p.type === k ? 'on' : ''}">${v.label}</button>`).join('')}</div>
+      <p class="small muted" style="margin:0">${esc(type.note)}</p>
+      <div class="grid" style="gap:10px">${type.options.map(optHtml).join('')}</div>
+      ${p.type === 'total' ? '' : `<div class="field"><label>使用天數</label><div class="row">${dayChips.map((d) => `<button class="chip lg ${p.days === d ? 'on' : ''}" data-days-set="${d}">${d} 天</button>`).join('')}
+        <span class="stepper"><button data-days-step="-1" aria-label="少一天">－</button><b>${p.days} 天</b><button data-days-step="1" aria-label="多一天">＋</button></span></div></div>`}
+      <div class="row"><div><b>購買張數</b><div class="small muted">幫家人朋友一起買，買完可以用 LINE 分享</div></div><span class="spacer"></span>
+        <span class="stepper"><button data-qty-step="-1" aria-label="少一張">－</button><b>${p.qty} 張</b><button data-qty-step="1" aria-label="多一張">＋</button></span></div>
+      <p class="notice">示意價格，正式價格與方案以官網為準。</p>
+      <div class="sheet-bar"><div><small class="muted">${esc(planSpec(p))}${p.qty > 1 ? ` × ${p.qty}` : ''}</small><div class="price">NT$${fmt(total)}</div></div><span class="spacer"></span>
+        <button class="btn" data-add-cart>加入購物車</button><button class="btn primary" data-buy-now>直接購買</button></div>`;
+  }
+  function planSheetClick(e) {
+    const b = e.target.closest('button');
+    if (!b || !planState || !b.closest('#plan-sheet')) return false;
+    const p = planState;
+    const ds = b.dataset;
+    if (ds.type) { p.type = ds.type; p.size = PLAN_TYPES[p.type].options[p.type === 'daily' ? 1 : 0].size; } else if (ds.size) p.size = ds.size;
+    else if (ds.daysSet) p.days = Number(ds.daysSet);
+    else if (ds.daysStep) p.days = Math.max(1, Math.min(30, p.days + Number(ds.daysStep)));
+    else if (ds.qtyStep) p.qty = Math.max(1, Math.min(10, p.qty + Number(ds.qtyStep)));
+    else if ('addCart' in ds) { addToCart(); return true; } else if ('buyNow' in ds) { addToCart(true); return true; } else return false;
+    renderPlanSheet();
+    return true;
+  }
+  function addToCart(checkoutNow) {
+    const p = planState;
+    const plan = { type: p.type, size: p.size, days: p.type === 'total' ? planOpt({ type: 'total', size: p.size }).days : p.days };
+    cart.push({ id: `k-${uid()}`, key: p.key, plan, qty: p.qty, tripIds: p.tripIds });
+    save();
+    renderCartFab();
+    if (checkoutNow) openCheckout(); else { modal.close(); toast(`已加入購物車：${planLabel(p.key, plan)}`); bumpFab(); }
+  }
+
+  // Cart, checkout, success
+  function renderCartFab() {
+    const fab = $('#cart-fab');
+    fab.hidden = !user;
+    const n = sum(cart, (k) => k.qty);
+    $('#cart-count').textContent = n || '';
+    $('#cart-count').hidden = !n;
+  }
+  function bumpFab() {
+    if (!REDUCED) $('#cart-fab').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  }
+  function openCart() {
+    const total = sum(cart, (k) => planPrice(k.key, k.plan, k.qty));
+    openModal('🛒 購物車', cart.length ? `
+      <div class="grid" style="gap:10px">${cart.map((k) => `<div class="cart-row"><span class="flag-tile">${target(k.key).icon}</span><div class="grow"><b>${esc(target(k.key).name)}</b><div class="small muted">${esc(planSpec(k.plan))}</div><div class="small"><b>NT$${fmt(planPrice(k.key, k.plan, k.qty))}</b></div></div>
+        <span class="stepper"><button data-cart-qty="${k.id}:-1" aria-label="少一張">－</button><b>${k.qty}</b><button data-cart-qty="${k.id}:1" aria-label="多一張">＋</button></span><button class="icon-btn" data-cart-del="${k.id}" aria-label="移除">✕</button></div>`).join('')}</div>
+      <div class="sheet-bar"><div><small class="muted">共 ${sum(cart, (k) => k.qty)} 張</small><div class="price">NT$${fmt(total)}</div></div><span class="spacer"></span><button class="btn primary" data-checkout>前往結帳</button></div>`
+      : `<div class="empty"><div class="empty-icon">🛒</div><b>購物車是空的</b><span class="small muted">${smartPick() ? '依你的下一趟行程，我們已經挑好方案。' : '先挑一個目的地吧。'}</span>${smartPick() ? `<button class="btn primary" data-plan="${smartPick().key}">看推薦方案</button>` : '<button class="btn primary" data-scroll="esim-shop">去挑方案</button>'}</div>`, { sheet: true });
+  }
+  function openCheckout() {
+    const total = sum(cart, (k) => planPrice(k.key, k.plan, k.qty));
+    const pays = [['card', '💳 信用卡'], ['apple', 'Apple Pay'], ['line', 'LINE Pay']];
+    openModal('結帳', `
+      <div class="grid" style="gap:8px">${cart.map((k) => `<div class="row small"><span>${target(k.key).icon} ${esc(planLabel(k.key, k.plan))} × ${k.qty}</span><span class="spacer"></span><b>NT$${fmt(planPrice(k.key, k.plan, k.qty))}</b></div>`).join('')}</div>
+      <div class="field"><label for="co-email">接收 eSIM 的 Email</label><input class="input" id="co-email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(user?.email || '')}"></div>
+      <div class="field"><label>付款方式</label><div class="pay-grid">${pays.map(([k, l], i) => `<label class="pay"><input type="radio" name="pay" value="${k}" ${i === (IS_IOS ? 1 : 0) ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div></div>
+      <label class="row small"><input type="checkbox" id="co-agree" checked> 我已確認手機支援 eSIM，並同意使用條款</label>
+      <p class="notice">示範結帳：不會真的扣款。正式購買請到 <a href="${CONFIG.esimUrl}" target="_blank" rel="noopener">官網</a>。</p>
+      <div class="sheet-bar"><div><small class="muted">應付金額</small><div class="price">NT$${fmt(total)}</div></div><span class="spacer"></span><button class="btn primary" data-pay>確認付款（示範）</button></div>`, { sheet: true });
+  }
+  function pay() {
+    const email = $('#co-email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('請填寫正確的 Email，eSIM 會寄到這裡'); $('#co-email').focus(); return; }
+    if (!$('#co-agree').checked) { toast('請先確認手機支援 eSIM'); return; }
+    user.email = email;
+    const btn = $('[data-pay]');
+    btn.disabled = true; btn.textContent = '付款處理中…';
+    setTimeout(() => {
+      const made = cart.map((k) => makeOrder({ key: k.key, plan: k.plan, qty: k.qty, tripIds: k.tripIds }));
+      orders.push(...made);
+      cart = [];
+      save();
+      esimTab = 'pending';
+      renderAll();
+      openSuccess(made);
+    }, REDUCED ? 100 : 900);
+  }
+  function openSuccess(made) {
+    const first = made[0];
+    const many = sum(made, (o) => o.qty) > 1;
+    openModal('', `<div class="success">
+        <div class="check" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg></div>
+        <h2>購買成功！</h2><div class="small muted">訂單編號 #${esc(first.orderNo)}・eSIM 已寄到 ${esc(user.email || '')}</div>
+      </div>
+      <div class="banner warn"><b>安裝時機建議</b><br>${esc(installAdvice(first))}到「我的 eSIM」依步驟取得並安裝。在台灣顯示「無法啟用」不一定是安裝失敗。</div>
+      ${many ? `<div class="card soft"><b>👥 幫親友買？直接分享</b><p class="small muted" style="margin:6px 0 10px">把其中一張 eSIM 用 LINE 傳給同行的人，對方點連結就能領取並一鍵安裝。</p>${lineBtn('分享安裝資訊給好友', `data-share="${first.id}:${first.cards[first.cards.length - 1].id}"`)}</div>` : ''}
+      <div class="actions two"><button class="btn primary" data-goto-esim>查看我的 eSIM</button><button class="btn" data-close>繼續逛逛</button></div>`, { sheet: true });
+  }
+
+  // Card detail, claim, install, activate, share
+  function openCardDetail(ref) {
+    const { o, c } = findCard(ref);
+    if (!o) return;
+    const st = cardState(o, c);
+    const t = target(o.key);
+    const claimBy = addDays(o.at, POLICY.claimDays);
+    openModal(`${t.icon} ${esc(t.name)}`, `
+      <div class="row" style="gap:6px"><span class="status ${CARD_STATE[st].cls}">${CARD_STATE[st].label}</span>${o.qty > 1 ? `<span class="chip sm">第 ${c.n} 張（共 ${o.qty} 張）</span>` : ''}</div>
+      <dl class="kv"><dt>方案</dt><dd>${esc(planSpec(o.plan))}</dd><dt>訂單編號</dt><dd>${esc(o.orderNo)}</dd><dt>購買日期</dt><dd>${o.at}</dd>${orderTrips(o).length ? `<dt>行程</dt><dd>${orderTrips(o).map(tripLabel).join(' → ')}</dd>` : ''}</dl>
+      ${stepsHtml(st, st === 'shared')}
+      <div class="banner info"><b>請於 ${claimBy} 前取得 eSIM</b><br>取得後 ${POLICY.installDays} 天內安裝到手機，安裝後 ${POLICY.activateDays} 天內抵達當地開始使用。逾期未使用的 eSIM 會失效，無法延期或補發。<span class="muted">（示意條款，以官網為準）</span></div>
+      ${st !== 'expired' && st !== 'active' ? `<div class="banner warn"><b>建議安裝時機</b><br>${esc(installAdvice(o))}</div>` : ''}
+      ${st === 'shared' ? `<div class="card soft"><b>👥 已分享給親友，等待領取</b><p class="small muted" style="margin:6px 0 10px">連結 24 小時內有效。對方還沒收到的話，可以再送一次。</p>${lineBtn('再送一次分享連結', `data-share="${ref}"`)}</div>` : ''}
+      <div class="actions two">${cardActions(o, c, st)}</div>`, { sheet: true });
+  }
+  function claimCard(ref) {
+    const { o, c } = findCard(ref);
+    if (!o) return;
+    c.claimed = true; c.sharedAt = null;
+    save(); renderEsim(); refreshTripViews();
+    toast('已取得 eSIM 安裝資料');
+    openInstall(ref);
+  }
+  function openInstall(ref, force) {
+    const { o, c } = findCard(ref);
+    if (!o) return;
+    const t = target(o.key);
+    const warnings = force ? [] : installWarnings(o, c);
+    if (warnings.length) {
+      openModal('安裝前請確認', `${warnings.map((w) => `<div class="banner warn">⚠️ ${esc(w)}</div>`).join('')}
+        <div class="actions two">${o.qty > 1 && c.n > 1 && !c.gift && !c.installed ? lineBtn('改成分享給親友', `data-share="${ref}"`) : '<button class="btn" data-guide="install">看設定教學</button>'}<button class="btn" data-install-force="${ref}">我確定要安裝</button></div>`, { sheet: true });
+      return;
+    }
+    const ideas = labelIdeas(o);
+    const label = labelOf(o, c);
+    // With real activation data (LPA) iOS 17.4+ opens its own eSIM setup from this link.
+    const appleLink = c.lpa ? `https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=${encodeURIComponent(c.lpa)}` : '';
+    openModal(`安裝 ${esc(t.name)} eSIM`, `
+      <div class="banner warn">⏰ ${esc(installAdvice(o))}</div>
+      <div class="card soft"><b>1. 安裝前檢查</b>
+        <ul class="pre-list"><li>✓ 已連上穩定的 Wi-Fi</li><li>✓ 手機支援 eSIM、沒有鎖網路 <button class="link" data-guide="device">怎麼確認</button></li><li>✓ 設定 → 行動服務 裡，沒有已經裝好的「${esc(label)}」</li><li>✓ 這張是自己要用的（要給別人請用「分享給親友」）</li></ul></div>
+      <div class="card soft"><b>2. 先想好手機上的名稱</b><p class="small muted" style="margin:4px 0 8px">安裝時 iPhone 會問「行動方案標籤」，寫目的地＋日期，抵達後才知道要選哪一個，也不會重複安裝。</p>
+        <div class="row">${ideas.map((x) => `<button class="chip lg ${x === label ? 'on' : ''}" data-label-pick="${esc(x)}" data-ref="${ref}">${esc(x)}</button>`).join('')}</div>
+        <div class="row" style="margin-top:8px"><input class="input" id="label-input" maxlength="16" value="${esc(label)}" aria-label="自訂名稱" style="flex:1"><button class="btn" data-copy-label>複製</button></div></div>
+      <div class="card soft"><b>3. 安裝</b>
+        ${IS_ANDROID ? '' : `<p class="small muted" style="margin:4px 0 8px">iPhone（iOS 17.4 以上）點一下就會打開「啟用 eSIM」畫面，不用掃 QR Code。</p>
+        ${appleLink ? `<a class="btn primary block" href="${appleLink}">一鍵安裝到 iPhone</a>` : '<button class="btn primary block" data-demo-install>一鍵安裝到 iPhone</button>'}`}
+        <div class="qr-box">${c.lpa ? '' : '<span>付款完成後，這裡會顯示安裝 QR Code 與手動輸入代碼（Android 或另一支手機掃描）</span>'}</div>
+        <button class="btn block" data-guide-card="${ref}" style="margin-top:10px">📖 看圖文教學（逐步畫面＋設定檢查表）</button></div>
+      <button class="btn primary block" data-installed-card="${ref}">我已安裝完成</button>`, { sheet: 'tall' });
+    const input = $('#label-input');
+    input.addEventListener('change', () => { c.label = input.value.trim() || ideas[0]; save(); });
+  }
+  function giftLink(o, c) {
+    const data = { k: o.key, p: o.plan, f: user?.name || '親友', o: o.orderNo, n: c.n, t: orderTrips(o)[0]?.start || '' };
+    const code = btoa(unescape(encodeURIComponent(JSON.stringify(data)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return `${window.location.origin}${window.location.pathname}#gift=${code}`;
+  }
+  function openGiftShare(ref) {
+    const { o, c } = findCard(ref);
+    if (!o) return;
+    const t = target(o.key);
+    const link = giftLink(o, c);
+    const text = `我幫你買好 ${t.name} eSIM（${planSpec(o.plan)}）🎁\n點連結領取，iPhone 可以一鍵安裝：\n${link}\n${installAdvice(o)}`;
+    openModal('分享給親友', `
+      <div class="gift-card"><span class="flag-tile lg">${t.icon}</span><div><b>${esc(t.name)}</b><div class="small muted">${esc(planSpec(o.plan))}${o.qty > 1 ? `・第 ${c.n} 張` : ''}</div></div></div>
+      <p class="small muted" style="margin:0">對方點連結就能領取，不需要再付款。連結 24 小時內有效（正式版）。</p>
+      <a class="btn line block" href="https://line.me/R/share?text=${encodeURIComponent(text)}" target="_blank" rel="noopener" data-shared="${ref}">用 LINE 傳送</a>
+      <div class="row"><input class="input" id="share-link" readonly value="${esc(link)}" style="flex:1"><button class="btn" data-copy-share="${ref}">複製連結</button></div>
+      ${navigator.share ? `<button class="btn block" data-native-share="${ref}">其他分享方式</button>` : ''}
+      <p class="notice">示範版的連結只帶方案資訊；正式版會由伺服器產生一次性的領取連結。</p>`, { sheet: true });
+    openGiftShare.text = text;
+  }
+  function markShared(ref) {
+    const { o, c } = findCard(ref);
+    if (!o || c.claimed) return;
+    c.sharedAt = new Date().toISOString().slice(0, 16);
+    save(); renderEsim();
+  }
+  function activateCard(ref) {
+    const { o, c } = findCard(ref);
+    if (!o) return;
+    c.installed = true; c.activatedAt = TODAY;
+    save(); esimTab = 'active'; renderEsim(); refreshTripViews();
+    openInstallGuide(ref);
+    guideState.i = guideState.steps.findIndex((x) => x.stage === 'after');
+    renderGuide();
+    toast(`照著設定「${labelOf(o, c)}」，完成檢查表就能上網`);
+  }
+  function refreshTripViews() { renderHero(); renderCover(); if (currentTab === 'plan') renderPlanner(); }
+
+  // Friend opens a gift link: "親友送你網卡！"
+  function readGift() {
+    const m = window.location.hash.match(/^#gift=([\w-]+)/);
+    if (!m) return null;
+    try {
+      const json = decodeURIComponent(escape(atob(m[1].replace(/-/g, '+').replace(/_/g, '/'))));
+      const g = JSON.parse(json);
+      if (!target(g.k)?.name || !PLAN_TYPES[g.p?.type]) return null;
+      return g;
+    } catch { return null; }
+  }
+  function openGift(g) {
+    const t = target(g.k);
+    const claimed = orders.some((o) => o.giftOf === `${g.o}-${g.n}`);
+    openModal('', `<div class="success"><div class="gift-icon" aria-hidden="true">🎁</div><h2>親友送你網卡！</h2><div class="small muted">${esc(g.f)} 分享了一張 eSIM 旅遊網卡給你</div></div>
+      <div class="gift-card"><span class="flag-tile lg">${t.icon}</span><div class="grow"><b>${esc(t.name)}</b><div class="small muted">${esc(planSpec(g.p))}</div></div></div>
+      <div class="banner warn"><b>重要提醒</b><br>天數從抵達當地、連上網路後才開始計算，建議依航線在出發當天或抵達後再安裝。領取後可以在「我的 eSIM」查看安裝步驟。</div>
+      ${claimed ? '<button class="btn block" data-goto-esim>已領取，查看我的 eSIM</button>' : '<button class="btn primary block" data-claim-gift>🎁 確認領取 eSIM</button>'}`, { sheet: true });
+    pendingGift = g;
+  }
+  function claimGift() {
+    const g = pendingGift;
+    if (!g) return;
+    const btn = $('[data-claim-gift]');
+    btn.disabled = true; btn.textContent = '領取中…';
+    setTimeout(() => {
+      const trip = g.t ? upcomingTrips().find((x) => x.start === g.t) : null;
+      const o = makeOrder({ key: g.k, plan: g.p, qty: 1, tripIds: trip ? [trip.id] : [], gift: { from: g.f } });
+      o.giftOf = `${g.o}-${g.n}`;
+      orders.push(o);
+      pendingGift = null;
+      save();
+      try { window.history.replaceState(null, '', window.location.pathname); } catch { /* ignore */ }
+      esimTab = 'pending';
+      modal.close();
+      go('esim');
+      renderAll();
+      toast('領取成功！依步驟安裝就能上網');
+    }, REDUCED ? 100 : 800);
+  }
+
+  // ---------- illustrated install guide (圖文教學), label names and duplicate-install checks
+  function shortPlace(o) {
+    const t = orderTrips(o)[0];
+    if (t) return t.city.split('・').pop().slice(0, 4);
+    return target(o.key).name.replace(/多國|通用/g, '').slice(0, 4);
+  }
+  function labelIdeas(o) {
+    const t = orderTrips(o)[0];
+    const d = t ? parseDate(t.start) : parseDate(o.at);
+    const mmdd = `${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+    const place = shortPlace(o);
+    return [...new Set([`${place}旅遊 ${mmdd}`, `${target(o.key).name.slice(0, 4)} eSIM ${d.getMonth() + 1}月`, `旅遊-${place}`])];
+  }
+  function labelOf(o, c) { return c.label || labelIdeas(o)[0]; }
+  // A guide opened from the quick actions uses the next eSIM still to be installed.
+  function guideTarget() {
+    const pend = allCards().filter(({ st }) => ['unclaimed', 'claimed', 'installed'].includes(st))
+      .sort((a, b) => (orderTrips(a.o)[0]?.start || a.o.at).localeCompare(orderTrips(b.o)[0]?.start || b.o.at));
+    return pend[0] || null;
+  }
+  function phone(title, rows, opts = {}) {
+    return `<div class="phone ${opts.android ? 'android' : ''}" aria-hidden="true"><div class="phone-screen">
+      <div class="phone-status"><span>10:00</span><span>●●● 〰 ▮</span></div>
+      <div class="phone-nav">${opts.back ? `<span class="back">‹ ${esc(opts.back)}</span>` : ''}<b>${esc(title)}</b></div>
+      ${opts.header ? `<div class="phone-header">${opts.header}</div>` : ''}
+      <div class="phone-list">${rows.map((r) => (r.section ? `<div class="psec">${esc(r.section)}</div>` : `<div class="prow ${r.hl ? 'hl' : ''}">
+        ${r.icon ? `<span class="pi" style="background:${r.color || '#8e8e93'}">${r.icon}</span>` : ''}<span class="pl">${esc(r.label)}${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</span>
+        <span class="pv">${r.toggle != null ? `<i class="tg ${r.toggle ? 'on' : ''}"></i>` : esc(r.value || '')}${r.check ? '<span class="ck">✓</span>' : ''}${r.chev ? '<span class="chev">›</span>' : ''}</span>
+        ${r.hl ? '<span class="tap"></span>' : ''}</div>`)).join('')}</div>
+      ${opts.note ? `<div class="phone-note">${esc(opts.note)}</div>` : ''}
+    </div></div>`;
+  }
+  function guideSteps(os, label) {
+    if (os === 'android') {
+      return [
+        { stage: 'before', title: '打開「設定」→「網路和網際網路」→「SIM 卡」', mock: phone('網路和網際網路', [{ icon: '📶', label: 'SIM 卡', sub: '中華電信', chev: true, hl: true, color: '#1a73e8' }, { icon: '📡', label: 'Wi-Fi', value: '已連線', chev: true, color: '#1a73e8' }, { icon: '✈️', label: '飛航模式', toggle: false, color: '#5f6368' }], { android: true, back: '設定' }) },
+        { stage: 'before', title: '點「新增 eSIM」或「下載 SIM」，掃描 QR Code', mock: phone('SIM 卡', [{ section: 'SIM 卡' }, { label: '中華電信', sub: '主要', chev: true }, { label: '+ 新增 eSIM／下載 SIM', hl: true }], { android: true, back: '網路' }) },
+        { stage: 'before', title: `把 eSIM 改名為「${label}」`, mock: phone(label, [{ label: '名稱', value: label, hl: true }, { label: '使用 SIM', toggle: false }, { label: '漫遊', toggle: false }], { android: true, back: 'SIM 卡', note: '名稱寫目的地＋日期，之後才不會選錯或重複安裝' }) },
+        { stage: 'after', title: `抵達後：開啟「${label}」的「使用 SIM」與「漫遊」`, mock: phone(label, [{ label: '使用 SIM', toggle: true, hl: true }, { label: '行動數據', toggle: true }, { label: '漫遊', toggle: true, hl: true }], { android: true, back: 'SIM 卡' }) },
+        { stage: 'after', title: `「行動數據」改用「${label}」，台灣門號關閉漫遊`, mock: phone('SIM 卡', [{ section: '偏好設定' }, { label: '行動數據', value: label, chev: true, hl: true }, { label: '通話', value: '中華電信', chev: true }, { label: '簡訊', value: '中華電信', chev: true }], { android: true, back: '網路' }) },
+      ];
+    }
+    return [
+      { stage: 'before', title: '連上 Wi-Fi，打開「設定」→「行動服務」', mock: phone('設定', [{ icon: '✈', label: '飛航模式', toggle: false, color: '#ff9500' }, { icon: '◉', label: 'Wi-Fi', value: '已連線', chev: true, color: '#007aff' }, { icon: '✱', label: '藍牙', value: '開啟', chev: true, color: '#007aff' }, { icon: '((·))', label: '行動服務', chev: true, hl: true, color: '#34c759' }]) },
+      { stage: 'before', title: '點「加入 eSIM」（用一鍵安裝的話會直接跳到下一步）', mock: phone('行動服務', [{ label: '行動數據', value: '主要', chev: true }, { label: '個人熱點', value: '關閉', chev: true }, { section: 'SIM' }, { label: '主要', sub: '+886 9xx-xxx-xxx', value: '開啟', chev: true }, { label: '加入 eSIM', hl: true }], { back: '設定' }) },
+      { stage: 'before', title: '選「使用 QR Code」掃描（或用一鍵安裝）', mock: phone('加入 eSIM', [{ label: '使用 QR Code', chev: true, hl: true }, { label: '手動輸入詳細資訊', chev: true }], { back: '行動服務' }) },
+      { stage: 'before', title: '「你擁有哪一種方案？」選「只限數據」', mock: phone('啟用 eSIM', [{ label: '只限數據', sub: '可以上網、地圖、LINE', check: true, hl: true }, { label: '語音和數據', sub: '通話、訊息和上網' }], { header: '你擁有哪一種方案？' }) },
+      { stage: 'before', title: `「行動方案標籤」選「自訂標籤」，輸入「${label}」`, mock: phone('行動方案標籤', [{ label: '主要' }, { label: '個人' }, { label: '工作' }, { label, check: true, hl: true }], { back: '行動服務', note: '名稱寫目的地＋日期，之後才不會選錯或重複安裝' }) },
+      { stage: 'before', title: '預設語音、iMessage 都保留「主要」（台灣門號）', mock: phone('預設語音號碼', [{ label: '主要', sub: '台灣門號', check: true, hl: true }, { label, sub: '只限數據' }], { back: '行動服務' }) },
+      { stage: 'after', title: `抵達後：點「${label}」→ 開啟「啟用此號碼」`, mock: phone(label, [{ label: '啟用此號碼', toggle: true, hl: true }, { label: '數據漫遊', toggle: false }, { label: '語音與數據', value: '5G 自動', chev: true }], { back: '行動服務' }) },
+      { stage: 'after', title: `「行動數據」選「${label}」，關閉「允許行動數據切換」`, mock: phone('行動數據', [{ label: '主要' }, { label, check: true, hl: true }, { section: '' }, { label: '允許行動數據切換', toggle: false, hl: true }], { back: '行動服務', note: '關閉後，不會自動切回台灣門號上網' }) },
+      { stage: 'after', title: `「${label}」開啟「數據漫遊」`, mock: phone(label, [{ label: '啟用此號碼', toggle: true }, { label: '數據漫遊', toggle: true, hl: true }, { label: '語音與數據', value: '4G', chev: true }], { back: '行動服務' }) },
+      { stage: 'after', title: '台灣門號（主要）關閉「數據漫遊」，避免高額漫遊費', mock: phone('主要', [{ label: '啟用此號碼', toggle: true }, { label: '數據漫遊', toggle: false, hl: true }], { back: '行動服務' }) },
+    ];
+  }
+  const CHECKS = (label) => [
+    ['on', `${label}：啟用此號碼`, '開啟'], ['on', `${label}：數據漫遊`, '開啟'], ['pick', `行動數據：選「${label}」`, '選擇'],
+    ['off', '允許行動數據切換', '關閉'], ['off', '台灣門號：數據漫遊', '關閉'],
+  ];
+  function openInstallGuide(ref, os) {
+    const found = ref ? findCard(ref) : guideTarget();
+    const o = found?.o; const c = found?.c;
+    const label = o ? labelOf(o, c) : '日本旅遊 1218';
+    const platform = os || (IS_ANDROID ? 'android' : 'ios');
+    const steps = guideSteps(platform, label);
+    if (guideState?.timer) clearInterval(guideState.timer);
+    guideState = { ref: o ? `${o.id}:${c.id}` : null, os: platform, label, steps, i: 0, timer: null, checks: c?.checks || {} };
+    openModal('圖文安裝教學', '<div id="guide"></div>', { sheet: 'tall' });
+    renderGuide();
+  }
+  function renderGuide() {
+    const g = guideState;
+    const step = g.steps[g.i];
+    const found = g.ref ? findCard(g.ref) : {};
+    const before = g.steps.filter((x) => x.stage === 'before').length;
+    const stageLabel = step.stage === 'before' ? `一、安裝 eSIM（${before} 步）` : `二、抵達後開通（${g.steps.length - before} 步）`;
+    const checks = CHECKS(g.label);
+    const doneChecks = checks.filter(([, text]) => g.checks[text]).length;
+    $('#guide').innerHTML = `
+      <div class="seg seg-lg seg-full" id="guide-os2"><button data-gos="ios" class="${g.os === 'ios' ? 'on' : ''}">iPhone</button><button data-gos="android" class="${g.os === 'android' ? 'on' : ''}">Android</button></div>
+      ${found.o && g.i === 0 ? `<div class="banner warn">⏰ ${esc(installAdvice(found.o))}</div>` : ''}
+      <div class="guide-stage"><span class="kicker plain muted">${stageLabel}</span><div class="row"><h3>${g.i + 1}. ${esc(step.title)}</h3></div></div>
+      <div class="guide-stage-body">${step.mock}</div>
+      <div class="guide-nav"><button class="btn" data-gstep="-1" ${g.i === 0 ? 'disabled' : ''} aria-label="上一步">‹ 上一步</button>
+        <div class="dots">${g.steps.map((x, i) => `<button class="${i === g.i ? 'on' : ''} ${x.stage}" data-gto="${i}" aria-label="第 ${i + 1} 步"></button>`).join('')}</div>
+        <button class="btn primary" data-gstep="1" ${g.i === g.steps.length - 1 ? 'disabled' : ''} aria-label="下一步">下一步 ›</button></div>
+      <button class="btn block" data-gplay>${g.timer ? '⏸ 暫停自動播放' : '▶ 自動播放教學'}</button>
+      ${CONFIG.guideVideo ? `<a class="btn block" href="${esc(CONFIG.guideVideo)}" target="_blank" rel="noopener">🎬 看影片教學</a>` : ''}
+      <div class="card soft"><div class="row"><b>三、設定總檢查表</b><span class="spacer"></span><span class="small muted">${doneChecks}/${checks.length}</span></div>
+        <p class="small muted" style="margin:4px 0 8px">抵達後照著設定，每完成一項就點一下。</p>
+        ${checks.map(([kind, text, state]) => `<button class="check-row ${g.checks[text] ? 'done' : ''}" data-gcheck="${esc(text)}"><span class="cbox">${g.checks[text] ? '✓' : ''}</span><span class="grow">${esc(text)}</span><i class="tg ${kind === 'off' ? '' : 'on'}"></i><span class="state ${kind}">${state}</span></button>`).join('')}
+        ${doneChecks === checks.length ? '<div class="banner good" style="margin-top:8px">🎉 設定完成！打開瀏覽器或 LINE 確認可以上網。</div>' : ''}
+      </div>
+      <details class="faq" open><summary>⚠️ 注意事項</summary><ul class="small" style="margin:8px 0 0;padding-left:20px;display:grid;gap:4px">
+        <li>台灣門號的「數據漫遊」請務必關閉，避免產生高額漫遊費。</li>
+        <li>不要刪除已安裝的 eSIM：多數 QR Code 只能使用一次，刪掉就裝不回來。</li>
+        <li>同一張 eSIM 不要在兩支手機安裝；要給同行的人，請用「分享給親友」。</li>
+        <li>在台灣安裝後顯示「無服務」是正常的，抵達當地才會連上。</li></ul></details>
+      <details class="faq"><summary>🛠️ 抵達後還是不能上網？</summary><ol class="small" style="margin:8px 0 0;padding-left:20px;display:grid;gap:4px">
+        <li>確認「行動數據」選的是「${esc(g.label)}」，而且它的「數據漫遊」已開啟。</li>
+        <li>開啟「飛航模式」約 10 秒再關閉，讓手機重新找網路。</li>
+        <li>把「語音與數據」改成 4G／LTE 試試。</li>
+        <li>重新開機。還是不行就聯絡客服，提供訂單編號${found.o ? `（${esc(found.o.orderNo)}）` : ''}。</li></ol></details>`;
+  }
+  function guideClick(e) {
+    const b = e.target.closest('button');
+    if (!b || !guideState || !b.closest('#guide')) return false;
+    const g = guideState;
+    const ds = b.dataset;
+    const stop = () => { if (g.timer) { clearInterval(g.timer); g.timer = null; } };
+    if (ds.gstep) { stop(); g.i = Math.max(0, Math.min(g.steps.length - 1, g.i + Number(ds.gstep))); } else if (ds.gto) { stop(); g.i = Number(ds.gto); } else if (ds.gos) {
+      stop();
+      const found = g.ref ? findCard(g.ref) : null;
+      g.os = ds.gos; g.steps = guideSteps(g.os, g.label); g.i = 0;
+      if (!found) g.ref = null;
+    } else if ('gplay' in ds) {
+      if (g.timer) stop();
+      else {
+        if (g.i === g.steps.length - 1) g.i = 0;
+        g.timer = setInterval(() => {
+          if (!modal.open || !$('#guide')) { stop(); return; }
+          if (g.i >= g.steps.length - 1) { stop(); renderGuide(); return; }
+          g.i += 1;
+          renderGuide();
+          const stage = $('#guide .guide-stage');
+          if (stage) modal.scrollTo({ top: Math.max(0, stage.offsetTop - $('.modal-head').offsetHeight - 8), behavior: REDUCED ? 'auto' : 'smooth' });
+        }, 3200);
+      }
+    } else if (ds.gcheck) {
+      g.checks[ds.gcheck] = !g.checks[ds.gcheck];
+      const found = g.ref ? findCard(g.ref) : null;
+      if (found?.c) { found.c.checks = g.checks; save(); }
+    } else return false;
+    renderGuide();
+    // Keep the step title in view when moving between steps.
+    if (ds.gstep || ds.gto || ds.gos) {
+      const stage = $('#guide .guide-stage');
+      if (stage) modal.scrollTo({ top: Math.max(0, stage.offsetTop - $('.modal-head').offsetHeight - 8), behavior: REDUCED ? 'auto' : 'smooth' });
+    }
+    return true;
+  }
+  modal.addEventListener('close', () => { if (guideState?.timer) { clearInterval(guideState.timer); guideState.timer = null; } });
+
+  // Before installing: warn about installing twice, or installing a friend's card on your own phone.
+  function installWarnings(o, c) {
+    const out = [];
+    if (c.installed) out.push(`這張 eSIM 已經標記為安裝在你的手機（名稱「${labelOf(o, c)}」）。到 設定 → 行動服務 看到它就不用再裝，重複安裝通常會失敗。`);
+    const twin = allCards().find((x) => x.c.id !== c.id && x.o.key === o.key && ['installed', 'active'].includes(x.st));
+    if (twin) out.push(`你已經安裝了一張${target(o.key).name} eSIM（「${labelOf(twin.o, twin.c)}」）。同一支手機通常只需要一張。`);
+    if (o.qty > 1 && c.n > 1 && !c.gift) out.push(`這是第 ${c.n} 張（共 ${o.qty} 張），通常是給同行的人用。要給別人的話，請改用「分享給親友」，讓對方在自己的手機安裝。`);
+    return out;
+  }
+
+  // Guides: install, data, device, quiz
+  const GUIDE_STEPS = {
+    ios: ['到「我的 eSIM」點「取得 eSIM」', '依建議時機點「一鍵安裝到 iPhone」（iOS 17.4 以上），或到 設定 → 行動服務 → 加入 eSIM 掃 QR Code', '「你擁有哪一種方案？」選「只限數據」，標籤取名「旅遊」', '抵達後：行動數據選「旅遊」，開啟它的「數據漫遊」', '台灣門號關閉數據漫遊，簡訊與電話照常可收'],
+    android: ['到「我的 eSIM」點「取得 eSIM」', '設定 → 網路和網際網路 → SIM 卡 → 新增 eSIM／下載 SIM，掃描 QR Code', '將 eSIM 命名為「旅遊」', '抵達後：行動數據改用「旅遊」，並開啟「漫遊」', '台灣門號關閉漫遊，保留簡訊與通話'],
   };
-  function renderSteps(os) {
-    $$('#os-seg button').forEach((b) => b.classList.toggle('on', b.dataset.os === os));
-    $('#steps').innerHTML = STEPS[os].map((s) => `<li>${esc(s)}</li>`).join('');
+  function openGuide(kind) {
+    if (kind === 'install') { openInstallGuide(); return; }
+    if (kind === 'install-text') {
+      const os = IS_ANDROID ? 'android' : 'ios';
+      openModal('安裝教學', `<div class="seg seg-lg" id="guide-os"><button data-os="ios" class="${os === 'ios' ? 'on' : ''}">iPhone</button><button data-os="android" class="${os === 'android' ? 'on' : ''}">Android</button></div>
+        <ol class="steps" id="guide-steps">${GUIDE_STEPS[os].map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+        <div class="banner warn"><b>什麼時候安裝？</b><br>日本、韓國、港澳、東南亞等短程航線：出發當天在機場安裝。歐洲、美洲、澳洲等長程航線：抵達後連機場 Wi-Fi 再安裝。</div>
+        <div class="banner info">在台灣安裝後顯示「無法啟用」或「無服務」是正常的，抵達當地才會連上網路。</div>`, { sheet: true });
+    } else if (kind === 'data') {
+      const rows = [['Google 地圖導航', '約 5 MB／小時'], ['LINE 文字訊息', '幾乎不用流量'], ['LINE 語音通話', '約 1 MB／分鐘'], ['IG／FB 滑動態', '約 300～500 MB／小時'], ['上傳一張照片', '約 3～5 MB'], ['YouTube 720p', '約 1～1.5 GB／小時'], ['視訊會議', '約 0.5～1 GB／小時']];
+      openModal('流量指南', `<table class="tbl"><tbody>${rows.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</tbody></table>
+        <div class="grid" style="gap:8px">${Object.values(PLAN_TYPES).map((v) => `<div class="card soft"><b>${v.label}</b><div class="small muted">${esc(v.note)}</div></div>`).join('')}</div>
+        <button class="btn primary block" data-guide="quiz">幫我挑選 eSIM 方案</button>`, { sheet: true });
+    } else if (kind === 'device') {
+      openModal('相容性檢查', `<p class="small muted" style="margin:0">購買前請確認手機可以使用 eSIM</p>
+        <div class="card soft"><b>✅ 方法一：查看 EID</b><p class="small" style="margin:6px 0 0">撥號畫面輸入 <b>*#06#</b>，出現「EID」條碼就代表支援。</p></div>
+        <div class="card soft"><b>⚙️ 方法二：系統設定</b><p class="small" style="margin:6px 0 0"><span class="chip sm">iOS</span> 設定 → 行動服務 → 有「加入 eSIM」<br><span class="chip sm">Android</span> 設定 → 網路 → SIM 卡 → 有「新增 eSIM」</p></div>
+        <div class="field"><label for="device">或輸入手機型號</label><div class="row"><input class="input" id="device" placeholder="例如：iPhone 13、Pixel 8、Galaxy S23" style="flex:1"><button class="btn" id="device-check">檢查</button></div><p id="device-result" class="small" style="margin:4px 0 0"></p></div>
+        <a class="btn primary block" href="tel:*%2306%23">撥打 *#06#</a>`, { sheet: true });
+      $('#device-check').addEventListener('click', checkDevice);
+      $('#device').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkDevice(); });
+    } else if (kind === 'quiz') openQuiz();
   }
-  $$('#os-seg button').forEach((b) => b.addEventListener('click', () => renderSteps(b.dataset.os)));
+  const quiz = { key: null, days: 5, uses: null, people: 1 };
+  function openQuiz() {
+    const pick = smartPick();
+    quiz.key = quiz.key || pick?.key || 'JP';
+    quiz.days = pick?.key === quiz.key ? pick.plan.days : quiz.days;
+    quiz.uses = quiz.uses || [...settings.uses];
+    quiz.people = settings.people;
+    openModal('幫我挑選 eSIM 方案', '<div id="quiz"></div>', { sheet: 'tall' });
+    renderQuiz();
+  }
+  function renderQuiz() {
+    const gb = usagePerDay(quiz.uses, quiz.people);
+    const rec = { ...pickForUsage(gb), days: quiz.days };
+    const shareHotspot = quiz.uses.includes('share');
+    const qty = shareHotspot ? 1 : quiz.people;
+    const opt = planOpt(rec);
+    let qtyNote = '';
+    if (qty > 1) qtyNote = `・${qty} 張（每人一張）`;
+    else if (shareHotspot && quiz.people > 1) qtyNote = '・一張分享熱點給大家';
+    const options = [...Object.keys(COUNTRIES).filter((k) => COUNTRIES[k].base), ...Object.keys(PACKS)];
+    $('#quiz').innerHTML = `
+      <div class="field"><label for="qz-key">1. 去哪裡？</label><select class="input" id="qz-key">${options.map((k) => `<option value="${k}" ${quiz.key === k ? 'selected' : ''}>${target(k).icon} ${target(k).name}</option>`).join('')}</select></div>
+      <div class="field"><label>2. 玩幾天？</label><span class="stepper"><button data-qz-days="-1" aria-label="少一天">－</button><b>${quiz.days} 天</b><button data-qz-days="1" aria-label="多一天">＋</button></span></div>
+      <div class="field"><label>3. 主要會用來做什麼？（可複選）</label><div class="use-grid">${Object.entries(USES).map(([k, u]) => `<button class="use ${quiz.uses.includes(k) ? 'on' : ''}" data-qz-use="${k}" aria-pressed="${quiz.uses.includes(k)}"><span>${u.icon}</span>${u.label}</button>`).join('')}</div></div>
+      <div class="field"><label>幾個人一起旅行？</label><span class="stepper"><button data-qz-people="-1" aria-label="少一人">－</button><b>${quiz.people} 人</b><button data-qz-people="1" aria-label="多一人">＋</button></span></div>
+      <div class="rec"><span class="kicker">推薦給你</span><div class="row"><span class="icon-tile">${opt.icon}</span><div class="grow"><b>${esc(planLabel(quiz.key, rec))}</b><div class="small">每天約 ${gb.toFixed(1)} GB・${esc(opt.persona)}${qtyNote}</div></div><b>NT$${fmt(planPrice(quiz.key, rec, qty))}</b></div>
+        <button class="btn primary block" data-qz-go>選這個方案</button></div>`;
+    $('#qz-key').addEventListener('change', (e) => { quiz.key = e.target.value; renderQuiz(); });
+  }
+  function quizClick(e) {
+    const b = e.target.closest('button');
+    if (!b || !b.closest('#quiz')) return false;
+    const ds = b.dataset;
+    if (ds.qzDays) quiz.days = Math.max(1, Math.min(30, quiz.days + Number(ds.qzDays)));
+    else if (ds.qzPeople) quiz.people = Math.max(1, Math.min(10, quiz.people + Number(ds.qzPeople)));
+    else if (ds.qzUse) quiz.uses = quiz.uses.includes(ds.qzUse) ? quiz.uses.filter((x) => x !== ds.qzUse) : [...quiz.uses, ds.qzUse];
+    else if ('qzGo' in ds) {
+      settings.uses = [...quiz.uses]; settings.people = quiz.people; save();
+      const gb = usagePerDay(quiz.uses, quiz.people);
+      const pick = smartPick();
+      openPlan(quiz.key, { ...pickForUsage(gb), days: quiz.days, qty: quiz.uses.includes('share') ? 1 : quiz.people, tripIds: pick?.key === quiz.key ? pick.journey.map((t) => t.id) : [] });
+      return true;
+    } else return false;
+    renderQuiz();
+    return true;
+  }
   const FAQ = [
     ['什麼時候開始計算天數？', '大多數方案在抵達目的地、eSIM 第一次連上當地網路時才開始計算，提早安裝不會浪費天數。'],
-    ['可以保留台灣門號收簡訊嗎？', '可以。eSIM 只負責上網，台灣實體卡照常收簡訊與來電（關閉台灣門號的數據漫遊即可避免漫遊費）。'],
-    ['可以分享熱點嗎？', '可以，一人購買就能分享給同行家人朋友，記得選流量大一點的方案。'],
+    ['可以保留台灣門號收簡訊嗎？', '可以。eSIM 只負責上網，台灣門號照常收簡訊與來電（關閉台灣門號的數據漫遊即可避免漫遊費）。'],
+    ['可以分享給家人朋友嗎？', '可以。一次買多張，在「我的 eSIM」點「分享給親友」用 LINE 傳連結，對方點開就能領取安裝。'],
     ['QR Code 可以重複掃嗎？', '多數 eSIM 只能安裝一次，刪除後無法再裝回，請不要隨意刪除。'],
     ['手機有鎖嗎？', '電信綁約機若有鎖網路，需先解鎖才能使用其他 eSIM。中國大陸與港澳版 iPhone 多數不支援 eSIM。'],
-    ['用不完可以退嗎？', '已安裝或已啟用的 eSIM 通常無法退款，未安裝的依官網退款規則辦理。'],
+    ['用不完可以退嗎？', '已領取或已安裝的 eSIM 通常無法退款，未領取的依官網退款規則辦理。'],
   ];
   $('#faq').innerHTML = FAQ.map(([q, a]) => `<details class="faq"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('');
-  $('#device-check').addEventListener('click', checkDevice);
-  $('#device').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkDevice(); });
   function checkDevice() {
     const v = $('#device').value.trim().toLowerCase().replace(/\s+/g, ' ');
     const out = $('#device-result');
@@ -929,8 +1492,55 @@
     const no = /iphone ?([4-8]|x\b|se ?\(?1)|中國|大陸|港版/.test(v);
     if (no) out.innerHTML = '<span style="color:var(--danger)">❌ 這個型號（或版本）可能不支援 eSIM。</span>';
     else if (ok) out.innerHTML = '<span style="color:var(--good)">✅ 一般支援 eSIM。</span> 綁約機請確認已解鎖。';
-    else out.innerHTML = '🤔 無法確定，請在撥號畫面輸入 *#06#，有出現 EID 就支援。';
+    else out.innerHTML = '🤔 無法確定，請撥 *#06#，有出現 EID 就支援。';
   }
+
+  // Store events
+  $('#modal-body').addEventListener('click', (e) => {
+    if (planSheetClick(e) || quizClick(e) || guideClick(e)) return;
+    const b = e.target.closest('button, a');
+    if (!b) return;
+    const ds = b.dataset;
+    if (ds.cartQty) {
+      const [id, d] = ds.cartQty.split(':');
+      const k = cart.find((x) => x.id === id);
+      if (k) { k.qty = Math.max(1, Math.min(10, k.qty + Number(d))); save(); renderCartFab(); openCart(); }
+    } else if (ds.cartDel) { cart = cart.filter((x) => x.id !== ds.cartDel); save(); renderCartFab(); openCart(); } else if ('checkout' in ds) openCheckout();
+    else if ('pay' in ds) pay();
+    else if ('gotoEsim' in ds) { modal.close(); esimTab = 'pending'; go('esim'); renderEsim(); } else if ('demoInstall' in ds) toast('示範版：正式版會直接開啟 iPhone 的「啟用 eSIM」畫面');
+    else if (ds.installedCard) {
+      const { o, c } = findCard(ds.installedCard);
+      if (o) {
+        const input = $('#label-input');
+        if (input?.value.trim()) c.label = input.value.trim();
+        c.claimed = true; c.installed = true; save(); modal.close(); renderEsim(); refreshTripViews();
+        toast(`已安裝「${labelOf(o, c)}」！抵達後照教學開啟就能上網`);
+      }
+    } else if (ds.shared) markShared(ds.shared);
+    else if (ds.copyShare) {
+      const input = $('#share-link');
+      const done = () => { markShared(ds.copyShare); toast('已複製連結'); };
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(input.value).then(done, () => { input.select(); toast('請長按連結複製'); });
+      else { input.select(); toast('請長按連結複製'); }
+    } else if (ds.nativeShare) navigator.share({ text: openGiftShare.text }).then(() => markShared(ds.nativeShare)).catch(() => {});
+    else if ('claimGift' in ds) claimGift();
+    else if (ds.labelPick) {
+      const { c } = findCard(ds.ref);
+      if (c) { c.label = ds.labelPick; save(); }
+      $('#label-input').value = ds.labelPick;
+      $$('[data-label-pick]').forEach((x) => x.classList.toggle('on', x === b));
+    } else if ('copyLabel' in ds) {
+      const input = $('#label-input');
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(input.value).then(() => toast(`已複製「${input.value}」，安裝時貼上`), () => { input.select(); toast('請長按名稱複製'); });
+      else { input.select(); toast('請長按名稱複製'); }
+    } else if (ds.installForce) openInstall(ds.installForce, true);
+    else if (ds.guideCard) openInstallGuide(ds.guideCard);
+    else if (ds.os) {
+      $$('#guide-os button').forEach((x) => x.classList.toggle('on', x === b));
+      $('#guide-steps').innerHTML = GUIDE_STEPS[ds.os].map((x) => `<li>${esc(x)}</li>`).join('');
+    }
+  });
+  $('#cart-fab').addEventListener('click', openCart);
 
   // ---------- trips list & form
   function renderTrips() {
@@ -1418,17 +2028,25 @@
   function budgetOf(t) {
     const b = t.plan.budget;
     const tickets = sum(t.plan.days.flat(), toTwd) * (b.people || 1);
-    const order = orders.find((o) => o.tripIds?.includes(t.id));
-    const esim = order ? order.price * (b.people || 1) : 0;
+    const linked = ordersFor(t.id);
+    const order = linked[0];
+    const esim = sum(linked, (o) => o.price);
     const manual = ['flight', 'hotel', 'transport', 'food', 'shopping', 'other'].reduce((s, k) => s + (Number(b[k]) || 0), 0);
     return { tickets, esim, order, total: manual + tickets + esim };
   }
   function autoTodos(t) {
     const c = country(t.n);
     const list = [];
-    const order = orders.find((o) => o.tripIds?.includes(t.id));
+    const order = ordersFor(t.id)[0];
     if (!order) list.push({ key: 'esim-buy', text: `購買 ${c.name} eSIM`, action: `<button class="btn sm" data-plan="${coverFor([c.code])}">選方案</button>` });
-    else if (!order.installed) list.push({ key: 'esim-install', text: '出發前一天在 Wi-Fi 下安裝 eSIM', action: `<button class="btn sm" data-installed="${order.id}">已安裝</button>` });
+    else {
+      const mine = order.cards.find((x) => !x.sharedAt || x.claimed) || order.cards[0];
+      const st = cardState(order, mine);
+      const ref = `${order.id}:${mine.id}`;
+      if (st === 'unclaimed') list.push({ key: 'esim-claim', text: '取得 eSIM 安裝資料', action: `<button class="btn sm" data-claim="${ref}">取得</button>` });
+      if (['unclaimed', 'claimed'].includes(st)) list.push({ key: 'esim-install', text: installAdvice(order), action: st === 'claimed' ? `<button class="btn sm" data-install="${ref}">安裝</button>` : '' });
+      order.cards.filter((x) => cardState(order, x) === 'shared').forEach((x) => list.push({ key: `esim-share-${x.id}`, text: `確認親友已領取第 ${x.n} 張 eSIM`, action: `<button class="btn sm" data-share="${order.id}:${x.id}">再傳一次</button>` }));
+    }
     if (c.note) list.push({ key: 'entry', text: c.note });
     t.plan.days.flat().filter((it) => it.fee).forEach((it) => list.push({ key: `tk-${it.id}`, text: `預訂門票：${it.name}（${ticketText(it)}）` }));
     return list;
@@ -1622,7 +2240,20 @@
     if (!t) return;
     const ds = t.dataset;
     if ('flip' in ds) { t.closest('.tcard').classList.toggle('flipped'); return; }
-    if (ds.plan !== undefined) { if (modal.open) modal.close(); openPlan(ds.plan); return; }
+    if (ds.plan !== undefined) { openPlan(ds.plan); return; }
+    if (ds.claim) { claimCard(ds.claim); return; }
+    if (ds.share) { openGiftShare(ds.share); return; }
+    if (ds.install) { openInstall(ds.install); return; }
+    if (ds.activate) { activateCard(ds.activate); return; }
+    if (ds.cardOpen) { openCardDetail(ds.cardOpen); return; }
+    if (ds.guide) { openGuide(ds.guide); return; }
+    if (ds.esimTab) { esimTab = ds.esimTab; renderWallet(); animateIn($('#wallet')); return; }
+    if (ds.scroll) {
+      if (modal.open) modal.close();
+      go('esim');
+      setTimeout(() => $(`#${ds.scroll}`)?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }), 380);
+      return;
+    }
     if (ds.ai) { openAi(ds.ai); return; }
     if (ds.wish) {
       wish = wish.includes(ds.wish) ? wish.filter((x) => x !== ds.wish) : [...wish, ds.wish];
@@ -1637,7 +2268,6 @@
     if (ds.origin) { setOrigin(ds.origin); return; }
     if (ds.tag) { recState.tags = recState.tags.includes(ds.tag) ? recState.tags.filter((x) => x !== ds.tag) : [...recState.tags, ds.tag]; renderRecs(); return; }
     if (ds.region) { esimRegion = ds.region; $('#esim-search').value = ''; renderEsim(); return; }
-    if (ds.installed) { const o = orders.find((x) => x.id === ds.installed); if (o) { o.installed = true; save(); renderEsim(); renderHero(); renderCover(); if (currentTab === 'plan') renderPlanner(); toast('已標記為已安裝'); } return; }
     if (ds.openPlan) { if (modal.open) modal.close(); openPlanner(ds.openPlan, ds.day != null ? Number(ds.day) : null); return; }
     if (ds.tripDest) { openTripForm(null, null, ds.tripDest); return; }
     if (ds.edit) { if (modal.open) modal.close(); openTripForm(ds.edit); return; }
@@ -1663,12 +2293,14 @@
       if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) return;
       const data = await res.json();
       Object.assign(CONFIG, {
-        ai: Boolean(data.ai), brand: data.brand || CONFIG.brand, esimUrl: data.esimUrl || CONFIG.esimUrl,
+        ai: Boolean(data.ai), brand: data.brand || CONFIG.brand, esimUrl: data.esimUrl || CONFIG.esimUrl, guideVideo: data.guideVideo || '',
       });
     } catch { /* static preview without the API */ }
   }
 
   applyTheme();
-  renderSteps('ios');
+  migrateOrders();
+  pendingGift = readGift();
+  window.addEventListener('hashchange', () => { const g = readGift(); if (g) { pendingGift = g; if (user) openGift(g); } });
   loadConfig().finally(() => { if (user) showApp(); else showLogin(); });
 }());

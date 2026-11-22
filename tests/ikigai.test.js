@@ -205,3 +205,10 @@ test('GET / keeps the JSON status for other clients', async () => {
   expect(res.headers.get('content-type')).toContain('application/json');
   expect((await res.json()).status).toEqual('OK');
 });
+
+test('buildIkigaiMessages asks for careers, skills and a staged plan', () => {
+  const [, human] = buildIkigaiMessages(normalizeIkigai(SAMPLE));
+  expect(human.content).toContain('## 3. 建議職業');
+  expect(human.content).toContain('## 4. 需要加強的能力');
+  expect(human.content).toContain('## 5. 職業規劃');
+});

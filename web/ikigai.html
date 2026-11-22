@@ -55,6 +55,8 @@
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
+    /* The step slide-in starts slightly off to the side; never let it scroll the page sideways. */
+    overflow-x: clip;
     background: var(--bg);
     color: var(--text);
     font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -318,6 +320,30 @@
   .plan-progress { display: flex; align-items: center; gap: 10px; font-size: 14px; margin-top: 4px; }
   .plan-progress .track { flex: 1; height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
   .plan-progress .track b { display: block; height: 100%; background: var(--ok); border-radius: inherit; transition: width .4s var(--ease); }
+
+  /* Career suggestions */
+  .careers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 640px) { .careers { grid-template-columns: 1fr; } }
+  .career { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--bg); display: grid; gap: 6px; align-content: start; }
+  .career-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+  .career p { margin: 0; font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+  .career .btn { justify-self: start; }
+  .ccs { display: inline-flex; gap: 3px; flex-wrap: wrap; }
+  .cc { font-size: 11.5px; border-radius: 999px; padding: 0 7px; border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); color: var(--muted); }
+  .cc.on { background: var(--c); border-color: var(--c); color: #fff; }
+  .paths { display: grid; gap: 8px; }
+  .path { border-left: 4px solid var(--paid); padding: 4px 0 4px 12px; }
+  .path b { font-size: 15.5px; }
+  .path p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .path-tag { display: inline-block; font-size: 12px; font-weight: 700; background: var(--surface-2); border-radius: 999px; padding: 1px 9px; margin-right: 8px; }
+  .skills { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+  .skills li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); }
+  .skills li span { font-size: 13px; color: var(--muted); }
+  .gap { margin-top: 12px; background: color-mix(in srgb, var(--good) 14%, transparent); border-radius: 12px; padding: 10px 14px; font-size: 14.5px; }
+  .timeline { list-style: none; padding: 0; margin: 0 0 10px; display: grid; gap: 0; }
+  .timeline li { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); font-size: 14.5px; }
+  .timeline li:last-child { border-bottom: 1px solid var(--border); }
+  .timeline li span { font-weight: 700; color: var(--muted); font-size: 13.5px; }
 
   /* Share and export */
   .share-section + .share-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
@@ -992,9 +1018,10 @@
           ${resultSummaryHtml(true)}
           <p class="next-tip">${nextTip()}</p>
         </div>
+        ${careerCardHtml()}
         <div class="card" id="aiCard">
           <h2>深度解析</h2>
-          <p class="hint">依你的四個圈，整理四個交集的觀察、可能的 IKIGAI 方向、最弱的圈，和接下來 30 天的行動。</p>
+          <p class="hint">依你的四個圈，寫出更完整的解析：四個交集、可能的 IKIGAI 方向、建議職業、需要加強的能力，和分階段的職業規劃。</p>
           <div id="aiBox">${aiBlock()}</div>
         </div>
         ${shareCardHtml()}
@@ -1003,6 +1030,7 @@
     animateResult = false;
     growBars($('view'));
     bindResult();
+    bindCareerCard();
     bindShareCard();
   }
 
@@ -1038,6 +1066,194 @@
   function bindResult() {
     bindVennFilter();
     bindAi();
+  }
+
+  // ---------- career suggestions (built in, no server call) ----------
+  // Each entry: keywords found in the visitor's items -> careers and the skills those careers need.
+  const CAREER_KB = [
+    { k: ['寫作', '文字', '文案', '編輯', '寫文章', '部落格'], careers: ['文案企劃', '內容編輯', '技術寫作', '自媒體創作者'], skills: ['文案寫作', '內容行銷與 SEO', '編輯校對'] },
+    { k: ['教學', '講師', '教書', '輔導', '課程', '家教', '帶人'], careers: ['企業內訓講師', '線上課程設計師', '教師或家教', '學習體驗設計師'], skills: ['課程設計', '簡報表達', '引導技巧'] },
+    { k: ['聊天', '溝通', '表達', '人際', '交朋友', '說話'], careers: ['客戶成功經理', '人資招募專員', '公關專員', '職涯顧問'], skills: ['溝通協調', '提問與傾聽', '衝突處理'] },
+    { k: ['傾聽', '陪伴', '同理'], careers: ['職涯諮詢師', '員工關懷專員', '客服主管'], skills: ['助人技巧', '提問與傾聽', '心理學基礎'] },
+    { k: ['數據', '分析', '統計', 'excel', 'Excel', '報表'], careers: ['數據分析師', '商業分析師', '市場研究員'], skills: ['SQL 與資料處理', '資料視覺化', '統計基礎'] },
+    { k: ['研究', '閱讀', '學習', '知識', '調查'], careers: ['產業分析師', '使用者研究員', '知識型內容創作者', '研究助理'], skills: ['研究方法', '資料整理', '寫作'] },
+    { k: ['程式', '軟體', '開發', '工程', '寫code', 'coding', '電腦', '網站'], careers: ['軟體工程師', '前端工程師', '自動化工程師', '技術顧問'], skills: ['程式設計', '系統設計', 'Git 版本控制'] },
+    { k: ['設計', '美術', '畫畫', '繪畫', '視覺', '插畫', 'UI', '美感'], careers: ['UI/UX 設計師', '平面設計師', '品牌設計師', '插畫家'], skills: ['Figma 等設計工具', '視覺設計原則', '使用者研究'] },
+    { k: ['攝影', '拍照', '影像', '影片', '剪輯', '拍片'], careers: ['攝影師', '影像剪輯師', '短影音創作者', '品牌影像企劃'], skills: ['拍攝技巧', '剪輯軟體', '腳本企劃'] },
+    { k: ['行銷', '社群', '品牌', '廣告', '企劃'], careers: ['行銷企劃', '社群經理', '品牌經理', '成長行銷專員'], skills: ['數位廣告投放', '社群經營', '成效數據追蹤'] },
+    { k: ['銷售', '業務', '談判', '賣東西', '推銷'], careers: ['業務代表', '客戶經理', '業務開發', '電商經營者'], skills: ['銷售技巧', '談判', '客戶關係管理'] },
+    { k: ['組織', '規劃', '管理', '專案', '領導', '統籌', '安排'], careers: ['專案經理', '營運專員', '活動企劃', '產品經理'], skills: ['專案管理', '時間管理', '跨部門協作'] },
+    { k: ['顧問', '諮詢', '建議'], careers: ['管理顧問', '職涯顧問', '專業領域顧問'], skills: ['問題拆解', '簡報表達', '商業分析'] },
+    { k: ['心理', '諮商', '心理健康', '情緒'], careers: ['心理諮商相關工作', '社工師', '員工關懷專員', '職涯諮詢師'], skills: ['助人技巧', '心理學基礎', '相關證照'] },
+    { k: ['環境', '永續', '環保', '綠能', '氣候', 'ESG'], careers: ['ESG 專員', '永續顧問', '環境教育推廣'], skills: ['ESG 報告撰寫', '碳盤查', '政策法規'] },
+    { k: ['教育'], careers: ['教育科技企劃', '教育非營利組織專員', '課程開發專員'], skills: ['課程設計', '提案與募資', '教育科技工具'] },
+    { k: ['長照', '照顧', '長期照顧', '醫療', '健康', '護理', '老人'], careers: ['照顧管理專員', '長照服務員', '健康產業企劃', '健康管理師'], skills: ['照顧技術', '相關證照', '溝通同理'] },
+    { k: ['數位能力', '數位', '科技', '3C'], careers: ['數位轉型顧問', '數位課程講師', '資訊支援專員'], skills: ['數位工具應用', '教學設計', '需求訪談'] },
+    { k: ['社區', '在地', '地方', '公益', '志工', '非營利'], careers: ['社區營造工作者', '地方創生企劃', '非營利組織專員'], skills: ['社區經營', '提案寫作', '活動企劃'] },
+    { k: ['料理', '烹飪', '做菜', '餐飲', '烘焙', '甜點', '食物', '咖啡'], careers: ['餐飲創業', '食品研發', '料理講師', '美食內容創作者'], skills: ['料理技術', '食品安全知識', '成本控管'] },
+    { k: ['食品安全', '食安', '營養'], careers: ['品保專員', '營養諮詢', '食品檢驗相關工作'], skills: ['食品法規', '營養學', '相關證照'] },
+    { k: ['運動', '健身', '體育', '跑步', '瑜珈'], careers: ['健身教練', '運動推廣企劃', '運動內容創作者'], skills: ['教練證照', '運動科學', '個人品牌經營'] },
+    { k: ['音樂', '樂器', '唱歌', '彈琴'], careers: ['音樂老師', '音樂製作', '表演工作者'], skills: ['樂理與演奏', '音樂製作軟體', '個人品牌經營'] },
+    { k: ['旅行', '旅遊', '觀光', '出國'], careers: ['旅遊規劃師', '領隊導遊', '旅遊內容創作者'], skills: ['行程規劃', '外語能力', '導覽解說'] },
+    { k: ['動物', '寵物', '貓', '狗'], careers: ['寵物照顧師', '寵物品牌經營', '動物保護組織專員'], skills: ['動物照護知識', '相關證照', '電商經營'] },
+    { k: ['翻譯', '外語', '英文', '日文', '韓文', '語言'], careers: ['譯者', '口譯', '國際業務'], skills: ['外語檢定', '專業領域術語', '翻譯工具'] },
+    { k: ['內容', '自媒體', '創作', 'YouTube', 'Podcast', '經營粉專'], careers: ['內容創作者', '自媒體經營者', '內容策略專員'], skills: ['內容企劃', '個人品牌經營', '成效數據追蹤'] },
+    { k: ['手作', '工藝', 'DIY', '手工', '木工', '編織'], careers: ['手作品牌經營', '手作課程講師', '工藝設計師'], skills: ['工藝技術', '電商經營', '定價策略'] },
+    { k: ['解決問題', '難題', '邏輯', '思考'], careers: ['產品經理', '管理顧問', '系統分析師'], skills: ['問題拆解', '邏輯思考', '系統思考'] },
+    { k: ['資訊辨識', '媒體', '新聞', '查證'], careers: ['事實查核員', '記者', '媒體識讀講師'], skills: ['查證方法', '新聞寫作', '研究方法'] },
+    { k: ['財務', '理財', '會計', '投資', '記帳'], careers: ['理財規劃顧問', '財務分析師', '會計人員'], skills: ['財務報表', '相關證照', 'Excel 進階'] },
+    { k: ['人資', '招募', '人才'], careers: ['人資專員', '招募顧問', '組織發展專員'], skills: ['面談技巧', '勞動法規', '組織發展'] },
+    { k: ['電商', '網拍', '創業', '開店', '做生意'], careers: ['電商經營者', '創業家', '小店主'], skills: ['電商平台操作', '數位行銷', '財務管理'] },
+    { k: ['遊戲', '電玩'], careers: ['遊戲企劃', '遊戲社群經營', '遊戲測試'], skills: ['遊戲設計', '社群經營', '企劃書撰寫'] },
+    { k: ['法律', '法規'], careers: ['法務專員', '法規遵循專員'], skills: ['法律知識', '合約審閱'] },
+  ];
+  const GAP_ADVICE = {
+    love: '多嘗試新活動，記下做什麼事時最投入、最不覺得累。',
+    good: '挑 1 項技能刻意練習 30 天，做出一個小作品並請人給回饋。',
+    need: '訪談 3 位可能的服務對象，了解他們真正的困擾和需求。',
+    paid: '研究市場行情：找 5 個相關職缺或服務，看要求的能力和收費方式。',
+  };
+
+  function careerInsights() {
+    const byCareer = new Map();
+    state.items.forEach((it) => {
+      const circles = circlesOf(it);
+      const text = it.text.toLowerCase();
+      CAREER_KB.forEach((entry, entryIdx) => {
+        if (!entry.k.some((kw) => text.includes(kw.toLowerCase()))) return;
+        entry.careers.forEach((name, rank) => {
+          const c = byCareer.get(name) || { name, entryIdx, score: 0, items: new Set(), circles: new Set(), skills: new Set() };
+          c.score += circles.length * 2 + (circles.length === 4 ? 3 : 0) - rank * 0.3;
+          c.items.add(it.text);
+          circles.forEach((k) => c.circles.add(k));
+          entry.skills.forEach((s) => c.skills.add(s));
+          byCareer.set(name, c);
+        });
+      });
+    });
+    // At most two careers from the same group, so one strong item does not crowd out the rest.
+    const perGroup = new Map();
+    const careers = [...byCareer.values()]
+      .map((c) => ({ ...c, items: [...c.items], circles: KEYS.filter((k) => c.circles.has(k)), skills: [...c.skills] }))
+      .sort((a, b) => b.circles.length - a.circles.length || b.score - a.score)
+      .filter((c) => {
+        const n = perGroup.get(c.entryIdx) || 0;
+        perGroup.set(c.entryIdx, n + 1);
+        return n < 2;
+      })
+      .slice(0, 6);
+
+    // Skills the top careers need that the visitor has not listed as a strength.
+    const strengths = inCircle('good').map((it) => it.text.toLowerCase());
+    const has = (skill) => strengths.some((g) => skill.toLowerCase().includes(g) || g.includes(skill.toLowerCase().slice(0, 2)));
+    const need = new Map();
+    careers.slice(0, 3).forEach((c) => c.skills.forEach((s) => { if (!has(s)) need.set(s, [...(need.get(s) || []), c.name]); }));
+    const skills = [...need.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 6).map(([name, forCareers]) => ({ name, forCareers }));
+    const owned = [...new Set(careers.slice(0, 3).flatMap((c) => c.skills).filter(has))];
+
+    const weakest = CIRCLES.slice().sort((a, b) => inCircle(a.key).length - inCircle(b.key).length)[0];
+    const pick = (keys, exclude) => careers.find((c) => keys.every((k) => c.circles.includes(k)) && !exclude.includes(c.name));
+    const paths = [];
+    const stable = pick(['good', 'paid'], []);
+    if (stable) paths.push({ title: '穩定發展', career: stable, how: `用你已經擅長、也有人付錢的能力，往「${stable.name}」深耕，最快看到成果。` });
+    const passion = pick(['love', 'good'], paths.map((p) => p.career.name));
+    if (passion) paths.push({ title: '熱情轉型', career: passion, how: `把熱愛又擅長的事變成工作，往「${passion.name}」發展，需要補上市場與收入的部分。` });
+    const mission = pick(['love', 'need'], paths.map((p) => p.career.name));
+    if (mission) paths.push({ title: '斜槓試水溫', career: mission, how: `先用副業或專案的方式做「${mission.name}」，確認有人需要、自己也做得久，再決定要不要全職。` });
+
+    const top = careers[0];
+    const s1 = skills[0] ? skills[0].name : '核心技能';
+    const s2 = skills[1] ? skills[1].name : '作品集';
+    const timeline = top ? [
+      { h: 'd30', when: '第 1 個月', what: `探索：訪談 2 位正在做「${top.name}」的人，整理 5 個相關職缺的要求` },
+      { h: 'd90', when: '第 2～3 個月', what: `補強：學習「${s1}」和「${s2}」，完成一個能展示的小作品` },
+      { h: 'd90', when: '第 4～6 個月', what: '實戰：用作品接第一個案子、做志工專案，或開始投遞履歷' },
+      { h: 'y1', when: '6～12 個月', what: `累積：建立作品集與人脈，評估是否全職轉向「${top.name}」` },
+    ] : [];
+    return { careers, skills, owned, weakest, paths, timeline };
+  }
+
+  const circleChips = (keys) => CIRCLES.map((c) => `<span class="cc${keys.includes(c.key) ? ' on' : ''}" style="--c:${c.color}">${c.short}</span>`).join('');
+
+  function careerCardHtml(readOnly) {
+    const ins = careerInsights();
+    const gap = `<div class="gap"><b>最需要補強的圈：${ins.weakest.short}</b>（${inCircle(ins.weakest.key).length} 項）　${GAP_ADVICE[ins.weakest.key]}</div>`;
+    if (!ins.careers.length) {
+      return `<div class="card" id="careerCard"><h2>職涯建議</h2>
+        <p class="hint">目前的項目還對應不到具體職業。試著寫得更具體一點，例如把「電腦」寫成「寫程式」、把「幫助人」寫成「教學」或「心理健康支持」。</p>${gap}</div>`;
+    }
+    const careerRows = ins.careers.map((c, i) => `
+      <div class="career">
+        <div class="career-head"><b>${esc(c.name)}</b><span class="ccs" aria-label="符合 ${c.circles.length} 個圈">${circleChips(c.circles)}</span></div>
+        <p>因為你寫了：${c.items.map(esc).join('、')}</p>
+        ${readOnly ? '' : `<button class="btn ghost small" type="button" data-addcareer="${i}">加入生涯規劃</button>`}
+      </div>`).join('');
+    const pathRows = ins.paths.map((p) => `<div class="path"><span class="path-tag">${p.title}</span><b>${esc(p.career.name)}</b><p>${esc(p.how)}</p></div>`).join('');
+    const skillRows = ins.skills.map((s) => `<li><b>${esc(s.name)}</b><span>${s.forCareers.map(esc).join('、')}需要</span></li>`).join('');
+    return `
+      <div class="card" id="careerCard">
+        <h2>職涯建議</h2>
+        <p class="hint">依你寫的項目和四個圈的交集整理。符合的圈越多，越接近你的 IKIGAI。</p>
+        <h3>建議職業</h3>
+        <div class="careers">${careerRows}</div>
+        ${pathRows ? `<h3>可以往哪個方向走</h3><div class="paths">${pathRows}</div>` : ''}
+        <h3>需要加強的能力</h3>
+        ${skillRows ? `<ul class="skills">${skillRows}</ul>` : '<p class="hint">建議職業需要的能力，你大多已經寫在「擅長」裡了。</p>'}
+        ${ins.owned.length ? `<p class="fine">你已具備：${ins.owned.map(esc).join('、')}</p>` : ''}
+        ${gap}
+        ${ins.timeline.length ? `<h3>職業規劃</h3><ol class="timeline">${ins.timeline.map((t) => `<li><span>${t.when}</span>${esc(t.what)}</li>`).join('')}</ol>
+        ${readOnly ? '' : '<button class="btn ghost small" type="button" id="addTimeline">把規劃步驟加入行動清單</button>'}` : ''}
+        <p class="fine">建議僅供參考，實際選擇請依自己的情況與市場狀況判斷。</p>
+      </div>`;
+  }
+
+  function bindCareerCard() {
+    const card = $('careerCard');
+    if (!card) return;
+    const ins = careerInsights();
+    card.querySelectorAll('[data-addcareer]').forEach((b) => b.addEventListener('click', () => {
+      const c = ins.careers[Number(b.dataset.addcareer)];
+      if (state.plan.dirs.some((d) => d.title === c.name)) { toast('這個職業已經在生涯規劃裡了'); return; }
+      if (state.plan.dirs.length >= MAX_DIRS) { toast(`生涯規劃最多 ${MAX_DIRS} 個方向，請先刪除一個`); return; }
+      const d = { id: uid(), title: c.name, s: Object.fromEntries(KEYS.map((k) => [k, c.circles.includes(k) ? 4 : 2])) };
+      state.plan.dirs.push(d);
+      if (!state.plan.main) state.plan.main = d.id;
+      save();
+      toast(`已把「${c.name}」加入生涯規劃`, { label: '前往', run: () => go('plan') });
+      renderProgress();
+    }));
+    if ($('addTimeline')) {
+      $('addTimeline').addEventListener('click', () => {
+        const added = ins.timeline.filter((t) => addAction(t.what.replace(/^[^：]+：/, ''), t.h)).length;
+        save();
+        toast(added ? `已加入 ${added} 項行動` : '這些步驟已經在行動清單裡了', added ? { label: '前往', run: () => go('plan') } : null);
+        renderProgress();
+      });
+    }
+  }
+
+  function careerReportHtml() {
+    const ins = careerInsights();
+    if (!ins.careers.length) return '';
+    return `<section><h2>職涯建議</h2>
+      <table>${ins.careers.map((c) => `<tr><th>${esc(c.name)}</th><td>符合：${c.circles.map((k) => BY_KEY[k].short).join('、')}　依據：${c.items.map(esc).join('、')}</td></tr>`).join('')}</table>
+      ${ins.paths.length ? `<h3>可以往哪個方向走</h3><table>${ins.paths.map((p) => `<tr><th>${p.title}</th><td><b>${esc(p.career.name)}</b>　${esc(p.how)}</td></tr>`).join('')}</table>` : ''}
+      ${ins.skills.length ? `<h3>需要加強的能力</h3><table>${ins.skills.map((s) => `<tr><th>${esc(s.name)}</th><td>${s.forCareers.map(esc).join('、')}需要</td></tr>`).join('')}</table>` : ''}
+      <p>最需要補強的圈：${ins.weakest.short}。${GAP_ADVICE[ins.weakest.key]}</p>
+      ${ins.timeline.length ? `<h3>職業規劃</h3><table>${ins.timeline.map((t) => `<tr><th>${t.when}</th><td>${esc(t.what)}</td></tr>`).join('')}</table>` : ''}
+    </section>`;
+  }
+
+  function careerText() {
+    const ins = careerInsights();
+    if (!ins.careers.length) return [];
+    const lines = ['', '— 職涯建議 —'];
+    ins.careers.forEach((c) => lines.push(`・${c.name}（符合 ${c.circles.map((k) => BY_KEY[k].short).join('、')}）`));
+    ins.paths.forEach((p) => lines.push(`【${p.title}】${p.career.name}：${p.how}`));
+    if (ins.skills.length) lines.push(`需要加強：${ins.skills.map((s) => s.name).join('、')}`);
+    lines.push(`最需要補強的圈：${ins.weakest.short}。${GAP_ADVICE[ins.weakest.key]}`);
+    ins.timeline.forEach((t) => lines.push(`${t.when}：${t.what}`));
+    return lines;
   }
 
   // ---------- career plan ----------
@@ -1111,6 +1327,7 @@
 
   function renderPlan() {
     const sugg = dirSuggestions();
+    const careerSugg = careerInsights().careers.filter((c) => !state.plan.dirs.some((d) => d.title === c.name)).slice(0, 4);
     const dir = mainDir();
     $('view').innerHTML = `
       <section class="${viewClass()}">
@@ -1125,6 +1342,7 @@
             <input type="text" id="dirInput" maxlength="60" placeholder="例如：技術寫作與教學創作者" autocomplete="off">
             <button class="btn" type="submit">新增方向</button>
           </form>
+          ${careerSugg.length ? `<div class="chips"><span>建議職業</span>${careerSugg.map((c, i) => `<button type="button" class="chip" data-csugg="${i}">+ ${esc(c.name)}</button>`).join('')}</div>` : ''}
           ${sugg.length ? `<div class="chips"><span>從你的交集開始</span>${sugg.map((it) => `<button type="button" class="chip" data-sugg="${it.id}">+ ${esc(it.text)}</button>`).join('')}</div>` : ''}` : '<p class="fine">最多 3 個方向。</p>'}
         </div>
         <div class="card">
@@ -1626,6 +1844,7 @@
           <h2>${esc(owner())} IKIGAI</h2>
           ${resultSummaryHtml(true)}
         </div>
+        ${careerCardHtml(true)}
         ${planReadHtml()}
         ${state.ai ? `<div class="card"><h2>深度解析</h2><div class="ai-out">${mdToHtml(state.ai)}</div></div>` : ''}
         ${shareCardHtml(true)}
@@ -1692,6 +1911,7 @@
       </div>
       <section><h2>四個圈</h2><table>${CIRCLES.map(listRow).join('')}</table>${state.note ? `<p>補充說明：${esc(state.note)}</p>` : ''}</section>
       <section><h2>交集</h2><table>${regions.map(([name, items]) => `<tr><th>${name}</th><td>${items.map((it) => esc(it.text)).join('、') || '—'}</td></tr>`).join('')}</table></section>
+      ${careerReportHtml()}
       ${dir ? `<section><h2>生涯規劃</h2>
         <table>${state.plan.dirs.map((d) => `<tr><th>${d.id === dir.id ? '主要方向' : '其他方向'}</th><td><b>${esc(d.title)}</b>　契合度 ${fitOf(d)}/20（${CIRCLES.map((c) => `${c.short} ${d.s[c.key]}`).join('、')}）</td></tr>`).join('')}
         ${HORIZONS.map((h) => (state.plan.goals[h.key] ? `<tr><th>${h.label}目標</th><td>${esc(state.plan.goals[h.key])}</td></tr>` : '')).join('')}</table>
@@ -1792,6 +2012,7 @@
     PAIRS.slice(0, 4).forEach((p) => lines.push(`${p.name}：${state.items.filter((it) => hasAll(it, p.keys)).map((it) => it.text).join('、') || '—'}`));
     lines.push(`IKIGAI 中心：${state.items.filter((it) => hasAll(it, KEYS)).map((it) => it.text).join('、') || '—'}`);
     if (state.note) lines.push('', `補充：${state.note}`);
+    lines.push(...careerText());
     const dir = mainDir();
     if (dir) {
       lines.push('', `— 生涯規劃 —`, `主要方向：${dir.title}（契合度 ${fitOf(dir)}/20）`);
@@ -1854,6 +2075,11 @@
     if (t.dataset.sugg) {
       const it = state.items.find((x) => x.id === t.dataset.sugg);
       if (it) addDirection(it.text, Object.fromEntries(KEYS.map((k) => [k, it.c[k] ? 4 : 2])));
+      return;
+    }
+    if (t.dataset.csugg) {
+      const c = careerInsights().careers.filter((x) => !state.plan.dirs.some((d) => d.title === x.name))[Number(t.dataset.csugg)];
+      if (c) addDirection(c.name, Object.fromEntries(KEYS.map((k) => [k, c.circles.includes(k) ? 4 : 2])));
       return;
     }
     if (t.dataset.main) { state.plan.main = t.dataset.main; save(); renderPlan(); return; }

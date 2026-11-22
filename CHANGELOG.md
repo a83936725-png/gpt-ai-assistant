@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.14.0 (2026-11-22)
+
+### New Features
+
+- IKIGAI: career suggestions on the result page, PDF report, copied text and share view, built in without AI: up to six careers with the circles they cover, three paths (stable, passion, side project), skills to strengthen, the weakest circle, and a 1-month to 12-month plan. Careers can be added to the career plan and the plan steps to the action list
+- IKIGAI: 深度解析 now also covers suggested careers, skills to strengthen and a staged career plan; `IKIGAI_MAX_TOKENS` defaults to 1800
+
 ## 4.13.1 (2026-11-21)
 
 ### Changes

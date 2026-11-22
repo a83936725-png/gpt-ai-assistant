@@ -154,3 +154,21 @@ test('GET /ikigai/qrcode.js serves the QR library', async () => {
   expect(res.status).toEqual(200);
   expect(await res.text()).toContain('QR Code Generator');
 });
+
+test('GET /ikigai/referrals/:rid counts friends who left their details', async () => {
+  const before = await (await fetch(`${base}/ikigai/referrals/${RECORD.id}`)).json();
+  expect(before).toEqual({ count: 0, goal: 3, reward: expect.any(String) });
+  await post(RECORD);
+  await post({
+    ...RECORD, id: 'friend000000000001', profile: { ...RECORD.profile, name: '朋友一' }, referredBy: RECORD.id,
+  });
+  await post({
+    ...RECORD, id: 'friend000000000001', profile: { ...RECORD.profile, name: '朋友一' }, referredBy: RECORD.id, step: 'plan',
+  });
+  await post({
+    ...RECORD, id: 'friend000000000002', profile: { ...RECORD.profile, name: '朋友二' }, referredBy: RECORD.id,
+  });
+  expect((await (await fetch(`${base}/ikigai/referrals/${RECORD.id}`)).json()).count).toEqual(2);
+  await admin('records/friend000000000002', { method: 'DELETE' });
+  expect((await (await fetch(`${base}/ikigai/referrals/${RECORD.id}`)).json()).count).toEqual(1);
+});

@@ -11,6 +11,8 @@ const HORIZONS = ['d30', 'd90', 'y1'];
 // Records live in a private Vercel Blob store when IKIGAI_BLOB_READ_WRITE_TOKEN is set,
 // otherwise in memory (local development and tests).
 const memory = new Map();
+const memoryRefs = new Map();
+const REFS = 'ikigai/refs/';
 const useBlob = () => Boolean(config.IKIGAI_BLOB_TOKEN);
 
 const str = (v, max) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
@@ -92,7 +94,35 @@ export const sanitizeRecord = (body, meta = {}) => {
 
 const pathOf = (id) => `${PREFIX}${id}.json`;
 
+// One small marker per referred friend, so a client's referral count is a single list call.
+const markReferral = async (referrer, referee) => {
+  if (!useBlob()) {
+    if (!memoryRefs.has(referrer)) memoryRefs.set(referrer, new Set());
+    memoryRefs.get(referrer).add(referee);
+    return;
+  }
+  await put(`${REFS}${referrer}/${referee}.json`, '{}', {
+    access: 'private', allowOverwrite: true, addRandomSuffix: false, contentType: 'application/json', token: config.IKIGAI_BLOB_TOKEN,
+  });
+};
+
+const unmarkReferral = async (referrer, referee) => {
+  if (!useBlob()) {
+    memoryRefs.get(referrer)?.delete(referee);
+    return;
+  }
+  await del(`${REFS}${referrer}/${referee}.json`, { token: config.IKIGAI_BLOB_TOKEN });
+};
+
+export const countReferrals = async (referrer) => {
+  if (!isId(referrer)) return 0;
+  if (!useBlob()) return memoryRefs.get(referrer)?.size || 0;
+  const page = await list({ prefix: `${REFS}${referrer}/`, limit: 1000, token: config.IKIGAI_BLOB_TOKEN });
+  return page.blobs.length;
+};
+
 export const saveRecord = async (record) => {
+  if (record.referredBy) await markReferral(record.referredBy, record.id);
   if (!useBlob()) {
     memory.set(record.id, record);
     return;
@@ -146,6 +176,8 @@ export const listRecords = async () => {
 
 export const deleteRecord = async (id) => {
   if (!isId(id)) return;
+  const existing = await getRecord(id).catch(() => null);
+  if (existing?.referredBy) await unmarkReferral(existing.referredBy, id).catch(() => {});
   if (!useBlob()) {
     memory.delete(id);
     return;
@@ -153,7 +185,10 @@ export const deleteRecord = async (id) => {
   await del(pathOf(id), { token: config.IKIGAI_BLOB_TOKEN });
 };
 
-export const clearMemoryRecords = () => memory.clear();
+export const clearMemoryRecords = () => {
+  memory.clear();
+  memoryRefs.clear();
+};
 
 const STEP_LABELS = {
   intro: '介紹', love: '熱愛', good: '擅長', need: '世界需要', paid: '報酬', match: '交集對照', result: '結果', plan: '生涯規劃',

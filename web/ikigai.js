@@ -8,7 +8,7 @@ import analyzeIkigai, {
 } from '../utils/analyze-ikigai.js';
 import moderateContent from '../utils/moderate-content.js';
 import {
-  deleteRecord, getRecord, listRecords, sanitizeRecord, saveRecord, summarize, toCsv,
+  countReferrals, deleteRecord, getRecord, listRecords, sanitizeRecord, saveRecord, summarize, toCsv,
 } from '../utils/ikigai-records.js';
 
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
@@ -171,6 +171,22 @@ router.post('/records', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error(`[ikigai] save record: ${err.message}`);
+    res.status(502).json({ code: 'storage_error' });
+  }
+});
+
+// How many friends a client has brought, for the invite progress bar on the page.
+router.get('/referrals/:rid', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (isSaveLimited(getClientIp(req))) {
+    res.status(429).json({ code: 'too_many_requests' });
+    return;
+  }
+  try {
+    const count = await countReferrals(req.params.rid);
+    res.json({ count, goal: config.IKIGAI_REFERRAL_GOAL, reward: config.IKIGAI_REFERRAL_REWARD });
+  } catch (err) {
+    console.error(`[ikigai] referrals: ${err.message}`);
     res.status(502).json({ code: 'storage_error' });
   }
 });

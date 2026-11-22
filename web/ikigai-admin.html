@@ -38,6 +38,14 @@
   .msg.error { color: var(--danger); }
   .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
   .ref { font-size: 13px; white-space: nowrap; }
+  .board { margin-bottom: 14px; }
+  .board ol { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+  .board li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .board li:last-child { border-bottom: 0; }
+  .board .rank { font-weight: 800; color: var(--muted); text-align: center; }
+  .board .who b { display: block; }
+  .board .who span { font-size: 13px; color: var(--muted); }
+  .board .n { font-weight: 800; color: var(--ok); white-space: nowrap; }
   .ref b { color: var(--ok); }
   @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
@@ -98,6 +106,7 @@
       </div>
     </div>
     <div class="stats" id="stats"></div>
+    <section class="card board" id="board" hidden></section>
     <div class="tools">
       <label for="q" class="msg" hidden>搜尋</label>
       <input type="search" id="q" placeholder="搜尋姓名、電話、Email、職業、項目">
@@ -173,6 +182,11 @@
       [rows.filter((r) => r.referredBy).length, '透過推薦進入'],
     ];
     $('stats').innerHTML = stats.map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
+    const top = rows.filter((r) => r.referrals > 0).sort((a, b) => b.referrals - a.referrals || b.updatedAt - a.updatedAt).slice(0, 10);
+    $('board').hidden = !top.length;
+    $('board').innerHTML = `<h2>推薦排行榜</h2><p class="msg">帶來最多朋友完成測驗的客戶，可以作為送禮或回饋的名單。</p>
+      <ol>${top.map((r, i) => `<li data-id="${esc(r.id)}"><span class="rank">${i + 1}</span><span class="who"><b>${esc(r.name)}</b><span>${esc([r.contact, r.email].filter(Boolean).join(' · '))}</span></span><span class="n">帶來 ${r.referrals} 位</span></li>`).join('')}</ol>`;
+    $('board').querySelectorAll('li[data-id]').forEach((li) => li.addEventListener('click', () => showDetail(li.dataset.id)));
   }
 
   function renderRows() {

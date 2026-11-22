@@ -310,7 +310,7 @@
         store.update((s) => {
           s.profile.member = who.value;
           s.family = {
-            id: inv.fid, key: inv.key, role: 'member', joinedAt: new Date().toISOString(), epoch: C.uid(), consentAt: new Date().toISOString(), members: r.family.members.length,
+            id: inv.fid, key: inv.key, role: r.family.owner ? 'owner' : 'member', joinedAt: new Date().toISOString(), epoch: C.uid(), consentAt: new Date().toISOString(), members: r.family.members.length,
           };
           if (hasOwn && mode === 'theirs') { s.babies = []; s.logs = []; s.growth = []; s.milk = []; s.milestones = {}; s.vaccines = {}; s.checkups = {}; s.activeBabyId = null; }
           if (s.sampleData) { s.babies = []; s.logs = []; s.growth = []; s.milk = []; s.milestones = {}; s.vaccines = {}; s.checkups = {}; s.activeBabyId = null; s.sampleData = false; } // sample data is never shared
@@ -354,7 +354,11 @@
         ui.toast('已建立 💜 現在邀請家人吧');
         App.refresh();
         sync();
-      } catch (e) { go.disabled = false; ui.toast(e && e.code === 'in_family' ? '你已經在一個家庭裡了' : '建立失敗，請稍後再試'); }
+      } catch (e) {
+        go.disabled = false;
+        // the account is in a family this phone has no key for (e.g. sample data replaced this phone's data): a link brings it back
+        ui.toast(e && e.code === 'in_family' ? '這個帳號已經在一個家庭裡了：請家人再傳一次邀請連結，用連結就能在這支手機恢復同步' : '建立失敗，請稍後再試', 6000);
+      }
     });
     el.append(ui.card({ class: 'fm-card' },
       h('div', { class: 'fm-ico', 'aria-hidden': 'true' }, '👨‍👩‍👧'),

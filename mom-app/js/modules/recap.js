@@ -229,6 +229,7 @@
   }
   function open(b, kind = 'now') {
     if (!b || !b.birthday) { ui.toast('先填寶寶的生日，才能做回顧'); return null; }
+    if (App.count) App.count('recap_view'); // 使用統計 (a count only)
     const now = new Date();
     const r = build(b, kind, now);
     const list = slides(b, r, now);

@@ -8,6 +8,7 @@ import axios from 'axios';
 import { createMomRouter } from '../../mom-api/index.js';
 import { MemoryStore, RedisRestStore } from '../../mom-api/store.js';
 import { dayKey, dayStart, makeMetrics } from '../../mom-api/metrics.js';
+import { weekKey } from '../../mom-api/circle.js';
 import { POLICY_VERSION as POLICY } from '../../mom-api/policy.js';
 import { fakeRedis } from './fake-redis.js';
 
@@ -170,6 +171,41 @@ function flows(label, makeStore) {
       await api.post(`${base}/wall/${mk.data.id}/wish`, { name: '阿嬤', text: '滿月快樂！' }, { headers: { 'X-Forwarded-For': '10.50.0.2' } });
       const { row } = await today();
       expect(row).toMatchObject({ wall_new: 1, wall_wish: 1 });
+    });
+
+    test('使用統計 from the app (POST /count): only the known names, at most 200 each, a limit per network', async () => {
+      const send = (n, ip = '10.70.0.1') => api.post(`${base}/count`, { n }, { headers: { 'X-Forwarded-For': ip } });
+      expect((await send(null)).status).toBe(400);
+      expect((await send(['active_d'])).status).toBe(400);
+      const before = (await today()).row;
+      const r = await send({
+        active_d: 1, active_w: 1, active_m: 1, first_open: 1, ob_baby: 1, log_diaper: 3, checkin: 2, share_line: 1, brand_view: 2, brand_shop: 1, hacked: 99, signup: 5, log_breast: 9999, search: -4,
+      });
+      expect(r.status).toBe(200);
+      const { row } = await today();
+      expect(row).toMatchObject({
+        active_d: 1, active_w: 1, active_m: 1, first_open: 1, ob_baby: 1, log_diaper: 3, checkin: 2, share_line: 1, brand_view: 2, brand_shop: 1, log_breast: 200, search: 0,
+      });
+      expect(row.hacked).toBeUndefined();
+      expect(row.signup).toBe(before.signup); // only the app's own names: a batch cannot add sign-ups
+      for (let i = 0; i < 60; i += 1) await send({ search: 1 }, '10.71.0.1'); // eslint-disable-line no-await-in-loop
+      expect((await send({ search: 1 }, '10.71.0.1')).status).toBe(429);
+      expect((await send({ search: 1 }, '10.72.0.1')).status).toBe(200);
+    });
+
+    test('同週好孕圈 in the dashboard: 備孕, the due months and the babies\' ages — counts only', async () => {
+      const join = (n, cohort) => api.post(`${base}/circle/sync`, { key: `circle-key-${String(n).padStart(4, '0')}-abcdefgh`, cohort }, { headers: { 'X-Forwarded-For': `10.80.${n}.1` } });
+      const due = weekKey(clock + 15 * 7 * DAY); // due in about 15 weeks
+      const tw = new Date(clock + 8 * HOUR);
+      const born = (back) => { const m = tw.getUTCFullYear() * 12 + tw.getUTCMonth() - back; return `b:${Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, '0')}`; };
+      for (const [i, c] of [[1, 'prep'], [2, `p:${due}`], [3, `p:${due}`], [4, born(1)], [5, born(14)]]) expect((await join(i, c)).status).toBe(200); // eslint-disable-line no-await-in-loop
+      const { r } = await today();
+      const c = r.data.circles;
+      expect(c).toMatchObject({ prep: 1, preg: 2, babies: 2, total: 5 });
+      expect(c.due.find((x) => x.n === 2)).toBeTruthy();
+      expect(c.baby.find((x) => x.label === '0–3 個月').n).toBe(1);
+      expect(c.baby.find((x) => x.label === '1–2 歲').n).toBe(1);
+      expect(JSON.stringify(r.data)).not.toMatch(/circle-key/);
     });
 
     test('only counts: no names, accounts, invite codes, team ids or the group-buy code', async () => {

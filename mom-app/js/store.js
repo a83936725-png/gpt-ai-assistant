@@ -286,6 +286,8 @@
         ...log,
       };
       this.update((s) => { s.logs.push(entry); });
+      // 使用統計: one more record of this kind (a count only, see account.js)
+      if (App.count) App.count(`log_${['breast', 'bottle', 'pump', 'diaper', 'sleep', 'food'].includes(entry.type) ? entry.type : 'other'}`);
       return entry;
     },
     updateLog(id, patch) {

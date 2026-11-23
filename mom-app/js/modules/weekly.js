@@ -491,6 +491,7 @@
   /* ---------------- sending ---------------- */
   function markSent(wk, channel, msg) {
     store.update((s) => { ensure(s).sent[wk] = C.dateKey(); });
+    if (App.count) App.count('weekly_sent'); // 使用統計 (a count only)
     const pts = App.share ? App.share.record(channel, 'weekly') : 0;
     ui.toast(msg || `謝謝分享${pts ? `・好孕點數 +${pts}` : ''}`);
   }

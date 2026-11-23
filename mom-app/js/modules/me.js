@@ -482,6 +482,7 @@
     s.island.stamps = {};
     s.starter = { demo: true }; // sample data: no 新手任務
     s.sampleData = true; // 範例資料 (with no member service, 團購 shows its sample group-buys too)
+    if (App.count) App.count('ob_demo'); // 使用統計: looked at the sample data (a count only)
     if (store.state.share) s.share = store.state.share; // keep invite code + who invited me
     if (store.state.auth) s.auth = store.state.auth; // stay logged in
     if (store.state.social) s.social = store.state.social; // keep 島上的媽媽／好孕圈 and the keys of my 祝福牆
@@ -512,6 +513,7 @@
       const go = (patch) => { Object.assign(ob, patch); wrap.innerHTML = ''; draw(); };
       const finish = () => {
         store.update((s) => { s.onboarded = true; s.onboardedAt = new Date().toISOString(); });
+        if (App.count) { App.count(`ob_${ob.stage}`); App.count.active(); } // 使用統計: the stage new users choose (a count only)
         ob = { step: 0, stage: null }; App.navigate('home'); App.refresh();
         if (App.gift) setTimeout(() => App.gift.sync(), 500); // set up: a friend's welcome gift can be claimed now
       };
@@ -728,11 +730,11 @@
             if (await ui.confirm(ask, n ? { ok: '取代', danger: true } : {})) seedDemo({ undo: true });
           },
         }, '載入範例資料'),
-        h('button', { class: 'btn btn-ghost danger-text', onclick: async () => { if (await ui.confirm('清除這台裝置上的所有資料？建議先匯出備份。', { ok: '清除', danger: true })) { store.reset(); App.navigate('onboarding'); } } }, '清除所有資料')));
+        h('button', { class: 'btn btn-ghost danger-text', onclick: async () => { if (await ui.confirm('清除這台裝置上的所有資料？建議先匯出備份。', { ok: '清除', danger: true })) { store.reset(); if (App.count) App.count.forget(); App.navigate('onboarding'); } } }, '清除所有資料')));
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.9.2`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.9.3`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
         App.screens.privacy ? h('button', { class: 'btn btn-ghost btn-sm center-btn', onclick: () => App.navigate('privacy') }, '🔒 隱私權政策與使用條款') : null,
         // the web preview (no member service) can show the brand's dashboard with its sample numbers; never linked for moms

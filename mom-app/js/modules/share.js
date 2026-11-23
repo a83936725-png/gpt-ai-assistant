@@ -62,7 +62,11 @@
 
   /* ================= points ================= */
   const POINTS = { line: 10, ig: 20, fb: 10, threads: 10, copy: 5, more: 10, invite: 15 };
+  // 使用統計: shares by where they went (a count only; an invite goes out on LINE; saved pictures count in saveImage)
+  const COUNTED = { line: 'line', invite: 'line', ig: 'ig', fb: 'fb', threads: 'threads', copy: 'copy', more: 'more' };
+  const savedPic = () => { if (App.count) App.count('share_save'); };
   function record(channel, campaign) {
+    if (App.count && COUNTED[channel]) App.count(`share_${COUNTED[channel]}`);
     let gained = 0;
     store.update((s) => {
       const sh = ensure(s);
@@ -563,7 +567,7 @@
       if (ch === 'copy') { const ok = await copyText(fullText('copy')); ui.toast(ok ? '已複製文字與連結' : '複製失敗，請長按選取'); if (ok) record('copy', p.campaign); return; }
       if (ch === 'save') {
         const blob = p.spec ? await getBlob() : null;
-        if (blob) { downloadBlob(blob, fileName(p.campaign, opt.format)); ui.toast('圖片存好了，可以傳到 LINE 群組或貼到限時動態'); }
+        if (blob) { downloadBlob(blob, fileName(p.campaign, opt.format)); savedPic(); ui.toast('圖片存好了，可以傳到 LINE 群組或貼到限時動態'); }
         return;
       }
       if (ch === 'ig' || ch === 'more') {
@@ -853,7 +857,7 @@
     const b = B();
     const consult = h('button', {
       class: 'isl-consult', 'aria-label': '諮詢與購買',
-      onclick: () => { if (b.lineOaUrl) openUrl(b.lineOaUrl); else App.navigate('brand'); },
+      onclick: () => { if (b.lineOaUrl) { if (App.count) App.count.daily('brand_line'); openUrl(b.lineOaUrl); } else App.navigate('brand'); },
     }, b.lineOaUrl ? [h('span', { class: 'isl-consult-ico', html: ui.ICONS.line }), 'LINE 諮詢'] : [h('img', { src: b.logo || 'assets/logo.svg', alt: '', class: 'isl-consult-logo' }), b.brandName || '品牌']);
     document.body.append(consult); islandUI.els.push(consult);
     scheduleHeart(true);
@@ -907,9 +911,9 @@
   // → 'shared' | 'downloaded' | 'cancel' (closed, already open, or 「圖片做好了・儲存」 waiting: onDone runs if that tap saves it)
   async function saveImage(blob, name, title = '', onDone = null) {
     const r = await sharePicture(blob, name, { title, action: '儲存', onShared: onDone });
-    if (r === 'shared') return 'shared';
+    if (r === 'shared') { savedPic(); return 'shared'; }
     if (r !== 'none') return 'cancel';
-    downloadBlob(blob, name); return 'downloaded';
+    downloadBlob(blob, name); savedPic(); return 'downloaded';
   }
   App.share = {
     open, link, render, cards, moment, checkMoments, momentLine, qr, saveImage, sharePicture, button, record, bonus, code: () => ensure(store.state).code, inviteText,

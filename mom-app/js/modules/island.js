@@ -1206,6 +1206,7 @@
         x.quiz[spot.id] = Math.max(x.quiz[spot.id] || 0, score);
         if (!x.stamps[spot.id]) { x.stamps[spot.id] = C.dateKey(); isNew = true; }
       });
+      if (isNew && App.count) App.count('island_stamp'); // 使用統計 (a count only)
       result = { score, isNew };
       const isl = ISL[spot.island];
       const islandComplete = isNew && isl && islandDone(isl) === islandSpots(isl).length;
@@ -1302,7 +1303,7 @@
         h('img', { src: brand.logoFull || brand.logo || 'assets/logo.svg', alt: brand.brandName || '易家滴雞精', class: 'isl-brand-logo' }),
         h('p', { class: 'small' }, brand.story || ''),
         canBrand ? h('button', { class: 'btn btn-primary btn-sm', onclick: () => { sh.close(); if (App.screens.brand) App.navigate('brand'); } }, `認識${brand.brandName || '易家滴雞精'}`)
-          : (brand.shopUrl ? h('a', { class: 'btn btn-primary btn-sm', href: brand.shopUrl, target: '_blank', rel: 'noopener' }, '前往官網') : null)));
+          : (brand.shopUrl ? h('a', { class: 'btn btn-primary btn-sm', href: brand.shopUrl, target: '_blank', rel: 'noopener', onclick: () => { if (App.count) App.count.daily('brand_shop'); } }, '前往官網') : null)));
     }
 
     const cite = App.src ? App.src.collector() : null;

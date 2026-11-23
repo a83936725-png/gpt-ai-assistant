@@ -415,17 +415,20 @@
     let saveT = 0;
     const commit = () => {
       clearTimeout(saveT);
+      let first = false;
       store.update((s) => {
         const M = ensure(s);
         M.frame = st.frame; M.qr = st.qr;
         if (!st.photo) return;
         const bs = M.babies[b.id] || (M.babies[b.id] = {});
+        first = !(bs[m] && bs[m].photo);
         const nm = cleanName(st.name);
         bs[m] = {
           photo: st.photo, frame: st.frame, crop: { x: Math.round(st.crop.x * 1000) / 1000, y: Math.round(st.crop.y * 1000) / 1000, z: Math.round(st.crop.z * 1000) / 1000 },
           note: cleanNote(st.note), name: nm === (b.name || '') ? null : nm, growth: st.growth, at: (bs[m] && bs[m].at) || new Date().toISOString(),
         };
       });
+      if (first && App.count) App.count('monthly_photo'); // 使用統計: a month got its photo (a count only)
     };
     const persist = () => { clearTimeout(saveT); saveT = setTimeout(commit, 300); };
 

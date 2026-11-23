@@ -60,13 +60,16 @@
 .ad-table thead th { position: sticky; top: 0; background: var(--c-surface); color: var(--c-text-2); font-weight: 600; }
 .ad-acts td { font-weight: 700; }
 
-.ad-hbars { display: flex; flex-direction: column; gap: 10px; }
-.ad-hrow { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 10px; }
+/* horizontal bars: the whole group is one grid (rows are display:contents), so every track has the same width
+   and the bars compare honestly; the label column fits the longest label, up to 40% */
+.ad-hbars { display: grid; grid-template-columns: fit-content(40%) minmax(0, 1fr) max-content; align-items: center; gap: 10px; }
+.ad-hrow { display: contents; }
 .ad-hn { font-size: 13.5px; color: var(--c-text-2); }
 .ad-htrack { height: 14px; }
 .ad-hfill { display: block; height: 14px; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--viz-1); }
-.ad-hv2 { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ad-hv2 { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .ad-hv2 small { color: var(--c-text-2); font-weight: 500; }
+.ad-sub { font-size: 14px; margin: 16px 0 8px; }
 
 .ad-gbs { display: flex; flex-direction: column; gap: 14px; }
 .ad-gbh { align-items: center; }

@@ -503,6 +503,9 @@
   const ST = { q: '', expanded: {}, browseAll: false, pkey: null };
   let els = null;
   let timer = null;
+  // 使用統計: a search is counted once she stops typing (1.5 s), or taps a suggestion; the words never leave the phone
+  let countT = null; let counted = '';
+  const countSearch = (q) => { q = String(q || '').trim(); if (q && q !== counted && App.count) { counted = q; App.count('search'); } };
 
   function suggestions() {
     const S = App.FAQ_SUGGEST || {};
@@ -515,6 +518,7 @@
   function setQuery(q, { save = false, focus = false } = {}) {
     ST.q = String(q ?? '');
     ST.expanded = {};
+    countSearch(ST.q);
     if (els) {
       els.input.value = ST.q;
       els.clear.hidden = !ST.q;
@@ -664,6 +668,8 @@
       clear.hidden = !input.value;
       clearTimeout(timer);
       timer = setTimeout(() => { renderResults(); if (window.scrollY > 0) window.scrollTo(0, 0); }, 120);
+      clearTimeout(countT);
+      countT = setTimeout(() => countSearch(input.value), 1500);
     });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && input.value && !document.body.classList.contains('has-sheet')) { e.preventDefault(); setQuery('', { focus: true }); }

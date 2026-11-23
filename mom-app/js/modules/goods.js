@@ -164,7 +164,7 @@
     }
     const actions = h('div', { class: 'row gap wrap mt' });
     if (it.link && App.screens[it.link]) actions.append(h('button', { type: 'button', class: 'btn btn-soft grow', onclick: () => { sh.close(); App.navigate(it.link); } }, `前往「${TOOL_NAME[it.link] || '相關工具'}」`));
-    if (it.brand && B().shopUrl) actions.append(h('a', { class: 'btn btn-primary grow', href: B().shopUrl, target: '_blank', rel: 'noopener' }, '前往官網'));
+    if (it.brand && B().shopUrl) actions.append(h('a', { class: 'btn btn-primary grow', href: B().shopUrl, target: '_blank', rel: 'noopener', onclick: () => { if (App.count) App.count.daily('brand_shop'); } }, '前往官網'));
     if (!it.custom && App.share) actions.append(h('button', { type: 'button', class: 'btn btn-ghost grow', onclick: () => shareItem(it) }, '📤 分享給朋友'));
     if (it.custom) {
       actions.append(

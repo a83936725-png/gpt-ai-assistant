@@ -3,7 +3,8 @@
  *   m:d:<YYYY-MM-DD>   counts for that day (kept 400 days): signup, signup_email / _phone / _line, login, open (the app
  *                      was opened or came back after a while), invite (a friend's join was counted for her inviter),
  *                      gift, gb_start / gb_join / gb_done, wall_new / wall_wish, circle_join / circle_vote, wave,
- *                      deleted, push_sub / push_sent, family_new / family_join, monthly … (see EVENTS)
+ *                      deleted, push_sub / push_sent, family_new / family_join, and what the app was used for
+ *                      (APP_EVENTS: active phones, the stage chosen, records, 滴雞精時光, shares, the brand page…)
  *   m:tot              running totals that can go down: marketing (members who said yes to marketing messages,
  *                      counted from this version on), push (phones that get notifications), families
  *
@@ -18,10 +19,24 @@ const DAY_MS = 86400e3;
 const TW_MS = 8 * 3600e3;
 const KEEP_SEC = 400 * 86400;
 const CACHE_MS = 30 * 1000;
+// what the app itself was used for (POST /count, see index.js): the phone keeps a tally and sends it with the
+// minute's presence beat; only these names are counted. active_d / active_w / active_m: a phone used today / this
+// week / this month (the phone remembers it already said so, so no id ever reaches the server); first_open: a phone
+// opening the app for the first time; ob_*: the stage chosen when setting up (ob_demo: 先看看範例資料); log_*: a record
+// added (food: 副食品, other: 體溫、用藥、看診、洗澡、其他); checkin: 滴雞精時光; brand_view / brand_shop / brand_line:
+// the brand page, its shop link, its LINE link; share_*: a share, by where it went. Nothing is counted on 範例資料.
+export const APP_EVENTS = [
+  'active_d', 'active_w', 'active_m', 'first_open', 'ob_prep', 'ob_preg', 'ob_baby', 'ob_demo',
+  'log_breast', 'log_bottle', 'log_pump', 'log_diaper', 'log_sleep', 'log_food', 'log_other',
+  'checkin', 'monthly_photo', 'recap_view', 'night_open', 'island_stamp', 'search', 'weekly_sent',
+  'share_line', 'share_ig', 'share_fb', 'share_threads', 'share_copy', 'share_more', 'share_save',
+  'brand_view', 'brand_shop', 'brand_line',
+];
 export const EVENTS = [
   'signup', 'signup_email', 'signup_phone', 'signup_line', 'login', 'open', 'invite', 'gift',
   'gb_start', 'gb_join', 'gb_done', 'wall_new', 'wall_wish', 'circle_join', 'circle_vote', 'wave', 'deleted',
   'push_sub', 'push_sent', 'family_new', 'family_join', 'handoff',
+  ...APP_EVENTS,
 ];
 // 台灣日期 of a moment, and the start (00:00 台灣時間) of that day
 export const dayKey = (t) => new Date(t + TW_MS).toISOString().slice(0, 10);

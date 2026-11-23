@@ -15,6 +15,8 @@
  *   GET  /me/export              everything stored about me (個資法 §3: a copy of my data)
  *   POST /auth/delete {password} delete my account (§3: deletion); password accounts must re-enter the password
  *   POST /presence {sid}         heartbeat from an open app
+ *   POST /count {n: {name: k}}   使用統計 from the app: how many times things were used since its last batch (known
+ *                                names only — metrics.js APP_EVENTS — at most 200 each, no id, nothing about who)
  *   GET  /stats                  {online (last 2 min), registered, todaySignups}
  *   /social/*, /wall/*           島上的媽媽 (preset reactions) and 祝福牆 — see social.js
  *   /circle/*                    同週好孕圈 (weekly question, mood, cheers) — see circle.js
@@ -25,7 +27,9 @@
  *   GET /admin/stats             品牌數據 for the brand's dashboard (X-Admin-Key = MOM_ADMIN_KEY): daily counts only,
  *                                never who — see metrics.js
  *
- * Health records and pregnancy stage are NOT sent here; they stay on the user's device.
+ * Health records and pregnancy stage are NOT sent here; they stay on the user's device. (The app's 使用統計 are bare
+ * counts — "one more diaper record", "a new user chose 懷孕中" — with no id or account, and are not sent at all from
+ * 範例資料.)
  * Sign-up needs the current privacy policy version in `consent` (個資法 §7: the collector must be able to show
  * consent); the version and time are kept with the account. Marketing is a separate, optional choice (§20).
  * Env: MOM_AUTH_SECRET (≥32 chars, required on Vercel/production; shorter ones are ignored), KV_REST_API_URL +
@@ -37,10 +41,12 @@ import crypto from 'crypto';
 import axios from 'axios';
 import { storeFromEnv } from './store.js';
 import { mountSocial } from './social.js';
-import { mountCircle } from './circle.js';
+import { mountCircle, cohortStats } from './circle.js';
 import { mountInvite, inviteInfo, normCode } from './invite.js';
 import { mountGroupbuy } from './groupbuy.js';
-import { makeMetrics, mountAdmin, dayStart as twDayStart } from './metrics.js';
+import {
+  makeMetrics, mountAdmin, dayStart as twDayStart, APP_EVENTS,
+} from './metrics.js';
 import { mountPush } from './push.js';
 import { mountFamily } from './family.js';
 import { makeSender, makeVerify } from './verify.js';
@@ -65,6 +71,7 @@ const LIMITS = {
   referralIp: [3, 86400], // …and at most 3 of them from the same network
   presenceNew: [6, 600], // a network may bring at most 6 new "online" sessions every 10 min (a family's phones)
   presenceSid: [30, 600], // heartbeats per session (the app sends one a minute)
+  count: [60, 600], // 使用統計 batches per network (a phone sends one with its heartbeat — once a minute, and on coming back — only when it has counts)
   meUser: [60, 600], // profile updates per account
   lineIp: [30, 600],
 };
@@ -374,6 +381,18 @@ export function createMomRouter({
     res.json({ ok: true });
   }));
 
+  // 使用統計 from the app: {n: {event: count}}. Only the names in APP_EVENTS are counted, at most 200 each per batch;
+  // nothing in it says who (the privacy policy's 「使用統計」: numbers only, kept 400 days)
+  router.post('/count', wrap(async (req, res) => {
+    const n = req.body && req.body.n;
+    if (!n || typeof n !== 'object' || Array.isArray(n)) { res.status(400).json({ error: 'bad_counts' }); return; }
+    if (await over('count', clientIp(req), LIMITS.count)) { res.status(429).json({ error: 'too_many' }); return; }
+    const known = new Set(APP_EVENTS);
+    const entries = Object.entries(n).filter(([k, v]) => known.has(k) && Number(v) >= 1).slice(0, APP_EVENTS.length);
+    for (const [k, v] of entries) await metrics.count(k, Math.min(200, Math.floor(Number(v)))); // eslint-disable-line no-restricted-syntax, no-await-in-loop
+    res.json({ ok: true, counted: entries.length });
+  }));
+
   router.get('/stats', wrap(async (req, res) => {
     const t = now();
     if (!statsCache || t - statsCache.at > STATS_CACHE_MS) {
@@ -489,6 +508,7 @@ export function createMomRouter({
   });
   forgetHooks.push((u) => family.forget(u));
   statsHooks.push(async () => ({ push: { on: push.on, line: push.lineOn } }));
+  statsHooks.push(async (t) => ({ circles: await cohortStats(store, t) })); // 同週好孕圈: 備孕, due months, babies' ages
   groupbuy = mountGroupbuy(router, {
     store, now, over, clientIp, wrap, currentUser, env, needVerify: verify.needVerify, metrics, notify: (uids, topic, p) => push.notify(uids, topic, p),
   });

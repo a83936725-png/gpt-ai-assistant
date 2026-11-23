@@ -55,6 +55,32 @@ export function cohortInfo(cohort, t) {
   return cohort === 'prep' ? { kind: 'prep', at: 0 } : null;
 }
 
+// 品牌數據: how many moms are in the circles now (opened theirs in the last two weeks) — 備孕, the month the baby is
+// due, the baby's age. The same kind of totals the circles show their own members; no id leaves this function.
+const thursdayMonth = (t) => { const d = new Date(Math.floor((t + TAIPEI_MS) / DAY_MS) * DAY_MS); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return d.toISOString().slice(0, 7); };
+const monthBack = (t, i) => { const d = new Date(t + TAIPEI_MS); const m = d.getUTCFullYear() * 12 + d.getUTCMonth() - i; return `${Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, '0')}`; };
+export const BABY_BANDS = [['0–3 個月', 0, 3], ['4–6 個月', 4, 6], ['7–12 個月', 7, 12], ['1–2 歲', 13, 24], ['2–3 歲', 25, 36], ['3 歲以上', 37, 84]];
+export async function cohortStats(store, t) {
+  const since = t - ACTIVE_MS;
+  const n = (cohort) => store.zcountSince(`circ:m:${cohort}`, since).catch(() => 0);
+  const dueAt = Array.from({ length: 47 }, (_, i) => t + (i - 4) * 7 * DAY_MS); // 4 weeks past the due date … 42 ahead
+  const [prep, wv, mv] = await Promise.all([
+    n('prep'),
+    Promise.all(dueAt.map((x) => n(`p:${weekKey(x)}`))),
+    Promise.all(Array.from({ length: 85 }, (_, i) => n(`b:${monthBack(t, i)}`))),
+  ]);
+  const due = new Map();
+  dueAt.forEach((x, i) => { const m = thursdayMonth(x); due.set(m, (due.get(m) || 0) + (Number(wv[i]) || 0)); });
+  const baby = BABY_BANDS.map(([label, a, b]) => ({ label, n: mv.slice(a, b + 1).reduce((s, x) => s + (Number(x) || 0), 0) }));
+  const dueList = [...due.entries()].map(([month, c]) => ({ month, n: c }));
+  const preg = dueList.reduce((s, x) => s + x.n, 0);
+  const babies = baby.reduce((s, x) => s + x.n, 0);
+  const prepN = Number(prep) || 0;
+  return {
+    prep: prepN, preg, babies, total: prepN + preg + babies, due: dueList, baby,
+  };
+}
+
 // this week's question for a cohort: everyone in it gets the same one; the next week brings the next one
 export function pollFor(info, t) {
   const fits = POLLS.filter((p) => p.kind === info.kind && (!p.range || (info.at >= p.range[0] && info.at <= p.range[1])));

@@ -88,6 +88,7 @@
   }
   function open(babyId = null) {
     if (root) { paint(babyId); return root; }
+    if (App.count) App.count('night_open'); // 使用統計 (a count only)
     prevFocus = document.activeElement;
     root = h('div', { class: 'nt', role: 'dialog', 'aria-modal': 'true', 'aria-label': '夜奶陪伴', tabindex: '-1' },
       h('button', { class: 'nt-x', 'aria-label': '關閉夜奶陪伴', onclick: () => close() }, '✕'),

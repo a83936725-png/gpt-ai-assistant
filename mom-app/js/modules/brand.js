@@ -23,6 +23,7 @@
       if (v) s.chicken.log[k] = v; else delete s.chicken.log[k];
     });
     if (delta <= 0) return;
+    if (App.count) App.count('checkin'); // 使用統計 (a count only)
     const n = streak();
     if (first && STREAKS.includes(n)) { // a streak worth celebrating (counted once, on the day's first check-in)
       ui.toast(`滴雞精時光，連續 ${n} 天了`, 3500);
@@ -152,6 +153,7 @@
     title: () => B().brandName || '品牌',
     render(el) {
       const b = B();
+      if (App.count) App.count.daily('brand_view'); // 使用統計: phones that looked at the brand page today
       el.append(h('section', { class: 'brand-hero center' },
         h('img', { src: b.logoFull || b.logo, alt: b.brandName || '', class: 'brand-hero-logo' }),
         h('p', { class: 'brand-story' }, b.story || '')));
@@ -176,8 +178,9 @@
           h('li', null, '有特殊飲食限制（例如醫師要求限制蛋白質或鈉）時，請先詢問醫師或營養師。'),
           h('li', null, '保存方式與期限請以產品包裝標示為準。'))));
       const links = [];
-      if (b.shopUrl) links.push(h('a', { class: 'btn btn-primary grow', href: b.shopUrl, target: '_blank', rel: 'noopener' }, '前往官網選購'));
-      if (b.lineOaUrl) links.push(h('a', { class: 'btn btn-line grow', href: b.lineOaUrl, target: '_blank', rel: 'noopener', html: `${ui.ICONS.line}<span>加入 LINE 好友</span>` }));
+      const counted = (name) => () => { if (App.count) App.count.daily(name); };
+      if (b.shopUrl) links.push(h('a', { class: 'btn btn-primary grow', href: b.shopUrl, target: '_blank', rel: 'noopener', onclick: counted('brand_shop') }, '前往官網選購'));
+      if (b.lineOaUrl) links.push(h('a', { class: 'btn btn-line grow', href: b.lineOaUrl, target: '_blank', rel: 'noopener', onclick: counted('brand_line'), html: `${ui.ICONS.line}<span>加入 LINE 好友</span>` }));
       if (b.phone) links.push(h('a', { class: 'btn btn-ghost grow', href: `tel:${b.phone}` }, `客服 ${b.phone}`));
       if (links.length) el.append(h('div', { class: 'row gap wrap mt' }, links));
       el.append(h('p', { class: 'disclaimer' }, '本頁為生活習慣紀錄功能。食品不具醫療效能，身體狀況請諮詢醫師。'));

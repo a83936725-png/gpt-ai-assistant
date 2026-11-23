@@ -79,10 +79,68 @@
         L.storage === 'memory' ? h('span', { class: 'live-test' }, '測試環境') : null]); // ui.append skips nulls
     });
   }
+  /* ================= 使用統計: how often things are used — counts only ================= */
+  // The phone keeps a tally ({name: n}) and sends it with the heartbeat (each minute, and on coming back to the app) when
+  // there is something in it (POST /count); the server adds it to
+  // today's numbers, keeps only names it knows and never learns which phone sent it. "Phones in use" are marked on the
+  // phone itself — once a day, a week and a month — so the server never has to tell phones apart. Not counted: the
+  // landing page's 試玩, 範例資料 (except choosing it) and a site without the member service. Offline, the tally waits.
+  const MKEY = 'yijia-mom-metrics';
+  const tw = (t = Date.now()) => new Date(t + 8 * 3600e3); // Taiwan time, the server's days
+  const dayK = (t) => tw(t).toISOString().slice(0, 10);
+  const weekK = (t) => { const d = tw(t); return new Date(d.getTime() - ((d.getUTCDay() || 7) - 1) * 864e5).toISOString().slice(0, 10); }; // its Monday
+  const monthK = (t) => tw(t).toISOString().slice(0, 7);
+  const mread = () => { try { const m = JSON.parse(localStorage.getItem(MKEY) || '{}'); return m && typeof m === 'object' ? m : {}; } catch (e) { return {}; } };
+  const mwrite = (m) => { try { localStorage.setItem(MKEY, JSON.stringify(m)); } catch (e) { /* storage full or blocked: only this count is lost */ } };
+  const quiet = (name) => App.sandbox || cfgWhy === 'none' || (store.state.sampleData && name !== 'ob_demo');
+  const bump = (m, name, by = 1) => { m.n = m.n || {}; m.n[name] = Math.min(10000, (m.n[name] || 0) + by); };
+  function count(name, by = 1) {
+    if (!name || quiet(name)) return;
+    const m = mread(); bump(m, name, by); mwrite(m);
+  }
+  // once a day per phone: 「看品牌頁的手機」, not how many times one mom opened it
+  count.daily = (name) => {
+    if (quiet(name)) return;
+    const m = mread(); m.o = m.o || {};
+    if (m.o[name] === dayK()) return;
+    m.o[name] = dayK(); bump(m, name); mwrite(m);
+  };
+  // this phone is in use: today, this week, this month (set up, and not looking at 範例資料); and the very first open
+  count.active = () => {
+    if (App.sandbox || cfgWhy === 'none' || /^#\/admin/.test(location.hash)) return; // the brand's own dashboard is not a mom
+    const m = mread(); let changed = false;
+    if (!m.first) { m.first = dayK(); bump(m, 'first_open'); changed = true; }
+    if (store.state.onboarded && !store.state.sampleData) {
+      [['d', dayK(), 'active_d'], ['w', weekK(), 'active_w'], ['m', monthK(), 'active_m']].forEach(([k, v, name]) => {
+        if (m[k] !== v) { m[k] = v; bump(m, name); changed = true; }
+      });
+    }
+    if (changed) mwrite(m);
+  };
+  // 清除所有資料 clears this too
+  count.forget = () => { try { localStorage.removeItem(MKEY); } catch (e) { /* fine */ } };
+  let sending = false;
+  async function flush() {
+    if (sending) return;
+    const m = mread(); const n = m.n || {};
+    const batch = {};
+    Object.keys(n).forEach((k) => { const v = Math.min(200, Math.floor(n[k])); if (v >= 1) { batch[k] = v; n[k] -= v; } if (!(n[k] >= 1)) delete n[k]; });
+    if (!Object.keys(batch).length) return;
+    sending = true;
+    m.n = n; mwrite(m); // off the phone while it travels, so a count made meanwhile is neither lost nor sent twice
+    try { await call('POST', 'count', { n: batch }); } catch (e) {
+      if (e && noApiHere(e.status)) return; // this server does not take counts: let them go
+      const back = mread(); Object.entries(batch).forEach(([k, v]) => bump(back, k, v)); mwrite(back); // next minute
+    } finally { sending = false; }
+  }
+  App.count = count;
+
   async function tick() {
     if (document.visibilityState !== 'visible' || App.sandbox) return; // the landing page's 試玩 is not a mom opening the app
+    count.active();
     const cfg = await config();
-    if (!cfg) return;
+    if (!cfg) { if (cfgWhy === 'none') count.forget(); return; }
+    flush();
     let here = false;
     try { await call('POST', 'presence', { sid }); here = true; } catch (e) { /* ignore */ }
     try {

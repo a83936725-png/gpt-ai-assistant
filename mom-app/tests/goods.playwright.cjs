@@ -58,8 +58,8 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: t
   await setStage(p, 'preg', { lmpDaysAgo: 170 });
   await S(p, () => App.store.update((s) => { s.profile.momName = '小美'; }));
   await go(p, 'health');
-  ok('健康 tab has the 常見好物 tile (孕期)', await p.isVisible('#view .tile:has-text("常見好物")'));
-  await p.click('#view .tile:has-text("常見好物")'); await wait(p, 300);
+  ok('健康 tab has the 常見好物 tile (孕期)', await p.isVisible('#view .tool-card:has-text("常見好物")'));
+  await p.click('#view .tool-card:has-text("常見好物")'); await wait(p, 300);
   ok('tile opens 常見好物', (await p.textContent('.appbar-title')) === '常見好物' && (await S(p, () => location.hash)) === '#/goods');
   ok('health tab stays active', await p.isVisible('.tab.active[href="#/health"]'));
   let c = await cats(p);
@@ -238,7 +238,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: t
   ok('備孕 shows only 備孕 items', c.length === 1 && c[0] === 'prep', c);
   ok('備孕 intro mentions 葉酸', (await p.textContent('.gd-summary')).includes('葉酸'));
   await go(p, 'health');
-  ok('健康 tab has the tile (備孕)', await p.isVisible('#view .tile:has-text("常見好物")'));
+  ok('健康 tab has the tile (備孕)', await p.isVisible('#view .tool-card:has-text("常見好物")'));
 
   /* ================= 11. 全部分類 + persistence ================= */
   await go(p, 'goods'); await p.click('.seg button:has-text("全部分類")'); await wait(p);

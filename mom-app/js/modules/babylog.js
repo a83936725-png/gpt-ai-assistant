@@ -528,7 +528,7 @@
   function renderBabyLog(el) {
     const baby = store.baby();
     if (!baby) {
-      el.append(ui.empty('👶', '先新增寶寶資料，就可以開始記錄餵奶、尿布和睡眠。',
+      el.append(ui.empty('stage-baby', '先新增寶寶資料，就可以開始記錄餵奶、尿布和睡眠。',
         h('button', { class: 'btn btn-primary', onclick: () => App.me && App.me.editBaby() }, '新增寶寶')));
       return;
     }

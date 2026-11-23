@@ -527,7 +527,7 @@
   function renderBag(el) {
     const baby = store.baby();
     if (!baby) {
-      el.append(ui.empty('👶', '先新增寶寶資料，就能依寶寶的紀錄估算外出包。',
+      el.append(ui.empty('outing', '先新增寶寶資料，就能依寶寶的紀錄估算外出包。',
         h('button', { class: 'btn btn-primary', onclick: () => App.me && App.me.editBaby() }, '新增寶寶')));
       return;
     }

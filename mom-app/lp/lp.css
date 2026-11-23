@@ -155,8 +155,11 @@ mark { background: linear-gradient(transparent 56%, var(--mark) 56%); color: inh
 .toc-in { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 .toc-h { margin: 0; font: 900 clamp(1.9rem, 1.4rem + 2vw, 2.6rem) var(--f-display); letter-spacing: .08em; }
 .toc-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 40px; border-top: 2px solid var(--ink); }
-.toc-list a { display: grid; grid-template-columns: 3.4rem minmax(0, 1fr); column-gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--rule); text-decoration: none; }
+.toc-list a { display: grid; grid-template-columns: 56px 3.4rem minmax(0, 1fr); column-gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--rule); text-decoration: none; }
+/* 0.9.4: each entry carries the app's own drawing of it, so the issue reads at a glance */
+.toc-pic { grid-row: span 2; width: 56px; height: 56px; border-radius: 12px; background: #f9f4ed; object-fit: cover; }
 .toc-n { grid-row: span 2; font: 900 1.7rem/1.1 var(--f-display); color: var(--plum); font-variant-numeric: tabular-nums; }
+.toc-t, .toc-d { grid-column: 3; }
 .toc-t { font-weight: 700; font-size: 1.0625rem; line-height: 1.5; }
 .toc-d { font-size: .875rem; color: var(--ink-3); line-height: 1.5; }
 .toc-list a:hover .toc-t { text-decoration: underline; text-decoration-color: var(--plum); text-underline-offset: 4px; }

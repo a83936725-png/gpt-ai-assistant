@@ -351,8 +351,8 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: t
   await p.click('[data-card="outing"] button:has-text("準備外出包")'); await wait(p, 400);
   ok('準備外出包 → outing bag tab', await S(p, () => location.hash.startsWith('#/outing') && document.querySelector('.ot-screen').dataset.section === 'bag'));
   await S(p, () => App.navigate('health')); await wait(p, 300);
-  ok('tool tile in 工具 group', await p.isVisible('.tile:has-text("外出好幫手")'));
-  await p.click('.tile:has-text("外出好幫手")'); await wait(p, 300);
+  ok('tool tile in 工具 group', await p.isVisible('.tool-card:has-text("外出好幫手")'));
+  await p.click('.tool-card:has-text("外出好幫手")'); await wait(p, 300);
   ok('tile opens outing', await S(p, () => location.hash.startsWith('#/outing')));
 
   // weekday with no plans → card empty; weekday with a plan tomorrow → card (fixed clock)

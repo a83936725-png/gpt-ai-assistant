@@ -260,19 +260,19 @@ const T = (s) => new Date(`${s}+08:00`); // Taipei time
   await go('pregnancy', 700);
   ok('孕期週記 links to it', await p.isVisible('.pg-shortcuts button:has-text("週報給家人")'));
   await go('health', 700);
-  ok('健康 tab while pregnant: a 家族週報 tile', await p.isVisible('.tile:has-text("家族週報")'));
+  ok('健康 tab while pregnant: a 家族週報 tile', await p.isVisible('.tool-card:has-text("家族週報")'));
 
   // ---------- 備孕: none ----------
   await S(() => { App.store.update((s) => { s.profile.stage = 'prep'; }); });
   await go('weekly', 700);
   ok('備孕: the screen explains it is for later', (await p.textContent('#view')).includes('家族週報在懷孕和育兒的時候使用'));
   await go('health', 700);
-  ok('備孕: no tile', !(await p.isVisible('.tile:has-text("家族週報")')));
+  ok('備孕: no tile', !(await p.isVisible('.tool-card:has-text("家族週報")')));
 
   // ---------- the ways in (育兒) ----------
   await S(() => { App.store.update((s) => { s.profile.stage = 'baby'; s.babies = s.babies.slice(0, 1); s.activeBabyId = 'b1'; }); });
   await go('health', 700);
-  ok('健康 tab: a 家族週報 tile', await p.isVisible('.tile:has-text("家族週報")'));
+  ok('健康 tab: a 家族週報 tile', await p.isVisible('.tool-card:has-text("家族週報")'));
   await go('stats', 900);
   ok('統計與報告 links to it', await p.isVisible('button:has-text("家族週報：這週做成一張卡")'));
   await go('invite', 900);

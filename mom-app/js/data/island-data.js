@@ -789,14 +789,6 @@
     '完成小測驗就能蓋章，集滿 35 個成為群島傳說！',
   ];
 
-  const TITLES = [
-    { min: 0, label: '新手島民' },
-    { min: 4, label: '好孕探險家' },
-    { min: 10, label: '資深島民' },
-    { min: 20, label: '好孕島主' },
-    { min: 35, label: '群島傳說' },
-  ];
-
   /* 好孕群島：one island per stage of the journey, from 備孕 to 6 歲. An island opens by itself when the pregnancy week
    * or the baby's age reaches it (unlock), and its 注意事項 (notes) and 新手教學 (guide) open with it.
    * island: { id, name, nick, emoji, color, range, unlock: { kind: 'always'|'preg'|'baby', weeks?, months? }, intro,
@@ -1055,6 +1047,6 @@
   });
 
   App.ISLAND = {
-    STAGES, USER_GROUPS, SPOTS, TIPS, TITLES, ISLANDS,
+    STAGES, USER_GROUPS, SPOTS, TIPS, ISLANDS,
   };
 }());

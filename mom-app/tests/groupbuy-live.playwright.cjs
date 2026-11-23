@@ -111,7 +111,7 @@ const NOW = '2026-11-22T14:19:03+08:00';
   const Q = await mk();
   await go(Q, 'island', null, 1800);
   const isl = await S(Q, () => [...document.querySelectorAll('.isl .gbr-tile')].filter((t) => !t.hidden).map((t) => [t.dataset.c, t.querySelector('.gbr-rib').textContent, t.querySelector('.gbr-rib').classList.contains('hot'), (t.querySelector('.gbr-badge') || {}).textContent || '']));
-  ok('好孕島: 月子禮盒 says 差1人 (red, no discount badge); the others 限時 with their discount', JSON.stringify(isl) === JSON.stringify([['sample-gift', '差1人', true, ''], ['sample-drip', '限時', false, '-18%'], ['sample-set', '限時', false, '-15%']]), JSON.stringify(isl));
+  ok('好孕島: one tile, 月子禮盒, says 差1人 (red, no discount badge); the others wait in the 🛒 tab', JSON.stringify(isl) === JSON.stringify([['sample-gift', '差1人', true, '']]) && await S(Q, () => (document.querySelector('.isl .gbr-tab-n') || {}).textContent) === '3', JSON.stringify(isl));
 
   /* ---------- a small phone, dark ---------- */
   const small = await mk({ width: 320, height: 640, scheme: 'dark' });

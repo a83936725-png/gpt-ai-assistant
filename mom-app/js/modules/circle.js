@@ -45,6 +45,7 @@
     return 'prep';
   }
   const md = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
+  const stagePic = (co) => (co === 'prep' ? 'stage-prep' : String(co || '').startsWith('p:') ? 'stage-preg' : 'stage-baby'); // the cohort's drawing
   function label(co = cohort()) {
     if (!co) return null;
     if (co === 'prep') return { emoji: '🌱', title: '一起備孕的媽媽', sub: '每週一題，一起準備迎接寶寶' };
@@ -202,7 +203,7 @@
         }
         if (!circ().on) {
           const agree = App.privacy ? App.privacy.box({ label: ['我同意分享上面「會送出」的資料（大家只看得到總數，可隨時離開），並同意', App.privacy.link()] }) : null;
-          box.append(h('div', { class: 'cc-hero' }, h('div', { class: 'cc-hero-e', 'aria-hidden': 'true' }, lb.emoji),
+          box.append(h('div', { class: 'cc-hero' }, ui.pic(stagePic(co), 56, 'cc-hero-pic'),
             h('div', null, h('div', { class: 'cc-kicker' }, '🗳️ 同週好孕圈'), h('h2', { class: 'cc-title' }, lb.title), h('div', { class: 'cc-sub' }, lb.sub))));
           box.append(ui.card(null,
             h('div', { class: 'card-title' }, '和同一週的媽媽一起'),
@@ -225,7 +226,7 @@
           return;
         }
         const d = live.data;
-        box.append(h('div', { class: 'cc-hero' }, h('div', { class: 'cc-hero-e', 'aria-hidden': 'true' }, lb.emoji),
+        box.append(h('div', { class: 'cc-hero' }, ui.pic(stagePic(co), 56, 'cc-hero-pic'),
           h('div', { class: 'grow' }, h('div', { class: 'cc-kicker' }, '🗳️ 同週好孕圈'), h('h2', { class: 'cc-title' }, lb.title), h('div', { class: 'cc-sub' }, lb.sub)),
           h('div', { class: 'cc-count' }, h('strong', null, d ? String(d.members) : '…'), h('span', null, '位媽媽'))));
         if (live.error && !d) { box.append(h('p', { class: 'login-err' }, errText(live.error))); return; }

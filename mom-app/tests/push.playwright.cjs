@@ -74,7 +74,7 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   };
   const S = (p, f, a) => p.evaluate(f, a);
   const go = async (p, screen, ms = 900) => { await S(p, (x) => App.navigate(x), screen); await p.waitForTimeout(ms); };
-  const card = (p) => S(p, () => { const c = document.querySelector('.push-card'); return c ? { text: c.innerText.replace(/\s+/g, ' '), why: (c.querySelector('.push-why') || {}).dataset ? c.querySelector('.push-why').dataset.why : '', on: !!c.querySelector('.push-on'), topics: [...c.querySelectorAll('.push-topic input')].map((x) => `${x.dataset.topic}:${x.checked}`) } : null; });
+  const card = (p) => S(p, () => { const c = document.querySelector('.push-card'); return c ? { pic: !!c.querySelector('.push-head img.pic'), text: c.innerText.replace(/\s+/g, ' '), why: (c.querySelector('.push-why') || {}).dataset ? c.querySelector('.push-why').dataset.why : '', on: !!c.querySelector('.push-on'), topics: [...c.querySelectorAll('.push-topic input')].map((x) => `${x.dataset.topic}:${x.checked}`) } : null; });
   const waitCard = async (p) => { await p.waitForFunction(() => { const c = document.querySelector('.push-card'); return c && !/讀取中/.test(c.innerText); }, null, { timeout: 8000 }).catch(() => {}); return card(p); };
   const toast = (p) => S(p, () => (document.querySelector('.toast-wrap') || {}).innerText || '').then((t) => t.replace(/\s+/g, ' ').trim());
   const login = (p) => S(p, () => App.store.update((s) => { s.auth = { token: 'tok-test-1', user: { id: 'u1', nickname: '小美', provider: 'email', code: 'ABC123', consent: App.privacy.VERSION, verified: true, invite: {} } }; }));
@@ -104,7 +104,7 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   /* ---------- 2. turning it on, topics, test, off ---------- */
   await login(P); await go(P, 'reminders');
   cd = await waitCard(P);
-  ok('logged in: 「開啟手機通知」 and what it brings', cd && cd.on && /團購進度、餵奶與預約提醒、家人共用/.test(cd.text), JSON.stringify(cd));
+  ok('logged in: 「開啟手機通知」 and what it brings', cd && cd.on && /團購進度、提醒、家人的消息/.test(cd.text) && !!cd.pic, JSON.stringify(cd));
   await P.click('.push-on'); await P.waitForTimeout(900);
   const subCall = calls.filter((c) => c.path === 'push/subscribe').pop();
   ok('the subscription goes to the server with every topic on, as the member', subCall && /^https:\/\/fcm\.googleapis\.com\//.test(subCall.body.sub.endpoint) && subCall.body.sub.keys.auth === 'testAuth-1' && JSON.stringify(subCall.body.topics) === '{"gb":true,"remind":true,"family":true}' && subCall.auth === 'Bearer tok-test-1', JSON.stringify(subCall));

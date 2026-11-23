@@ -21,7 +21,7 @@ body.rc-open { overflow: hidden; }
 @keyframes rc-fill { to { width: 100%; } }
 @keyframes rc-in { from { opacity: 0; } }
 .rc-x { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 2px); right: 10px; z-index: 4; width: 44px; height: 44px; border-radius: 50%;
-  border: 0; background: rgba(0, 0, 0, .22); color: #fff; font-size: 18px; cursor: pointer; }
+  border: 0; background: rgba(0, 0, 0, .22); color: #fff; font-size: var(--fs-lg); cursor: pointer; }
 .rc-stage { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; z-index: 2; pointer-events: none; overflow-y: auto; }
 .rc-card { width: 100%; max-width: 420px; text-align: center; animation: rc-pop .45s cubic-bezier(.2, .8, .2, 1); }
 .rc-actions, .rc-actions * { pointer-events: auto; }
@@ -30,17 +30,17 @@ body.rc-open { overflow: hidden; }
 .rc-prev { left: 0; }
 .rc-next { right: 0; }
 .rc-art { display: flex; justify-content: center; margin-bottom: 10px; }
-.rc-kicker { font-size: 18px; font-weight: 700; opacity: .92; }
+.rc-kicker { font-size: var(--fs-lg); font-weight: 700; opacity: .92; }
 .rc-title { font-size: 32px; font-weight: 900; line-height: 1.25; margin: 8px 0 6px; }
 .rc-big { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
 .rc-num { font-size: 84px; font-weight: 900; line-height: 1; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
 .rc-unit { font-size: 24px; font-weight: 800; }
-.rc-sub { font-size: 16px; line-height: 1.65; opacity: .95; margin: 10px auto 0; max-width: 340px; }
-.rc-list { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 12px; font-size: 17px; font-weight: 700; }
+.rc-sub { font-size: var(--fs-lg); line-height: 1.65; opacity: .95; margin: 10px auto 0; max-width: 340px; }
+.rc-list { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 12px; font-size: var(--fs-lg); font-weight: 700; }
 .rc-photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 14px 0 0; }
 .rc-photos figure { margin: 0; }
 .rc-ph { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 12px; background: rgba(255, 255, 255, .15); }
-.rc-photos figcaption { font-size: 12.5px; margin-top: 4px; font-weight: 700; }
+.rc-photos figcaption { font-size: var(--fs-xs); margin-top: 4px; font-weight: 700; }
 .rc-actions { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
 .rc-actions .btn { min-height: 50px; }
 .rc .btn-primary { background: #fff; color: #3a1650; border-color: #fff; }
@@ -61,5 +61,5 @@ body.rc-open { overflow: hidden; }
 .rc-tile[data-kind="y1"] { background: linear-gradient(150deg, #6a1f40, #a3456c); }
 .rc-tile.locked { background: var(--c-surface-2); color: var(--c-text-2); box-shadow: none; }
 .rc-te { font-size: 28px; line-height: 1; }
-.rc-tile b { font-size: 16px; overflow-wrap: anywhere; }
-.rc-tile small { font-size: 12.5px; opacity: .95; }
+.rc-tile b { font-size: var(--fs-lg); overflow-wrap: anywhere; }
+.rc-tile small { font-size: var(--fs-xs); opacity: .95; }

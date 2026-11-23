@@ -129,7 +129,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   ok('紀錄 with nothing today: a sleepy 小滴 holding up 🌙, and the words', em.mood === 'sleepy' && em.badge === '🌙' && /今天還沒有紀錄/.test(em.text), JSON.stringify(em));
   await axe(P, '紀錄 empty page with 小滴');
   await go(P, 'milk', 900);
-  ok('母乳庫存 empty: a happy 小滴 with 🍶', await S(P, () => { const m = document.querySelector('#view .empty .md'); return m && m.dataset.mood === 'happy' && m.querySelector('.md-badge').textContent === '🍶'; }));
+  ok('母乳庫存 empty: its own drawing (0.9.4: features with a drawing show it instead of 小滴 with an emoji)', await S(P, () => { const e = document.querySelector('#view .empty.has-pic'); const i = e && e.querySelector('img.pic'); return !!i && /thumbs\/milk\.webp$/.test(i.src) && i.alt === '' && !e.querySelector('.md'); }));
   await go(P, 'search', 800);
   await P.fill('#view input', 'ㄅㄆㄇ亂打xyz'); await P.waitForTimeout(900);
   ok('搜尋 with no answer: 小滴 thinking', await S(P, () => !!document.querySelector('.sr-empty .md-think')));

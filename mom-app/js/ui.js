@@ -335,8 +335,20 @@
     return wrap;
   }
 
-  // an empty page: 小滴 (js/modules/qban.js) holding up the page's emoji in a bubble; just the emoji without her
+  // 縮圖 (0.9.4): the app's own drawings, assets/thumbs/<name>.webp (256 px, one style, made for this app with an image
+  // model). They sit beside words that say the same, so they are decorative (alt="") and screen readers skip them.
+  const PICS = new Set(['benefits', 'brand', 'circle', 'confinement', 'contraction', 'cycle', 'family', 'fertility', 'goods', 'groupbuy', 'growth',
+    'handoff', 'hospitalbag', 'island', 'journey', 'kick', 'milestones', 'milk', 'monitor', 'monthly', 'night', 'outing', 'postpartum',
+    'pregnancy', 'pregweight', 'prenatal', 'prepcheck', 'prevention', 'push', 'recap', 'search', 'stage-baby', 'stage-preg', 'stage-prep',
+    'stats', 'wall', 'weekly']);
+  const pic = (name, size = 64, cls = '') => (PICS.has(name) ? h('img', {
+    class: `pic${cls ? ` ${cls}` : ''}`, src: `assets/thumbs/${name}.webp`, alt: '', width: size, height: size, decoding: 'async', draggable: 'false',
+  }) : null);
+
+  // an empty page: the feature's drawing when it has one; otherwise 小滴 (js/modules/qban.js) holding up the page's emoji
+  // in a bubble, or just the emoji without her
   const empty = (icon, text, action) => {
+    if (PICS.has(icon)) return h('div', { class: 'empty has-pic' }, pic(icon, 112, 'empty-pic'), h('p', null, text), action || null);
     const M = window.App && window.App.mascot;
     return h('div', { class: 'empty' },
       M ? M.el({ mood: M.moodFor(icon), size: 64, badge: icon }) : h('div', { class: 'empty-icon' }, icon),
@@ -395,6 +407,6 @@
   App.h = h;
   App.s = s;
   App.ui = {
-    h, s, append, sheet, toast, busy, haptic, celebrate, burst, reducedMotion, confirm, field, seg, steps, stepper, empty, card, progress, ICONS, icon,
+    h, s, append, sheet, toast, busy, haptic, celebrate, burst, reducedMotion, confirm, field, seg, steps, stepper, empty, card, progress, ICONS, icon, pic, PICS,
   };
 }());

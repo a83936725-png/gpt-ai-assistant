@@ -21,9 +21,6 @@
    * Materials -> generated CSS (day / night / seasons)
    * ========================================================= */
   const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
-  const SEASON_LABEL = {
-    spring: { label: '春季', icon: '🌸' }, summer: { label: '夏季', icon: '☀️' }, autumn: { label: '秋季', icon: '🍁' }, winter: { label: '冬季', icon: '❄️' },
-  };
   const MATS = {
     sea: '#8fd0d4',
     sand: '#f1dcae',
@@ -1172,7 +1169,6 @@
 
   const islandState = () => store.state.island || { stamps: {}, quiz: {}, visited: {} };
   const stampCount = () => D.SPOTS.filter((s) => islandState().stamps?.[s.id]).length;
-  const titleFor = (n) => D.TITLES.filter((t) => n >= t.min).pop().label;
   const islandDone = (isl) => { const st = islandState().stamps || {}; const sp = islandSpots(isl); return sp.filter((s) => st[s.id]).length; };
   // next stop: the island you are on first, then the islands you have already passed (newest first)
   function nextSpot() {
@@ -1213,11 +1209,6 @@
       if (isNew) {
         ui.toast(islandComplete ? `🏝️ ${isl.name}全部蓋章完成！` : `🏅 蓋章成功！獲得「${spot.name}」印章`);
         ui.celebrate({ emojis: ['🏅', '⭐', '✨', spot.emoji || '💜'], big: islandComplete });
-      }
-      if (isNew && App.share && D.TITLES) {
-        const n = Object.keys(store.state.island.stamps || {}).length;
-        const t = D.TITLES.find((x) => x.min === n && n > 0);
-        if (t) App.share.moment(`island-title-${t.min}`, { emoji: '🏝️', msg: `你成為「${t.label}」了！`, kind: 'island', force: true, queue: true });
       }
       onStampChange();
     };
@@ -1466,10 +1457,10 @@
     const doneN = open.filter((i) => islandDone(i) === islandSpots(i).length).length;
     App.share.open({
       spec: {
-        emoji: '🏝️', kicker: '我的好孕群島護照', title: titleFor(n), subtitle: `已開放 ${open.length} 座島・蓋了 ${n} 個章`,
+        emoji: '🏝️', kicker: '我的好孕群島護照', title: `蓋了 ${n} 個章`, subtitle: `已開放 ${open.length} 座島`,
         stats: [{ v: n, l: '印章' }, { v: open.length, l: '座島' }, { v: doneN, l: '完成' }], theme: 'night', campaign: 'island-passport', path: 'island',
       },
-      text: `我在「好孕群島」已經開放 ${open.length} 座島、蓋了 ${n} 個章，成為「${titleFor(n)}」了！一起來逛：`,
+      text: `我在「好孕群島」開放了 ${open.length} 座島、蓋了 ${n} 個章。一起來逛：`,
       campaign: 'island-passport', path: 'island',
     });
   }
@@ -1499,7 +1490,7 @@
     const body = h('div', { class: 'stack' },
       h('div', { class: 'card soft isl-jr-top' },
         h('div', { class: 'row between' },
-          h('div', null, h('div', { class: 'tiny muted' }, '我的稱號'), h('div', { class: 'isl-jr-title' }, titleFor(n))),
+          h('div', null, h('div', { class: 'tiny muted' }, '我的護照'), h('div', { class: 'isl-jr-title' }, `${open.length} 座島開放中`)),
           h('div', { class: 'center' }, h('div', { class: 'big-num' }, `${n}`, h('small', { class: 'small muted' }, ` / ${N}`)), h('div', { class: 'tiny muted' }, `已蓋章・開放 ${open.length}/${ISLANDS.length} 座島`))),
         ui.progress(n / N),
         h('div', { class: 'row gap-sm mt wrap' },
@@ -1730,7 +1721,7 @@
       const next = nextSpot();
       hud.innerHTML = '';
       hud.append(
-        h('span', { class: 'isl-hud-top' }, App.avatar && App.avatar.current() ? App.avatar.head(26) : null, h('strong', null, `${hereIsl.emoji} ${hereIsl.name}`), h('span', { class: 'isl-hud-title' }, `🏅 ${n}/${all}・${titleFor(stampCount())}`)),
+        h('span', { class: 'isl-hud-top' }, App.avatar && App.avatar.current() ? App.avatar.head(26) : null, h('strong', null, `${hereIsl.emoji} ${hereIsl.name}`), h('span', { class: 'isl-hud-title' }, `🏅 這座島 ${n}/${all} 個章`)),
         h('span', { class: 'isl-hud-next' }, next ? `下一站 ${pad2(next.no)} ${next.name}` : '開放的小島都蓋完章了 🎉'),
       );
       hud.onclick = () => (next ? goSpot(next.id) : openIsland(here));
@@ -1817,14 +1808,6 @@
           if (ST.glow) { root.classList.remove(ST.glow); ST.glow = null; }
           root.classList.toggle('night', ST.night); makeStars(); renderCtrl();
         }),
-        ctrlBtn(SEASON_LABEL[ST.season].icon, SEASON_LABEL[ST.season].label, () => {
-          const i = SEASONS.indexOf(ST.season);
-          root.classList.remove(`s-${ST.season}`);
-          ST.season = SEASONS[(i + 1) % 4];
-          root.classList.add(`s-${ST.season}`);
-          makeFx(); renderCtrl();
-          ui.toast(`${SEASON_LABEL[ST.season].icon} 換成${SEASON_LABEL[ST.season].label}`);
-        }),
       );
     };
 
@@ -1841,25 +1824,9 @@
       stars.appendChild(sv('circle', { cx: R1(W * 0.6), cy: 38, r: 14, class: 'isl-moon' }));
       stars.appendChild(sv('circle', { cx: R1(W * 0.6 + 6), cy: 33, r: 12, class: 'm-sea-t' }));
     };
-    const makeFx = () => {
-      fx.innerHTML = '';
-      fx.className = `isl-fx fx-${ST.season}`;
-      if (reduceMotion()) return;
-      const r = rng(ST.season.length * 31);
-      const count = ST.season === 'summer' ? 14 : 26;
-      for (let i = 0; i < count; i += 1) {
-        fx.append(h('i', {
-          style: {
-            left: `${R1(r() * 100)}%`,
-            top: ST.season === 'summer' ? `${R1(10 + r() * 80)}%` : '-4%',
-            animationDuration: `${R1(7 + r() * 9)}s`,
-            animationDelay: `${R1(-r() * 14)}s`,
-            '--dx': `${R1((r() - 0.5) * 120)}px`,
-            '--s': R1(0.6 + r() * 0.8),
-          },
-        }));
-      }
-    };
+    // 0.9.4: no falling petals, leaves or snow — the season shows in the island's own colours, by the calendar (it had
+    // a button to switch seasons and particles drifting over the map; both were things to look at instead of learning)
+    const makeFx = () => { fx.innerHTML = ''; fx.className = `isl-fx fx-${ST.season}`; };
     renderCtrl(); makeStars(); makeFx();
 
     /* ----- ticker ----- */
@@ -1871,7 +1838,8 @@
       tickerText.classList.add('in');
     };
     showTip();
-    const tipTimer = setInterval(() => { tipIdx += 1; showTip(); }, 6500);
+    // one tip per visit; the next comes when she taps it (it used to change by itself every 6.5 seconds)
+    const tipTimer = 0;
     ticker.addEventListener('click', () => { tipIdx += 1; showTip(); });
 
     /* ----- baby bubble ----- */

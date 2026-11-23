@@ -344,7 +344,7 @@
     const buy = pick('buy'); const want = pick('want'); const have = pick('have'); const skip = pick('skip');
     const sum = (list) => list.reduce((a, x) => a + (entry(x.id).price || 0), 0);
     if (!buy.length && !want.length && !have.length && !skip.length) {
-      el.append(ui.empty('📝', '還沒有加入任何東西。到「現在需要」點一項，標記要買、已有，或想請親友送。'));
+      el.append(ui.empty('goods', '還沒有加入任何東西。到「現在需要」點一項，標記要買、已有，或想請親友送。'));
     } else {
       el.append(ui.card({ class: 'gd-budget' },
         h('div', { class: 'grid-2' },
@@ -423,7 +423,7 @@
       h('h2', { class: 'gd-wish-title' }, who ? `${who}的寶寶好物願望清單` : '寶寶好物願望清單'),
       h('p', { class: 'small muted' }, `想送禮的話，點「我想送這個」用 LINE 跟${who || '準爸媽'}說一聲，避免大家送重複`)));
     if (!items.length && !custom.length) {
-      el.append(ui.empty('🎁', '這份清單是空的，或連結不完整。'));
+      el.append(ui.empty('goods', '這份清單是空的，或連結不完整。'));
     }
     if (items.length || custom.length) {
       el.append(h('div', { class: 'list gd-wish-list' },

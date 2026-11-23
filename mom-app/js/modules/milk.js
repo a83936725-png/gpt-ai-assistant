@@ -94,7 +94,7 @@
           h('button', { class: 'btn btn-sm btn-ghost mt', onclick: async () => { if (await ui.confirm('把過期的母乳袋全部移除？', { ok: '移除', danger: true })) store.update((s) => { s.milk = s.milk.filter((b) => !expired.some((e) => e.id === b.id)); }); } }, '清除過期')));
       }
       el.append(h('div', { class: 'section-title' }, h('span', null, `庫存（${bags.length} 袋，先到期先用）`), h('button', { onclick: () => bagSheet() }, '＋ 新增')));
-      if (!bags.length) el.append(ui.empty('🍶', '還沒有庫存。記錄「擠奶」時勾選「存入母乳庫存」，或按右上角＋新增。'));
+      if (!bags.length) el.append(ui.empty('milk', '還沒有庫存。記錄「擠奶」時勾選「存入母乳庫存」，或按右上角＋新增。'));
       else el.append(h('div', { class: 'list' }, bags.map(bagRow)));
 
       el.append(h('div', { class: 'card soft mt-lg' },

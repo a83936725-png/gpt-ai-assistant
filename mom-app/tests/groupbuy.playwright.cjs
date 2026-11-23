@@ -49,7 +49,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   ok('首頁: a new group-buy (price, team size), can be closed', /團購：易家滴雞精 10 入（測試）/.test(homeNew) && /團購價 NT\$1,980/.test(homeNew) && /3 人成團/.test(homeNew) && await A.isVisible('.gb-home-x'), homeNew);
   await A.goto(`${BASE}#/island`); await A.waitForTimeout(1800);
   const islNew = await S(A, () => [...document.querySelectorAll('.isl .gbr-tile')].filter((x) => !x.hidden).map((x) => [x.dataset.kind, x.dataset.c, (x.querySelector('.gbr-badge') || {}).textContent, x.querySelector('.gbr-chip').textContent]));
-  ok('好孕島: the group-buy as a 限時 tile, its discount and how long is left', islNew.length === 1 && islNew[0][0] === 'new' && islNew[0][1] === 'gb-test' && islNew[0][2] === '-18%' && /^剩 \d+ 天$/.test(islNew[0][3]), JSON.stringify(islNew));
+  ok('好孕島: the group-buy as a 限時 tile with how long is left (no discount badge on the island since 0.9.4)', islNew.length === 1 && islNew[0][0] === 'new' && islNew[0][1] === 'gb-test' && !islNew[0][2] && /^剩 \d+ 天$/.test(islNew[0][3]), JSON.stringify(islNew));
   await A.click('.gbr-tile'); await A.waitForTimeout(1300);
   ok('…a tap opens 正在開團 at that group-buy', (await S(A, () => document.body.dataset.screen)) === 'groupbuy' && await A.isVisible('.gb-deal.focus[data-c="gb-test"]'));
   const card = await text(A, '.gb-card');
@@ -72,7 +72,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const teamId = await S(A, () => JSON.parse(decodeURIComponent(location.hash.split('?')[1] || '%7B%7D')).team);
   await A.goto(`${BASE}#/island`); await A.waitForTimeout(1800);
   const islA = await S(A, () => [...document.querySelectorAll('.isl .gbr-tile')].filter((x) => !x.hidden).map((x) => [x.dataset.kind, (x.querySelector('.gbr-rib') || {}).textContent, (x.querySelector('.gbr-badge') || {}).textContent, x.querySelector('.gbr-chip').textContent]));
-  ok('好孕島: her team as a tile — 揪團中, 1/3, its countdown (47:5x:xx)', islA.length === 1 && islA[0][0] === 'mine' && islA[0][1] === '揪團中' && islA[0][2] === '1/3' && /^(47:5\d|48:00):\d\d$/.test(islA[0][3]), JSON.stringify(islA));
+  ok('好孕島: her team as a tile — 揪團中, 1/3, 剩 47 小時 (words, no ticking seconds)', islA.length === 1 && islA[0][0] === 'mine' && islA[0][1] === '揪團中' && islA[0][2] === '1/3' && /^剩 4[78] 小時$/.test(islA[0][3]), JSON.stringify(islA));
   // 即時團購: her team was public (the default), so another member sees it in 正在開團 and could join it there
   const F = await mk();
   await setUpAndRegister(F, 'browser');

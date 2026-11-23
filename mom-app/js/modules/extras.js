@@ -165,9 +165,12 @@
       const all = X().BENEFITS;
       const doneCount = all.filter((b) => (store.state.benefits[b.id] || {}).status === 'done').length;
       el.append(ui.card({ class: 'soft' },
-        h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '補助福利清單'), h('span', { class: 'tag primary' }, `完成 ${doneCount}/${all.length}`)),
-        h('p', { class: 'small muted' }, '從備孕到育兒可以領的補助、可以請的假和要辦的手續，標出金額、什麼時候辦，一項一項打勾。金額與資格整理自 2026 年 11 月的公告，以政府最新公告為準。'),
-        ui.progress(doneCount / all.length)));
+        h('div', { class: 'pic-intro' }, ui.pic('benefits', 72),
+          h('div', { class: 'grow' },
+            h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '補助福利清單'), h('span', { class: 'tag primary' }, `完成 ${doneCount}/${all.length}`)),
+            h('p', { class: 'small muted' }, '能領的補助、能請的假、要辦的手續，一項一項打勾。'))),
+        ui.progress(doneCount / all.length),
+        h('p', { class: 'tiny muted mt-xs' }, '依 2026 年 11 月的公告整理，以政府最新公告為準。')));
       // the money most families can count on, at a glance (each line opens its item)
       if (store.inStage(['preg', 'baby'])) {
         const cash = ['birth-pay', 'allowance-02', 'parental', 'tax-preschool'].map((id) => all.find((b) => b.id === id)).filter(Boolean);

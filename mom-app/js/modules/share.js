@@ -134,14 +134,12 @@
   const themeOf = (t) => THEMES[t] || THEMES.purple;
   const inkOf = (t) => themeOf(t)[3] || '#fff';
   const accentOf = (t) => themeOf(t)[4] || themeOf(t)[1];
-  // every card shares this frame: the theme's background and the logo header (y 72–180)
+  // every card shares this frame: the theme's colour, flat, and the logo header (y 72–180) over a hairline, like a
+  // magazine's running head (0.9.4: it was a gradient with big translucent bubbles)
   async function paintFrame(ctx, W, H, theme) {
-    const [c1, c2] = THEMES[theme] || THEMES.purple;
-    const g = ctx.createLinearGradient(0, 0, W * 0.4, H); g.addColorStop(0, c1); g.addColorStop(1, c2);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    ctx.globalAlpha = 0.09; ctx.fillStyle = '#fff';
-    [[900, 260, 260], [140, 720, 200], [980, 1300, 320], [120, 1650, 150]].forEach(([x, y, r]) => { ctx.beginPath(); ctx.arc(x, y * (H / 1920), r, 0, Math.PI * 2); ctx.fill(); });
-    ctx.globalAlpha = 1;
+    const [c1] = THEMES[theme] || THEMES.purple;
+    ctx.fillStyle = c1; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = inkOf(theme) === '#fff' ? 'rgba(255,255,255,.3)' : 'rgba(74,31,98,.24)'; ctx.fillRect(64, 200, W - 128, 3);
     const logo = await loadImg(B().logo || 'assets/logo.svg');
     ctx.fillStyle = '#fff'; roundRect(ctx, 64, 72, 108, 108, 30); ctx.fill();
     if (inkOf(theme) !== '#fff') { ctx.strokeStyle = 'rgba(74,31,98,.14)'; ctx.lineWidth = 3; ctx.stroke(); }
@@ -217,7 +215,7 @@
     await paintFrame(ctx, W, H, spec.theme);
     // main panel (a light theme gets a thin edge so the white panel still stands out)
     const px = 64; const pw = W - 128; const py = L.py; const bottom = py + L.ph;
-    ctx.fillStyle = 'rgba(255,255,255,0.97)'; roundRect(ctx, px, py, pw, L.ph, 56); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.97)'; roundRect(ctx, px, py, pw, L.ph, 24); ctx.fill();
     if (inkOf(spec.theme) !== '#fff') { ctx.strokeStyle = 'rgba(74,31,98,.12)'; ctx.lineWidth = 3; ctx.stroke(); }
     const cx = W / 2; let y = py + (format === 'square' ? 50 : 70);
     // a big picture (an ultrasound photo) in a rounded frame, or the emoji / round photo
@@ -237,8 +235,11 @@
       const R = listMode ? Math.round(L.r * 0.66) : L.r;
       const photo = spec.photo ? await loadImg(spec.photo) : null;
       const art = !photo && spec.art ? await loadImg(spec.art) : null; // a drawing (the Q版 baby)
-      ctx.fillStyle = soft; ctx.beginPath(); ctx.arc(cx, y + R, R, 0, Math.PI * 2); ctx.fill();
-      if (photo) { ctx.save(); ctx.beginPath(); ctx.arc(cx, y + R, R - 8, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(photo, cx - R + 8, y + 8, (R - 8) * 2, (R - 8) * 2); ctx.restore(); }
+      // the moment's own illustration (0.9.4, the same set as the app's), in a rounded square instead of an emoji
+      const drawing = !photo && !art && spec.pic && ui.PICS && ui.PICS.has(spec.pic) ? await loadImg(`assets/thumbs/${spec.pic}.webp`) : null;
+      if (!drawing) { ctx.fillStyle = soft; ctx.beginPath(); ctx.arc(cx, y + R, R, 0, Math.PI * 2); ctx.fill(); }
+      if (drawing) { ctx.save(); roundRect(ctx, cx - R, y, R * 2, R * 2, Math.round(R * 0.26)); ctx.clip(); ctx.drawImage(drawing, cx - R, y, R * 2, R * 2); ctx.restore(); }
+      else if (photo) { ctx.save(); ctx.beginPath(); ctx.arc(cx, y + R, R - 8, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(photo, cx - R + 8, y + 8, (R - 8) * 2, (R - 8) * 2); ctx.restore(); }
       else if (art) { const s = R * 1.62; ctx.drawImage(art, cx - s / 2, y + R - s / 2 + R * 0.04, s, s); }
       else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${Math.round(R * 1.15)}px ${FONT}`; ctx.fillText(spec.emoji || '💜', cx, y + R + 8); }
       y += listMode ? R * 2 + 40 : L.block;
@@ -255,15 +256,17 @@
       wrap(ctx, spec.subtitle, pw - 140).slice(0, format === 'story' ? 3 : 2).forEach((ln) => { ctx.fillText(ln, cx, y + 6); y += format === 'square' ? 46 : 54; });
       y += 14;
     }
-    if (spec.stats && spec.stats.length) {
-      const n = Math.min(3, spec.stats.length); const gap = 22; const sw = (pw - 120 - gap * (n - 1)) / n; const sh0 = format === 'square' ? 120 : 150;
+    if (spec.stats && spec.stats.length) { // numbers in one row between hairlines (0.9.4: they were three rounded boxes)
+      const n = Math.min(3, spec.stats.length); const sw = (pw - 120) / n; const sh0 = format === 'square' ? 120 : 150;
+      const rule = 'rgba(43,34,49,.16)';
+      ctx.fillStyle = rule; ctx.fillRect(px + 60, y + 4, pw - 120, 2); ctx.fillRect(px + 60, y + sh0 + 14, pw - 120, 2);
       spec.stats.slice(0, 3).forEach((st, i) => {
-        const sx = px + 60 + i * (sw + gap);
-        ctx.fillStyle = soft; roundRect(ctx, sx, y + 10, sw, sh0, 30); ctx.fill();
-        ctx.fillStyle = strong; ctx.font = `900 ${format === 'square' ? 44 : 52}px ${FONT}`; ctx.fillText(String(st.v), sx + sw / 2, y + 30);
-        ctx.fillStyle = '#5f5566'; ctx.font = `500 28px ${FONT}`; ctx.fillText(st.l, sx + sw / 2, y + sh0 - 44);
+        const sx = px + 60 + i * sw;
+        if (i) { ctx.fillStyle = rule; ctx.fillRect(sx, y + 30, 2, sh0 - 34); }
+        ctx.fillStyle = strong; ctx.font = `900 ${format === 'square' ? 48 : 58}px ${FONT}`; ctx.fillText(fitLine(ctx, String(st.v), sw - 24), sx + sw / 2, y + 28);
+        ctx.fillStyle = '#5f5566'; ctx.font = `500 28px ${FONT}`; ctx.fillText(fitLine(ctx, st.l, sw - 20), sx + sw / 2, y + sh0 - 40);
       });
-      y += sh0 + 40;
+      y += sh0 + 44;
     }
     // her one line: kept at the bottom of the panel, so the list above it leaves room
     const noteRows = [];
@@ -343,7 +346,7 @@
       if (ga.totalDays >= 0 && wk) {
         out.push({
           kind: 'preg-week', label: '孕週卡', campaign: 'preg-week',
-          spec: { emoji: wk.emoji, kicker: '懷孕週記', title: `懷孕 ${ga.weeks} 週 ${ga.days} 天`, subtitle: `寶寶大約像${wk.fruit}一樣大（約 ${wk.len} cm）`, stats: [{ v: Math.max(0, ga.daysLeft), l: '天後見面' }, { v: `第${ga.trimester}`, l: '孕期' }], theme: 'purple' },
+          spec: { emoji: wk.emoji, pic: 'stage-preg', kicker: '懷孕週記', title: `懷孕 ${ga.weeks} 週 ${ga.days} 天`, subtitle: `寶寶大約像${wk.fruit}一樣大（約 ${wk.len} cm）`, stats: [{ v: Math.max(0, ga.daysLeft), l: '天後見面' }, { v: `第${ga.trimester}`, l: '孕期' }], theme: 'purple' },
           text: `懷孕 ${ga.weeks} 週 ${ga.days} 天了！寶寶現在大約像${wk.fruit}一樣大 ${wk.emoji}`,
         });
       }
@@ -355,29 +358,29 @@
       if (g || b.birthWeight) stats.push({ v: `${(g && g.weight) || b.birthWeight}`, l: '公斤' });
       const gl = s.growth.filter((x) => x.babyId === b.id && x.length).sort((x, y) => (x.date < y.date ? 1 : -1))[0];
       if (gl || b.birthLength) stats.push({ v: `${(gl && gl.length) || b.birthLength}`, l: '公分' });
-      out.push({ kind: 'baby-age', label: '成長卡', campaign: 'baby-age', spec: { emoji: b.avatar || '👶', photo: photo(b), art: qArt(b, photo(b)), kicker: '寶寶成長日記', title: `${bname(b)} ${a ? a.text : ''}`, subtitle: '每天都在長大一點點', stats, theme: 'peach' }, text: `${bname(b)} ${a ? a.text : ''}了，每天都在長大一點點 💕` });
+      out.push({ kind: 'baby-age', label: '成長卡', campaign: 'baby-age', spec: { emoji: b.avatar || '👶', pic: 'stage-baby', photo: photo(b), art: qArt(b, photo(b)), kicker: '寶寶成長日記', title: `${bname(b)} ${a ? a.text : ''}`, subtitle: '每天都在長大一點點', stats, theme: 'peach' }, text: `${bname(b)} ${a ? a.text : ''}了，每天都在長大一點點 💕` });
       const cu = customFor(b);
-      if (cu) out.push({ kind: `custom-${cu.id}`, label: cu.title.replace('！', ''), campaign: `custom-${cu.id}`, spec: { emoji: cu.emoji, photo: photo(b), kicker: bname(b), title: cu.title, subtitle: cu.sub, theme: 'peach' }, text: `${bname(b)} ${cu.title}${cu.sub}` });
+      if (cu) out.push({ kind: `custom-${cu.id}`, label: cu.title.replace('！', ''), campaign: `custom-${cu.id}`, spec: { emoji: cu.emoji, pic: 'recap', photo: photo(b), kicker: bname(b), title: cu.title, subtitle: cu.sub, theme: 'peach' }, text: `${bname(b)} ${cu.title}${cu.sub}` });
       if (a && a.days <= 60) {
         const bt = b.birthTime ? ` ${b.birthTime}` : '';
-        out.push({ kind: 'birth', label: '出生卡', campaign: 'birth', spec: { emoji: '🍼', photo: photo(b), kicker: '歡迎來到這個世界', title: bname(b), subtitle: `${C.fmtDateLong(b.birthday)}${bt}`, stats: [b.birthWeight ? { v: b.birthWeight, l: '公斤' } : null, b.birthLength ? { v: b.birthLength, l: '公分' } : null].filter(Boolean), theme: 'green' }, text: `歡迎 ${bname(b)} 來到這個世界！🎉` });
+        out.push({ kind: 'birth', label: '出生卡', campaign: 'birth', spec: { emoji: '🍼', pic: 'stage-baby', photo: photo(b), kicker: '歡迎來到這個世界', title: bname(b), subtitle: `${C.fmtDateLong(b.birthday)}${bt}`, stats: [b.birthWeight ? { v: b.birthWeight, l: '公斤' } : null, b.birthLength ? { v: b.birthLength, l: '公分' } : null].filter(Boolean), theme: 'green' }, text: `歡迎 ${bname(b)} 來到這個世界！🎉` });
       }
       const ms = s.milestones[b.id] || {};
       const last = Object.entries(ms).sort((x, y) => (x[1] < y[1] ? 1 : -1))[0];
       if (last && App.HEALTH) {
         const item = App.HEALTH.MILESTONES.flatMap((band) => band.items).find((it) => it[0] === last[0]);
-        if (item) out.push({ kind: 'milestone', label: '里程碑卡', campaign: 'milestone', spec: { emoji: '⭐', photo: photo(b), kicker: `${bname(b)} 的新技能`, title: item[2], subtitle: `${C.fmtDateLong(last[1])} 達成`, theme: 'green' }, text: `${bname(b)} 新技能解鎖：${item[2]}！⭐` });
+        if (item) out.push({ kind: 'milestone', label: '里程碑卡', campaign: 'milestone', spec: { emoji: '⭐', pic: 'milestones', photo: photo(b), kicker: `${bname(b)} 的新技能`, title: item[2], subtitle: `${C.fmtDateLong(last[1])} 達成`, theme: 'green' }, text: `${bname(b)} 新技能解鎖：${item[2]}！⭐` });
       }
     }
     const streak = App.chicken ? App.chicken.streak() : 0;
-    if (streak >= 3) out.push({ kind: 'streak', label: '打卡卡', campaign: 'streak', spec: { emoji: '💜', kicker: '每天留一點時間給自己', title: `滴雞精時光 連續 ${streak} 天`, subtitle: `${B().brandName || ''}陪我好好照顧自己`, theme: 'purple' }, text: `我已經連續 ${streak} 天好好照顧自己了 💜` });
+    if (streak >= 3) out.push({ kind: 'streak', label: '打卡卡', campaign: 'streak', spec: { emoji: '💜', pic: 'brand', kicker: '每天留一點時間給自己', title: `滴雞精時光 連續 ${streak} 天`, subtitle: `${B().brandName || ''}陪我好好照顧自己`, theme: 'purple' }, text: `我已經連續 ${streak} 天好好照顧自己了 💜` });
     const stamps = Object.keys((s.island && s.island.stamps) || {}).length;
     if (stamps && App.ISLAND) {
-      const title = [...App.ISLAND.TITLES].reverse().find((t) => stamps >= t.min);
-      out.push({ kind: 'island', label: '好孕島稱號', campaign: 'island', path: 'island', spec: { emoji: '🏝️', kicker: '好孕島', title: title ? title.label : '島民', subtitle: `已收集 ${stamps}／${App.ISLAND.SPOTS.length} 個印章`, theme: 'night', path: 'island' }, text: `我在好孕島收集了 ${stamps} 個印章，成為「${title ? title.label : '島民'}」🏝️ 一起來逛！` });
+      // 0.9.4: the stamps themselves, no 稱號 (好孕島 no longer gives titles)
+      out.push({ kind: 'island', label: '好孕島印章', campaign: 'island', path: 'island', spec: { emoji: '🏝️', pic: 'island', kicker: '好孕島', title: `蓋了 ${stamps} 個章`, subtitle: `共 ${App.ISLAND.SPOTS.length} 站，每一站都附出處`, theme: 'night', path: 'island' }, text: `我在好孕島蓋了 ${stamps} 個章，每一站都附出處。一起來逛：` });
     }
     const pp = App.journey && App.journey.ppInfo ? App.journey.ppInfo() : null;
-    if (pp && pp.day <= 45) out.push({ kind: 'pp', label: '坐月子卡', campaign: 'postpartum', spec: { emoji: '🍲', kicker: '坐月子日記', title: pp.day >= 30 ? '產後滿月' : `產後第 ${pp.day} 天`, subtitle: pp.day >= 30 ? '坐月子告一段落' : '坐月子中', theme: 'peach' }, text: pp.day >= 30 ? '產後滿月了，謝謝一路陪伴的家人朋友 💜' : `坐月子第 ${pp.day} 天，好好休息中 🍲` });
+    if (pp && pp.day <= 45) out.push({ kind: 'pp', label: '坐月子卡', campaign: 'postpartum', spec: { emoji: '🍲', pic: 'postpartum', kicker: '坐月子日記', title: pp.day >= 30 ? '產後滿月' : `產後第 ${pp.day} 天`, subtitle: pp.day >= 30 ? '坐月子告一段落' : '坐月子中', theme: 'peach' }, text: pp.day >= 30 ? '產後滿月了，謝謝一路陪伴的家人朋友 💜' : `坐月子第 ${pp.day} 天，好好休息中 🍲` });
     return out;
   }
 

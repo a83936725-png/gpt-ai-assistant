@@ -244,7 +244,9 @@
     const agree = App.privacy ? App.privacy.box({ label: ['我了解知道連結的人都看得到牆上「已顯示」的祝福，並同意', App.privacy.link()] }) : null;
     const available = h('div');
     el.append(h('div', { class: 'stack' },
-      h('div', { class: 'card soft' }, h('div', { class: 'card-title' }, '祝福牆'), h('p', { class: 'small' }, '滿月、百日、週歲（或懷孕時的好孕加油），開一面牆、把連結傳到家族群組。親友不用下載 App 就能留言，你按「顯示」才會出現在牆上，最後可以存成一張祝福卡。')),
+      h('div', { class: 'card soft pic-intro' }, ui.pic('wall', 84),
+        h('div', { class: 'grow' }, h('div', { class: 'card-title' }, '祝福牆'), h('p', { class: 'small' }, '滿月、百日、週歲，親友留言祝福。'),
+          h('ul', { class: 'pic-points small' }, h('li', null, '親友不用下載 App'), h('li', null, '你按「顯示」才會上牆'), h('li', null, '最後存成一張祝福卡')))),
       segEl, preview,
       ui.field('寶寶的名字或小名', baby, '會顯示在牆的標題，可以只寫小名'),
       ui.field('媽媽的名稱', mom),

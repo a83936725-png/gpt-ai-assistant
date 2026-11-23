@@ -68,6 +68,14 @@
     const s = Math.floor(ms / 1000);
     return `${two(Math.floor(s / 3600))}:${two(Math.floor((s % 3600) / 60))}:${two(s % 60)}`;
   }
+  // the 好孕島 column (0.9.4): calm words without seconds — 「剩 3 天」「剩 47 小時」「剩 29 分」. The island is for learning;
+  // a game-style clock ticking every second there was one of the things pulling at her (the 正在開團 page keeps its clock)
+  function calm(ms) {
+    if (ms <= 0) return '時間到了';
+    if (ms >= 72 * C.HOUR) return `剩 ${Math.floor(ms / C.DAY)} 天`;
+    if (ms >= C.HOUR) return `剩 ${Math.floor(ms / C.HOUR)} 小時`;
+    return `剩 ${Math.max(1, Math.floor(ms / C.MIN))} 分`;
+  }
   const parts = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return { d: Math.floor(s / 86400), h: Math.floor((s % 86400) / 3600), m: Math.floor((s % 3600) / 60), s: s % 60 }; };
   // the big countdown: 天・時・分・秒 in boxes (天 only while a day or more is left)
   const BIG = [['d', '天'], ['h', '時'], ['m', '分'], ['s', '秒']];
@@ -88,7 +96,7 @@
     const now = Date.now();
     els.forEach((e) => {
       const ms = Number(e.dataset.gbEnd) - now;
-      if (e.dataset.gbFmt === 'big') paintBig(e, ms); else e.textContent = clock(ms);
+      if (e.dataset.gbFmt === 'big') paintBig(e, ms); else e.textContent = e.dataset.gbFmt === 'calm' ? calm(ms) : clock(ms);
       e.classList.toggle('soon', ms > 0 && ms < C.HOUR);
       if (ms <= 0 && !e.dataset.gbZero) {
         e.dataset.gbZero = '1';
@@ -551,15 +559,22 @@
     box.replaceChildren(h('span', { class: 'gb-feed-tag' }, h('span', { class: 'gb-live-dot', 'aria-hidden': 'true' }), '即時'),
       h('span', { class: 'gb-feed-text' }, feedText(items[feedAt % items.length])));
   }
-  setInterval(() => {
-    const boxes = document.querySelectorAll('.gb-feed:not([hidden])');
-    if (!boxes.length) return;
-    feedAt += 1;
-    boxes.forEach((b) => { const items = feedItems(); const tx = b.querySelector('.gb-feed-text'); if (tx && items.length) tx.textContent = feedText(items[feedAt % items.length]); });
-  }, 4000);
+  // the next line every 4 seconds, counted from when the line was put up (a shared clock running since the app opened
+  // sometimes swapped the newest line away a moment after the page appeared)
+  let feedTimer = 0;
+  const restartFeed = () => {
+    clearInterval(feedTimer);
+    feedTimer = setInterval(() => {
+      const boxes = document.querySelectorAll('.gb-feed:not([hidden])');
+      if (!boxes.length) return;
+      feedAt += 1;
+      boxes.forEach((b) => { const items = feedItems(); const tx = b.querySelector('.gb-feed-text'); if (tx && items.length) tx.textContent = feedText(items[feedAt % items.length]); });
+    }, 4000);
+  };
+  restartFeed();
   // new numbers in: only those parts change (the page keeps its place); something new happened → that line first
   function paintLive() {
-    feedAt = 0;
+    feedAt = 0; restartFeed();
     document.querySelectorAll('.gb-open[data-c]').forEach(fillOpen);
     document.querySelectorAll('.gb-feed').forEach(fillFeed);
     if (document.body.dataset.screen === 'island') syncRail(); // eslint-disable-line no-use-before-define
@@ -594,7 +609,7 @@
         : h('button', { class: 'btn btn-primary btn-block gb-start', onclick: () => startSheet(c) }, user() ? '🛒 我要開一團' : '🛒 登入後開一團'));
   }
   // under the hero: what just happened (a new line every few seconds)
-  const feedBox = () => { feedAt = 0; const box = h('div', { class: 'gb-feed', hidden: true }); fillFeed(box); return box; };
+  const feedBox = () => { feedAt = 0; restartFeed(); const box = h('div', { class: 'gb-feed', hidden: true }); fillFeed(box); return box; };
   function renderList(el, params = {}) {
     el.append(ui.card({ class: 'card-hero gb-hero' },
       h('div', { class: 'gb-hero-top small' }, h('span', { class: 'gb-live-dot', 'aria-hidden': 'true' }), '限時團購・一起買比較划算'),
@@ -604,7 +619,7 @@
     loadLive();
     el.append(feedBox());
     if (!live.campaigns.length) {
-      el.append(ui.empty('🛒', '目前沒有進行中的團購。有新的團購時，會出現在這裡和首頁。'));
+      el.append(ui.empty('groupbuy', '目前沒有進行中的團購。有新的團購時，會出現在這裡和首頁。'));
       el.append(fine());
       return;
     }
@@ -623,13 +638,14 @@
       });
     }
   }
-  const howTo = () => ui.card({ class: 'soft gb-how' },
-    h('div', { class: 'card-title' }, '怎麼揪團'),
-    h('ol', { class: 'gb-steps small' },
-      h('li', null, '開一團，或打開朋友傳來的團的連結「我要跟團」'),
-      h('li', null, '把團的連結傳到 LINE 媽媽群組'),
-      h('li', null, '時間內湊滿人數就成團，每個人都拿到折扣碼'),
-      h('li', null, '到品牌官網結帳時輸入折扣碼')));
+  const howTo = () => ui.card({ class: 'soft gb-how pic-intro' }, ui.pic('groupbuy', 84),
+    h('div', { class: 'grow' },
+      h('div', { class: 'card-title' }, '怎麼揪團'),
+      h('ol', { class: 'gb-steps small' },
+        h('li', null, '開一團，或跟朋友的團'),
+        h('li', null, '連結傳到 LINE 群組'),
+        h('li', null, '湊滿人數，每人拿折扣碼'),
+        h('li', null, '到官網結帳時輸入'))));
 
   // her own open team: shown in 正在開團 (other moms can join it there) or only through her link
   function pubSwitch(team) {
@@ -672,7 +688,7 @@
     }
     if (!cached.gone && !cached.error && !cached.campaign) { el.append(h('p', { class: 'center muted mt-lg', role: 'status' }, '載入這一團…')); refreshTeam(id); return; }
     if (cached.gone || cached.error) {
-      el.append(ui.empty('🛒', cached.gone ? '找不到這一團，可能已經取消了。' : '目前連不到會員服務，請稍後再試。',
+      el.append(ui.empty('groupbuy', cached.gone ? '找不到這一團，可能已經取消了。' : '目前連不到會員服務，請稍後再試。',
         h('button', { class: 'btn btn-primary', onclick: () => App.navigate('groupbuy') }, '看看其他團購')));
       return;
     }
@@ -832,7 +848,6 @@
   function railTile(it) {
     const { kind, c, team } = it;
     const ms = it.end - Date.now();
-    const off = c.listPrice ? Math.round((1 - c.price / c.listPrice) * 100) : 0;
     const rib = it.need1 ? 'need1' : kind;
     const label = kind === 'done' ? `成團了：${c.title}，看折扣碼`
       : kind === 'mine' ? `我的團：${c.title}，已 ${team.count}／${team.size} 人，還剩 ${left(ms)}`
@@ -845,10 +860,9 @@
     h('span', { class: 'gbr-pic' },
       c.image ? h('img', { src: c.image, alt: '' }) : h('span', { class: 'gbr-emoji', 'aria-hidden': 'true' }, kind === 'done' ? '🎉' : (c.emoji || '🛒'))),
     h('span', { class: `gbr-rib${it.need1 ? ' hot' : ''}`, 'aria-hidden': 'true' }, RIBBON[rib]),
-    kind === 'new' && off >= 5 && !it.need1 ? h('span', { class: 'gbr-badge', 'aria-hidden': 'true' }, `-${off}%`) : null, // 差1人 says more
     kind === 'mine' || kind === 'friend' ? h('span', { class: 'gbr-badge', 'aria-hidden': 'true' }, `${team.count}/${team.size}`) : null,
     kind === 'done' ? h('span', { class: 'gbr-chip gold', 'aria-hidden': 'true' }, '看折扣碼')
-      : h('span', { class: 'gbr-chip num', 'aria-hidden': 'true', dataset: { gbEnd: String(it.end) } }, clock(ms)));
+      : h('span', { class: 'gbr-chip num', 'aria-hidden': 'true', dataset: { gbEnd: String(it.end), gbFmt: 'calm' } }, calm(ms)));
   }
   let railEl = null;
   // the column for a new 好孕島 screen (js/modules/island.js puts it on the map)
@@ -872,7 +886,8 @@
       type: 'button', class: 'gbr-tab', 'aria-label': `限時團購：${items.length} 個，看正在開團`, onclick: () => App.navigate('groupbuy'),
     }, h('span', { class: 'gbr-tab-ico', 'aria-hidden': 'true' }, '🛒'), h('span', { class: 'gbr-tab-n', 'aria-hidden': 'true' }, String(items.length)),
     items.some((i) => i.kind !== 'new') ? h('span', { class: 'gbr-dot', 'aria-hidden': 'true' }) : null);
-    railEl.replaceChildren(tuck, ...items.slice(0, 3).map(railTile), tab);
+    // one tile — the most pressing (her team, a friend's, a 成團, else the one ending first); the 🛒 tab has the count and opens them all
+    railEl.replaceChildren(tuck, ...items.slice(0, 1).map(railTile), tab);
     requestAnimationFrame(fitRail);
     setTimeout(fitRail, 450); // again once the screen has settled in
   }

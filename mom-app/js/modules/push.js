@@ -156,7 +156,7 @@
       const st = await status();
       const line = await lineRow();
       box.innerHTML = '';
-      box.append(h('div', { class: 'card-title' }, '手機通知'));
+      box.append(h('div', { class: 'push-head' }, ui.pic('push', 52), h('div', { class: 'card-title' }, '手機通知')));
       if (st.why !== 'on' && st.why !== 'off') {
         box.append(h('p', { class: 'small muted push-why', dataset: { why: st.why } }, WHY[st.why]));
         if (st.why === 'login') box.append(h('button', { class: 'btn btn-sm btn-primary mt', onclick: () => App.navigate('login') }, '登入／註冊'));
@@ -164,7 +164,7 @@
         return;
       }
       if (st.why === 'off') {
-        box.append(h('p', { class: 'small muted' }, '開啟後，App 關著也會收到：團購進度、餵奶與預約提醒、家人共用的消息。隨時可以關掉。'),
+        box.append(h('p', { class: 'small muted' }, 'App 關著也收得到：團購進度、提醒、家人的消息。隨時可以關。'),
           h('button', {
             class: 'btn btn-primary btn-block mt push-on',
             onclick: async (e) => {

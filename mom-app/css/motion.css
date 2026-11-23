@@ -76,7 +76,7 @@
 
 /* positions used by the baby's hero decorations (also without motion: then they simply are not drawn) */
 .hero-main { position: relative; }
-.hero-fx { position: absolute; left: 34px; top: -6px; width: 30px; height: 30px; pointer-events: none; font-size: 15px; }
+.hero-fx { position: absolute; left: 34px; top: -6px; width: 30px; height: 30px; pointer-events: none; font-size: var(--fs-md); }
 .hero-fx.sleep i { color: var(--t-sleep); font-weight: 800; }
 .hero-fx i:nth-child(1) { left: 0; top: 14px; }
 .hero-fx i:nth-child(2) { left: 8px; top: 8px; }

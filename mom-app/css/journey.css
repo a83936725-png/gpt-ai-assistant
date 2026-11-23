@@ -6,7 +6,7 @@
 .jr-steps::before { content: ''; position: absolute; left: 14px; right: 14px; top: 50%; height: 2px; background: rgba(255, 255, 255, .3); }
 .jr-step {
   position: relative; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 17px; background: rgba(255, 255, 255, .18); opacity: .55;
+  font-size: var(--fs-lg); background: rgba(255, 255, 255, .18); opacity: .55;
 }
 .jr-step.done { opacity: .9; background: rgba(255, 255, 255, .3); }
 .jr-step.now { opacity: 1; background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .45); transform: scale(1.12); }
@@ -24,19 +24,19 @@
 }
 .jr-dot {
   width: 36px; height: 36px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center;
-  font-size: 18px; background: var(--c-surface-2);
+  font-size: var(--fs-lg); background: var(--c-surface-2);
 }
 .jr-done .jr-dot { background: var(--c-ok-soft); color: var(--c-ok-ink); font-weight: 800; }
 .jr-now .jr-dot { background: var(--c-primary-soft); }
 .jr-phase-body { padding: 0 14px 14px; }
-.jr-sub { font-weight: 700; font-size: 14px; margin: 14px 0 6px; }
+.jr-sub { font-weight: 700; font-size: var(--fs-sm); margin: 14px 0 6px; }
 .jr-sub-warn { color: var(--c-danger-ink); }
 .jr-todos { display: grid; gap: 6px; }
 .jr-todo { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 12px; background: var(--c-surface-2); }
 .jr-todo.done .jr-todo-main span { color: var(--c-text-2); text-decoration: line-through; } /* muted, still readable (no opacity) */
-.jr-todo-main { flex: 1; display: flex; align-items: flex-start; gap: 10px; min-height: 40px; padding: 4px 0; font-size: 14px; line-height: 1.45; cursor: pointer; }
+.jr-todo-main { flex: 1; display: flex; align-items: flex-start; gap: 10px; min-height: 40px; padding: 4px 0; font-size: var(--fs-sm); line-height: 1.45; cursor: pointer; }
 .jr-todo-main input { width: 22px; height: 22px; margin-top: 1px; flex: none; accent-color: var(--c-primary); }
-.jr-watch { margin: 0; padding: 10px 12px 10px 30px; border-radius: 12px; background: var(--c-danger-soft); font-size: 14px; line-height: 1.55; }
+.jr-watch { margin: 0; padding: 10px 12px 10px 30px; border-radius: 12px; background: var(--c-danger-soft); font-size: var(--fs-sm); line-height: 1.55; }
 .jr-watch li { margin: 3px 0; }
 .jr-watch-card .jr-watch { margin-top: 6px; }
 
@@ -49,7 +49,7 @@
 .jr-newborn { margin-top: 10px; }
 .jr-check {
   display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; margin-top: 6px;
-  border-radius: 12px; border: 1px solid var(--c-border); background: var(--c-surface); font-size: 13.5px; line-height: 1.45; min-height: 40px;
+  border-radius: 12px; border: 1px solid var(--c-border); background: var(--c-surface); font-size: var(--fs-sm); line-height: 1.45; min-height: 40px;
 }
 .jr-check-ico { flex: none; width: 24px; text-align: center; }
 .jr-check.good { border-color: transparent; background: var(--c-ok-soft); }
@@ -74,7 +74,7 @@
 .jr-range { width: 100%; height: 36px; accent-color: var(--c-primary); }
 .jr-swatches { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .jr-alert ul { margin: 8px 0 12px; font-weight: 600; }
-.jr-alert-urgent p:first-child, .jr-alert-crisis p:first-child { font-size: 15.5px; }
+.jr-alert-urgent p:first-child, .jr-alert-crisis p:first-child { font-size: var(--fs-md); }
 .jr-alert-urgent ul { color: var(--c-danger-ink); }
 .jr-tel { margin-top: 8px; }
 
@@ -89,6 +89,6 @@
 /* postpartum trend */
 .jr-trend { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin: 10px 0 6px; text-align: center; }
 .jr-trend-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.jr-trend-mood { font-size: 18px; line-height: 1; }
+.jr-trend-mood { font-size: var(--fs-lg); line-height: 1; }
 .jr-trend-dot { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .1); }
 .jr-hotlines .list-item { padding-left: 0; padding-right: 0; min-height: 48px; }

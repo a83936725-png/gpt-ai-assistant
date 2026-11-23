@@ -1,5 +1,5 @@
 /* Offline cache for 易家做媽媽 (network-first for HTML so updates show up, cache-first for assets). */
-const CACHE = 'yijia-mom-v36';
+const CACHE = 'yijia-mom-v37';
 const ASSETS = [
   './', 'index.html', 'config.js', 'manifest.webmanifest',
   'css/base.css', 'css/modules.css', 'css/island.css', 'css/health.css', 'css/pregnancy.css', 'css/journey.css', 'css/monitor.css', 'css/outing.css', 'css/search.css', 'css/extras.css', 'css/share.css', 'css/account.css', 'css/goods.css', 'css/diary.css', 'css/social.css', 'css/groupbuy.css', 'css/monthly.css', 'css/admin.css', 'css/family.css', 'css/recap.css', 'css/night.css', 'css/components.css', 'css/qban.css', 'css/motion.css',
@@ -8,6 +8,8 @@ const ASSETS = [
   'js/modules/home.js', 'js/modules/babylog.js', 'js/modules/milk.js', 'js/modules/avatar.js', 'js/modules/qban.js', 'js/modules/island.js', 'js/modules/diary.js',
   'js/modules/health.js', 'js/modules/pregnancy.js', 'js/modules/journey.js', 'js/modules/outing.js', 'js/modules/monitor.js', 'js/modules/search.js', 'js/modules/extras.js', 'js/modules/goods.js', 'js/modules/share.js', 'js/modules/privacy.js', 'js/modules/account.js', 'js/modules/gift.js', 'js/modules/starter.js', 'js/modules/groupbuy.js', 'js/modules/social.js', 'js/modules/wall.js', 'js/modules/circle.js', 'js/modules/weekly.js', 'js/modules/monthly.js', 'js/modules/admin.js', 'js/modules/push.js', 'js/modules/family.js', 'js/modules/recap.js', 'js/modules/handoff.js', 'js/modules/night.js', 'js/modules/brand.js', 'js/modules/me.js', 'js/modules/sources.js',
   'assets/logo.svg', 'assets/logo-full.svg', 'assets/icon.svg', 'assets/icon-192.png', 'assets/icon-512.png',
+  // 縮圖 (0.9.4): the app's own drawings, 3–9 KB each
+  ...['benefits', 'brand', 'circle', 'confinement', 'contraction', 'cycle', 'family', 'fertility', 'goods', 'groupbuy', 'growth', 'handoff', 'hospitalbag', 'island', 'journey', 'kick', 'milestones', 'milk', 'monitor', 'monthly', 'night', 'outing', 'postpartum', 'pregnancy', 'pregweight', 'prenatal', 'prepcheck', 'prevention', 'push', 'recap', 'search', 'stage-baby', 'stage-preg', 'stage-prep', 'stats', 'wall', 'weekly'].map((n) => `assets/thumbs/${n}.webp`),
 ];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => Promise.allSettled(ASSETS.map((a) => c.add(a)))).then(() => self.skipWaiting()));

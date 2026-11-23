@@ -1,5 +1,6 @@
 /* 易家做媽媽 — 寶寶月照 */
 .mo-intro .mo-intro-ico { font-size: 30px; line-height: 1; flex: none; }
+.mo-intro .mo-intro-pic { width: 52px; height: 52px; border-radius: 14px; }
 .mo-next { margin-top: 2px; }
 .mo-prog { height: 8px; border-radius: 999px; background: var(--c-surface-2); overflow: hidden; margin: 12px 0 6px; }
 .mo-prog > span { display: block; height: 100%; min-width: 8px; border-radius: inherit; background: linear-gradient(90deg, var(--c-primary), var(--c-accent)); }
@@ -13,8 +14,8 @@
 .mo-img.gone { visibility: hidden; }
 .mo-ph { font-size: 24px; line-height: 1; color: var(--c-text-3); }
 .mo-tx { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.25; }
-.mo-tl { font-weight: 800; font-size: 14px; }
-.mo-td { font-size: 11.5px; color: var(--c-text-2); overflow-wrap: anywhere; }
+.mo-tl { font-weight: 800; font-size: var(--fs-sm); }
+.mo-td { font-size: var(--fs-xs); color: var(--c-text-2); overflow-wrap: anywhere; }
 .mo-tile.is-done .mo-tl { color: var(--c-primary); }
 .mo-tile.is-now { border-color: var(--c-primary); box-shadow: 0 0 0 2px var(--c-primary-soft); }
 .mo-tile.is-now .mo-thumb { background: var(--c-primary-soft); }
@@ -29,8 +30,8 @@
 .mo-wide { flex-direction: row; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; text-align: left; }
 .mo-wide .mo-thumb { flex: none; width: 64px; }
 .mo-wide .mo-tx { align-items: flex-start; }
-.mo-wide .mo-tl { font-size: 15px; }
-.mo-wide .mo-td { font-size: 12.5px; }
+.mo-wide .mo-tl { font-size: var(--fs-md); }
+.mo-wide .mo-td { font-size: var(--fs-xs); }
 .mo-col-btn { margin-top: 14px; }
 
 /* the editor */
@@ -66,5 +67,5 @@
 
 @media (max-width: 340px) {
   .mo-grid { gap: 8px; }
-  .mo-tl { font-size: 13px; }
+  .mo-tl { font-size: var(--fs-sm); }
 }

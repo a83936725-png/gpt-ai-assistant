@@ -1,8 +1,11 @@
 /* 易家做媽媽 — 家人共用紀錄 */
 .fm-card { margin-bottom: 14px; }
 .fm-ico { font-size: 40px; line-height: 1; margin: 2px 0 8px; }
+.fm-pic { width: 96px; height: 96px; margin: 0 0 10px; border-radius: 22px; }
+.fm-pic.sm { width: 48px; height: 48px; margin: 0; border-radius: 12px; }
+.fm-card.center .fm-pic { margin-inline: auto; }
 .fm-ico.sm { font-size: 30px; margin: 0; flex: none; }
-.fm-h { font-size: 20px; margin: 0 0 8px; }
+.fm-h { font-size: var(--fs-xl); margin: 0 0 8px; }
 .fm-points { margin: 10px 0 4px; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .fm-points li { line-height: 1.5; }
 .fm-lbl { margin: 12px 0 6px; }

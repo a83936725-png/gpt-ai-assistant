@@ -4,9 +4,9 @@
 .gd-summary .gd-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 .gd-count {
   display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; min-height: 56px;
-  border-radius: 12px; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text); font-size: 12.5px;
+  border-radius: 12px; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text); font-size: var(--fs-xs);
 }
-.gd-count b { font-size: 20px; color: var(--c-primary); }
+.gd-count b { font-size: var(--fs-xl); color: var(--c-primary); }
 
 .gd-filter, .gd-cats { margin: 12px 0 4px; }
 .gd-cats { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
@@ -20,10 +20,10 @@
 .gd-item { color: var(--c-text); font: inherit; cursor: pointer; }
 .gd-item.done .li-title { color: var(--c-text-2); }
 .gd-item.done .gd-ico { opacity: .55; }
-.gd-ico { width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; font-size: 21px; }
+.gd-ico { width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; font-size: var(--fs-xl); }
 .gd-right { margin-left: auto; flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-.gd-mini { margin-left: 6px; font-size: 12px; vertical-align: 1px; }
-.gd-state { font-size: 12px; font-weight: 700; white-space: nowrap; color: var(--c-text-2); }
+.gd-mini { margin-left: 6px; font-size: var(--fs-xs); vertical-align: 1px; }
+.gd-state { font-size: var(--fs-xs); font-weight: 700; white-space: nowrap; color: var(--c-text-2); }
 .gd-s-have { color: var(--c-ok-ink); }
 .gd-s-want { color: var(--c-accent-ink); }
 .gd-s-buy { color: var(--c-primary); }
@@ -61,7 +61,7 @@
 
 /* public wishlist page */
 .gd-wish-emoji { font-size: 48px; line-height: 1.1; }
-.gd-wish-title { font-size: 20px; margin: 6px 0 4px; }
+.gd-wish-title { font-size: var(--fs-xl); margin: 6px 0 4px; }
 .gd-wish-list { margin-top: 12px; }
 .gd-wish-item { align-items: flex-start; }
 .gd-wish-item .gd-gift { flex: none; align-self: center; min-height: 40px; }

@@ -438,7 +438,7 @@
   }
 
   const noBaby = (el) => {
-    el.append(ui.empty('👶', '先建立寶寶資料，就能開始追蹤成長與健康。',
+    el.append(ui.empty('stage-baby', '先建立寶寶資料，就能開始追蹤成長與健康。',
       h('button', { class: 'btn btn-primary', onclick: () => App.navigate('me') }, '新增寶寶資料')));
   };
   const needBaby = (render) => (el, params) => {
@@ -450,6 +450,7 @@
   /* =====================================================================
    * 健康 hub (tab)
    * ===================================================================== */
+  const PIC_OF = { 'journey-baby': 'journey', 'weekly-preg': 'weekly' }; // tools that share another tool's drawing
   function stageHeader() {
     const st = store().stage;
     const p = store().profile;
@@ -467,12 +468,12 @@
     if (st === 'preg') {
       const ga = p.lmp ? C.gestAge(p.lmp) : null;
       return ui.card({ class: 'soft health-stage' },
-        h('div', { class: 'row gap' }, h('div', { class: 'health-avatar' }, '🤰'),
+        h('div', { class: 'row gap' }, ui.pic('stage-preg', 46, 'health-avatar'),
           h('div', { class: 'grow' }, h('div', { class: 'bold' }, '懷孕中'),
             h('div', { class: 'small muted' }, ga && ga.totalDays >= 0 ? `懷孕 ${ga.weeks} 週 ${ga.days} 天・還有 ${Math.max(0, ga.daysLeft)} 天` : '設定最後一次月經日，就能算孕週'))));
     }
     return ui.card({ class: 'soft health-stage' },
-      h('div', { class: 'row gap' }, h('div', { class: 'health-avatar' }, '🌱'),
+      h('div', { class: 'row gap' }, ui.pic('stage-prep', 46, 'health-avatar'),
         h('div', { class: 'grow' }, h('div', { class: 'bold' }, '備孕中'),
           h('div', { class: 'small muted' }, '照顧好自己，為好孕做準備'))));
   }
@@ -500,12 +501,15 @@
       });
       groups.forEach((g) => {
         el.append(h('div', { class: 'section-title' }, g.name));
-        // one list per group, plain rows with a chevron (it was a grid of big-emoji tiles, with lone tiles in half-empty rows)
-        el.append(h('div', { class: 'tool-list' }, g.tools.map((t) => h('button', {
-          class: 'tile tool-row', type: 'button', onclick: () => App.navigate(t.screen || t.id, t.params),
-        },
-        h('span', { class: 'tool-text' }, h('span', { class: 'tile-title' }, t.title), t.desc ? h('span', { class: 'tile-desc' }, t.desc) : null),
-        h('span', { class: 'ic faint', html: ui.ICONS.chevron })))));
+        // one grid of picture cards per group (0.9.4; it was plain rows of words): the drawing says what the tool is. A group
+        // with an odd number of tools starts with a wide card that also has the tool's line, so no row is half empty.
+        const wideFirst = g.tools.length % 2 === 1;
+        el.append(h('div', { class: 'tool-grid' }, g.tools.map((t, i) => {
+          const wide = wideFirst && i === 0;
+          return h('button', { class: `tool-card${wide ? ' wide' : ''}`, type: 'button', dataset: { tool: t.id }, onclick: () => App.navigate(t.screen || t.id, t.params) },
+            ui.pic(PIC_OF[t.id] || t.id, wide ? 64 : 96),
+            h('span', { class: 'tool-text' }, h('span', { class: 'tile-title' }, t.title), wide && t.desc ? h('span', { class: 'tile-desc' }, t.desc) : null));
+        })));
       });
       el.append(h('p', { class: 'disclaimer' }, '本 App 內容僅供衛教參考，不能取代醫師診斷；如有任何身體不適，請儘速就醫。'));
     },
@@ -638,7 +642,7 @@
           h('span', { class: 'li-right tiny' }, '來自寶寶資料')));
       }
       if (!rows.length && !b.birthWeight && !b.birthLength) {
-        el.append(ui.empty('📏', '還沒有測量紀錄。每次量完身高體重記下來，就能看到成長曲線。',
+        el.append(ui.empty('growth', '還沒有測量紀錄。每次量完身高體重記下來，就能看到成長曲線。',
           h('button', { class: 'btn btn-primary', onclick: () => openMeasureSheet(b) }, '新增第一筆測量')));
       } else {
         el.append(list);
@@ -924,7 +928,7 @@
           (v) => { statsRange = Number(v); App.refresh(); }, { small: true })));
       const st = dailyStats(b, statsRange);
       if (!st.hasData) {
-        el.append(ui.empty('📊', '這段時間還沒有紀錄。到「紀錄」記下餵奶、尿布與睡眠，就會自動產生圖表。',
+        el.append(ui.empty('stats', '這段時間還沒有紀錄。到「紀錄」記下餵奶、尿布與睡眠，就會自動產生圖表。',
           h('button', { class: 'btn btn-primary', onclick: () => App.navigate('log') }, '去記錄')));
         return;
       }

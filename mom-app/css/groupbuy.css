@@ -6,20 +6,20 @@
 .gb-card .card-title .tag, .gb-team .tag, .gb-home .tag, .gb-brand .tag { margin-left: 6px; vertical-align: middle; }
 .gb-price { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
 .gb-price-now { font-size: 24px; font-weight: 900; color: var(--c-accent-ink); }
-.gb-price-was { font-size: 13px; color: var(--c-text-2); }
+.gb-price-was { font-size: var(--fs-sm); color: var(--c-text-2); }
 .gb-meta { margin: 0 0 12px; }
 .gb-start { min-height: 48px; }
 .gb-mine { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 10px 12px; margin-top: 4px; border: 0; border-radius: 14px;
   background: var(--c-primary-soft); color: var(--c-text); font: inherit; text-align: left; cursor: pointer; }
 .gb-mine .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.gb-mine .chev { color: var(--c-text-2); font-size: 20px; flex: none; }
+.gb-mine .chev { color: var(--c-text-2); font-size: var(--fs-xl); flex: none; }
 .gb-progress { display: grid; gap: 6px; margin-top: 10px; }
-.gb-count { font-size: 17px; }
+.gb-count { font-size: var(--fs-lg); }
 .gb-actions { display: grid; gap: 10px; }
 .gb-actions p { margin: 0; }
-.gb-join, .gb-line { min-height: 52px; font-size: 16px; }
+.gb-join, .gb-line { min-height: 52px; font-size: var(--fs-lg); }
 .gb-leave { justify-self: center; min-height: 40px; color: var(--c-text-2); }
-.gb-done { font-weight: 800; font-size: 17px; color: var(--c-primary); }
+.gb-done { font-weight: 800; font-size: var(--fs-lg); color: var(--c-primary); }
 .gb-code-box { display: grid; gap: 4px; padding: 14px; border-radius: 16px; border: 2px dashed var(--c-primary); background: var(--c-primary-soft); text-align: center; }
 .gb-code-box p { margin: 6px 0 0; }
 .gb-code { font-size: 26px; font-weight: 900; letter-spacing: 3px; color: var(--c-primary); user-select: all; -webkit-user-select: all; word-break: break-all; }
@@ -32,7 +32,7 @@
 .gb-steps li { counter-increment: gbs; position: relative; padding: 2px 0 14px 38px; min-height: 28px; }
 .gb-steps li::before {
   content: counter(gbs); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--c-surface); color: var(--c-primary); box-shadow: inset 0 0 0 2px var(--c-primary); font-weight: 700; font-size: 13px;
+  background: var(--c-surface); color: var(--c-primary); box-shadow: inset 0 0 0 2px var(--c-primary); font-weight: 700; font-size: var(--fs-sm);
 }
 .gb-steps li:not(:last-child)::after { content: ''; position: absolute; left: 12px; top: 27px; bottom: -1px; width: 2px; border-radius: 1px; background: var(--c-primary); opacity: .35; }
 .gb-steps-now { margin-top: 14px; }
@@ -88,31 +88,25 @@
 .gbr-chip.gold { background: #8f5800; }
 /* ‹: tuck the column away for today (a 44 × 36 target around a small pill) */
 .gbr-tuck { width: 44px; height: 36px; margin-bottom: -16px; padding: 0; border: 0; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.gbr-tuck span { display: block; width: 32px; height: 20px; border-radius: 999px; background: rgba(58, 24, 70, .78); color: #fff; font-size: 17px; font-weight: 800; line-height: 18px; text-align: center; }
+.gbr-tuck span { display: block; width: 32px; height: 20px; border-radius: 999px; background: rgba(58, 24, 70, .78); color: #fff; font-size: var(--fs-lg); font-weight: 800; line-height: 18px; text-align: center; }
 /* the 🛒 tab at the edge: tucked away, or no room for a tile */
 .gbr-tab {
   position: relative; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   width: 36px; height: 58px; padding: 0 0 0 2px; border: 2px solid #fff; border-left: 0; border-radius: 0 16px 16px 0;
   background: linear-gradient(150deg, #ffe6d8, #ffc4d1); box-shadow: 0 4px 12px rgba(70, 25, 90, .28); cursor: pointer;
 }
-.gbr-tab-ico { font-size: 19px; line-height: 1; }
+.gbr-tab-ico { font-size: var(--fs-xl); line-height: 1; }
 .gbr-tab-n { min-width: 20px; padding: 0 5px; border-radius: 999px; background: #c62f2a; color: #fff; font-size: 11px; font-weight: 800; line-height: 1.45; }
 .gbr-dot { position: absolute; top: 5px; right: 4px; width: 10px; height: 10px; border-radius: 50%; background: #c62f2a; border: 1.5px solid #fff; }
 .isl .gb-rail.peek, .isl .gb-rail.tucked { left: 0; }
 .gb-rail.peek .gbr-tab, .gb-rail.tucked .gbr-tab { display: flex; }
 .gb-rail.peek .gbr-tuck, .gb-rail.tucked .gbr-tuck, .gb-rail.tucked .gbr-tile { display: none; }
 @media (prefers-reduced-motion: no-preference) {
-  .gbr-pic { animation: gbrBob 3.8s ease-in-out infinite; }
-  .gbr-tile:nth-of-type(2) .gbr-pic { animation-delay: .7s; }
-  .gbr-tile:nth-of-type(3) .gbr-pic { animation-delay: 1.4s; }
-  .gbr-tile:active .gbr-pic { animation: none; transform: scale(.92); }
-  .gbr-chip.soon { animation: gbrPulse 1s ease-in-out infinite; }
+  .gbr-tile:active .gbr-pic { transform: scale(.92); } /* 0.9.4: the tiles no longer bob, the last hour no longer pulses */
   .gbr-tab:active { transform: scale(.94); }
   .gb-live-dot { animation: gbLive 1.6s ease-in-out infinite; }
   .gb-deal.focus { animation: gbFocus 1.6s ease-out 2; }
 }
-@keyframes gbrBob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3px) rotate(-1.5deg); } }
-@keyframes gbrPulse { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.08); } }
 @keyframes gbLive { 0%, 100% { box-shadow: 0 0 0 3px rgba(198, 47, 42, .18); } 50% { box-shadow: 0 0 0 6px rgba(198, 47, 42, .06); } }
 @keyframes gbFocus { 0% { box-shadow: 0 0 0 0 rgba(238, 139, 111, .7); } 100% { box-shadow: 0 0 0 14px rgba(238, 139, 111, 0); } }
 
@@ -125,13 +119,13 @@
 .gb-deal.focus { outline: 3px solid var(--c-accent); outline-offset: 2px; }
 .gb-deal-price { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .gb-deal-price .gb-price { margin: 12px 0 4px; }
-.gb-save { padding: 3px 9px; border-radius: 999px; background: var(--c-danger-soft); color: var(--c-danger-ink); font-weight: 800; font-size: 13px; white-space: nowrap; }
+.gb-save { padding: 3px 9px; border-radius: 999px; background: var(--c-danger-soft); color: var(--c-danger-ink); font-weight: 800; font-size: var(--fs-sm); white-space: nowrap; }
 .gb-deal-clock, .gb-team-clock { display: grid; gap: 6px; margin: 10px 0 10px; }
 .gb-team-clock { margin-bottom: 2px; }
 .gb-big { display: flex; flex-wrap: wrap; gap: 6px; }
 .gb-big-u { display: inline-flex; align-items: baseline; gap: 3px; padding: 7px 10px 6px; border-radius: 12px; background: #3a1846; color: #fff; }
-.gb-big-u b { min-width: 1.25em; font-size: 22px; font-weight: 900; line-height: 1; text-align: center; font-variant-numeric: tabular-nums; }
-.gb-big-u i { font-style: normal; font-size: 12px; opacity: .9; }
+.gb-big-u b { min-width: 1.25em; font-size: var(--fs-xl); font-weight: 900; line-height: 1; text-align: center; font-variant-numeric: tabular-nums; }
+.gb-big-u i { font-style: normal; font-size: var(--fs-xs); opacity: .9; }
 .gb-big.soon .gb-big-u { background: #b3261e; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .gb-big-u { background: #5a2873; } }
 :root[data-theme="dark"] .gb-big-u { background: #5a2873; }
@@ -144,17 +138,17 @@
 .gb-open-steps { list-style: none; margin: 2px 0; padding: 10px 6px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; border-radius: 16px; background: var(--c-primary-soft); text-align: center; }
 .gb-open-steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .gb-open-steps li:not(:last-child)::after { content: '›'; position: absolute; right: -6px; top: 6px; color: var(--c-primary); font-weight: 800; opacity: .6; }
-.gb-os-ico { font-size: 22px; line-height: 1.15; }
+.gb-os-ico { font-size: var(--fs-xl); line-height: 1.15; }
 
 /* ---------- 即時團購: 正在揪的團 (other moms' public teams) and what just happened ---------- */
 .gb-open { display: grid; gap: 8px; margin: 0 0 12px; padding: 10px; border-radius: 16px; background: var(--c-surface-2); }
 .gb-open[hidden] { display: none; }
-.gb-open-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 14px; }
+.gb-open-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: var(--fs-sm); }
 .gb-open-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 10px; border-radius: 14px; background: var(--c-surface); border: 1px solid var(--c-border); }
 .gb-open-main { flex: 1; min-width: 0; display: grid; gap: 4px; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 44px; }
 .gb-open-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .gb-open-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gb-need1 { flex: none; padding: 1px 7px; border-radius: 999px; background: #c62f2a; color: #fff; font-size: 12px; font-weight: 800; line-height: 1.45; }
+.gb-need1 { flex: none; padding: 1px 7px; border-radius: 999px; background: #c62f2a; color: #fff; font-size: var(--fs-xs); font-weight: 800; line-height: 1.45; }
 .gb-open-bar { display: block; height: 5px; border-radius: 3px; background: var(--c-border); overflow: hidden; }
 .gb-open-bar i { display: block; height: 100%; border-radius: 3px; background: var(--c-primary); }
 .gb-open-sub .num { font-variant-numeric: tabular-nums; }
@@ -163,8 +157,8 @@
 .gb-open-more { justify-self: center; min-height: 40px; }
 .gb-feed { display: flex; align-items: center; gap: 8px; min-height: 40px; margin: 0 0 12px; padding: 8px 12px; border-radius: 14px; background: var(--c-surface); border: 1px solid var(--c-border); }
 .gb-feed[hidden] { display: none; }
-.gb-feed-tag { display: inline-flex; align-items: center; gap: 5px; flex: none; font-size: 12px; font-weight: 800; color: var(--c-danger-ink); }
-.gb-feed-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+.gb-feed-tag { display: inline-flex; align-items: center; gap: 5px; flex: none; font-size: var(--fs-xs); font-weight: 800; color: var(--c-danger-ink); }
+.gb-feed-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
 /* 開一團 / her team: 公開這一團 */
 .gb-pub { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--c-surface-2); cursor: pointer; }
 .gb-pub input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; accent-color: var(--c-primary); }

@@ -555,15 +555,15 @@
   function renderScreen(el, params) {
     const stage = store.stage;
     if (stage === 'prep') {
-      el.append(ui.empty('📮', '家族週報在懷孕和育兒的時候使用：每週一張卡，傳到家族群組。'));
+      el.append(ui.empty('weekly', '家族週報在懷孕和育兒的時候使用：每週一張卡，傳到家族群組。'));
       return;
     }
     if (stage === 'baby' && !store.baby()) {
-      el.append(ui.empty('👶', '先新增寶寶資料，就可以做寶寶的家族週報。', h('button', { class: 'btn btn-primary', onclick: () => App.me && App.me.editBaby() }, '新增寶寶')));
+      el.append(ui.empty('stage-baby', '先新增寶寶資料，就可以做寶寶的家族週報。', h('button', { class: 'btn btn-primary', onclick: () => App.me && App.me.editBaby() }, '新增寶寶')));
       return;
     }
     if (stage === 'preg' && !kindNow()) {
-      el.append(ui.empty('🤰', '先設定預產期，就可以做每週的好孕週報。', h('button', { class: 'btn btn-primary', onclick: () => App.preg.openDueDateSheet() }, '設定預產期')));
+      el.append(ui.empty('stage-preg', '先設定預產期，就可以做每週的好孕週報。', h('button', { class: 'btn btn-primary', onclick: () => App.preg.openDueDateSheet() }, '設定預產期')));
       return;
     }
     const kind = stage === 'baby' ? 'baby' : 'preg';
@@ -585,7 +585,7 @@
     view.wk = wk;
     const r = build(kind, wk, b, now);
     if (!r) {
-      el.append(ui.empty('📮', kind === 'baby' ? '寶寶出生後，就可以做家族週報。' : '這週還沒有可以做成週報的內容。'));
+      el.append(ui.empty('weekly', kind === 'baby' ? '寶寶出生後，就可以做家族週報。' : '這週還沒有可以做成週報的內容。'));
       return;
     }
 

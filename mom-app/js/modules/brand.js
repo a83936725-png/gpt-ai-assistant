@@ -166,10 +166,11 @@
           h('button', { class: 'btn btn-primary', onclick: () => App.navigate('invite') }, '💌 邀請好友')));
       }
       el.append(monthGrid());
-      el.append(h('section', { class: 'card' },
-        h('div', { class: 'card-title' }, '每日提醒'),
-        h('p', { class: 'small muted' }, '設定一個固定時間，提醒自己停下來，喝一杯、休息一下。'),
-        h('button', { class: 'btn btn-sm btn-soft mt', onclick: () => App.navigate('reminders') }, '設定提醒')));
+      el.append(h('section', { class: 'card pic-intro' }, ui.pic('brand', 72),
+        h('div', { class: 'grow' },
+          h('div', { class: 'card-title' }, '每日提醒'),
+          h('p', { class: 'small muted' }, '每天固定一個時間，提醒自己停下來喝一杯。'),
+          h('button', { class: 'btn btn-sm btn-soft mt', onclick: () => App.navigate('reminders') }, '設定提醒'))));
       el.append(h('section', { class: 'card soft' },
         h('div', { class: 'card-title' }, '加熱與飲用小提醒'),
         h('ul', { class: 'small tight' },

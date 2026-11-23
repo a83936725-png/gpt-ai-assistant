@@ -263,7 +263,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   await S(() => App.search.open('葉酸')); await wait(400);
   ok('App.search.open(q)', (await p.inputValue('#sr-input')) === '葉酸');
   await S(() => App.navigate('health')); await wait(300);
-  ok('健康頁有「問答搜尋」工具', await p.isVisible('.tile:has-text("問答搜尋")'));
+  ok('健康頁有「問答搜尋」工具', await p.isVisible('.tool-card:has-text("問答搜尋")'));
 
   ok('整段流程沒有任何錯誤', !errors.length, errors.slice(0, 5).join(' | '));
   console.log('\n=== 問答搜尋 ===');

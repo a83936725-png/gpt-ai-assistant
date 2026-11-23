@@ -532,7 +532,8 @@
               App.mascot ? App.mascot.el({ mood: 'wave', size: 50, cls: 'ob-md' }) : null),
             h('h2', { class: 'ob-q' }, '你現在是？'),
             h('div', { class: 'stack ob-stages' }, App.STAGES.map((st) => h('button', { class: 'ob-choice', onclick: () => go({ step: 2, stage: st.value }) },
-              h('span', { class: 'ob-choice-t' }, h('b', null, st.label), h('span', { class: 'small muted' }, { prep: '記錄經期、算排卵日、孕前檢查', preg: '孕週、產檢、胎動與宮縮', baby: '餵奶、尿布、睡眠、成長與疫苗' }[st.value])),
+              ui.pic(`stage-${st.value}`, 56, 'ob-pic'), // 0.9.4: a drawing of each stage, so the choice is seen before it is read
+              h('span', { class: 'ob-choice-t' }, h('b', null, st.label), h('span', { class: 'small muted' }, { prep: '經期・排卵日・孕前檢查', preg: '孕週・產檢・胎動', baby: '餵奶・尿布・睡眠・疫苗' }[st.value])),
               h('span', { class: 'chev', 'aria-hidden': 'true' }, '›')))),
             h('p', { class: 'ob-note small muted' }, '不用註冊，紀錄預設只存在這支手機。')),
           h('div', { class: 'ob-actions' },
@@ -734,7 +735,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.9.3`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.9.4`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
         App.screens.privacy ? h('button', { class: 'btn btn-ghost btn-sm center-btn', onclick: () => App.navigate('privacy') }, '🔒 隱私權政策與使用條款') : null,
         // the web preview (no member service) can show the brand's dashboard with its sample numbers; never linked for moms

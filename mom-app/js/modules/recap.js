@@ -320,7 +320,10 @@
       if (babies.length > 1) el.append(h('div', { class: 'mb' }, ui.seg(babies.map((x) => ({ value: x.id, label: x.name || '寶寶' })), b.id, (v) => App.navigate('recap', { baby: v }), { small: true })));
       const now = new Date(); const d = ageDays(b, now);
       const have = available(b, now).map((x) => x.kind);
-      el.append(h('p', { class: 'small muted rc-lead' }, '把這段日子的紀錄做成一段回顧：喝了幾次奶、陪了幾個深夜、長大了多少。在這支手機上做，不會上傳。'));
+      el.append(h('div', { class: 'pic-intro rc-lead' }, ui.pic('recap', 72),
+        h('div', { class: 'grow' }, h('p', { class: 'small' }, '把紀錄做成一段回顧'),
+          h('ul', { class: 'pic-points small' }, h('li', null, '喝了幾次奶'), h('li', null, '陪了幾個深夜'), h('li', null, '長大了多少')),
+          h('p', { class: 'tiny muted' }, '在這支手機上做，不會上傳'))));
       el.append(h('div', { class: 'rc-tiles' }, ORDER.map((k) => {
         const P = PERIODS[k]; const ok = have.includes(k);
         const left = k === 'now' ? 0 : P.days - d;

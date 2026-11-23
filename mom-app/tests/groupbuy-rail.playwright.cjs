@@ -73,15 +73,18 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
   await P.waitForFunction(() => (document.querySelector('.gbr-tile[data-c="sample-gift"] .gbr-rib') || {}).textContent === '差1人', null, { timeout: 5000 }).catch(() => {});
   await P.clock.pauseAt(new Date('2026-11-22T14:19:10+08:00')); await P.clock.runFor(1000); // 14:19:11, held still
   let t = await tiles(P);
-  ok('好孕島: three tiles down the left side, the group-buy ending soonest first', t.length === 3 && t.map((x) => x.c).join() === 'sample-gift,sample-drip,sample-set' && t.every((x) => x.kind === 'new'), JSON.stringify(t));
-  ok('…限時 with the discount; 差1人 (red) when another mom\'s team needs just one more', t.map((x) => `${x.rib}${x.badge}`).join() === '差1人,限時-18%,限時-15%', JSON.stringify(t));
-  ok('…each with a countdown: 07:40:49 (today 22:00), 53:40:49 (past 24 hours, like a game timer), 剩 6 天', t.map((x) => x.chip).join() === '07:40:49,53:40:49,剩 6 天', JSON.stringify(t));
+  const tabN = () => S(P, () => (document.querySelector('.isl .gb-rail .gbr-tab-n') || {}).textContent);
+  // 0.9.4: the column was calmed down — one tile (it was three), how long is left in words (it was a clock ticking every
+  // second), no discount badge; the 🛒 tab has the count and opens them all
+  ok('好孕島: one tile — the most pressing group-buy (月子禮盒, ending soonest) — and the 🛒 tab with the count (3)', t.length === 1 && t[0].c === 'sample-gift' && t[0].kind === 'new' && await tabN() === '3', JSON.stringify(t));
+  ok('…差1人 (red) when another mom\'s team needs just one more; no discount badge on the island', t[0].rib === '差1人' && t[0].badge === '', JSON.stringify(t));
+  ok('…how long is left in words, without seconds: 剩 7 小時 (today 22:00)', t[0].chip === '剩 7 小時', JSON.stringify(t));
   ok('…a screen reader hears what, the price, how long is left, and that a team is one short', /^限時團購：月子禮盒（範例），團購價 NT\$3,280，還剩 7 小時 40 分，有一團只差 1 人$/.test(t[0].label), t[0].label);
   const place = await S(P, () => { const r = document.querySelector('.isl .gb-rail').getBoundingClientRect(); const hud = document.querySelector('.isl-hud').getBoundingClientRect(); const heart = document.querySelector('.isl-heart-badge'); const hb = heart && heart.getBoundingClientRect(); return { left: Math.round(r.left), top: Math.round(r.top), bottom: Math.round(r.bottom), hudBottom: Math.round(hud.bottom), heartTop: hb ? Math.round(hb.top) : null }; });
   ok('…on the left edge, below the island card and above the 💜 chip', place.left <= 12 && place.top > place.hudBottom && (place.heartTop === null || place.bottom < place.heartTop), JSON.stringify(place));
   await P.clock.runFor(3000);
   t = await tiles(P);
-  ok('…the countdowns tick every second (3 seconds later: 07:40:46)', t[0].chip === '07:40:46' && t[1].chip === '53:40:46', JSON.stringify(t.map((x) => x.chip)));
+  ok('…nothing ticks on the island (3 seconds later it still says 剩 7 小時)', t[0].chip === '剩 7 小時', JSON.stringify(t.map((x) => x.chip)));
   await P.clock.resume();
   await shot(P, 'island');
   await axe(P, '好孕島 with the tiles');
@@ -89,7 +92,7 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
   ok('…the gaps between tiles let the map be dragged (only the tiles take taps)', drag === 'none');
 
   /* ---------- a tap: 正在開團 at that group-buy ---------- */
-  await P.click('.gbr-tile[data-c="sample-drip"]'); await P.waitForTimeout(1500);
+  await P.click('.gbr-tile[data-c="sample-gift"]'); await P.waitForTimeout(1500);
   const page = await S(P, () => {
     const f = document.querySelector('.gb-deal.focus'); const r = f && f.getBoundingClientRect();
     return {
@@ -97,7 +100,7 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
       hero: (document.querySelector('.gb-hero') || {}).innerText || '', note: !!document.querySelector('.gb-sample-note'),
     };
   });
-  ok('tap the 滴雞精 tile → 「正在開團」, scrolled to that group-buy, which glows', page.screen === 'groupbuy' && page.focus === 'sample-drip' && page.inView && /正在開團/.test(page.hero), JSON.stringify(page));
+  ok('tap the 月子禮盒 tile → 「正在開團」, scrolled to that group-buy, which glows', page.screen === 'groupbuy' && page.focus === 'sample-gift' && page.inView && /正在開團/.test(page.hero), JSON.stringify(page));
   ok('…all three, ending soonest first, and a note that these are samples', page.cards.join() === 'sample-gift,sample-drip,sample-set' && page.note, JSON.stringify(page));
   const deal = (c) => flat(P, `.gb-deal[data-c="${c}"]`);
   const meta = (c) => S(P, (x) => document.querySelector(`.gb-deal[data-c="${x}"] .gb-meta`).textContent, c);
@@ -134,11 +137,11 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
   /* ---------- back on the island: 揪團中 ---------- */
   await go(P, 'island', null, 1500);
   t = await tiles(P);
-  ok('好孕島: her team first — 揪團中, 1/5, its countdown', t[0] && t[0].kind === 'mine' && t[0].rib === '揪團中' && t[0].badge === '1/5' && /^07:40:\d\d$/.test(t[0].chip) && t.length === 3, JSON.stringify(t));
+  ok('好孕島: her team is the tile — 揪團中, 1/5, 剩 7 小時', t[0] && t[0].kind === 'mine' && t[0].rib === '揪團中' && t[0].badge === '1/5' && t[0].chip === '剩 7 小時' && t.length === 1, JSON.stringify(t));
   ok('…and the screen reader hears how many so far', /^我的團：月子禮盒（範例），已 1／5 人，還剩 7 小時 4\d 分$/.test(t[0].label), t[0].label);
   await P.clock.fastForward('07:11:00'); await P.waitForTimeout(1300); // 21:30
   t = await tiles(P);
-  ok('21:30: the last half hour of her team — the countdown turns red', t[0].kind === 'mine' && /^00:29:\d\d$/.test(t[0].chip) && t[0].soon, JSON.stringify(t[0]));
+  ok('21:30: the last half hour of her team — 剩 29 分, in red (it no longer pulses)', t[0].kind === 'mine' && /^剩 (29|30) 分$/.test(t[0].chip) && t[0].soon && await S(P, () => getComputedStyle(document.querySelector('.gbr-chip')).animationName) === 'none', JSON.stringify(t[0]));
   await shot(P, 'island-mine');
 
   /* ---------- 成團 ---------- */
@@ -148,7 +151,7 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
   ok('模擬朋友跟團 four times → 成團了（範例）, the sample code and its note', /🎉成團了！（範例）/.test(done) && /SAMPLE-0000/.test(done) && /範例折扣碼，不能真的使用/.test(done), done);
   await go(P, 'island', null, 1500);
   t = await tiles(P);
-  ok('…the island no longer points at that group-buy (code seen); the other two stay', t.map((x) => x.c).join() === 'sample-drip,sample-set', JSON.stringify(t));
+  ok('…the island no longer points at that group-buy (code seen): the next one (滴雞精) is the tile, 2 in the tab', t.map((x) => x.c).join() === 'sample-drip' && await tabN() === '2', JSON.stringify(t));
 
   /* ---------- ‹ tucks it away for the day ---------- */
   await P.click('.gbr-tuck'); await P.waitForTimeout(400);
@@ -160,13 +163,13 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
   await go(P, 'island', null, 1300);
   ok('…the same day it stays tucked', await S(P, () => document.querySelector('.isl .gb-rail').classList.contains('tucked')));
   await P.clock.fastForward('24:00:00'); await go(P, 'home', null, 300); await go(P, 'island', null, 1500);
-  ok('…the next day the tiles are back', !(await S(P, () => document.querySelector('.isl .gb-rail').classList.contains('tucked'))) && (await tiles(P)).length >= 2);
+  ok('…the next day the tile is back', !(await S(P, () => document.querySelector('.isl .gb-rail').classList.contains('tucked'))) && (await tiles(P)).length === 1);
 
   /* ---------- sizes ---------- */
   const small = await mk({ width: 375, height: 667 });
   await go(small, 'island', null, 1600);
   const sm = await S(small, () => { const r = document.querySelector('.isl .gb-rail'); const vis = [...r.querySelectorAll('.gbr-tile')].filter((x) => !x.hidden); const last = vis[vis.length - 1].getBoundingClientRect(); const heart = document.querySelector('.isl-heart-badge'); return { n: vis.length, peek: r.classList.contains('peek'), lastBottom: Math.round(last.bottom + 14), heartTop: heart ? Math.round(heart.getBoundingClientRect().top) : 9999 }; });
-  ok('375×667: two tiles fit above the 💜 chip (the third waits on 正在開團)', sm.n === 2 && !sm.peek && sm.lastBottom < sm.heartTop, JSON.stringify(sm));
+  ok('375×667: the tile fits above the 💜 chip (the others wait on 正在開團)', sm.n === 1 && !sm.peek && sm.lastBottom < sm.heartTop, JSON.stringify(sm));
   await shot(small, 'island-667');
   const land = await mk({ width: 844, height: 390 });
   await go(land, 'island', null, 1600);
@@ -177,7 +180,7 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
   await S(dark, () => { App.isNight = () => true; App.applyTheme(); });
   await go(dark, 'island', null, 1600);
   const dm = await S(dark, () => ({ anim: getComputedStyle(document.querySelector('.gbr-pic')).animationName, chip: getComputedStyle(document.querySelector('.gbr-chip')).backgroundColor }));
-  ok('dark + less motion: the tiles stay still, the chips stay dark with white digits', dm.anim === 'none' && dm.chip === 'rgb(58, 24, 70)', JSON.stringify(dm));
+  ok('dark + less motion: the tile stays still, the chip stays dark with white digits', dm.anim === 'none' && dm.chip === 'rgb(58, 24, 70)', JSON.stringify(dm));
   await shot(dark, 'island-dark');
   await axe(dark, '好孕島 tiles at night (dark)');
   await go(dark, 'groupbuy', null, 1300);
@@ -186,7 +189,7 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
   /* ---------- the web preview: the samples right away; never while a real service is only unreachable ---------- */
   const real = await mk({ sample: false });
   await go(real, 'island', null, 1800);
-  ok('the web preview (a site with no member service, config groupbuyPreview on): the samples show without loading 範例資料', (await tiles(real)).length === 3);
+  ok('the web preview (a site with no member service, config groupbuyPreview on): the samples show without loading 範例資料', (await tiles(real)).length === 1);
   await go(real, 'groupbuy', null, 1300);
   ok('…正在開團 lists them, marked as samples', (await S(real, () => document.querySelectorAll('.gb-deal .tag').length)) === 3 && /這些是範例團購/.test(await flat(real, '#view')));
   await go(real, 'home', null, 600);
@@ -201,7 +204,7 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
   ok('a real member service only unreachable for a moment (offline): no samples, even with the preview on', await S(down, () => { const r = document.querySelector('.isl .gb-rail'); return (!r || r.hidden) && window.BRAND.groupbuyPreview === true; }));
   const h403 = await mk({ sample: false, apiStatus: 403 });
   await go(h403, 'island', null, 1800);
-  ok('…a static host that answers 403 (not 404) is still a site with no member service: the samples show', (await tiles(h403)).length === 3);
+  ok('…a static host that answers 403 (not 404) is still a site with no member service: the samples show', (await tiles(h403)).length === 1);
   const h503 = await mk({ sample: false, apiStatus: 503 });
   await go(h503, 'island', null, 1800);
   ok('…a real service answering 503 (having trouble): no samples', await S(h503, () => { const r = document.querySelector('.isl .gb-rail'); return !r || r.hidden; }));

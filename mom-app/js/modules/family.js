@@ -283,7 +283,7 @@
     if (!store.state.auth) {
       setPending({ j: `${inv.fid}.${inv.token}`, k: inv.key });
       el.innerHTML = '';
-      el.append(ui.card({ class: 'fm-card center' }, h('div', { class: 'fm-ico', 'aria-hidden': 'true' }, '👨‍👩‍👧'), h('h2', { class: 'fm-h' }, '家人邀請你一起記錄寶寶'),
+      el.append(ui.card({ class: 'fm-card center' }, ui.pic('family', 96, 'fm-pic'), h('h2', { class: 'fm-h' }, '家人邀請你一起記錄寶寶'),
         h('p', { class: 'small muted' }, '登入或註冊會員（免費）後就能加入，你們的紀錄會加密同步到彼此的手機。'),
         h('button', { class: 'btn btn-primary btn-block mt', onclick: () => App.navigate('login') }, '登入／註冊後加入')));
       return;
@@ -329,7 +329,7 @@
       } catch (e) { go.disabled = false; ui.toast(e && e.code === 'in_family' ? '你已經在另一個家庭了' : e && e.code === 'full' ? '這個家庭已經滿 8 位了' : '加入失敗，請稍後再試'); } // eslint-disable-line no-nested-ternary
     });
     el.append(ui.card({ class: 'fm-card' },
-      h('div', { class: 'fm-ico', 'aria-hidden': 'true' }, '👨‍👩‍👧'),
+      ui.pic('family', 96, 'fm-pic'),
       h('h2', { class: 'fm-h' }, `${owner}邀請你一起記錄`),
       h('p', { class: 'small muted' }, `這個家庭現在有 ${pv.members} 位家人。加入後，你們手機上的寶寶紀錄會自動同步。`),
       h('div', { class: 'fm-lbl small bold' }, '你是寶寶的'), who,
@@ -365,9 +365,9 @@
       }
     });
     el.append(ui.card({ class: 'fm-card' },
-      h('div', { class: 'fm-ico', 'aria-hidden': 'true' }, '👨‍👩‍👧'),
+      ui.pic('family', 96, 'fm-pic'),
       h('h2', { class: 'fm-h' }, '家人共用紀錄'),
-      h('p', { class: 'small' }, '爸爸、阿嬤也能在自己的手機上記錄和查看：誰餵了奶、換了尿布、睡多久，大家都看得到，不用再傳訊息問。'),
+      h('p', { class: 'small' }, '爸爸、阿嬤在自己的手機上一起記，不用再傳訊息問。'),
       h('ul', { class: 'fm-points small' },
         h('li', null, '🔒 紀錄在手機上先加密，伺服器只存看不懂的密文'),
         h('li', null, '🔑 鑰匙只在邀請連結裡，只傳給家人'),
@@ -388,7 +388,7 @@
     const owner = view ? view.owner : f.role === 'owner';
     if (view && f.members !== members.length) store.update((s) => { if (s.family) s.family.members = members.length; });
     el.append(ui.card({ class: 'fm-card fm-top' },
-      h('div', { class: 'row gap' }, h('span', { class: 'fm-ico sm', 'aria-hidden': 'true' }, '👨‍👩‍👧'),
+      h('div', { class: 'row gap' }, ui.pic('family', 48, 'fm-pic sm'),
         h('div', { class: 'grow' }, h('div', { class: 'bold' }, '家人共用紀錄'), statusEl)),
       h('button', { class: 'btn btn-sm btn-soft mt fm-sync', onclick: () => sync({ quiet: false }) }, '🔄 立即同步'),
       err ? h('p', { class: 'small fm-err' }, err) : null));
@@ -453,7 +453,7 @@
     App.account.config().then(() => {
       if (!host.isConnected) return;
       if (App.account.noService()) {
-        host.append(ui.card({ class: 'fm-card' }, h('div', { class: 'fm-ico', 'aria-hidden': 'true' }, '👨‍👩‍👧'), h('h2', { class: 'fm-h' }, '家人共用紀錄'),
+        host.append(ui.card({ class: 'fm-card' }, ui.pic('family', 96, 'fm-pic'), h('h2', { class: 'fm-h' }, '家人共用紀錄'),
           h('p', { class: 'small' }, '爸爸、阿嬤也能在自己的手機上記錄和查看寶寶的紀錄，加密同步。'),
           h('p', { class: 'small muted fm-why', dataset: { why: 'no-server' } }, '這個網址還沒有開啟會員服務（例如網頁預覽版），正式上線後就能使用。現在可以先用「我的 → 匯出／匯入備份」和家人交換紀錄。')));
         return;
@@ -461,7 +461,7 @@
       if (inv && !(fam() && fam().id === inv.fid)) { renderJoin(host, inv); return; }
       if (inv) { setPending(null); history.replaceState(null, '', '#/family'); }
       if (!store.state.auth) {
-        host.append(ui.card({ class: 'fm-card center' }, h('div', { class: 'fm-ico', 'aria-hidden': 'true' }, '👨‍👩‍👧'), h('h2', { class: 'fm-h' }, '家人共用紀錄'),
+        host.append(ui.card({ class: 'fm-card center' }, ui.pic('family', 96, 'fm-pic'), h('h2', { class: 'fm-h' }, '家人共用紀錄'),
           h('p', { class: 'small muted fm-why', dataset: { why: 'login' } }, '登入會員（免費）後，就能和家人加密同步寶寶的紀錄。'),
           h('button', { class: 'btn btn-primary btn-block mt', onclick: () => App.navigate('login') }, '登入／註冊')));
         return;
@@ -480,7 +480,7 @@
   function listItem() {
     const f = fam();
     const m = f ? meta() : null;
-    return h('a', { class: 'list-item fm-li', href: '#/family' }, h('span', { class: 'li-icon', 'aria-hidden': 'true' }, '👨‍👩‍👧'),
+    return h('a', { class: 'list-item fm-li', href: '#/family' }, h('span', { class: 'li-icon li-pic', 'aria-hidden': 'true' }, ui.pic('family', 40)),
       h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '家人共用紀錄'),
         h('div', { class: 'li-sub' }, f && f.id ? `已和 ${Math.max(1, (f.members || 1) - 1)} 位家人共用・${m && m.at ? '已同步' : '尚未同步'}` : '爸爸、阿嬤的手機也能一起記錄（加密同步）')),
       h('span', { class: 'li-right', html: ui.ICONS.chevron }));

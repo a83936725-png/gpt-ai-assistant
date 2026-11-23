@@ -79,8 +79,8 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const cam = await open('camera');
   await S(cam, () => { location.hash = '#/health'; });
   await wait(cam, 300);
-  ok('健康頁有「看寶寶」工具', await cam.isVisible('.tile:has-text("看寶寶")'));
-  await cam.click('.tile:has-text("看寶寶")');
+  ok('健康頁有「看寶寶」工具', await cam.isVisible('.tool-card:has-text("看寶寶")'));
+  await cam.click('.tool-card:has-text("看寶寶")');
   await wait(cam, 300);
   ok('點工具進到看寶寶', (await S(cam, () => document.body.dataset.screen)) === 'monitor');
   ok('標題「看寶寶」', (await cam.textContent('.appbar-title')) === '看寶寶');

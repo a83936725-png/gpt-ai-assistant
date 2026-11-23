@@ -655,8 +655,8 @@
     const b = babies.find((x) => x.id === view.baby) || store.baby();
     if (!b) {
       el.append(ui.card({ class: 'soft center mo-empty' },
-        h('div', { class: 'empty-icon', 'aria-hidden': 'true' }, '📸'),
-        h('p', null, '寶寶出生後，每個月拍一張月照，套上相框留作紀念。'),
+        ui.pic('monthly', 112, 'empty-pic'),
+        h('p', null, '寶寶出生後，每個月拍一張月照，套上相框。'),
         App.me && App.me.editBaby ? h('button', { class: 'btn btn-primary', onclick: () => App.me.editBaby() }, '新增寶寶') : null));
       return;
     }
@@ -683,7 +683,7 @@
     else nextLine = `下一張：${label(next).text}・${C.fmtDate(slotDate(b, next), false)}（還有 ${C.diffDays(now, C.parseKey(slotDate(b, next)))} 天）`;
     el.append(ui.card({ class: 'mo-intro' },
       h('div', { class: 'row gap' },
-        h('span', { class: 'mo-intro-ico', 'aria-hidden': 'true' }, '📸'),
+        ui.pic('monthly', 52, 'mo-intro-pic'),
         h('div', { class: 'grow' }, h('div', { class: 'bold' }, `${b.name || '寶寶'}的月照`), h('div', { class: 'small muted mo-next' }, nextLine))),
       h('div', { class: 'mo-prog', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(total), 'aria-valuenow': String(Math.min(done, total)), 'aria-label': `已拍 ${done} 張` },
         h('span', { style: { width: `${Math.min(100, (done / total) * 100)}%` } })),

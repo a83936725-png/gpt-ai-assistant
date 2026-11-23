@@ -6,7 +6,7 @@
 .md svg { display: block; overflow: visible; }
 .md-badge {
   position: absolute; right: -14px; top: -4px; width: 30px; height: 30px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; font-size: 16px; line-height: 1;
+  display: flex; align-items: center; justify-content: center; font-size: var(--fs-lg); line-height: 1;
   background: var(--c-surface); box-shadow: 0 2px 8px rgba(90, 40, 115, .18); border: 1px solid var(--c-border);
 }
 /* in dark mode she is a lighter purple with a soft rim, so she still stands out */
@@ -37,7 +37,7 @@
 .md-pop.show { opacity: 1; transform: none; }
 .md-pop-say {
   position: relative; margin-bottom: 44px; padding: 7px 12px; border-radius: 16px 16px 4px 16px; white-space: nowrap;
-  background: var(--c-surface); color: var(--c-primary); font-weight: 800; font-size: 14px; line-height: 1.2;
+  background: var(--c-surface); color: var(--c-primary); font-weight: 800; font-size: var(--fs-sm); line-height: 1.2;
   box-shadow: 0 6px 18px rgba(60, 25, 80, .2); border: 1px solid var(--c-border);
 }
 @media (min-width: 900px) { .md-pop { bottom: 96px; right: 28px; } }

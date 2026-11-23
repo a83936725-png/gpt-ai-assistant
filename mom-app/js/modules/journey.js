@@ -450,7 +450,7 @@
           h('p', { class: 'small' }, `${recentFlag.title}：${recentFlag.sub}`), h('button', { class: 'btn btn-sm btn-ghost', onclick: () => App.navigate('journey') }, '看注意事項')));
       }
       if (!entries.length) {
-        el.append(ui.empty('📒', '還沒有孕期紀錄。每天花 10 秒記下身體狀況，產檢時拿給醫師看最方便。',
+        el.append(ui.empty('stage-preg', '還沒有孕期紀錄。每天花 10 秒記下身體狀況，產檢時拿給醫師看最方便。',
           h('button', { class: 'btn btn-primary', onclick: () => openPregJournal() }, '記錄今天的身體狀況')));
       } else {
         const groups = C.groupBy(entries, (e) => C.dateKey(new Date(e.at)));
@@ -508,7 +508,7 @@
           h('div', { class: 'tiny muted' }, '上排心情・中排惡露顏色・下排傷口疼痛（0–10）')));
       }
       el.append(h('div', { class: 'section-title' }, h('span', null, '紀錄'), h('button', { onclick: () => openPPLog() }, '＋ 新增')));
-      if (!log.length) el.append(ui.empty('🍲', '每天記一下惡露、傷口、體溫和心情，回診時給醫師看，也能及早發現警訊。'));
+      if (!log.length) el.append(ui.empty('postpartum', '每天記一下惡露、傷口、體溫和心情，回診時給醫師看，也能及早發現警訊。'));
       else {
         el.append(h('div', { class: 'timeline' }, log.map((x) => {
           const { level } = levelOf(x.symptoms, J().PP_SYMPTOMS, { temp: x.temp });

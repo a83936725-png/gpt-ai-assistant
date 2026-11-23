@@ -1584,6 +1584,7 @@
       else { input.select(); toast('請長按名稱複製'); }
     } else if (ds.installForce) openInstall(ds.installForce, true);
     else if (ds.guideCard) openInstallGuide(ds.guideCard);
+    else if (ds.albumExport) exportAlbum(ds.albumExport, b);
     else if (ds.albumStep) { const album = $('#album'); album.scrollBy({ left: album.clientWidth * Number(ds.albumStep), behavior: REDUCED ? 'auto' : 'smooth' }); } else if (ds.albumDel) {
       const [tripId, id] = ds.albumDel.split(':');
       store.set(albumKey(tripId), albumPhotos(tripId).filter((x) => x.id !== id));
@@ -2482,46 +2483,296 @@
   // ---------- 回憶紀念冊
   function albumKey(tripId) { return `album:${tripId}`; }
   function albumPhotos(tripId) { return store.get(albumKey(tripId), []); }
-  function openAlbum(year) {
+  // An album is built from data, so a shared link can show it on someone else's phone.
+  function albumData(year) {
     const s = stats(year);
-    const list = s.past;
-    const name = esc(user?.name || '旅人');
-    const coverPhotos = list.map((t) => destPhoto(t.dest)).filter(Boolean).slice(0, 4);
-    const pages = [`<section class="album-page album-cover">
+    return {
+      year,
+      name: user?.name || '旅人',
+      own: true,
+      trips: s.past.map((t) => ({ id: t.id, dest: t.dest, city: t.city, n: t.n, start: t.start, end: t.end, tags: t.tags, gb: t.gb, memo: t.memo || '' })),
+      countries: s.countries.size,
+      cities: s.cities.size,
+      days: s.days,
+      km: s.km,
+      gb: s.gb,
+      type: travelerType(s),
+      badges: BADGES.filter((x) => { const [v, g] = x.progress(s); return v >= g; }).map((x) => x.name),
+    };
+  }
+  const b64url = (obj) => btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const fromB64url = (code) => JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g, '+').replace(/_/g, '/')))));
+  function albumLink(a) {
+    const data = {
+      y: a.year, f: a.name, k: Math.round(a.km), b: a.badges, p: a.type,
+      t: a.trips.slice(0, 24).map((t) => [t.dest || '', t.city, t.n, t.start, t.end, t.tags.slice(0, 4).join(','), (t.memo || '').slice(0, 140)]),
+    };
+    return `${window.location.origin}${window.location.pathname}#album=${b64url(data)}`;
+  }
+  function readSharedAlbum() {
+    const m = window.location.hash.match(/^#album=([\w-]+)/);
+    if (!m) return null;
+    try {
+      const d = fromB64url(m[1]);
+      const list = (d.t || []).map(([dest, city, n, start, end, tags, memo], i) => ({
+        id: `shared-${i}`, dest: DEST[dest] ? dest : '', city: String(city).slice(0, 30), n: String(n), start, end, tags: String(tags || '').split(',').filter((k) => ELEMENTS[k]), gb: '', memo: String(memo || '').slice(0, 140),
+      })).filter((t) => /^\d{4}-\d\d-\d\d$/.test(t.start) && /^\d{4}-\d\d-\d\d$/.test(t.end));
+      return {
+        year: Number(d.y) || new Date().getFullYear(),
+        name: String(d.f || '旅人').slice(0, 20),
+        own: false,
+        trips: list,
+        countries: new Set(list.map((t) => t.n)).size,
+        cities: new Set(list.map((t) => t.city)).size,
+        days: sum(list, (t) => daysBetween(t.start, t.end)),
+        km: Number(d.k) || 0,
+        gb: 0,
+        type: String(d.p || '').slice(0, 40),
+        badges: (Array.isArray(d.b) ? d.b : []).map(String).slice(0, 8),
+      };
+    } catch { return null; }
+  }
+
+  const ownSection = (t, mine) => `<div class="album-grid mine">${mine.map((m) => `<figure class="album-photo"><img src="${m.src}" alt="我的照片"><button class="icon-btn" data-album-del="${t.id}:${m.id}" aria-label="刪除照片">✕</button></figure>`).join('')}
+      <label class="album-add"><input type="file" accept="image/*" multiple hidden data-album-add="${t.id}"><span>＋</span>加入我的照片</label></div>
+    <textarea class="input journal" rows="3" data-memo="${t.id}" placeholder="寫下這趟最難忘的一刻…">${esc(t.memo || '')}</textarea>`;
+  const memoText = (t) => (t.memo ? `<p class="journal-text serif">${esc(t.memo)}</p>` : '');
+  function albumPages(a) {
+    const coverPhotos = a.trips.map((t) => destPhoto(t.dest)).filter(Boolean).slice(0, 4);
+    const flags = [...new Set(a.trips.map((t) => flag(country(t.n).code)))].join(' ');
+    return [`<section class="album-page album-cover">
         <div class="collage n${coverPhotos.length}">${coverPhotos.map((p) => `<div class="album-photo">${imgHtml(p, '')}</div>`).join('')}</div>
-        <div class="album-cover-text"><span class="kicker plain">旅行紀念冊</span><h2 class="serif">${year}</h2><p>${name} 的旅行紀念冊</p>
-        <p class="small">${s.countries.size} 個國家・${s.cities.size} 座城市・${s.days} 天・${fmt(s.km)} 公里</p><div class="flags">${[...new Set(list.map((t) => flag(country(t.n).code)))].join(' ')}</div></div></section>`,
-    ...list.map((t, i) => {
+        <div class="album-cover-text"><span class="kicker plain">旅行紀念冊</span><h2 class="serif">${a.year}</h2><p>${esc(a.name)} 的旅行紀念冊</p>
+        <p class="small">${a.countries} 個國家・${a.cities} 座城市・${a.days} 天${a.km ? `・${fmt(a.km)} 公里` : ''}</p><div class="flags">${flags}</div></div></section>`,
+    ...a.trips.map((t, i) => {
       const p = destPhoto(t.dest);
       const d = DEST[t.dest];
-      const mine = albumPhotos(t.id);
+      const mine = a.own ? albumPhotos(t.id) : [];
       const spotsShown = d ? d.spots.map((x) => ({ x, ph: spotPhoto(d.id, x.name) })).filter((x) => x.ph).slice(0, 2) : [];
       return `<section class="album-page">
         <div class="album-hero album-photo ${p ? '' : 'ph-missing'}">${imgHtml(p, t.city)}<span class="album-no">No. ${pad(i + 1)}</span></div>
         <div class="album-body">
-          <span class="kicker muted">${flag(country(t.n).code)} ${esc(country(t.n).name)}・${t.start.replace(/-/g, '.')} – ${t.end.slice(5).replace('-', '.')}</span>
+          <span class="kicker plain muted">${flag(country(t.n).code)} ${esc(country(t.n).name)}・${t.start.replace(/-/g, '.')} – ${t.end.slice(5).replace('-', '.')}</span>
           <h2 class="serif">${esc(t.city)}</h2>
-          <div class="row">${t.tags.map((k) => `${tagChip(k)}`).join('')}${Number(t.gb) ? `<span class="chip">${t.gb} GB</span>` : ''}</div>
+          <div class="row">${t.tags.map((k) => tagChip(k)).join('')}${Number(t.gb) ? `<span class="chip">${t.gb} GB</span>` : ''}</div>
           ${spotsShown.length ? `<div class="album-grid">${spotsShown.map(({ x, ph }) => `<figure class="album-photo">${imgHtml(ph, x.name)}<figcaption>${esc(x.name)}</figcaption></figure>`).join('')}</div>` : ''}
-          <div class="album-grid mine">${mine.map((m) => `<figure class="album-photo">${`<img src="${m.src}" alt="我的照片">`}<button class="icon-btn" data-album-del="${t.id}:${m.id}" aria-label="刪除照片">✕</button></figure>`).join('')}
-            <label class="album-add"><input type="file" accept="image/*" multiple hidden data-album-add="${t.id}"><span>＋</span>加入我的照片</label></div>
-          <textarea class="input journal" rows="3" data-memo="${t.id}" placeholder="寫下這趟最難忘的一刻…">${esc(t.memo || '')}</textarea>
+          ${a.own ? ownSection(t, mine) : memoText(t)}
         </div></section>`;
     }),
-    `<section class="album-page album-end"><span class="kicker plain muted">年度總結</span><h2 class="serif">${year}</h2>
-      <div class="grid stats" style="grid-template-columns:repeat(2,1fr)"><div class="stat"><b>${s.countries.size}</b><span>國家</span></div><div class="stat"><b>${s.days}</b><span>天</span></div><div class="stat"><b>${fmt(s.km)}</b><span>公里</span></div><div class="stat"><b>${s.gb.toFixed(1)}</b><span>GB 上網</span></div></div>
-      <p>${esc(travelerType(s))}</p><div class="badges">${BADGES.filter((x) => { const [v, g] = x.progress(s); return v >= g; }).map((x) => `<div class="badge"><b class="medal ${/^[A-Za-z]/.test(x.name) ? 'latin' : ''}">${monogram(x.name)}</b>${x.name}</div>`).join('') || '<span class="muted small">明年一起解鎖徽章！</span>'}</div>
-      <button class="btn primary block" data-share="${year}">產生分享用旅遊卡</button></section>`];
-    openModal(`${year} 旅行紀念冊`, list.length ? `<div class="album" id="album">${pages.join('')}</div>
-      <div class="album-nav"><button class="btn sm" data-album-step="-1" aria-label="上一頁">‹</button><span class="small muted" id="album-page">1 / ${pages.length}</span><button class="btn sm" data-album-step="1" aria-label="下一頁">›</button></div>`
-      : `<div class="empty"><div class="empty-icon">${icon('book')}</div><b>${year} 還沒有旅行紀錄</b><span class="small muted">新增行程或匯入 Google 地圖時間軸，就能做出紀念冊。</span></div>`, { sheet: 'tall' });
+    `<section class="album-page album-end"><span class="kicker plain muted">年度總結</span><h2 class="serif">${a.year}</h2>
+      <div class="grid stats" style="grid-template-columns:repeat(2,1fr)"><div class="stat"><b>${a.countries}</b><span>國家</span></div><div class="stat"><b>${a.days}</b><span>天</span></div><div class="stat"><b>${fmt(a.km)}</b><span>公里</span></div><div class="stat"><b>${a.cities}</b><span>城市</span></div></div>
+      ${a.type ? `<p>${esc(a.type)}</p>` : ''}<div class="badges">${a.badges.map((n) => `<div class="badge"><b class="medal ${/^[A-Za-z]/.test(n) ? 'latin' : ''}">${esc(monogram(n))}</b>${esc(n)}</div>`).join('') || '<span class="muted small">明年一起解鎖徽章！</span>'}</div>
+      ${a.own ? `<button class="btn block" data-share="${a.year}">產生分享用旅遊卡</button>` : `<a class="btn primary block" href="${window.location.pathname}">做一本自己的紀念冊</a>`}</section>`];
+  }
+
+  let currentAlbum = null;
+  function openAlbum(year, shared) {
+    const a = shared || albumData(year);
+    currentAlbum = a;
+    const pages = albumPages(a);
+    openModal(`${a.year} 旅行紀念冊${a.own ? '' : `・${esc(a.name)}`}`, a.trips.length ? `<div class="album" id="album">${pages.join('')}</div>
+      <div class="album-nav"><button class="btn sm" data-album-step="-1" aria-label="上一頁">‹</button><span class="small muted" id="album-page">1 / ${pages.length}</span><button class="btn sm" data-album-step="1" aria-label="下一頁">›</button></div>
+      <div class="album-tools">
+        <button class="btn" data-album-export="page">存這一頁</button>
+        <button class="btn" data-album-export="all">全部存成圖片</button>
+        ${navigator.share ? '<button class="btn" data-album-export="share">分享圖片</button>' : ''}
+        ${a.own ? '<button class="btn" data-album-export="link">分享連結</button>' : ''}
+        <button class="btn" data-album-export="print">列印／存成 PDF</button>
+      </div>
+      <p class="small muted" style="margin:0">圖片尺寸 1080×1350，適合 IG／Threads。${a.own ? '分享連結會帶目的地照片、日期與旅行日記；你上傳的照片只存在這支手機，不會放進連結。' : ''}</p>`
+      : `<div class="empty"><div class="empty-icon">${icon('book')}</div><b>${a.year} 還沒有旅行紀錄</b><span class="small muted">新增行程或匯入 Google 地圖時間軸，就能做出紀念冊。</span></div>`, { sheet: 'tall' });
     const album = $('#album');
     if (!album) return;
     album.addEventListener('scroll', () => {
       const i = Math.round(album.scrollLeft / album.clientWidth);
       $('#album-page').textContent = `${i + 1} / ${pages.length}`;
     }, { passive: true });
-    openAlbum.year = year;
+    openAlbum.year = a.year;
+  }
+  const albumPageIndex = () => { const box = $('#album'); return box ? Math.round(box.scrollLeft / box.clientWidth) : 0; };
+
+  // ---------- album pages as 1080×1350 images
+  const W = 1080;
+  const H = 1350;
+  const SERIF = '"Noto Serif TC", "Songti TC", serif';
+  const SANS = '-apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+  function loadImage(src) {
+    return new Promise((resolve) => {
+      if (!src) { resolve(null); return; }
+      const im = new Image();
+      if (!/^(data:|blob:)/.test(src) && /^https?:/.test(src)) im.crossOrigin = 'anonymous';
+      im.onload = () => resolve(im);
+      im.onerror = () => resolve(null);
+      im.src = src;
+    });
+  }
+  // Draws an image to fill the box (like object-fit: cover), or a soft gradient when it is missing.
+  function cover(x, im, l, t, w, h, r = 0) {
+    x.save();
+    roundRect(x, l, t, w, h, r);
+    x.clip();
+    if (im) {
+      const s = Math.max(w / im.width, h / im.height);
+      x.drawImage(im, l + (w - im.width * s) / 2, t + (h - im.height * s) / 2, im.width * s, im.height * s);
+    } else {
+      const g = x.createLinearGradient(l, t, l + w, t + h);
+      g.addColorStop(0, '#d9e4ff'); g.addColorStop(1, '#cdeee9');
+      x.fillStyle = g; x.fillRect(l, t, w, h);
+    }
+    x.restore();
+  }
+  function wrapLines(x, text, maxW, maxLines) {
+    const lines = [];
+    let line = '';
+    [...String(text)].forEach((ch) => {
+      if (ch === '\n' || x.measureText(line + ch).width > maxW) { lines.push(line); line = ch === '\n' ? '' : ch; } else line += ch;
+    });
+    if (line) lines.push(line);
+    if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = `${lines[maxLines - 1].slice(0, -1)}…`; }
+    return lines;
+  }
+  async function drawAlbumPage(a, index) {
+    try { await document.fonts.load(`900 40px ${SERIF}`); } catch { /* fallback font */ }
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const x = cv.getContext('2d');
+    x.fillStyle = '#fbfaf7'; x.fillRect(0, 0, W, H);
+    const last = a.trips.length + 1;
+    x.textBaseline = 'alphabetic';
+    if (index === 0) {
+      const photos = await Promise.all(a.trips.map((t) => destPhoto(t.dest)?.src).filter(Boolean).slice(0, 4).map(loadImage));
+      const ims = photos.filter(Boolean);
+      const LAYOUTS = {
+        4: [[0, 0, 540, 675], [540, 0, 540, 675], [0, 675, 540, 675], [540, 675, 540, 675]],
+        3: [[0, 0, 540, 1350], [540, 0, 540, 675], [540, 675, 540, 675]],
+        2: [[0, 0, 540, 1350], [540, 0, 540, 1350]],
+      };
+      const cells = LAYOUTS[Math.min(4, ims.length)] || [[0, 0, W, H]];
+      cells.forEach(([l, t, w, h], i) => cover(x, ims[i] || null, l + 3, t + 3, w - 6, h - 6));
+      const g = x.createLinearGradient(0, H * 0.45, 0, H);
+      g.addColorStop(0, 'rgba(5,10,25,0)'); g.addColorStop(1, 'rgba(5,10,25,.88)');
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      x.fillStyle = '#fff';
+      x.font = `600 34px ${SANS}`; x.fillText('旅行紀念冊', 72, 980);
+      x.font = `900 190px ${SERIF}`; x.fillText(String(a.year), 64, 1160);
+      x.font = `600 40px ${SANS}`; x.fillText(`${a.name} 的旅行紀念冊`, 72, 1225);
+      x.font = `400 32px ${SANS}`; x.globalAlpha = 0.85;
+      x.fillText(`${a.countries} 個國家・${a.cities} 座城市・${a.days} 天${a.km ? `・${fmt(a.km)} 公里` : ''}`, 72, 1280);
+      x.globalAlpha = 1;
+    } else if (index < last) {
+      const t = a.trips[index - 1];
+      const hero = await loadImage(destPhoto(t.dest)?.src);
+      cover(x, hero, 0, 0, W, 720);
+      x.fillStyle = 'rgba(255,255,255,.92)'; x.font = `900 34px ${SERIF}`; x.fillText(`No. ${pad(index)}`, 56, 80);
+      x.fillStyle = '#6b6f7a'; x.font = `500 30px ${SANS}`;
+      x.fillText(`${country(t.n).name}・${t.start.replace(/-/g, '.')} – ${t.end.slice(5).replace('-', '.')}`, 64, 800);
+      x.fillStyle = '#141a2a'; x.font = `900 92px ${SERIF}`; x.fillText(t.city, 60, 905);
+      let tx = 64;
+      x.font = `500 28px ${SANS}`;
+      t.tags.slice(0, 4).forEach((k) => {
+        const { label } = el(k);
+        const w = x.measureText(label).width + 56;
+        x.strokeStyle = '#d9dde6'; x.lineWidth = 2; roundRect(x, tx, 935, w, 52, 26); x.stroke();
+        [x.fillStyle] = TAG_COLORS[k] || ['#1463ff']; x.beginPath(); x.arc(tx + 24, 961, 7, 0, Math.PI * 2); x.fill();
+        x.fillStyle = '#141a2a'; x.fillText(label, tx + 40, 971);
+        tx += w + 12;
+      });
+      const mine = a.own ? albumPhotos(t.id).slice(0, 2).map((m) => m.src) : [];
+      const d = DEST[t.dest];
+      const spots = d ? d.spots.map((s) => spotPhoto(d.id, s.name)?.src).filter(Boolean) : [];
+      const small = await Promise.all([...mine, ...spots].slice(0, 2).map(loadImage));
+      const memoTop = small.some(Boolean) ? 1270 : 1030;
+      if (small.some(Boolean)) small.forEach((im, i) => cover(x, im, 64 + i * 484, 1020, 468, 210, 20));
+      if (t.memo) {
+        x.fillStyle = '#3a3f4b'; x.font = `500 34px ${SERIF}`;
+        const room = Math.max(1, Math.floor((H - 40 - memoTop) / 46));
+        wrapLines(x, t.memo, W - 128, room).forEach((ln, i) => x.fillText(ln, 64, memoTop + 10 + i * 46));
+      }
+    } else {
+      x.fillStyle = '#141a2a';
+      x.font = `500 32px ${SANS}`; x.fillStyle = '#6b6f7a'; x.fillText('年度總結', 72, 200);
+      x.fillStyle = '#141a2a'; x.font = `900 190px ${SERIF}`; x.fillText(String(a.year), 64, 390);
+      const figs = [[a.countries, '國家'], [a.cities, '城市'], [a.days, '天'], [fmt(a.km), '公里']];
+      figs.forEach(([v, l], i) => {
+        const cx = 72 + (i % 2) * 480; const cy = 520 + Math.floor(i / 2) * 230;
+        x.fillStyle = '#141a2a'; x.font = `900 96px ${SERIF}`; x.fillText(String(v), cx, cy + 90);
+        x.fillStyle = '#6b6f7a'; x.font = `500 32px ${SANS}`; x.fillText(l, cx, cy + 145);
+      });
+      if (a.type) { x.fillStyle = '#141a2a'; x.font = `600 38px ${SANS}`; x.fillText(a.type, 72, 1050); }
+      x.font = `500 32px ${SANS}`; x.fillStyle = '#6b6f7a';
+      wrapLines(x, a.badges.length ? `徽章：${a.badges.join('、')}` : '', W - 144, 2).forEach((ln, i) => x.fillText(ln, 72, 1120 + i * 44));
+    }
+    x.fillStyle = index === 0 ? 'rgba(255,255,255,.7)' : '#9aa0ab';
+    x.font = `500 24px ${SANS}`;
+    x.fillText(`${CONFIG.brand}・${index + 1} / ${last + 1}`, 64, H - 36);
+    return cv;
+  }
+  const canvasBlob = (cv) => new Promise((resolve, reject) => {
+    try { cv.toBlob((b) => (b ? resolve(b) : reject(new Error('blob'))), 'image/jpeg', 0.9); } catch (err) { reject(err); }
+  });
+  async function albumFiles(a, indexes) {
+    const files = [];
+    for (const i of indexes) { // eslint-disable-line no-restricted-syntax
+      const cv = await drawAlbumPage(a, i); // eslint-disable-line no-await-in-loop
+      const blob = await canvasBlob(cv); // eslint-disable-line no-await-in-loop
+      files.push(new File([blob], `${a.year}-album-${pad(i + 1)}.jpg`, { type: 'image/jpeg' }));
+    }
+    return files;
+  }
+  function saveFile(file) {
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url; link.download = file.name;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+  async function exportAlbum(kind, button) {
+    if (!currentAlbum) return;
+    // Rebuild your own album so journal edits made after opening it are included.
+    const a = currentAlbum.own ? albumData(currentAlbum.year) : currentAlbum;
+    const total = a.trips.length + 2;
+    if (kind === 'link') {
+      const url = albumLink(a);
+      const done = () => toast('已複製紀念冊連結');
+      if (navigator.share) navigator.share({ title: `${a.year} 旅行紀念冊`, text: `${a.name} 的 ${a.year} 旅行紀念冊`, url }).catch(() => {});
+      else if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => window.prompt('複製這個連結', url)); // eslint-disable-line no-alert
+      else window.prompt('複製這個連結', url); // eslint-disable-line no-alert
+      return;
+    }
+    if (kind === 'print') { printAlbum(a); return; }
+    const label = button.textContent;
+    button.disabled = true; button.textContent = '製作中…';
+    try {
+      const indexes = kind === 'page' ? [albumPageIndex()] : Array.from({ length: total }, (_, i) => i);
+      const files = await albumFiles(a, indexes);
+      if (kind === 'share' && navigator.canShare?.({ files })) {
+        await navigator.share({ files, title: `${a.year} 旅行紀念冊` }).catch(() => {});
+      } else {
+        files.forEach((f, i) => setTimeout(() => saveFile(f), i * 400));
+        toast(files.length > 1 ? `正在下載 ${files.length} 張圖片` : '已存成圖片');
+      }
+    } catch {
+      toast('有照片無法放進圖片，請稍後再試');
+    } finally {
+      button.disabled = false; button.textContent = label;
+    }
+  }
+  // Print view: every page as a full-size image, one per sheet; the browser can save it as PDF.
+  async function printAlbum(a) {
+    toast('準備列印版…');
+    const files = await albumFiles(a, Array.from({ length: a.trips.length + 2 }, (_, i) => i)).catch(() => null);
+    if (!files) { toast('有照片無法放進列印版，請稍後再試'); return; }
+    const urls = files.map((f) => URL.createObjectURL(f));
+    const box = document.createElement('div');
+    box.id = 'print-album';
+    box.innerHTML = urls.map((u) => `<img src="${u}" alt="">`).join('');
+    document.body.appendChild(box);
+    document.body.classList.add('printing');
+    await Promise.all([...box.querySelectorAll('img')].map((im) => (im.complete ? null : new Promise((r) => { im.onload = r; im.onerror = r; }))));
+    const cleanup = () => { document.body.classList.remove('printing'); box.remove(); urls.forEach((u) => URL.revokeObjectURL(u)); window.removeEventListener('afterprint', cleanup); };
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+    setTimeout(() => { if (document.body.classList.contains('printing') && !window.matchMedia('print').matches) cleanup(); }, 60000);
   }
   function compressImage(file) {
     return new Promise((resolve, reject) => {
@@ -2544,7 +2795,7 @@
     const datas = await Promise.all([...files].slice(0, 6).map((f) => compressImage(f).catch(() => null)));
     datas.filter(Boolean).forEach((src) => list.push({ id: uid(), src }));
     try { localStorage.setItem(`tm:${albumKey(tripId)}`, JSON.stringify(list)); } catch { toast('這台裝置的空間滿了，請刪掉幾張照片再試'); return; }
-    const page = Math.round($('#album').scrollLeft / $('#album').clientWidth);
+    const page = albumPageIndex();
     openAlbum(openAlbum.year);
     $('#album').scrollLeft = page * $('#album').clientWidth;
     toast('已加入紀念冊');
@@ -2620,6 +2871,10 @@
   applyTheme();
   migrateOrders();
   pendingGift = readGift();
+  const sharedAlbum = readSharedAlbum();
   window.addEventListener('hashchange', () => { const g = readGift(); if (g) { pendingGift = g; if (user) openGift(g); } });
-  Promise.all([loadConfig(), loadPhotos()]).finally(() => { if (user) showApp(); else showLogin(); });
+  Promise.all([loadConfig(), loadPhotos()]).finally(() => {
+    if (user) showApp(); else showLogin();
+    if (sharedAlbum) openAlbum(sharedAlbum.year, sharedAlbum);
+  });
 }());

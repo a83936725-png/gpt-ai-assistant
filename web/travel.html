@@ -553,6 +553,16 @@ section h3 { margin-top: 2px; }
 .link { padding: 8px 2px; margin: -8px 0; }
 .album-nav .btn { min-width: 44px; min-height: 40px; }
 @media (pointer: coarse) { .btn.sm { min-height: 38px; } }
+/* album export */
+.album-tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.journal-text { margin: 0; font-size: 17px; line-height: 1.8; color: var(--text); white-space: pre-wrap; }
+#print-album { display: none; }
+@media print {
+  body.printing > *:not(#print-album), body.printing dialog { display: none !important; }
+  body.printing #print-album { display: block; }
+  #print-album img { display: block; width: 100%; height: auto; page-break-after: always; break-after: page; }
+  @page { margin: 0; }
+}
 @media (prefers-reduced-motion: reduce) { .tcard-inner, #toast, .land, .mag-cover::before, dialog#modal { transition: none; animation: none; } .check path { animation: none; stroke-dashoffset: 0; } .gift-icon { animation: none; } .tap { animation: none; } }
 </style>
 </head>

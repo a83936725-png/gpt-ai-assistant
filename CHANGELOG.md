@@ -25,6 +25,7 @@
 - Travel: a less templated look. Emoji are gone from tags, headings, buttons, cost rows and notices (tags are a colored dot and a word, quick actions use line icons, plans show their data size, badges show one character); no more match percentages or "world explored %"; plain Chinese labels instead of English kickers; shorter, concrete reasons on recommendation cards; the cart button only appears on the eSIM tab or when the cart has something in it
 - Travel: works on 320px phones (long button labels wrap instead of widening the page, which had made taps land in the wrong place), larger tap areas for chips, item names and album navigation
 - Travel: `scripts/travel-photos-download.js` saves the photos as small local WebP files (960px covers, 500px attractions), honoring Wikimedia's rate limits and resuming where it stopped
+- Travel: memory album export. Save the current page or every page as 1080×1350 images, share them through the phone's share sheet, share a link that opens the album (destination photos, dates and journal) on someone else's phone without logging in, or print it / save it as PDF
 - Travel eSIM: a database of the brand's public Threads replies (`data/esim-threads.json`) feeds the first FAQ answers and troubleshooting tips. `node scripts/threads-import.js` adds every post and reply from a Threads data export
 
 ## 4.21.0 (2026-11-22)

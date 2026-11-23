@@ -1,5 +1,5 @@
 import express from 'express';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import config from '../config/index.js';
 import adviseTrip, { describeTravelError, normalizeAdviceInput, TravelInputError } from '../utils/travel-advice.js';
@@ -72,6 +72,21 @@ router.get('/', (req, res, next) => {
 }, sendFile(''));
 
 Object.keys(FILES).filter(Boolean).forEach((key) => router.get(`/${key}`, sendFile(key)));
+
+// Local copies of the attraction photos (scripts/travel-photos-download.js). Names are hashes, so the
+// pattern below is the whole allowlist.
+router.get('/travel-photos/:name', (req, res) => {
+  const { name } = req.params;
+  const match = /^[a-f0-9]{12}\.(webp|jpg)$/.exec(name);
+  const file = match && path.join(WEB_DIR, 'travel-photos', name);
+  if (!file || !existsSync(file)) {
+    res.sendStatus(404);
+    return;
+  }
+  res.set('Content-Type', match[1] === 'webp' ? 'image/webp' : 'image/jpeg');
+  res.set('Cache-Control', 'public, max-age=2592000, immutable');
+  res.send(readFileSync(file));
+});
 
 router.get('/api/status', (req, res) => {
   res.json({

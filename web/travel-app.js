@@ -63,9 +63,20 @@
     city: ['#6a5cff', '#2b2e8f'], shopping: ['#ff5fa2', '#b0306f'], onsen: ['#ff7e6b', '#a8435a'], snow: ['#6fb7ff', '#3a5bd9'],
     family: ['#ffb020', '#ef6c00'], night: ['#5b3cc4', '#1b1446'], art: ['#e05297', '#6c2bd9'], adventure: ['#3aa45a', '#0f5e6e'],
   };
-  const DEST_EMOJI = {
-    food: '🍜', culture: '⛩️', nature: '🏔️', island: '🏝️', city: '🏙️', shopping: '🛍️', onsen: '♨️', snow: '🏂', family: '🎡', night: '🌃', art: '🎨', adventure: '🪂',
+  // Small line icons for the few places that need a picture (empty states, quick actions).
+  const ICONS = {
+    plane: '<path d="M2 16l20-6-20-6 3 6-3 6zM5 10h9"/>',
+    cart: '<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.6l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.7a1.5 1.5 0 0 0 1.5-1.1L21 7.5H6"/>',
+    book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 5v16M8 7h7"/>',
+    gift: '<rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M12 9v12M3 13h18M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/>',
+    calendar: '<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/>',
+    pin: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
   };
+  const icon = (name, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
+
+  // Tags are a colored dot plus the label; no emoji (they read as template UI).
+  const dot = (k) => `<i class="dot" style="background:${(TAG_COLORS[k] || ['var(--brand)'])[0]}"></i>`;
+  const tagChip = (k, extra = '') => `<span class="chip tag">${dot(k)}${(ELEMENTS[k] || { label: k }).label}${extra}</span>`;
 
   let world = null;
   let planTripId = null;
@@ -154,10 +165,12 @@
     { icon: '🗓️', name: '一個月在路上', desc: '旅行 30 天', progress: (s) => [s.days, 30] },
   ];
 
+  // Badge emblem: the first character, or a short Latin word such as "eSIM".
+  const monogram = (name) => (/^[A-Za-z]/.test(name) ? name.match(/^[A-Za-z]+/)[0].slice(0, 4) : name.slice(0, 1));
   const travelerType = (s) => {
     const top = s.topElements.slice(0, 2).map(([k]) => el(k).label);
-    if (!top.length) return '還在等第一趟旅行的旅人';
-    return `「${top.join(' × ')}」型旅人`;
+    if (!top.length) return '還沒有旅行紀錄';
+    return `最常玩：${top.join('、')}`;
   };
 
   // ---------- ticket helpers
@@ -286,7 +299,7 @@
   const destPhoto = (id) => photoOf(`dest:${id}`);
   const spotPhoto = (destId, name) => photoOf(`spot:${destId}:${name}`);
   const culturePhoto = (code, name) => photoOf(`culture:${code}:${name}`);
-  const creditHtml = (p) => (p ? `<a class="credit-mini" href="${esc(p.page)}" target="_blank" rel="noopener">📷 ${esc(p.author || 'Wikimedia Commons')}${p.license ? `・${esc(p.license)}` : ''}</a>` : '');
+  const creditHtml = (p) => (p ? `<a class="credit-mini" href="${esc(p.page)}" target="_blank" rel="noopener">${esc(p.author || 'Wikimedia Commons')}${p.license ? `・${esc(p.license)}` : ''}</a>` : '');
   const imgHtml = (p, alt) => (p ? `<img src="${esc(p.src)}" alt="${esc(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '');
   const photoCard = (p, title, sub = '') => `<figure class="ph-card"><div class="ph ${p ? '' : 'ph-missing'}">${imgHtml(p, title)}</div><figcaption><b>${esc(title)}</b>${sub}${creditHtml(p)}</figcaption></figure>`;
   async function loadPhotos() {
@@ -325,8 +338,8 @@
     return { day, flight, stay, tickets, esim, total: flight + stay + tickets + esim };
   }
   const costRows = (c) => `<div class="cost">
-    <div><span>✈️ 來回機票</span><b>NT$${fmt(c.flight)}</b></div><div><span>🏨 住宿・餐飲・交通</span><b>NT$${fmt(c.stay)}</b></div>
-    <div><span>🎟️ 景點門票</span><b>NT$${fmt(c.tickets)}</b></div><div><span>📶 eSIM</span><b>NT$${fmt(c.esim)}</b></div>
+    <div><span>來回機票</span><b>NT$${fmt(c.flight)}</b></div><div><span>住宿・餐飲・交通</span><b>NT$${fmt(c.stay)}</b></div>
+    <div><span>景點門票</span><b>NT$${fmt(c.tickets)}</b></div><div><span>eSIM</span><b>NT$${fmt(c.esim)}</b></div>
     <div class="total"><span>概估總計</span><b>NT$${fmt(c.total)}</b></div></div>`;
 
   // ---------- demo data
@@ -379,14 +392,13 @@
     $('#login').hidden = false;
     $('#cart-fab').hidden = true;
     $('#login-gift').hidden = !pendingGift;
-    if (pendingGift) $('#login-gift').innerHTML = `🎁 <b>${esc(pendingGift.f)}</b> 送你一張 ${esc(target(pendingGift.k).name)} eSIM，登入後就能領取。`;
+    if (pendingGift) $('#login-gift').innerHTML = `<b>${esc(pendingGift.f)}</b> 送你一張 ${esc(target(pendingGift.k).name)} eSIM，登入後就能領取。`;
     $('#login-name').value = user?.name || '';
   }
   $('#login-demo').addEventListener('click', () => {
     user = { name: $('#login-name').value.trim() || '旅人', since: TODAY };
     loadDemo();
     showApp();
-    toast(`歡迎回來，${user.name}！已載入 2025–2026 足跡`);
   });
   $('#login-new').addEventListener('click', () => {
     user = { name: $('#login-name').value.trim() || '旅人', since: TODAY };
@@ -411,6 +423,7 @@
       window.scrollTo({ top: 0 });
       if (tab === 'map') requestAnimationFrame(drawMap);
       if (tab === 'plan') renderPlanner();
+      renderCartFab();
       animateIn($(`[data-view="${tab}"]`));
     };
     if (document.startViewTransition && !REDUCED) document.startViewTransition(swap); else swap();
@@ -454,7 +467,7 @@
     if (!s.list.length) return `<div><b>${y}</b>：還沒有紀錄</div>`;
     const top = s.topElements[0];
     const soon = s.upcoming.length ? `，另有 ${s.upcoming.length} 趟即將出發` : '';
-    return `<div><b>${y}</b>：去了 ${s.countries.size} 個國家、${s.cities.size} 座城市、${s.days} 天${soon}${top ? `｜最愛元素 ${el(top[0]).icon} ${el(top[0]).label}` : ''}</div>`;
+    return `<div><b>${y}</b>：去了 ${s.countries.size} 個國家、${s.cities.size} 座城市、${s.days} 天${soon}${top ? `｜最常玩${el(top[0]).label}` : ''}</div>`;
   }
   function renderHero() {
     const name = esc(user?.name || '旅人');
@@ -472,10 +485,10 @@
         <button class="btn sm" data-near="${next.id}">附近還能去哪</button></div>`;
     }
     $('#hero').innerHTML = trips.length ? `
-      <h2>嗨 ${name}，歡迎回來 👋</h2>
-      <p style="margin:4px 0 0;opacity:.92">你是${travelerType(all)}，2025–2026 已點亮 ${all.countries.size} 個國家。</p>
+      <h2 class="serif">${name}的 2025–2026</h2>
+      <p style="margin:4px 0 0" class="muted">去過 ${all.countries.size} 個國家・${travelerType(all)}</p>
       <div class="yr">${CONFIG.years.map(yearLine).join('')}</div>${nextHtml}` : `
-      <h2>嗨 ${name}，開始點亮你的世界地圖 ✨</h2>
+      <h2 class="serif">${name}，從第一趟開始</h2>
       <p style="margin:6px 0 12px;opacity:.92">新增去過的旅行，或匯入 Google 地圖時間軸，自動找出 2025、2026 去過的國家。</p>
       <div class="row"><button class="btn" data-goto="trips">＋ 新增第一趟</button><button class="btn" id="hero-demo">看範例足跡</button></div>`;
     $('#hero-demo')?.addEventListener('click', () => { loadDemo(); renderAll(); });
@@ -483,12 +496,11 @@
 
   function renderStats() {
     const s = stats(settings.year);
-    const coverage = (s.countries.size / 195) * 100;
     const items = [
       [count(s.countries.size), '國家・地區'], [count(s.cities.size), '城市'], [count(s.days), '旅行天數'],
-      [count(s.km), '飛行公里'], [count(s.gb, 1), 'eSIM 用量 GB'], [count(coverage, 1), '世界探索度 %'],
+      [count(s.km), '飛行公里'], [count(s.gb, 1), 'eSIM 用量 GB'],
     ];
-    $('#stats').innerHTML = items.map(([v, l]) => `<div class="card stat">${v}<span>${l}</span></div>`).join('');
+    $('#stats').innerHTML = items.map(([v, l]) => `<div class="stat">${v}<span>${l}</span></div>`).join('');
     animateIn($('#stats'));
   }
 
@@ -649,14 +661,14 @@
     const d = t.dest && DEST[t.dest];
     openModal(`${flag(c.code)} ${esc(t.city)}`, `
       <div class="muted">${t.start} – ${t.end}（${daysBetween(t.start, t.end)} 天）・${esc(c.name)}</div>
-      <div class="row">${t.tags.map((k) => `<span class="chip">${el(k).icon} ${el(k).label}</span>`).join('')}</div>
-      ${Number(t.gb) ? `<div class="small">📶 eSIM 用了 ${t.gb} GB</div>` : ''}
+      <div class="row">${t.tags.map((k) => `${tagChip(k)}`).join('')}</div>
+      ${Number(t.gb) ? `<div class="small">eSIM 用了 ${t.gb} GB</div>` : ''}
       ${t.note ? `<p>${esc(t.note)}</p>` : ''}
       ${d ? spotsHtml(d) : ''}
       <div class="actions">
-        <button class="btn primary" data-near="${t.id}">🧭 附近還能去哪</button>
+        <button class="btn primary" data-near="${t.id}">附近還能去哪</button>
         <a class="btn" href="${gmaps(`${t.city} ${c.name}`)}" target="_blank" rel="noopener">Google 地圖 ↗</a>
-        <button class="btn" data-open-plan="${t.id}">🗓️ 行程表</button>
+        <button class="btn" data-open-plan="${t.id}">行程表</button>
         <button class="btn" data-edit="${t.id}">編輯</button>
       </div>`);
   }
@@ -664,20 +676,20 @@
   // ---------- recommendations
   function originOptions() {
     const opts = [];
-    if (recState.gps) opts.push({ key: 'gps', label: '📍 目前位置', ...recState.gps });
-    else opts.push({ key: 'gps', label: '📍 用目前位置' });
-    opts.push({ key: 'home', label: `🏠 ${home().name}`, lat: home().lat, lng: home().lng, name: home().name });
+    if (recState.gps) opts.push({ key: 'gps', label: '目前位置', ...recState.gps });
+    else opts.push({ key: 'gps', label: '用目前位置' });
+    opts.push({ key: 'home', label: `家・${home().name}`, lat: home().lat, lng: home().lng, name: home().name });
     const next = upcomingTrips()[0];
-    if (next) opts.push({ key: `trip:${next.id}`, label: `🧳 下一站 ${next.city}`, lat: next.lat, lng: next.lng, name: next.city });
+    if (next) opts.push({ key: `trip:${next.id}`, label: `下一站 ${next.city}`, lat: next.lat, lng: next.lng, name: next.city, next: true });
     sortTrips(trips.filter((t) => t.end < TODAY)).reverse().slice(0, 4).forEach((t) => {
-      opts.push({ key: `trip:${t.id}`, label: `🕘 ${t.city}`, lat: t.lat, lng: t.lng, name: t.city });
+      opts.push({ key: `trip:${t.id}`, label: `去過・${t.city}`, lat: t.lat, lng: t.lng, name: t.city });
     });
     const extra = recState.origin && !opts.find((o) => o.key === recState.origin.key) ? [recState.origin] : [];
     return [...opts, ...extra];
   }
   function defaultOrigin() {
     const opts = originOptions();
-    return opts.find((o) => o.key.startsWith('trip:') && o.label.startsWith('🧳')) || opts.find((o) => o.key === 'home');
+    return opts.find((o) => o.next) || opts.find((o) => o.key === 'home');
   }
   function elementPrefs() {
     const counts = {};
@@ -700,20 +712,20 @@
       if (opts.budget && tripCost(d, 5).total > opts.budget) return null;
       const why = [];
       let score = Math.max(0, 1 - dist / 4000) * 40;
-      if (dist < 600) why.push(`離${origin.name}只有 ${fmtKm(dist)}，很適合順遊`);
-      else if (dist < 2500) why.push(`離${origin.name} ${fmtKm(dist)}，短程就到`);
+      if (dist < 600) why.push(`離${origin.name} ${fmtKm(dist)}`);
+      else if (dist < 2500) why.push(`離${origin.name} ${fmtKm(dist)}`);
       const matched = d.tags.filter((t) => pref[t] >= 0.5);
       score += (d.tags.reduce((s, t) => s + (pref[t] || 0), 0) / d.tags.length) * 30;
-      if (matched.length) why.push(`符合你常玩的 ${matched.slice(0, 2).map((k) => el(k).label).join('、')}`);
+      if (matched.length) why.push(`你常玩${matched.slice(0, 2).map((k) => el(k).label).join('、')}`);
       if (opts.tags.length) score += 8;
-      if (d.months.includes(Number(opts.month))) { score += 14; why.push(`${opts.month} 月是最佳旅遊季節`); }
+      if (d.months.includes(Number(opts.month))) { score += 14; why.push(`${opts.month} 月適合去`); }
       const { n } = COUNTRIES[d.c];
       if (!visitedCities.has(d.id)) {
         score += 6;
-        if (!visitedCountries.has(n)) { score += 4; why.push(`解鎖新國家 ${flag(d.c)} ${COUNTRIES[d.c].name}`); }
-      } else why.push('你去過，換個季節再訪');
+        if (!visitedCountries.has(n)) { score += 4; why.push(`還沒去過${COUNTRIES[d.c].name}`); }
+      } else why.push('去過，可以換季再去');
       const free = freeCount(d);
-      if (free) why.push(`${free} 個景點免門票`);
+      if (free) why.push(`${free} 個景點免費`);
       return {
         d, dist, score: Math.round(Math.min(99, score + 10)), why: why.slice(0, 3),
       };
@@ -728,7 +740,7 @@
         <small class="muted">${x.fee ? `成人門票 ≈ NT$${fmt(toTwd(x))}${x.note ? `・${esc(x.note)}` : ''}` : esc(x.note || '不需門票')}</small>`;
       return photoCard(spotPhoto(d.id, x.name), x.name, sub);
     }).join('')}</div>
-    <div class="ticket-sum"><span>🎟️ 門票合計（成人）</span><b>≈ NT$${fmt(ticketTotal(d))}</b></div>
+    <div class="ticket-sum"><span>門票合計（成人）</span><b>≈ NT$${fmt(ticketTotal(d))}</b></div>
     <div class="small muted">參考價（匯率概估），以景點官網公告為準。貨幣 ${c.cur}・插座 ${esc(c.plug)}</div>`;
   }
 
@@ -742,19 +754,18 @@
         <div class="face front">
           <div class="cover ${destPhoto(d.id) ? 'has-photo' : ''}" style="background:linear-gradient(135deg,${c1},${c2})">
             ${imgHtml(destPhoto(d.id), d.name)}
-            <span class="score">配對 ${r.score}%</span>
+            ${d.months.includes(Number(recState.month)) ? `<span class="score">${recState.month} 月當季</span>` : '<span></span>'}
             <div><div class="small" style="opacity:.9">${flag(d.c)} ${c.name}・${r.dist ? fmtKm(r.dist) : ''}</div><h3>${esc(d.name)}</h3></div>
-            ${destPhoto(d.id) ? '' : `<span class="emoji" aria-hidden="true">${DEST_EMOJI[d.tags[0]]}</span>`}
           </div>
           <div class="body">
             <div class="small">${esc(d.blurb)}</div>
-            <div class="row">${d.tags.slice(0, 4).map((k) => `<span class="chip">${el(k).icon} ${el(k).label}</span>`).join('')}</div>
-            <ul class="why">${r.why.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
-            <div class="ticket-sum"><span>🎟️ ${d.spots.length} 個景點・${freeCount(d)} 個免費</span><b>≈ NT$${fmt(ticketTotal(d))}</b></div>
-            <div class="small muted">✈️ 台北直飛約 ${d.hours} 小時・最佳 ${d.months.length === 12 ? '全年' : `${d.months.slice(0, 4).join('、')} 月`}</div>
+            <div class="row">${d.tags.slice(0, 4).map((k) => `${tagChip(k)}`).join('')}</div>
+            <p class="why-line">${esc(r.why.join('・'))}</p>
+            <div class="ticket-sum"><span>${d.spots.length} 個景點・${freeCount(d)} 個免費</span><b>≈ NT$${fmt(ticketTotal(d))}</b></div>
+            <div class="small muted">台北直飛約 ${d.hours} 小時・最佳 ${d.months.length === 12 ? '全年' : `${d.months.slice(0, 4).join('、')} 月`}</div>
             <div class="actions">
               <button class="btn sm primary" data-flip>景點與門票 ↻</button>
-              <button class="btn sm" data-ai="${d.id}">✨ AI 行程</button>
+              <button class="btn sm" data-ai="${d.id}">排行程</button>
               <button class="btn sm" data-wish="${d.id}" aria-pressed="${wished}">${wished ? '♥' : '♡'}</button>
             </div>
           </div>
@@ -767,8 +778,8 @@
             <a class="btn sm" href="${gmaps(`${d.name} 景點`)}" target="_blank" rel="noopener">Google 地圖 ↗</a>
             <a class="btn sm" href="${gmaps(`${d.name} 美食`)}" target="_blank" rel="noopener">附近美食 ↗</a>
             <a class="btn sm" href="${gsearch(`${d.name} 自由行 攻略 ${new Date().getFullYear()}`)}" target="_blank" rel="noopener">最新攻略 ↗</a>
-            <button class="btn sm" data-show="${d.id}">🗺️ 地圖上看</button>
-            <button class="btn sm primary" data-plan="${d.c}">📶 ${c.name} eSIM</button>
+            <button class="btn sm" data-show="${d.id}">地圖上看</button>
+            <button class="btn sm primary" data-plan="${d.c}">${c.name} eSIM</button>
           </div>
         </div>
       </div>
@@ -779,7 +790,7 @@
     if (!recState.origin) recState.origin = defaultOrigin();
     const opts = originOptions();
     $('#origin-chips').innerHTML = opts.map((o) => `<button class="chip ${recState.origin?.key === o.key ? 'on' : ''}" data-origin="${esc(o.key)}">${esc(o.label)}</button>`).join('');
-    $('#tag-chips').innerHTML = Object.entries(ELEMENTS).map(([k, v]) => `<button class="chip ${recState.tags.includes(k) ? 'on' : ''}" data-tag="${k}">${v.icon} ${v.label}</button>`).join('');
+    $('#tag-chips').innerHTML = Object.entries(ELEMENTS).map(([k, v]) => `<button class="chip ${recState.tags.includes(k) ? 'on' : ''}" data-tag="${k}">${dot(k)}${v.label}</button>`).join('');
     const list = recState.origin?.lat != null ? recommend(recState.origin) : [];
     $('#recs-count').textContent = list.length ? `從 ${recState.origin.name} 出發・${list.length} 個推薦` : '';
     $('#recs').innerHTML = list.length ? list.map(travelCard).join('') : '<div class="card muted">沒有符合條件的推薦，試著放寬篩選條件。</div>';
@@ -807,7 +818,7 @@
       toast('取得目前位置中…');
       navigator.geolocation.getCurrentPosition((pos) => {
         recState.gps = { lat: pos.coords.latitude, lng: pos.coords.longitude, name: '目前位置' };
-        recState.origin = { key: 'gps', label: '📍 目前位置', ...recState.gps };
+        recState.origin = { key: 'gps', label: '目前位置', ...recState.gps };
         renderRecs();
       }, () => toast('無法取得位置，請允許定位或改選其他出發點'), { timeout: 10000 });
       return;
@@ -817,7 +828,7 @@
   }
   function nearFrom(lat, lng, name, key) {
     recState.origin = {
-      key, label: `📌 ${name}`, lat, lng, name,
+      key, label: `${name}`, lat, lng, name,
     };
     modal.close();
     go('recs');
@@ -863,14 +874,14 @@
     const c = COUNTRIES[d.c];
     const days = Math.max(3, Math.min(7, Math.round(d.hours / 2) + 3));
     const pick = { ...pickForUsage(), days };
-    openModal(`✨ ${flag(d.c)} ${esc(d.name)} ${days} 天行程`, `
+    openModal(`${flag(d.c)} ${esc(d.name)} ${days} 天行程`, `
       <div class="row"><label class="small muted" for="ai-days">天數</label><select class="input" id="ai-days" style="width:auto">${[2, 3, 4, 5, 6, 7, 8, 10].map((n) => `<option ${n === days ? 'selected' : ''}>${n}</option>`).join('')}</select>
         <span class="spacer"></span>${CONFIG.ai ? '<button class="btn sm primary" id="ai-run">請 AI 客製</button>' : ''}</div>
       <div id="ai-out"><ul class="steps" style="gap:10px">${localPlan(d, days)}</ul></div>
-      <div class="notice">🧳 行前清單：出發前一天在 Wi-Fi 下安裝 eSIM、抵達後把行動數據切到旅遊 eSIM 並開啟數據漫遊・貨幣 ${c.cur}・插座 ${esc(c.plug)}${c.note ? `・${esc(c.note)}` : ''}</div>
+      <div class="notice">行前清單：出發前一天在 Wi-Fi 下安裝 eSIM、抵達後把行動數據切到旅遊 eSIM 並開啟數據漫遊・貨幣 ${c.cur}・插座 ${esc(c.plug)}${c.note ? `・${esc(c.note)}` : ''}</div>
       ${spotsHtml(d)}
       <div class="actions">
-        <button class="btn primary" data-plan="${d.c}">📶 ${esc(planLabel(d.c, pick))}・NT$${fmt(planPrice(d.c, pick))}</button>
+        <button class="btn primary" data-plan="${d.c}">${esc(planLabel(d.c, pick))}・NT$${fmt(planPrice(d.c, pick))}</button>
         <a class="btn" href="${c.site}" target="_blank" rel="noopener">官方觀光網 ↗</a>
         <a class="btn" href="${gmaps(`${d.name} 景點`)}" target="_blank" rel="noopener">Google 地圖 ↗</a>
       </div>
@@ -961,14 +972,14 @@
       <div class="esim-top">
         <span class="flag-tile">${t.icon}</span>
         <div class="grow">
-          <div class="row" style="gap:6px"><b class="esim-name">${esc(t.name)}</b><span class="status ${S.cls}">${S.label}</span>${o.qty > 1 ? `<span class="chip sm">第 ${c.n} 張（共 ${o.qty} 張）</span>` : ''}${c.gift ? `<span class="chip sm">🎁 ${esc(c.from || '親友')}送的</span>` : ''}</div>
+          <div class="row" style="gap:6px"><b class="esim-name">${esc(t.name)}</b><span class="status ${S.cls}">${S.label}</span>${o.qty > 1 ? `<span class="chip sm">第 ${c.n} 張（共 ${o.qty} 張）</span>` : ''}${c.gift ? `<span class="chip sm">${esc(c.from || '親友')}送的</span>` : ''}</div>
           <div class="small muted">${esc(planSpec(o.plan))}${ts.length ? `・${ts.map(tripLabel).join(' → ')}` : ''}</div>
           <div class="small muted">${c.installed ? `手機上的名稱：<b>${esc(labelOf(o, c))}</b>` : `購買日期 ${o.at}`}</div>
         </div>
         <button class="icon-btn" data-card-open="${o.id}:${c.id}" aria-label="詳細資訊">⋯</button>
       </div>
-      ${st === 'shared' ? '<div class="banner good">👥 已分享給親友，等待領取</div>' : ''}
-      ${['unclaimed', 'claimed', 'shared'].includes(st) ? `<div class="banner warn">⏰ ${esc(installAdvice(o))}</div>` : ''}
+      ${st === 'shared' ? '<div class="banner good">已分享給親友，等待領取</div>' : ''}
+      ${['unclaimed', 'claimed', 'shared'].includes(st) ? `<div class="banner warn">${esc(installAdvice(o))}</div>` : ''}
       ${stepsHtml(st, st === 'shared')}
       ${st === 'expired' && used && total ? `<div><div class="usage"><div style="width:${Math.min(100, (used / total) * 100)}%"></div></div><div class="small muted" style="margin-top:4px">用了 ${used.toFixed(1)} GB／${total} GB</div></div>` : ''}
       <div class="actions two">${cardActions(o, c, st)}</div>
@@ -985,7 +996,7 @@
       .sort((a, b) => (esimTab === 'expired' ? b.o.at.localeCompare(a.o.at) : a.o.at.localeCompare(b.o.at)) || a.c.n - b.c.n);
     const empty = { active: '目前沒有使用中的 eSIM。', pending: '沒有待啟用的 eSIM。', expired: '還沒有到期的 eSIM。' };
     $('#wallet').innerHTML = list.length ? list.map(({ o, c, st }) => esimCardHtml(o, c, st)).join('')
-      : `<div class="empty"><div class="empty-icon">✈️</div><b>暫無資料</b><span class="muted small">${empty[esimTab]}</span><button class="btn primary" data-scroll="esim-shop">前往挑選方案</button></div>`;
+      : `<div class="empty"><div class="empty-icon">${icon('plane')}</div><b>暫無資料</b><span class="muted small">${empty[esimTab]}</span><button class="btn primary" data-scroll="esim-shop">前往挑選方案</button></div>`;
   }
   function renderEsim() {
     $('#esim-site').href = CONFIG.esimUrl;
@@ -993,7 +1004,7 @@
     const pick = smartPick();
     const bought = pick && pick.journey.some((t) => ordersFor(t.id).length);
     $('#smart-pick').innerHTML = pick && !bought ? `<div class="pick"><span class="flag-tile">${target(pick.key).icon}</span><div class="grow">
-      <span class="kicker muted">為你的下一趟推薦</span><b>${esc(planLabel(pick.key, pick.plan))}</b>
+      <span class="small muted">下一趟適合的方案</span><b>${esc(planLabel(pick.key, pick.plan))}</b>
       <div class="small muted">${pick.journey.map(tripLabel).join(' → ')}・${md(pick.journey[0].start)} 出發${pick.journey.length > 1 ? `・跨 ${pick.journey.length} 地一張搞定` : ''}</div></div>
       <button class="btn primary" data-plan="${pick.key}">NT$${fmt(planPrice(pick.key, pick.plan))}</button></div>` : '';
     $('#esim-regions').innerHTML = REGION_CHIPS.map(([k, v]) => `<button class="chip lg ${esimRegion === k ? 'on' : ''}" data-region="${k}">${v}</button>`).join('');
@@ -1036,7 +1047,7 @@
       const price = p.type === 'total' ? planPrice(p.key, { type: 'total', size: o.size }) : planPrice(p.key, { type: p.type, size: o.size, days: p.days });
       const on = String(p.size) === o.size;
       return `<button class="plan-card ${on ? 'on' : ''} ${o.premium ? 'premium' : ''}" data-size="${o.size}" aria-pressed="${on}">
-        <span class="icon-tile">${o.icon}</span>
+        <span class="icon-tile size">${p.type === 'unl' ? '∞' : `${o.size}<small>GB</small>`}</span>
         <span class="grow"><span class="row" style="gap:6px"><b class="plan-name">${esc(o.name)}</b><span class="persona">${esc(o.persona)}</span></span>
           <span class="desc">${esc(o.desc)}</span>
           ${o.perks ? `<span class="perks">${o.perks.map((x) => `<span>✓ ${esc(x)}</span>`).join('')}</span>` : ''}
@@ -1049,7 +1060,7 @@
     $('#plan-sheet').innerHTML = `
       ${p.forCountry && p.forCountry !== p.key ? `<div class="banner info">${flag(p.forCountry)} ${esc(countryName(p.forCountry))} 使用「${esc(t.name)}」方案，一張就能上網</div>` : ''}
       <div class="small muted">${t.pack ? `適用 ${t.countries.length} 國：${t.countries.slice(0, 14).map((c) => `${flag(c)} ${esc(countryName(c))}`).join('、')}${t.countries.length > 14 ? ' 等' : ''}` : `可連網路：${esc(t.ops)}（以官網為準）`}</div>
-      ${trip ? `<div class="banner info">🧳 已依你的行程帶入：${esc(trip.city)} ${md(trip.start)}–${md(orderTripsEnd(p.tripIds))}，共 ${p.days} 天</div>` : ''}
+      ${trip ? `<div class="banner info">已依你的行程帶入：${esc(trip.city)} ${md(trip.start)}–${md(orderTripsEnd(p.tripIds))}，共 ${p.days} 天</div>` : ''}
       <div><h3>選擇最適合你的連網方式</h3><p class="small muted" style="margin:2px 0 0">不確定？<button class="link" data-guide="quiz">回答 3 題幫你挑</button></p></div>
       <div class="seg seg-lg seg-full" id="type-seg">${Object.entries(PLAN_TYPES).map(([k, v]) => `<button data-type="${k}" class="${p.type === k ? 'on' : ''}">${v.label}</button>`).join('')}</div>
       <p class="small muted" style="margin:0">${esc(type.note)}</p>
@@ -1087,7 +1098,8 @@
   // Cart, checkout, success
   function renderCartFab() {
     const fab = $('#cart-fab');
-    fab.hidden = !user;
+    // Only where it helps: on the eSIM tab, or once something is in the cart.
+    fab.hidden = !user || (!cart.length && currentTab !== 'esim');
     const n = sum(cart, (k) => k.qty);
     $('#cart-count').textContent = n || '';
     $('#cart-count').hidden = !n;
@@ -1097,15 +1109,15 @@
   }
   function openCart() {
     const total = sum(cart, (k) => planPrice(k.key, k.plan, k.qty));
-    openModal('🛒 購物車', cart.length ? `
+    openModal('購物車', cart.length ? `
       <div class="grid" style="gap:10px">${cart.map((k) => `<div class="cart-row"><span class="flag-tile">${target(k.key).icon}</span><div class="grow"><b>${esc(target(k.key).name)}</b><div class="small muted">${esc(planSpec(k.plan))}</div><div class="small"><b>NT$${fmt(planPrice(k.key, k.plan, k.qty))}</b></div></div>
         <span class="stepper"><button data-cart-qty="${k.id}:-1" aria-label="少一張">－</button><b>${k.qty}</b><button data-cart-qty="${k.id}:1" aria-label="多一張">＋</button></span><button class="icon-btn" data-cart-del="${k.id}" aria-label="移除">✕</button></div>`).join('')}</div>
       <div class="sheet-bar"><div><small class="muted">共 ${sum(cart, (k) => k.qty)} 張</small><div class="price">NT$${fmt(total)}</div></div><span class="spacer"></span><button class="btn primary" data-checkout>前往結帳</button></div>`
-      : `<div class="empty"><div class="empty-icon">🛒</div><b>購物車是空的</b><span class="small muted">${smartPick() ? '依你的下一趟行程，我們已經挑好方案。' : '先挑一個目的地吧。'}</span>${smartPick() ? `<button class="btn primary" data-plan="${smartPick().key}">看推薦方案</button>` : '<button class="btn primary" data-scroll="esim-shop">去挑方案</button>'}</div>`, { sheet: true });
+      : `<div class="empty"><div class="empty-icon">${icon('cart')}</div><b>購物車是空的</b><span class="small muted">${smartPick() ? '依你的下一趟行程，我們已經挑好方案。' : '先挑一個目的地吧。'}</span>${smartPick() ? `<button class="btn primary" data-plan="${smartPick().key}">看推薦方案</button>` : '<button class="btn primary" data-scroll="esim-shop">去挑方案</button>'}</div>`, { sheet: true });
   }
   function openCheckout() {
     const total = sum(cart, (k) => planPrice(k.key, k.plan, k.qty));
-    const pays = [['card', '💳 信用卡'], ['apple', 'Apple Pay'], ['line', 'LINE Pay']];
+    const pays = [['card', '信用卡'], ['apple', 'Apple Pay'], ['line', 'LINE Pay']];
     openModal('結帳', `
       <div class="grid" style="gap:8px">${cart.map((k) => `<div class="row small"><span>${target(k.key).icon} ${esc(planLabel(k.key, k.plan))} × ${k.qty}</span><span class="spacer"></span><b>NT$${fmt(planPrice(k.key, k.plan, k.qty))}</b></div>`).join('')}</div>
       <div class="field"><label for="co-email">接收 eSIM 的 Email</label><input class="input" id="co-email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(user?.email || '')}"></div>
@@ -1139,7 +1151,7 @@
         <h2>購買成功！</h2><div class="small muted">訂單編號 #${esc(first.orderNo)}・eSIM 已寄到 ${esc(user.email || '')}</div>
       </div>
       <div class="banner warn"><b>安裝時機建議</b><br>${esc(installAdvice(first))}到「我的 eSIM」依步驟取得並安裝。在台灣顯示「無法啟用」不一定是安裝失敗。</div>
-      ${many ? `<div class="card soft"><b>👥 幫親友買？直接分享</b><p class="small muted" style="margin:6px 0 10px">把其中一張 eSIM 用 LINE 傳給同行的人，對方點連結就能領取並一鍵安裝。</p>${lineBtn('分享安裝資訊給好友', `data-share="${first.id}:${first.cards[first.cards.length - 1].id}"`)}</div>` : ''}
+      ${many ? `<div class="card soft"><b>幫親友買？直接分享</b><p class="small muted" style="margin:6px 0 10px">把其中一張 eSIM 用 LINE 傳給同行的人，對方點連結就能領取並一鍵安裝。</p>${lineBtn('分享安裝資訊給好友', `data-share="${first.id}:${first.cards[first.cards.length - 1].id}"`)}</div>` : ''}
       <div class="actions two"><button class="btn primary" data-goto-esim>查看我的 eSIM</button><button class="btn" data-close>繼續逛逛</button></div>`, { sheet: true });
   }
 
@@ -1156,7 +1168,7 @@
       ${stepsHtml(st, st === 'shared')}
       <div class="banner info"><b>請於 ${claimBy} 前取得 eSIM</b><br>取得後 ${POLICY.installDays} 天內安裝到手機，安裝後 ${POLICY.activateDays} 天內抵達當地開始使用。逾期未使用的 eSIM 會失效，無法延期或補發。<span class="muted">（示意條款，以官網為準）</span></div>
       ${st !== 'expired' && st !== 'active' ? `<div class="banner warn"><b>建議安裝時機</b><br>${esc(installAdvice(o))}</div>` : ''}
-      ${st === 'shared' ? `<div class="card soft"><b>👥 已分享給親友，等待領取</b><p class="small muted" style="margin:6px 0 10px">連結 24 小時內有效。對方還沒收到的話，可以再送一次。</p>${lineBtn('再送一次分享連結', `data-share="${ref}"`)}</div>` : ''}
+      ${st === 'shared' ? `<div class="card soft"><b>已分享給親友，等待領取</b><p class="small muted" style="margin:6px 0 10px">連結 24 小時內有效。對方還沒收到的話，可以再送一次。</p>${lineBtn('再送一次分享連結', `data-share="${ref}"`)}</div>` : ''}
       <div class="actions two">${cardActions(o, c, st)}</div>`, { sheet: true });
   }
   function claimCard(ref) {
@@ -1173,7 +1185,7 @@
     const t = target(o.key);
     const warnings = force ? [] : installWarnings(o, c);
     if (warnings.length) {
-      openModal('安裝前請確認', `${warnings.map((w) => `<div class="banner warn">⚠️ ${esc(w)}</div>`).join('')}
+      openModal('安裝前請確認', `${warnings.map((w) => `<div class="banner warn">${esc(w)}</div>`).join('')}
         <div class="actions two">${o.qty > 1 && c.n > 1 && !c.gift && !c.installed ? lineBtn('改成分享給親友', `data-share="${ref}"`) : '<button class="btn" data-guide="install">看設定教學</button>'}<button class="btn" data-install-force="${ref}">我確定要安裝</button></div>`, { sheet: true });
       return;
     }
@@ -1182,7 +1194,7 @@
     // With real activation data (LPA) iOS 17.4+ opens its own eSIM setup from this link.
     const appleLink = c.lpa ? `https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=${encodeURIComponent(c.lpa)}` : '';
     openModal(`安裝 ${esc(t.name)} eSIM`, `
-      <div class="banner warn">⏰ ${esc(installAdvice(o))}</div>
+      <div class="banner warn">${esc(installAdvice(o))}</div>
       <div class="card soft"><b>1. 安裝前檢查</b>
         <ul class="pre-list"><li>✓ 已連上穩定的 Wi-Fi</li><li>✓ 手機支援 eSIM、沒有鎖網路 <button class="link" data-guide="device">怎麼確認</button></li><li>✓ 設定 → 行動服務 裡，沒有已經裝好的「${esc(label)}」</li><li>✓ 這張是自己要用的（要給別人請用「分享給親友」）</li></ul></div>
       <div class="card soft"><b>2. 先想好手機上的名稱</b><p class="small muted" style="margin:4px 0 8px">安裝時 iPhone 會問「行動方案標籤」，寫目的地＋日期，抵達後才知道要選哪一個，也不會重複安裝。</p>
@@ -1192,7 +1204,7 @@
         ${IS_ANDROID ? '' : `<p class="small muted" style="margin:4px 0 8px">iPhone（iOS 17.4 以上）點一下就會打開「啟用 eSIM」畫面，不用掃 QR Code。</p>
         ${appleLink ? `<a class="btn primary block" href="${appleLink}">一鍵安裝到 iPhone</a>` : '<button class="btn primary block" data-demo-install>一鍵安裝到 iPhone</button>'}`}
         <div class="qr-box">${c.lpa ? '' : '<span>付款完成後，這裡會顯示安裝 QR Code 與手動輸入代碼（Android 或另一支手機掃描）</span>'}</div>
-        <button class="btn block" data-guide-card="${ref}" style="margin-top:10px">📖 看圖文教學（逐步畫面＋設定檢查表）</button></div>
+        <button class="btn block" data-guide-card="${ref}" style="margin-top:10px">看圖文教學（逐步畫面＋設定檢查表）</button></div>
       <button class="btn primary block" data-installed-card="${ref}">我已安裝完成</button>`, { sheet: 'tall' });
     const input = $('#label-input');
     input.addEventListener('change', () => { c.label = input.value.trim() || ideas[0]; save(); });
@@ -1249,10 +1261,10 @@
   function openGift(g) {
     const t = target(g.k);
     const claimed = orders.some((o) => o.giftOf === `${g.o}-${g.n}`);
-    openModal('', `<div class="success"><div class="gift-icon" aria-hidden="true">🎁</div><h2>親友送你網卡！</h2><div class="small muted">${esc(g.f)} 分享了一張 eSIM 旅遊網卡給你</div></div>
+    openModal('', `<div class="success"><div class="gift-icon">${icon('gift')}</div><h2>親友送你網卡！</h2><div class="small muted">${esc(g.f)} 分享了一張 eSIM 旅遊網卡給你</div></div>
       <div class="gift-card"><span class="flag-tile lg">${t.icon}</span><div class="grow"><b>${esc(t.name)}</b><div class="small muted">${esc(planSpec(g.p))}</div></div></div>
       <div class="banner warn"><b>重要提醒</b><br>天數從抵達當地、連上網路後才開始計算，建議依航線在出發當天或抵達後再安裝。領取後可以在「我的 eSIM」查看安裝步驟。</div>
-      ${claimed ? '<button class="btn block" data-goto-esim>已領取，查看我的 eSIM</button>' : '<button class="btn primary block" data-claim-gift>🎁 確認領取 eSIM</button>'}`, { sheet: true });
+      ${claimed ? '<button class="btn block" data-goto-esim>已領取，查看我的 eSIM</button>' : '<button class="btn primary block" data-claim-gift>確認領取 eSIM</button>'}`, { sheet: true });
     pendingGift = g;
   }
   function claimGift() {
@@ -1356,25 +1368,25 @@
     const doneChecks = checks.filter(([, text]) => g.checks[text]).length;
     $('#guide').innerHTML = `
       <div class="seg seg-lg seg-full" id="guide-os2"><button data-gos="ios" class="${g.os === 'ios' ? 'on' : ''}">iPhone</button><button data-gos="android" class="${g.os === 'android' ? 'on' : ''}">Android</button></div>
-      ${found.o && g.i === 0 ? `<div class="banner warn">⏰ ${esc(installAdvice(found.o))}</div>` : ''}
+      ${found.o && g.i === 0 ? `<div class="banner warn">${esc(installAdvice(found.o))}</div>` : ''}
       <div class="guide-stage"><span class="kicker plain muted">${stageLabel}</span><div class="row"><h3>${g.i + 1}. ${esc(step.title)}</h3></div></div>
       <div class="guide-stage-body">${step.mock}</div>
       <div class="guide-nav"><button class="btn" data-gstep="-1" ${g.i === 0 ? 'disabled' : ''} aria-label="上一步">‹ 上一步</button>
         <div class="dots">${g.steps.map((x, i) => `<button class="${i === g.i ? 'on' : ''} ${x.stage}" data-gto="${i}" aria-label="第 ${i + 1} 步"></button>`).join('')}</div>
         <button class="btn primary" data-gstep="1" ${g.i === g.steps.length - 1 ? 'disabled' : ''} aria-label="下一步">下一步 ›</button></div>
-      <button class="btn block" data-gplay>${g.timer ? '⏸ 暫停自動播放' : '▶ 自動播放教學'}</button>
-      ${CONFIG.guideVideo ? `<a class="btn block" href="${esc(CONFIG.guideVideo)}" target="_blank" rel="noopener">🎬 看影片教學</a>` : ''}
+      <button class="btn block" data-gplay>${g.timer ? '暫停自動播放' : '▶ 自動播放教學'}</button>
+      ${CONFIG.guideVideo ? `<a class="btn block" href="${esc(CONFIG.guideVideo)}" target="_blank" rel="noopener">看影片教學</a>` : ''}
       <div class="card soft"><div class="row"><b>三、設定總檢查表</b><span class="spacer"></span><span class="small muted">${doneChecks}/${checks.length}</span></div>
         <p class="small muted" style="margin:4px 0 8px">抵達後照著設定，每完成一項就點一下。</p>
         ${checks.map(([kind, text, state]) => `<button class="check-row ${g.checks[text] ? 'done' : ''}" data-gcheck="${esc(text)}"><span class="cbox">${g.checks[text] ? '✓' : ''}</span><span class="grow">${esc(text)}</span><i class="tg ${kind === 'off' ? '' : 'on'}"></i><span class="state ${kind}">${state}</span></button>`).join('')}
-        ${doneChecks === checks.length ? '<div class="banner good" style="margin-top:8px">🎉 設定完成！打開瀏覽器或 LINE 確認可以上網。</div>' : ''}
+        ${doneChecks === checks.length ? '<div class="banner good" style="margin-top:8px">設定完成！打開瀏覽器或 LINE 確認可以上網。</div>' : ''}
       </div>
-      <details class="faq" open><summary>⚠️ 注意事項</summary><ul class="small" style="margin:8px 0 0;padding-left:20px;display:grid;gap:4px">
+      <details class="faq" open><summary>注意事項</summary><ul class="small" style="margin:8px 0 0;padding-left:20px;display:grid;gap:4px">
         <li>台灣門號的「數據漫遊」請務必關閉，避免產生高額漫遊費。</li>
         <li>不要刪除已安裝的 eSIM：多數 QR Code 只能使用一次，刪掉就裝不回來。</li>
         <li>同一張 eSIM 不要在兩支手機安裝；要給同行的人，請用「分享給親友」。</li>
         <li>在台灣安裝後顯示「無服務」是正常的，抵達當地才會連上。</li></ul></details>
-      <details class="faq"><summary>🛠️ 抵達後還是不能上網？</summary><ol class="small" style="margin:8px 0 0;padding-left:20px;display:grid;gap:4px">
+      <details class="faq"><summary>抵達後還是不能上網？</summary><ol class="small" style="margin:8px 0 0;padding-left:20px;display:grid;gap:4px">
         <li>測速很快、實際很慢：把台灣門號關掉，右上角只留「${esc(g.label)}」一排訊號。</li>
         <li>確認「行動數據」選的是「${esc(g.label)}」，而且它的「數據漫遊」已開啟。</li>
         <li>開啟「飛航模式」約 10 秒再關閉，讓手機重新找網路。</li>
@@ -1450,8 +1462,8 @@
         <button class="btn primary block" data-guide="quiz">幫我挑選 eSIM 方案</button>`, { sheet: true });
     } else if (kind === 'device') {
       openModal('相容性檢查', `<p class="small muted" style="margin:0">購買前請確認手機可以使用 eSIM</p>
-        <div class="card soft"><b>✅ 方法一：查看 EID</b><p class="small" style="margin:6px 0 0">撥號畫面輸入 <b>*#06#</b>，出現「EID」條碼就代表支援。</p></div>
-        <div class="card soft"><b>⚙️ 方法二：系統設定</b><p class="small" style="margin:6px 0 0"><span class="chip sm">iOS</span> 設定 → 行動服務 → 有「加入 eSIM」<br><span class="chip sm">Android</span> 設定 → 網路 → SIM 卡 → 有「新增 eSIM」</p></div>
+        <div class="card soft"><b>方法一：查看 EID</b><p class="small" style="margin:6px 0 0">撥號畫面輸入 <b>*#06#</b>，出現「EID」條碼就代表支援。</p></div>
+        <div class="card soft"><b>方法二：系統設定</b><p class="small" style="margin:6px 0 0"><span class="chip sm">iOS</span> 設定 → 行動服務 → 有「加入 eSIM」<br><span class="chip sm">Android</span> 設定 → 網路 → SIM 卡 → 有「新增 eSIM」</p></div>
         <div class="field"><label for="device">或輸入手機型號</label><div class="row"><input class="input" id="device" placeholder="例如：iPhone 13、Pixel 8、Galaxy S23" style="flex:1"><button class="btn" id="device-check">檢查</button></div><p id="device-result" class="small" style="margin:4px 0 0"></p></div>
         <a class="btn primary block" href="tel:*%2306%23">撥打 *#06#</a>`, { sheet: true });
       $('#device-check').addEventListener('click', checkDevice);
@@ -1481,9 +1493,9 @@
     $('#quiz').innerHTML = `
       <div class="field"><label for="qz-key">1. 去哪裡？</label><select class="input" id="qz-key">${options.map((k) => `<option value="${k}" ${quiz.key === k ? 'selected' : ''}>${target(k).icon} ${target(k).name}</option>`).join('')}</select></div>
       <div class="field"><label>2. 玩幾天？</label><span class="stepper"><button data-qz-days="-1" aria-label="少一天">－</button><b>${quiz.days} 天</b><button data-qz-days="1" aria-label="多一天">＋</button></span></div>
-      <div class="field"><label>3. 主要會用來做什麼？（可複選）</label><div class="use-grid">${Object.entries(USES).map(([k, u]) => `<button class="use ${quiz.uses.includes(k) ? 'on' : ''}" data-qz-use="${k}" aria-pressed="${quiz.uses.includes(k)}"><span>${u.icon}</span>${u.label}</button>`).join('')}</div></div>
+      <div class="field"><label>3. 主要會用來做什麼？（可複選）</label><div class="use-grid">${Object.entries(USES).map(([k, u]) => `<button class="use ${quiz.uses.includes(k) ? 'on' : ''}" data-qz-use="${k}" aria-pressed="${quiz.uses.includes(k)}">${u.label}</button>`).join('')}</div></div>
       <div class="field"><label>幾個人一起旅行？</label><span class="stepper"><button data-qz-people="-1" aria-label="少一人">－</button><b>${quiz.people} 人</b><button data-qz-people="1" aria-label="多一人">＋</button></span></div>
-      <div class="rec"><span class="kicker">推薦給你</span><div class="row"><span class="icon-tile">${opt.icon}</span><div class="grow"><b>${esc(planLabel(quiz.key, rec))}</b><div class="small">每天約 ${gb.toFixed(1)} GB・${esc(opt.persona)}${qtyNote}</div></div><b>NT$${fmt(planPrice(quiz.key, rec, qty))}</b></div>
+      <div class="rec"><span class="small">推薦</span><div class="row"><span class="icon-tile size">${rec.type === 'unl' ? '∞' : `${opt.size}<small>GB</small>`}</span><div class="grow"><b>${esc(planLabel(quiz.key, rec))}</b><div class="small">每天約 ${gb.toFixed(1)} GB・${esc(opt.persona)}${qtyNote}</div></div><b>NT$${fmt(planPrice(quiz.key, rec, qty))}</b></div>
         <button class="btn primary block" data-qz-go>選這個方案</button></div>`;
     $('#qz-key').addEventListener('change', (e) => { quiz.key = e.target.value; renderQuiz(); });
   }
@@ -1527,9 +1539,9 @@
       /(s2[0-9]|z fold|z flip)/, /ipad (pro|air|mini)/, /(sony|xperia) ?(1|5|10)/, /(oppo ?find ?x[3-9]|vivo ?x(90|100|200))/,
     ].some((re) => re.test(v));
     const no = /iphone ?([4-8]|x\b|se ?\(?1)|中國|大陸|港版/.test(v);
-    if (no) out.innerHTML = '<span style="color:var(--danger)">❌ 這個型號（或版本）可能不支援 eSIM。</span>';
-    else if (ok) out.innerHTML = '<span style="color:var(--good)">✅ 一般支援 eSIM。</span> 綁約機請確認已解鎖。';
-    else out.innerHTML = '🤔 無法確定，請撥 *#06#，有出現 EID 就支援。';
+    if (no) out.innerHTML = '<span style="color:var(--danger)">這個型號（或版本）可能不支援 eSIM。</span>';
+    else if (ok) out.innerHTML = '<span style="color:var(--good)">一般支援 eSIM。</span> 綁約機請確認已解鎖。';
+    else out.innerHTML = '無法確定，請撥 *#06#，有出現 EID 就支援。';
   }
 
   // Store events
@@ -1604,8 +1616,8 @@
     $('#trip-list').innerHTML = years.length ? years.map((y) => `<div class="section-title"><h3>${y}</h3><span class="muted small">${byYear[y].length} 趟</span></div>
       <div class="grid">${byYear[y].map((t) => `<div class="trip"><div class="flag">${flag(country(t.n).code)}</div><div class="grow">
         <div class="row"><b>${esc(t.city)}</b><span class="muted small">${esc(country(t.n).name)}</span>${isUpcoming(t) ? '<span class="status pending">即將出發</span>' : ''}${isOngoing(t) ? '<span class="status active">旅行中</span>' : ''}</div>
-        <div class="small muted">${t.start} – ${t.end}・${daysBetween(t.start, t.end)} 天${Number(t.gb) ? `・📶 ${t.gb} GB` : ''}${t.src === 'import' ? '・來自時間軸' : ''}</div>
-        <div class="tags">${t.tags.map((k) => `${el(k).icon}${el(k).label}`).join('　')}</div></div>
+        <div class="small muted">${t.start} – ${t.end}・${daysBetween(t.start, t.end)} 天${Number(t.gb) ? `・上網 ${t.gb} GB` : ''}${t.src === 'import' ? '・來自時間軸' : ''}</div>
+        <div class="tags">${t.tags.map((k) => `${el(k).label}`).join('　')}</div></div>
         <button class="btn sm primary" data-open-plan="${t.id}">行程表</button><button class="btn sm" data-edit="${t.id}">編輯</button></div>`).join('')}</div>`).join('')
       : '<div class="card muted">還沒有行程。按「新增行程」或匯入 Google 地圖時間軸開始。</div>';
   }
@@ -1632,7 +1644,7 @@
       </div>
       <div class="row"><div class="field" style="flex:1"><label for="f-start">出發</label><input type="date" class="input" id="f-start" value="${t.start}"></div>
         <div class="field" style="flex:1"><label for="f-end">回程</label><input type="date" class="input" id="f-end" value="${t.end}"></div></div>
-      <div class="field"><label>旅行元素</label><div class="row" id="f-tags">${Object.entries(ELEMENTS).map(([k, v]) => `<button type="button" class="chip ${t.tags.includes(k) ? 'on' : ''}" data-ftag="${k}">${v.icon} ${v.label}</button>`).join('')}</div></div>
+      <div class="field"><label>旅行元素</label><div class="row" id="f-tags">${Object.entries(ELEMENTS).map(([k, v]) => `<button type="button" class="chip ${t.tags.includes(k) ? 'on' : ''}" data-ftag="${k}">${dot(k)}${v.label}</button>`).join('')}</div></div>
       <div class="row"><div class="field" style="flex:1"><label for="f-gb">eSIM 用量（GB，選填）</label><input type="number" min="0" step="0.1" class="input" id="f-gb" value="${t.gb ?? ''}"></div></div>
       <div class="field"><label for="f-note">備註</label><textarea class="input" id="f-note" rows="2" maxlength="200">${esc(t.note)}</textarea></div>
       <div class="actions"><button class="btn primary" id="f-save">儲存</button>${id ? '<button class="btn" id="f-del" style="color:var(--danger)">刪除</button>' : ''}</div>`);
@@ -1791,14 +1803,14 @@
       const max = Math.max(1, ...s.topElements.map(([, v]) => v));
       const color = y === 2025 ? 'var(--y25)' : 'var(--y26)';
       return `<div class="card" style="display:grid;gap:14px;border-top:4px solid ${color}">
-        <div class="row"><h2>${y}</h2><span class="muted small">${travelerType(s)}</span><span class="spacer"></span><button class="btn sm" data-album="${y}">📖 紀念冊</button><button class="btn sm" data-share="${y}">🪪 旅遊卡</button></div>
+        <div class="row"><h2>${y}</h2><span class="muted small">${travelerType(s)}</span><span class="spacer"></span><button class="btn sm" data-album="${y}">紀念冊</button><button class="btn sm" data-share="${y}">旅遊卡</button></div>
         <div class="grid stats" style="grid-template-columns:repeat(4,1fr)">
           <div class="stat">${count(s.countries.size)}<span>國家</span></div><div class="stat">${count(s.cities.size)}<span>城市</span></div>
           <div class="stat">${count(s.days)}<span>天</span></div><div class="stat">${count(s.km)}<span>公里</span></div></div>
         <div><b class="small">旅行月份</b><div class="months" style="margin-top:6px">${Array.from({ length: 12 }, (_, i) => `<span class="${s.months.has(i + 1) ? 'on' : ''}" style="${s.months.has(i + 1) ? `background:${color}` : ''}">${i + 1}</span>`).join('')}</div></div>
-        <div><b class="small">旅行元素</b><div class="grid" style="gap:6px;margin-top:6px">${s.topElements.length ? s.topElements.slice(0, 6).map(([k, v]) => `<div class="bar"><span>${el(k).icon} ${el(k).label}</span><div class="track"><div class="fill" style="width:${(v / max) * 100}%;background:${color}"></div></div><span>${v}</span></div>`).join('') : '<span class="muted small">還沒有資料</span>'}</div></div>
-        <div><b class="small">徽章</b><div class="badges" style="margin-top:6px">${BADGES.map((b) => { const [v, goal] = b.progress(s); const ok = v >= goal; return `<div class="badge ${ok ? '' : 'locked'}" title="${b.desc}"><b>${b.icon}</b>${b.name}<div class="muted" style="font-size:11px">${ok ? '已解鎖' : `${fmt(Math.min(v, goal))}/${fmt(goal)}`}</div></div>`; }).join('')}</div></div>
-        <div><b class="small">足跡</b><ul class="timeline" style="margin-top:6px">${s.list.length ? s.list.map((t) => `<li data-trip="${t.id}"><span class="flag">${flag(country(t.n).code)}</span><div style="flex:1"><b>${esc(t.city)}</b> <span class="small muted">${md(t.start)}–${md(t.end)}</span><div class="small">${t.tags.map((k) => el(k).icon).join(' ')}${Number(t.gb) ? `・📶 ${t.gb}GB` : ''}${isUpcoming(t) ? '・即將出發' : ''}</div></div></li>`).join('') : '<li class="muted small">還沒有紀錄</li>'}</ul></div>
+        <div><b class="small">旅行元素</b><div class="grid" style="gap:6px;margin-top:6px">${s.topElements.length ? s.topElements.slice(0, 6).map(([k, v]) => `<div class="bar"><span>${el(k).label}</span><div class="track"><div class="fill" style="width:${(v / max) * 100}%;background:${color}"></div></div><span>${v}</span></div>`).join('') : '<span class="muted small">還沒有資料</span>'}</div></div>
+        <div><b class="small">徽章</b><div class="badges" style="margin-top:6px">${BADGES.map((b) => { const [v, goal] = b.progress(s); const ok = v >= goal; return `<div class="badge ${ok ? '' : 'locked'}" title="${b.desc}"><b class="medal ${/^[A-Za-z]/.test(b.name) ? 'latin' : ''}">${monogram(b.name)}</b>${b.name}<div class="muted" style="font-size:11px">${ok ? '已解鎖' : `${fmt(Math.min(v, goal))}/${fmt(goal)}`}</div></div>`; }).join('')}</div></div>
+        <div><b class="small">足跡</b><ul class="timeline" style="margin-top:6px">${s.list.length ? s.list.map((t) => `<li data-trip="${t.id}"><span class="flag">${flag(country(t.n).code)}</span><div style="flex:1"><b>${esc(t.city)}</b> <span class="small muted">${md(t.start)}–${md(t.end)}</span><div class="small">${t.tags.map((k) => el(k).label).join('・')}${Number(t.gb) ? `・上網 ${t.gb}GB` : ''}${isUpcoming(t) ? '・即將出發' : ''}</div></div></li>`).join('') : '<li class="muted small">還沒有紀錄</li>'}</ul></div>
       </div>`;
     });
     const a = stats('2025'); const b = stats('2026');
@@ -1838,8 +1850,8 @@
     wrapText(x, cities || '還沒有紀錄', 80, 950, W - 160, 48);
     x.font = `700 40px ${font}`; x.fillText('旅行元素', 80, 1110);
     x.font = `500 38px ${font}`;
-    x.fillText(s.topElements.slice(0, 4).map(([k]) => `${el(k).icon} ${el(k).label}`).join('   ') || '—', 80, 1170);
-    x.globalAlpha = 0.8; x.font = `500 28px ${font}`; x.fillText(`📶 eSIM ${s.gb.toFixed(1)} GB・${window.location.host || CONFIG.brand}`, 80, 1270);
+    x.fillText(s.topElements.slice(0, 4).map(([k]) => el(k).label).join('・') || '—', 80, 1170);
+    x.globalAlpha = 0.8; x.font = `500 28px ${font}`; x.fillText(`eSIM ${s.gb.toFixed(1)} GB・${window.location.host || CONFIG.brand}`, 80, 1270);
     x.globalAlpha = 1;
     return cv;
   }
@@ -1853,7 +1865,7 @@
   }
   function openShare(year = new Date().getFullYear() >= 2026 ? 2026 : 2025) {
     const cv = shareCanvas(Number(year));
-    openModal(`🪪 ${year} 旅遊卡`, `<div class="seg" id="share-seg">${CONFIG.years.map((y) => `<button data-sy="${y}" class="${Number(year) === y ? 'on' : ''}">${y}</button>`).join('')}</div><div id="share-holder"></div>
+    openModal(`${year} 旅遊卡`, `<div class="seg" id="share-seg">${CONFIG.years.map((y) => `<button data-sy="${y}" class="${Number(year) === y ? 'on' : ''}">${y}</button>`).join('')}</div><div id="share-holder"></div>
       <div class="actions"><button class="btn primary" id="share-dl">下載圖片</button>${navigator.share ? '<button class="btn" id="share-native">分享</button>' : ''}</div>
       <p class="small muted">尺寸 1080×1350，適合 IG／Threads 貼文。</p>`);
     $('#share-holder').appendChild(cv);
@@ -1910,12 +1922,12 @@
       img.onload = () => {
         if (node.classList.contains('photo')) {
           node.style.backgroundImage = `url("${p.src}")`;
-          node.innerHTML = p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">📷 ${esc(p.author || 'Wikipedia')}${p.license ? `・${esc(p.license)}` : ''}</a>` : '';
+          node.innerHTML = p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">${esc(p.author || 'Wikipedia')}${p.license ? `・${esc(p.license)}` : ''}</a>` : '';
         } else {
           node.style.setProperty('--cover-img', `url("${p.src}")`);
           node.classList.add('loaded');
           const credit = node.querySelector('.credit');
-          if (credit && p.page) { credit.href = p.page; credit.textContent = `📷 ${p.author || 'Wikipedia'}${p.license ? `・${p.license}` : ''}`; credit.hidden = false; }
+          if (credit && p.page) { credit.href = p.page; credit.textContent = `${p.author || 'Wikipedia'}${p.license ? `・${p.license}` : ''}`; credit.hidden = false; }
         }
       };
       img.src = p.src;
@@ -1962,12 +1974,12 @@
     const vol = parseDate(t.start);
     return `<header class="mag-cover ${planner ? 'plan-cover' : ''}" data-cover="${esc(WIKI[t.dest] || t.city)}" data-photo-key="dest:${esc(t.dest || '')}" style="--cover-fallback:linear-gradient(160deg,${c1} 0%,${c2} 45%,#0b1430 100%)">
       ${coverArt(t.lng, t.lat)}
-      <div class="masthead"><span>${esc(CONFIG.brand)}</span><span>VOL.${vol.getFullYear()} · NO.${pad(vol.getMonth() + 1)}</span></div>
+      <div class="masthead"><span>${esc(CONFIG.brand)}</span><span>${vol.getFullYear()} 年 ${vol.getMonth() + 1} 月號</span></div>
       <div class="content">
         <span class="kicker">${flag(c.code)} ${esc(c.name)}・${season(t.start)}季・${tripStatus(t)}</span>
         <h1 class="cover-title serif">${esc(t.city)}</h1>
         <p class="cover-lede">${esc(d?.blurb || t.note || `${n} 天的${c.name}之旅`)}</p>
-        <div class="cover-meta"><span>${md(t.start)} – ${md(t.end)}・${n} 天</span>${items.length ? `<span>${items.length} 個行程</span>` : ''}${tickets ? `<span>🎟️ ${tickets} 張門票</span>` : ''}<span>📶 ${order ? orderStatus(order)[1] : '尚未購買 eSIM'}</span></div>
+        <div class="cover-meta"><span>${md(t.start)} – ${md(t.end)}・${n} 天</span>${items.length ? `<span>${items.length} 個行程</span>` : ''}${tickets ? `<span>${tickets} 張門票</span>` : ''}<span>${order ? orderStatus(order)[1] : '尚未購買 eSIM'}</span></div>
         ${planner ? '' : `<div class="row" style="margin-top:6px"><button class="btn" data-open-plan="${t.id}">打開行程表 →</button><button class="btn glass" data-near="${t.id}">附近還能去哪</button></div>`}
       </div>
       <a class="credit" target="_blank" rel="noopener" hidden>照片：Wikipedia</a>
@@ -1991,16 +2003,15 @@
     ensurePlan(t);
     $('#cover').innerHTML = coverHtml(t, false);
     applyPhoto($('#cover .mag-cover'), $('#cover .mag-cover').dataset.cover);
-    $('#strip-title').innerHTML = `<span class="kicker muted">Itinerary</span><h2 class="serif">${esc(t.city)} ${t.plan.days.length} 日行程</h2><span class="spacer"></span><button class="btn sm" data-open-plan="${t.id}">編輯行程表 →</button>`;
+    $('#strip-title').innerHTML = `<h2 class="serif">${esc(t.city)} ${t.plan.days.length} 日行程</h2><span class="spacer"></span><button class="btn sm" data-open-plan="${t.id}">編輯行程表 →</button>`;
     $('#day-strip').innerHTML = t.plan.days.map((items, i) => `<button class="day-card" data-open-plan="${t.id}" data-day="${i}">
-      <span class="kicker muted">Day</span><span class="dn">${pad(i + 1)}</span><span class="small muted">${dayLabel(t, i)}</span>
+      <span class="dn">Day ${i + 1}</span><span class="small muted">${dayLabel(t, i)}</span>
       <ol>${items.slice(0, 3).map((it) => `<li>${esc(it.name)}</li>`).join('') || '<li>尚未安排</li>'}</ol>${items.length > 3 ? `<span class="small muted">還有 ${items.length - 3} 項</span>` : ''}</button>`).join('');
   }
 
   // ---------- planner (行程表)
   const openItems = new Set();
   let sortables = [];
-  const KIND_ICON = { spot: '📍', food: '🍽️', move: '🚆', custom: '📝' };
   const newItem = (name, time, extra = {}) => ({
     id: `p-${uid()}`, name, time: time || '', kind: 'spot', fee: null, cur: '', note: '', ...extra,
   });
@@ -2058,16 +2069,16 @@
       <div class="item-row">
         <span class="handle" title="拖曳排序" aria-label="拖曳排序">⋮⋮</span>
         <input class="time" value="${esc(it.time)}" data-time="${it.id}" inputmode="numeric" maxlength="5" placeholder="--:--" aria-label="時間（例如 09:30）">
-        <button class="item-name" data-toggle="${it.id}" aria-expanded="${open}">${KIND_ICON[it.kind] || '📍'} ${esc(it.name)}</button>
+        <button class="item-name" data-toggle="${it.id}" aria-expanded="${open}">${esc(it.name)}</button>
         ${fee}
       </div>
       ${open ? `<div class="item-detail">
         ${it.kind === 'move' ? '' : `<div class="photo" data-photo="${esc(it.kind === 'food' ? (WIKI[t.dest] || t.city) : spotTitle(it.name))}" data-photo-key="${it.kind === 'food' ? `dest:${esc(t.dest || '')}` : `spot:${esc(t.dest || '')}:${esc(it.name)}`}">載入照片中…</div>`}
         <div class="links">
-          <a class="btn sm" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(place)}" target="_blank" rel="noopener">📷 照片</a>
+          <a class="btn sm" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(place)}" target="_blank" rel="noopener">照片</a>
           <a class="btn sm" href="https://www.youtube.com/results?search_query=${encodeURIComponent(`${place} 旅遊`)}" target="_blank" rel="noopener">▶️ 影片</a>
-          <a class="btn sm" href="${gmaps(place)}" target="_blank" rel="noopener">🗺️ 地圖</a>
-          ${it.fee ? `<a class="btn sm primary" href="${gsearch(`${spotTitle(it.name)} 門票 官方 預約`)}" target="_blank" rel="noopener">🎟️ 訂票</a>` : ''}
+          <a class="btn sm" href="${gmaps(place)}" target="_blank" rel="noopener">地圖</a>
+          ${it.fee ? `<a class="btn sm primary" href="${gsearch(`${spotTitle(it.name)} 門票 官方 預約`)}" target="_blank" rel="noopener">訂票</a>` : ''}
           ${c.site ? `<a class="btn sm" href="${c.site}" target="_blank" rel="noopener">官方觀光網</a>` : ''}
         </div>
         ${it.fee ? `<div class="small muted">成人門票 ${esc(ticketText(it))} ≈ NT$${fmt(toTwd(it))}${it.note ? `・${esc(it.note)}` : ''}（參考價，以官方公告為準）</div>` : ''}
@@ -2116,8 +2127,8 @@
       return;
     }
     ensurePlan(t);
-    const switcher = sortTrips(trips).reverse().map((x) => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${isUpcoming(x) || isOngoing(x) ? '🧳' : '🕘'} ${esc(x.city)}・${x.start}</option>`).join('');
-    $('#plan-cover').innerHTML = `<div class="row" style="margin-bottom:12px"><span class="kicker muted" style="width:auto">Planner</span><h2>行程表</h2><span class="spacer"></span>
+    const switcher = sortTrips(trips).reverse().map((x) => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.city)}・${x.start}${isUpcoming(x) || isOngoing(x) ? '（即將出發）' : ''}</option>`).join('');
+    $('#plan-cover').innerHTML = `<div class="row" style="margin-bottom:12px"><h2>行程表</h2><span class="spacer"></span>
       <select class="input" id="plan-switch" style="width:auto;max-width:60vw" aria-label="切換行程">${switcher}</select><button class="btn sm" data-edit="${t.id}">行程資訊</button></div>${coverHtml(t, true)}`;
     applyPhoto($('#plan-cover .mag-cover'), $('#plan-cover .mag-cover').dataset.cover);
     $('#plan-switch').addEventListener('change', (e) => { planTripId = e.target.value; openItems.clear(); renderPlanner(); });
@@ -2136,29 +2147,29 @@
     const autos = autoTodos(t);
     const doneCount = autos.filter((a) => t.plan.done[a.key]).length + t.plan.todos.filter((x) => x.done).length;
     const todoTotal = autos.length + t.plan.todos.length;
-    const fields = [['flight', '✈️ 機票'], ['hotel', '🏨 住宿'], ['transport', '🚆 當地交通'], ['food', '🍜 餐飲'], ['shopping', '🛍️ 購物'], ['other', '📦 其他']];
+    const fields = [['flight', '機票'], ['hotel', '住宿'], ['transport', '當地交通'], ['food', '餐飲'], ['shopping', '購物'], ['other', '其他']];
     const pct = b.cap ? Math.min(100, (total / b.cap) * 100) : 0;
     $('#plan-side').innerHTML = `
-      <div class="card"><div class="row"><h3>💰 預算</h3><span class="spacer"></span><label class="small muted" for="bp">人數</label><input class="input" id="bp" type="number" min="1" max="20" value="${b.people}" data-budget="people" style="width:64px;min-height:32px;padding:4px 8px"></div>
+      <div class="card"><div class="row"><h3>預算</h3><span class="spacer"></span><label class="small muted" for="bp">人數</label><input class="input" id="bp" type="number" min="1" max="20" value="${b.people}" data-budget="people" style="width:64px;min-height:32px;padding:4px 8px"></div>
         <div class="grid" style="gap:6px;margin-top:10px">
           ${fields.map(([k, label]) => `<div class="budget-row"><label for="b-${k}">${label}</label><input class="input" id="b-${k}" type="number" min="0" step="100" inputmode="numeric" value="${b[k] || ''}" placeholder="0" data-budget="${k}"></div>`).join('')}
-          <div class="budget-row"><span>🎟️ 門票（自動）</span><span class="auto">NT$${fmt(tickets)}</span></div>
-          <div class="budget-row"><span>📶 eSIM（自動）</span><span class="auto">${order ? `NT$${fmt(esim)}` : `<button class="btn sm" data-plan="${coverFor([country(t.n).code])}">選方案</button>`}</span></div>
+          <div class="budget-row"><span>門票（自動）</span><span class="auto">NT$${fmt(tickets)}</span></div>
+          <div class="budget-row"><span>eSIM（自動）</span><span class="auto">${order ? `NT$${fmt(esim)}` : `<button class="btn sm" data-plan="${coverFor([country(t.n).code])}">選方案</button>`}</span></div>
         </div>
         <div class="ticket-sum" style="margin-top:10px"><span>合計${b.people > 1 ? `（每人 NT$${fmt(total / b.people)}）` : ''}</span><b>NT$${fmt(total)}</b></div>
         <div class="budget-row" style="margin-top:8px"><label for="b-cap" class="small muted">預算上限</label><input class="input" id="b-cap" type="number" min="0" step="1000" value="${b.cap || ''}" placeholder="不設定" data-budget="cap"></div>
         ${b.cap ? `<div class="usage" style="margin-top:8px"><div style="width:${pct}%;background:${total > b.cap ? 'var(--danger)' : 'var(--brand-2)'}"></div></div><div class="small muted">${total > b.cap ? `超出 NT$${fmt(total - b.cap)}` : `還剩 NT$${fmt(b.cap - total)}`}</div>` : ''}
       </div>
       ${budgetAdvice(t)}
-      <div class="card"><div class="row"><h3>✅ 待辦</h3><span class="spacer"></span><span class="small muted">${doneCount}/${todoTotal}</span></div>
+      <div class="card"><div class="row"><h3>待辦</h3><span class="spacer"></span><span class="small muted">${doneCount}/${todoTotal}</span></div>
         <div style="margin-top:6px">
           ${autos.map((a) => `<label class="todo ${t.plan.done[a.key] ? 'done' : ''}"><input type="checkbox" data-auto="${esc(a.key)}" ${t.plan.done[a.key] ? 'checked' : ''}><span style="flex:1">${esc(a.text)} <span class="auto-tag">自動</span></span>${a.action || ''}</label>`).join('')}
           ${t.plan.todos.map((x) => `<label class="todo ${x.done ? 'done' : ''}"><input type="checkbox" data-todo="${x.id}" ${x.done ? 'checked' : ''}><span style="flex:1">${esc(x.text)}</span><button class="btn sm ghost" data-todo-del="${x.id}" aria-label="刪除">✕</button></label>`).join('')}
         </div>
         <form class="row" id="todo-add" style="margin-top:8px"><input class="input" maxlength="60" placeholder="新增待辦" style="flex:1" aria-label="新增待辦"><button class="btn sm">新增</button></form>
       </div>
-      <div class="card"><h3>📌 景點庫</h3><p class="small muted" style="margin:4px 0 8px">拖曳到左邊任一天${pool.some((p) => p.side) ? '，含 400 公里內可順遊的城市' : ''}</p>
-        <ul class="pool" id="pool">${pool.map((p, i) => `<li data-pool="${i}"><span>${p.side ? '🧭' : '📍'}</span><span style="flex:1">${esc(p.name)}${p.side ? `<span class="small muted">・${esc(p.city)}</span>` : ''}</span><span class="chip ${p.fee === 0 ? 'free' : 'fee'}">${p.fee === 0 ? '免費' : esc(ticketText(p))}</span></li>`).join('') || '<li style="cursor:default">景點都排進去了 🎉</li>'}</ul>
+      <div class="card"><h3>景點庫</h3><p class="small muted" style="margin:4px 0 8px">拖曳到左邊任一天${pool.some((p) => p.side) ? '，含 400 公里內可順遊的城市' : ''}</p>
+        <ul class="pool" id="pool">${pool.map((p, i) => `<li data-pool="${i}"><span style="flex:1">${esc(p.name)}${p.side ? `<span class="small muted">・${esc(p.city)}</span>` : ''}</span><span class="chip ${p.fee === 0 ? 'free' : 'fee'}">${p.fee === 0 ? '免費' : esc(ticketText(p))}</span></li>`).join('') || '<li style="cursor:default">景點都排進去了</li>'}</ul>
       </div>`;
 
     const sync = () => setTimeout(() => syncFromDom(t, pool), 0);
@@ -2302,15 +2313,15 @@
     const plan = code ? packFor(code) : 'GLOBAL';
     openModal(`${flag(code)} ${esc(name)}`, `
       <div class="country-hero ${hero ? '' : 'ph-missing'}">${imgHtml(hero, name)}<div class="country-hero-text"><span class="kicker">${esc(REGIONS[c.region] || '世界')}</span><h2 class="serif">${esc(name)}</h2>${c.cur ? `<span class="small">貨幣 ${esc(c.cur)}・插座 ${esc(c.plug)}</span>` : ''}</div>${creditHtml(hero)}</div>
-      ${cul ? `<section><h3>🍜 必吃美食</h3><div class="gallery">${cul.food.map(([zh]) => photoCard(culturePhoto(code, zh), zh, `<a class="small" href="${gmaps(`${zh} ${name}`)}" target="_blank" rel="noopener">找附近的店 ↗</a>`)).join('')}</div></section>
-      <section><h3>🎎 必體驗文化</h3><div class="gallery">${cul.culture.map(([zh]) => photoCard(culturePhoto(code, zh), zh, `<a class="small" href="${gsearch(`${zh} ${name} 體驗`)}" target="_blank" rel="noopener">怎麼體驗 ↗</a>`)).join('')}</div></section>
-      <section><h3>🎁 伴手禮</h3><div class="row">${cul.buy.map((b) => `<span class="chip lg">${esc(b)}</span>`).join('')}</div></section>
-      <div class="banner info"><b>💡 小提醒</b><br>${[...cul.tips, c.note].filter(Boolean).map(esc).join('<br>')}</div>`
+      ${cul ? `<section><h3>必吃美食</h3><div class="gallery">${cul.food.map(([zh]) => photoCard(culturePhoto(code, zh), zh, `<a class="small" href="${gmaps(`${zh} ${name}`)}" target="_blank" rel="noopener">找附近的店 ↗</a>`)).join('')}</div></section>
+      <section><h3>必體驗文化</h3><div class="gallery">${cul.culture.map(([zh]) => photoCard(culturePhoto(code, zh), zh, `<a class="small" href="${gsearch(`${zh} ${name} 體驗`)}" target="_blank" rel="noopener">怎麼體驗 ↗</a>`)).join('')}</div></section>
+      <section><h3>伴手禮</h3><div class="row">${cul.buy.map((b) => `<span class="chip lg">${esc(b)}</span>`).join('')}</div></section>
+      <div class="banner info"><b>小提醒</b><br>${[...cul.tips, c.note].filter(Boolean).map(esc).join('<br>')}</div>`
     : `<p class="muted" style="margin:0">這個國家還沒有整理在地資料。</p><div class="row"><a class="btn" href="https://en.wikipedia.org/wiki/${encodeURIComponent(name)}" target="_blank" rel="noopener">認識這個國家 ↗</a><a class="btn" href="${gsearch(`${name} 必吃 必玩`)}" target="_blank" rel="noopener">必吃必玩 ↗</a></div>`}
-      ${dests.length ? `<section><h3>📍 推薦城市</h3><div class="gallery">${dests.map((d) => `<button class="ph-card city" data-dest="${d.id}"><div class="ph ${destPhoto(d.id) ? '' : 'ph-missing'}">${imgHtml(destPhoto(d.id), d.name)}</div><figcaption><b>${esc(d.name)}</b><small class="muted">${esc(d.blurb)}</small></figcaption></button>`).join('')}</div></section>` : ''}
-      ${visits.length ? `<section><h3>🧳 你去過 ${visits.length} 次</h3><ul class="timeline" style="margin-top:8px">${visits.map((t) => `<li data-trip="${t.id}"><span class="flag">${isUpcoming(t) ? '🧳' : '📍'}</span><div><b>${esc(t.city)}</b><div class="small muted">${t.start} – ${t.end}・${t.tags.map((k) => el(k).icon).join(' ')}</div></div></li>`).join('')}</ul></section>` : ''}
+      ${dests.length ? `<section><h3>推薦城市</h3><div class="gallery">${dests.map((d) => `<button class="ph-card city" data-dest="${d.id}"><div class="ph ${destPhoto(d.id) ? '' : 'ph-missing'}">${imgHtml(destPhoto(d.id), d.name)}</div><figcaption><b>${esc(d.name)}</b><small class="muted">${esc(d.blurb)}</small></figcaption></button>`).join('')}</div></section>` : ''}
+      ${visits.length ? `<section><h3>你去過 ${visits.length} 次</h3><ul class="timeline" style="margin-top:8px">${visits.map((t) => `<li data-trip="${t.id}"><span class="flag">${icon(isUpcoming(t) ? 'calendar' : 'pin')}</span><div><b>${esc(t.city)}</b><div class="small muted">${t.start} – ${t.end}・${t.tags.map((k) => el(k).label).join('・')}</div></div></li>`).join('')}</ul></section>` : ''}
       <div class="actions two">
-        <button class="btn primary" data-plan="${plan}" ${code && plan !== code ? `data-for="${code}"` : ''}>📶 ${esc(name)} eSIM</button>
+        <button class="btn primary" data-plan="${plan}" ${code && plan !== code ? `data-for="${code}"` : ''}>${esc(name)} eSIM</button>
         ${c.site ? `<a class="btn" href="${c.site}" target="_blank" rel="noopener">官方觀光網 ↗</a>` : `<a class="btn" href="${gmaps(`${name} 景點`)}" target="_blank" rel="noopener">Google 地圖 ↗</a>`}
         <button class="btn" data-trip-new="${n}">＋ 記錄一趟</button>
         ${dests[0] ? `<button class="btn" data-dest="${dests[0].id}">附近推薦</button>` : `<a class="btn" href="${gmaps(`${name} 景點`)}" target="_blank" rel="noopener">景點地圖 ↗</a>`}
@@ -2327,7 +2338,7 @@
       && (!rnd.fresh || !visited.has(d.id)));
   }
   function openRandom() {
-    openModal('🎲 隨機出國', '<div id="rnd"></div>', { sheet: 'tall' });
+    openModal('隨機出國', '<div id="rnd"></div>', { sheet: 'tall' });
     renderRandom();
   }
   function randomResult(d) {
@@ -2336,10 +2347,10 @@
     const ph = destPhoto(d.id);
     return `<div class="rnd-result">
       <div class="country-hero ${ph ? '' : 'ph-missing'}">${imgHtml(ph, d.name)}<div class="country-hero-text"><span class="kicker">${flag(d.c)} ${esc(COUNTRIES[d.c].name)}・台北直飛約 ${d.hours} 小時</span><h2 class="serif">${esc(d.name)}</h2><span class="small">${esc(d.blurb)}</span></div>${creditHtml(ph)}</div>
-      <div class="row">${d.months.includes(rnd.month) ? `<span class="chip free">${rnd.month} 月正是好季節</span>` : `<span class="chip">${rnd.month} 月非旺季，人少比較便宜</span>`}${d.tags.slice(0, 3).map((k) => `<span class="chip">${el(k).icon} ${el(k).label}</span>`).join('')}</div>
+      <div class="row">${d.months.includes(rnd.month) ? `<span class="chip free">${rnd.month} 月正是好季節</span>` : `<span class="chip">${rnd.month} 月非旺季，人少比較便宜</span>`}${d.tags.slice(0, 3).map((k) => `${tagChip(k)}`).join('')}</div>
       <div><b class="small">${rnd.days} 天每人概估</b>${costRows(cost)}</div>
       ${cul ? `<div class="small"><b>必吃：</b>${cul.food.map(([x]) => esc(x)).join('、')}<br><b>必體驗：</b>${cul.culture.map(([x]) => esc(x)).join('、')}</div>` : ''}
-      <div class="actions two"><button class="btn primary" data-trip-dest="${d.id}">＋ 排進我的行程</button><button class="btn" data-ai="${d.id}">✨ 建議行程</button><button class="btn" data-country-code="${d.c}">看在地文化</button><button class="btn" data-plan="${d.c}">📶 ${esc(COUNTRIES[d.c].name)} eSIM</button></div>
+      <div class="actions two"><button class="btn primary" data-trip-dest="${d.id}">＋ 排進我的行程</button><button class="btn" data-ai="${d.id}">建議行程</button><button class="btn" data-country-code="${d.c}">看在地文化</button><button class="btn" data-plan="${d.c}">${esc(COUNTRIES[d.c].name)} eSIM</button></div>
       <p class="notice">機票、住宿與門票都是概估，實際價格依日期與訂購管道而定。</p></div>`;
   }
   function renderRandom() {
@@ -2350,9 +2361,9 @@
       <div class="row"><div class="field"><label>天數</label><span class="stepper"><button data-rdays="-1" aria-label="少一天">－</button><b>${rnd.days} 天</b><button data-rdays="1" aria-label="多一天">＋</button></span></div>
         <div class="field"><label for="rnd-month">出發月份</label><select class="input" id="rnd-month" style="width:auto">${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${rnd.month === i + 1 ? 'selected' : ''}>${i + 1} 月</option>`).join('')}</select></div>
         <label class="row small" style="margin-top:20px"><input type="checkbox" id="rnd-fresh" ${rnd.fresh ? 'checked' : ''}> 只去沒去過的</label></div>
-      <div class="field"><label>想要的元素（可不選）</label><div class="row">${Object.entries(ELEMENTS).slice(0, 8).map(([k, v]) => `<button class="chip ${rnd.tags.includes(k) ? 'on' : ''}" data-rtag="${k}">${v.icon} ${v.label}</button>`).join('')}</div></div>
-      <div class="slot" id="slot">${result ? randomResult(result) : `<div class="slot-empty"><span>🎲</span><b>讓命運決定下一站</b><small class="muted">符合條件的地點有 ${list.length} 個</small></div>`}</div>
-      <div class="sheet-bar"><span class="small muted">${list.length ? `${list.length} 個地點符合` : '沒有符合的地點，放寬預算或天數試試'}</span><span class="spacer"></span><button class="btn primary" data-rspin ${list.length ? '' : 'disabled'}>🎲 ${result ? '再轉一次' : '轉一下'}</button></div>`;
+      <div class="field"><label>想要的元素（可不選）</label><div class="row">${Object.entries(ELEMENTS).slice(0, 8).map(([k, v]) => `<button class="chip ${rnd.tags.includes(k) ? 'on' : ''}" data-rtag="${k}">${dot(k)}${v.label}</button>`).join('')}</div></div>
+      <div class="slot" id="slot">${result ? randomResult(result) : `<div class="slot-empty"><b>從 ${list.length} 個符合條件的地點抽一個</b><small class="muted">改上面的預算、天數或月份，範圍會跟著變</small></div>`}</div>
+      <div class="sheet-bar"><span class="small muted">${list.length ? `${list.length} 個地點符合` : '沒有符合的地點，放寬預算或天數試試'}</span><span class="spacer"></span><button class="btn primary" data-rspin ${list.length ? '' : 'disabled'}>${result ? '再抽一次' : '抽一個'}</button></div>`;
     $('#rnd-month').addEventListener('change', (e) => { rnd.month = Number(e.target.value); renderRandom(); });
     $('#rnd-fresh').addEventListener('change', (e) => { rnd.fresh = e.target.checked; rnd.result = null; renderRandom(); });
   }
@@ -2390,7 +2401,7 @@
   // ---------- 預算回推 (planner): estimate the trip, then fit the plan to the budget cap
   function budgetAdvice(t) {
     const d = t.dest && DEST[t.dest];
-    if (!d) return '<div class="card"><h3>💡 預算回推</h3><p class="small muted" style="margin:6px 0 0">自訂城市沒有價格資料，無法概估。</p></div>';
+    if (!d) return '<div class="card"><h3>預算回推</h3><p class="small muted" style="margin:6px 0 0">自訂城市沒有價格資料，無法概估。</p></div>';
     const b = t.plan.budget;
     const people = b.people || 1;
     const days = t.plan.days.length;
@@ -2416,7 +2427,7 @@
       advice = `<div class="banner ${perDay < est.day * 0.7 ? 'warn' : 'good'}" style="margin-top:8px"><b>${tier}</b><br>${esc(tip)}</div>
         <button class="btn block" data-badjust style="margin-top:8px">依預算自動調整景點</button>`;
     }
-    return `<div class="card"><h3>💡 預算回推</h3><p class="small muted" style="margin:4px 0 0">${esc(d.name)} ${days} 天・${people} 人的概估</p>
+    return `<div class="card"><h3>預算回推</h3><p class="small muted" style="margin:4px 0 0">${esc(d.name)} ${days} 天・${people} 人的概估</p>
       ${costRows({ ...est, tickets: planned, total: est.flight + est.stay + planned + est.esim })}
       <button class="btn sm" data-bfill>把概估帶入預算表</button>${advice}</div>`;
   }
@@ -2478,7 +2489,7 @@
     const coverPhotos = list.map((t) => destPhoto(t.dest)).filter(Boolean).slice(0, 4);
     const pages = [`<section class="album-page album-cover">
         <div class="collage n${coverPhotos.length}">${coverPhotos.map((p) => `<div class="album-photo">${imgHtml(p, '')}</div>`).join('')}</div>
-        <div class="album-cover-text"><span class="kicker">Travel Memories</span><h2 class="serif">${year}</h2><p>${name} 的旅行紀念冊</p>
+        <div class="album-cover-text"><span class="kicker plain">旅行紀念冊</span><h2 class="serif">${year}</h2><p>${name} 的旅行紀念冊</p>
         <p class="small">${s.countries.size} 個國家・${s.cities.size} 座城市・${s.days} 天・${fmt(s.km)} 公里</p><div class="flags">${[...new Set(list.map((t) => flag(country(t.n).code)))].join(' ')}</div></div></section>`,
     ...list.map((t, i) => {
       const p = destPhoto(t.dest);
@@ -2490,20 +2501,20 @@
         <div class="album-body">
           <span class="kicker muted">${flag(country(t.n).code)} ${esc(country(t.n).name)}・${t.start.replace(/-/g, '.')} – ${t.end.slice(5).replace('-', '.')}</span>
           <h2 class="serif">${esc(t.city)}</h2>
-          <div class="row">${t.tags.map((k) => `<span class="chip">${el(k).icon} ${el(k).label}</span>`).join('')}${Number(t.gb) ? `<span class="chip">📶 ${t.gb} GB</span>` : ''}</div>
+          <div class="row">${t.tags.map((k) => `${tagChip(k)}`).join('')}${Number(t.gb) ? `<span class="chip">${t.gb} GB</span>` : ''}</div>
           ${spotsShown.length ? `<div class="album-grid">${spotsShown.map(({ x, ph }) => `<figure class="album-photo">${imgHtml(ph, x.name)}<figcaption>${esc(x.name)}</figcaption></figure>`).join('')}</div>` : ''}
           <div class="album-grid mine">${mine.map((m) => `<figure class="album-photo">${`<img src="${m.src}" alt="我的照片">`}<button class="icon-btn" data-album-del="${t.id}:${m.id}" aria-label="刪除照片">✕</button></figure>`).join('')}
             <label class="album-add"><input type="file" accept="image/*" multiple hidden data-album-add="${t.id}"><span>＋</span>加入我的照片</label></div>
           <textarea class="input journal" rows="3" data-memo="${t.id}" placeholder="寫下這趟最難忘的一刻…">${esc(t.memo || '')}</textarea>
         </div></section>`;
     }),
-    `<section class="album-page album-end"><span class="kicker muted">Year in Review</span><h2 class="serif">${year} 的旅行，謝謝自己</h2>
+    `<section class="album-page album-end"><span class="kicker plain muted">年度總結</span><h2 class="serif">${year}</h2>
       <div class="grid stats" style="grid-template-columns:repeat(2,1fr)"><div class="stat"><b>${s.countries.size}</b><span>國家</span></div><div class="stat"><b>${s.days}</b><span>天</span></div><div class="stat"><b>${fmt(s.km)}</b><span>公里</span></div><div class="stat"><b>${s.gb.toFixed(1)}</b><span>GB 上網</span></div></div>
-      <p>${esc(travelerType(s))}</p><div class="badges">${BADGES.filter((x) => { const [v, g] = x.progress(s); return v >= g; }).map((x) => `<div class="badge"><b>${x.icon}</b>${x.name}</div>`).join('') || '<span class="muted small">明年一起解鎖徽章！</span>'}</div>
-      <button class="btn primary block" data-share="${year}">🪪 產生分享用旅遊卡</button></section>`];
-    openModal(`📖 ${year} 旅行紀念冊`, list.length ? `<div class="album" id="album">${pages.join('')}</div>
+      <p>${esc(travelerType(s))}</p><div class="badges">${BADGES.filter((x) => { const [v, g] = x.progress(s); return v >= g; }).map((x) => `<div class="badge"><b class="medal ${/^[A-Za-z]/.test(x.name) ? 'latin' : ''}">${monogram(x.name)}</b>${x.name}</div>`).join('') || '<span class="muted small">明年一起解鎖徽章！</span>'}</div>
+      <button class="btn primary block" data-share="${year}">產生分享用旅遊卡</button></section>`];
+    openModal(`${year} 旅行紀念冊`, list.length ? `<div class="album" id="album">${pages.join('')}</div>
       <div class="album-nav"><button class="btn sm" data-album-step="-1" aria-label="上一頁">‹</button><span class="small muted" id="album-page">1 / ${pages.length}</span><button class="btn sm" data-album-step="1" aria-label="下一頁">›</button></div>`
-      : `<div class="empty"><div class="empty-icon">📖</div><b>${year} 還沒有旅行紀錄</b><span class="small muted">新增行程或匯入 Google 地圖時間軸，就能做出紀念冊。</span></div>`, { sheet: 'tall' });
+      : `<div class="empty"><div class="empty-icon">${icon('book')}</div><b>${year} 還沒有旅行紀錄</b><span class="small muted">新增行程或匯入 Google 地圖時間軸，就能做出紀念冊。</span></div>`, { sheet: 'tall' });
     const album = $('#album');
     if (!album) return;
     album.addEventListener('scroll', () => {

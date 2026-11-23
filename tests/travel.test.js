@@ -117,3 +117,9 @@ test('isRateLimited allows TRAVEL_RATE_LIMIT requests per IP per hour', () => {
   expect(isRateLimited('5.6.7.8', now)).toBe(false);
   expect(isRateLimited('1.2.3.4', now + 61 * 60 * 1000)).toBe(false);
 });
+
+test('GET /travel/travel-photos/:name serves only hashed photo names', async () => {
+  expect((await fetch(`${base}/travel/travel-photos/..%2F..%2Fpackage.json`)).status).toBe(404);
+  expect((await fetch(`${base}/travel/travel-photos/not-a-photo.webp`)).status).toBe(404);
+  expect((await fetch(`${base}/travel/travel-photos/000000000000.webp`)).status).toBe(404);
+});

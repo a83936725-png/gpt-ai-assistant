@@ -22,6 +22,9 @@
 - Travel: 隨機出國, a roulette that picks a destination within a budget, number of days and month, with a cost estimate
 - Travel: budget-based planning. The itinerary estimates flights, stay, tickets and eSIM, says how much each person can spend per day, and can drop or add paid attractions to fit the budget cap. Recommendations can be filtered by total budget
 - Travel: a 2025 / 2026 memory album with a cover, one page per trip, your own photos and a journal
+- Travel: a less templated look. Emoji are gone from tags, headings, buttons, cost rows and notices (tags are a colored dot and a word, quick actions use line icons, plans show their data size, badges show one character); no more match percentages or "world explored %"; plain Chinese labels instead of English kickers; shorter, concrete reasons on recommendation cards; the cart button only appears on the eSIM tab or when the cart has something in it
+- Travel: works on 320px phones (long button labels wrap instead of widening the page, which had made taps land in the wrong place), larger tap areas for chips, item names and album navigation
+- Travel: `scripts/travel-photos-download.js` saves the photos as small local WebP files (960px covers, 500px attractions), honoring Wikimedia's rate limits and resuming where it stopped
 - Travel eSIM: a database of the brand's public Threads replies (`data/esim-threads.json`) feeds the first FAQ answers and troubleshooting tips. `node scripts/threads-import.js` adds every post and reply from a Threads data export
 
 ## 4.21.0 (2026-11-22)

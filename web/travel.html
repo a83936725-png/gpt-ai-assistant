@@ -563,6 +563,7 @@ section h3 { margin-top: 2px; }
   #print-album img { display: block; width: 100%; height: auto; page-break-after: always; break-after: page; }
   @page { margin: 0; }
 }
+.sync-status { margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); justify-content: space-between; }
 @media (prefers-reduced-motion: reduce) { .tcard-inner, #toast, .land, .mag-cover::before, dialog#modal { transition: none; animation: none; } .check path { animation: none; stroke-dashoffset: 0; } .gift-icon { animation: none; } .tap { animation: none; } }
 </style>
 </head>
@@ -583,8 +584,9 @@ section h3 { margin-top: 2px; }
     <div class="grid" style="margin-top:12px">
       <button class="btn primary block" id="login-demo">以示範帳號登入（含 2025–2026 範例足跡）</button>
       <button class="btn block" id="login-new">建立新帳號（從空白開始）</button>
+      <button class="btn line block" id="login-line" hidden>用 LINE 登入（資料雲端同步）</button>
     </div>
-    <p class="notice" style="margin-top:12px">示範版：帳號與足跡只存在這台裝置的瀏覽器，不會上傳。正式版可接 Google / LINE 登入與雲端同步。</p>
+    <p class="notice" style="margin-top:12px">沒有用 LINE 登入時，帳號與足跡只存在這台裝置的瀏覽器。</p>
   </div>
 </section>
 
@@ -694,6 +696,7 @@ section h3 { margin-top: 2px; }
             <div class="field" style="flex:1"><label for="home-select">我的出發城市</label><select class="input" id="home-select"></select></div>
             <div class="field" style="flex:1"><label for="theme-select">外觀</label><select class="input" id="theme-select"><option value="">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></div>
           </div>
+          <div class="row sync-status" id="sync-status" hidden></div>
           <div class="row" style="margin-top:10px">
             <button class="btn sm" id="export">匯出備份</button>
             <label class="btn sm"><input type="file" id="import-backup" accept=".json,application/json" hidden>匯入備份</label>

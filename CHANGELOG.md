@@ -26,6 +26,7 @@
 - Travel: works on 320px phones (long button labels wrap instead of widening the page, which had made taps land in the wrong place), larger tap areas for chips, item names and album navigation
 - Travel: `scripts/travel-photos-download.js` saves the photos as small local WebP files (960px covers, 500px attractions), honoring Wikimedia's rate limits and resuming where it stopped
 - Travel: memory album export. Save the current page or every page as 1080×1350 images, share them through the phone's share sheet, share a link that opens the album (destination photos, dates and journal) on someone else's phone without logging in, or print it / save it as PDF
+- Travel: LINE login and cloud sync. With `TRAVEL_LIFF_ID` set, people sign in with LINE (automatically inside the LINE app) and their trips, itineraries, budgets, eSIM orders and settings are saved to Vercel Blob (`TRAVEL_BLOB_READ_WRITE_TOKEN`, or the IKIGAI store) and kept in step across phones; the newer copy wins. The server checks every LIFF ID token with LINE (`POST /travel/api/sync/pull`, `/push`)
 - Travel eSIM: a database of the brand's public Threads replies (`data/esim-threads.json`) feeds the first FAQ answers and troubleshooting tips. `node scripts/threads-import.js` adds every post and reply from a Threads data export
 
 ## 4.21.0 (2026-11-22)

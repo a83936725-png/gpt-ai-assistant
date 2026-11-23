@@ -30,7 +30,9 @@ app.get('/knowledge.json', (req, res) => {
   res.json(exportKnowledge());
 });
 
+// 512kb: the travel page syncs a traveller's trips and itineraries in one request.
 app.use(express.json({
+  limit: '512kb',
   verify: (req, res, buf) => {
     req.rawBody = buf.toString();
   },

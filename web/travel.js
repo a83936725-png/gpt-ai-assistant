@@ -3,6 +3,9 @@ import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import config from '../config/index.js';
 import adviseTrip, { describeTravelError, normalizeAdviceInput, TravelInputError } from '../utils/travel-advice.js';
+import {
+  loadTravelData, saveTravelData, sanitizeTravelData, TravelSyncError, verifyIdToken,
+} from '../utils/travel-sync.js';
 
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
 const WEB_DIR = path.join(process.cwd(), 'web');
@@ -39,7 +42,16 @@ const isRateLimited = (ip, now = Date.now()) => {
   if (hits.size > 5000) hits.delete(hits.keys().next().value);
   return false;
 };
-const resetRateLimit = () => hits.clear();
+// Syncing happens as people use the page, so it gets a separate, larger allowance.
+const syncs = new Map();
+const isSyncLimited = (ip, now = Date.now()) => {
+  const recent = (syncs.get(ip) || []).filter((time) => now - time < WINDOW_MS);
+  recent.push(now);
+  syncs.set(ip, recent);
+  if (syncs.size > 5000) syncs.delete(syncs.keys().next().value);
+  return recent.length > 600;
+};
+const resetRateLimit = () => { hits.clear(); syncs.clear(); };
 
 const getClientIp = (req) => (req.get('x-forwarded-for') || req.ip || '').split(',')[0].trim();
 const aiAvailable = () => config.TRAVEL_AI_ENABLED && Boolean(config.OPENAI_COMPLETION_API_KEY || config.APP_ENV !== 'production');
@@ -90,7 +102,7 @@ router.get('/travel-photos/:name', (req, res) => {
 
 router.get('/api/status', (req, res) => {
   res.json({
-    ai: aiAvailable(), brand: config.TRAVEL_BRAND, esimUrl: config.TRAVEL_ESIM_URL, guideVideo: config.TRAVEL_GUIDE_VIDEO_URL,
+    ai: aiAvailable(), brand: config.TRAVEL_BRAND, esimUrl: config.TRAVEL_ESIM_URL, guideVideo: config.TRAVEL_GUIDE_VIDEO_URL, liff: config.TRAVEL_LIFF_ID,
   });
 });
 
@@ -118,6 +130,31 @@ router.post('/api/advise', async (req, res) => {
     res.status(502).json(reason);
   }
 });
+
+// LINE login + cloud sync: the page sends its LIFF ID token with every call.
+const syncRoute = (handler) => async (req, res) => {
+  if (isSyncLimited(getClientIp(req))) {
+    res.status(429).json({ code: 'too_many_requests', error: '同步次數太多，請稍後再試' });
+    return;
+  }
+  try {
+    const account = await verifyIdToken(req.body?.idToken);
+    res.json(await handler(account, req.body));
+  } catch (err) {
+    if (err instanceof TravelSyncError) {
+      res.status(err.status).json({ code: err.status === 401 ? 'unauthorized' : 'invalid_data', error: err.message });
+      return;
+    }
+    console.error(JSON.stringify({ type: 'travel_sync_error', message: err.message }));
+    res.status(502).json({ code: 'sync_failed', error: '同步失敗，資料先保留在這支手機，稍後會再試' });
+  }
+};
+
+router.post('/api/sync/pull', syncRoute(async (account) => ({ name: account.name, data: await loadTravelData(account.sub) })));
+router.post('/api/sync/push', syncRoute(async (account, body) => {
+  const saved = await saveTravelData(account.sub, sanitizeTravelData(body.data));
+  return { ok: true, savedAt: saved.savedAt };
+}));
 
 export { isRateLimited, resetRateLimit };
 

@@ -97,8 +97,12 @@
     origin: null, tags: [], month: new Date().getMonth() + 1, hours: 0, fee: 'any', unvisited: false, gps: null, budget: 0,
   };
   const home = () => HOMES[settings.home] || HOMES.TPE;
-  const save = () => {
+  // fromCloud: the data just came from the LINE sync, so it is not pushed back or re-stamped.
+  const save = (fromCloud) => {
     store.set('user', user); store.set('trips', trips); store.set('orders', orders); store.set('wish', wish); store.set('settings', settings); store.set('cart', cart);
+    if (fromCloud === true) return;
+    store.set('updatedAt', Date.now());
+    if (typeof schedulePush === 'function') schedulePush(); // eslint-disable-line no-use-before-define
   };
 
   // ---------- trip helpers
@@ -378,6 +382,94 @@
     save();
   }
 
+  // ---------- LINE login + cloud sync (only when the server has TRAVEL_LIFF_ID)
+  let liffReady = null;
+  const sync = { state: 'off', at: 0, timer: null };
+  function loadLiff() {
+    if (!CONFIG.liff) return Promise.resolve(null);
+    if (!liffReady) {
+      liffReady = new Promise((resolve) => {
+        const tag = document.createElement('script');
+        tag.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+        tag.onload = () => window.liff.init({ liffId: CONFIG.liff }).then(() => resolve(window.liff), () => resolve(null));
+        tag.onerror = () => resolve(null);
+        document.head.appendChild(tag);
+      });
+    }
+    return liffReady;
+  }
+  async function syncCall(path, body = {}) {
+    const liff = await loadLiff();
+    const idToken = liff?.isLoggedIn() ? liff.getIDToken() : null;
+    if (!idToken) { const err = new Error('請重新用 LINE 登入'); err.status = 401; throw err; }
+    const res = await fetch(`api/sync/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken, ...body }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { const err = new Error(data.error || `HTTP ${res.status}`); err.status = res.status; throw err; }
+    return data;
+  }
+  const snapshot = () => ({
+    user: { name: user?.name || '' }, trips, orders, cart, wish, settings, updatedAt: store.get('updatedAt', Date.now()),
+  });
+  function renderSync() {
+    const box = $('#sync-status');
+    if (!box) return;
+    if (!CONFIG.liff) { box.hidden = true; return; }
+    box.hidden = false;
+    const time = sync.at ? new Date(sync.at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '';
+    const text = {
+      ok: `已用 LINE 登入（${esc(user?.name || '')}），${time} 同步完成`, syncing: '同步中…', error: '同步失敗，資料先存在這支手機，稍後會再試', login: 'LINE 登入已過期，請重新登入',
+    }[sync.state];
+    box.innerHTML = user?.line ? `<span class="small">${text || '已用 LINE 登入'}</span><button class="btn sm" data-sync-now>立即同步</button>`
+      : '<span class="small">用 LINE 登入後，換手機也看得到你的行程與 eSIM</span><button class="btn sm line" data-line-login>用 LINE 登入</button>';
+  }
+  async function pushNow() {
+    if (!user?.line) return;
+    sync.state = 'syncing'; renderSync();
+    try {
+      await syncCall('push', { data: snapshot() });
+      sync.state = 'ok'; sync.at = Date.now();
+    } catch (err) {
+      sync.state = err.status === 401 ? 'login' : 'error';
+    }
+    renderSync();
+  }
+  function schedulePush() {
+    if (!user?.line || !CONFIG.liff) return;
+    clearTimeout(sync.timer);
+    sync.timer = setTimeout(pushNow, 2500);
+  }
+  // After LINE login: the newer copy wins (the cloud's or this phone's), then both match.
+  async function lineLogin() {
+    const liff = await loadLiff();
+    if (!liff) { toast('LINE 登入暫時無法使用，請稍後再試'); return; }
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: window.location.href.split('#')[0] }); return; }
+    const profile = await liff.getProfile().catch(() => null);
+    sync.state = 'syncing';
+    try {
+      const { data } = await syncCall('pull');
+      const localAt = user ? store.get('updatedAt', 0) : 0;
+      if (data && (data.updatedAt || 0) >= localAt) {
+        trips = Array.isArray(data.trips) ? data.trips : [];
+        orders = Array.isArray(data.orders) ? data.orders : [];
+        cart = Array.isArray(data.cart) ? data.cart : [];
+        wish = Array.isArray(data.wish) ? data.wish : [];
+        Object.assign(settings, data.settings || {});
+        migrateOrders();
+        store.set('updatedAt', data.updatedAt || Date.now());
+      }
+      user = { ...(user || {}), name: profile?.displayName || data?.user?.name || user?.name || '旅人', line: true, since: user?.since || TODAY };
+      save(true);
+      if (!data || (data.updatedAt || 0) < localAt) await pushNow();
+      sync.state = 'ok'; sync.at = Date.now();
+    } catch (err) {
+      sync.state = 'error';
+      user = { ...(user || {}), name: profile?.displayName || user?.name || '旅人', line: true, since: user?.since || TODAY };
+      save(true);
+      toast(`雲端同步失敗：${err.message}`);
+    }
+    showApp();
+    renderSync();
+  }
   // ---------- login
   function showApp() {
     $('#login').hidden = true;
@@ -390,6 +482,7 @@
   function showLogin() {
     $('#app').hidden = true;
     $('#login').hidden = false;
+    $('#login-line').hidden = !CONFIG.liff;
     $('#cart-fab').hidden = true;
     $('#login-gift').hidden = !pendingGift;
     if (pendingGift) $('#login-gift').innerHTML = `<b>${esc(pendingGift.f)}</b> 送你一張 ${esc(target(pendingGift.k).name)} eSIM，登入後就能領取。`;
@@ -405,7 +498,11 @@
     trips = []; orders = []; save();
     showApp();
   });
-  $('#logout').addEventListener('click', () => { user = null; save(); showLogin(); });
+  $('#logout').addEventListener('click', async () => {
+    if (user?.line) { const liff = await loadLiff(); if (liff?.isLoggedIn()) liff.logout(); }
+    user = null; save(true); showLogin();
+  });
+  $('#login-line').addEventListener('click', lineLogin);
   $('#load-demo').addEventListener('click', () => {
     const run = () => { loadDemo(); renderAll(); toast('已載入範例足跡'); };
     if (!trips.length) { run(); return; }
@@ -1609,6 +1706,7 @@
 
   // ---------- trips list & form
   function renderTrips() {
+    renderSync();
     $('#home-select').innerHTML = Object.entries(HOMES).map(([k, h]) => `<option value="${k}" ${settings.home === k ? 'selected' : ''}>${h.name}</option>`).join('');
     $('#theme-select').value = settings.theme;
     const byYear = {};
@@ -2173,14 +2271,14 @@
         <ul class="pool" id="pool">${pool.map((p, i) => `<li data-pool="${i}"><span style="flex:1">${esc(p.name)}${p.side ? `<span class="small muted">・${esc(p.city)}</span>` : ''}</span><span class="chip ${p.fee === 0 ? 'free' : 'fee'}">${p.fee === 0 ? '免費' : esc(ticketText(p))}</span></li>`).join('') || '<li style="cursor:default">景點都排進去了</li>'}</ul>
       </div>`;
 
-    const sync = () => setTimeout(() => syncFromDom(t, pool), 0);
+    const resync = () => setTimeout(() => syncFromDom(t, pool), 0);
     $$('#plan-days .items').forEach((ul) => sortables.push(Sortable.create(ul, {
-      group: 'plan', handle: '.handle', animation: REDUCED ? 0 : 180, ghostClass: 'drag-ghost', chosenClass: 'drag-chosen', forceFallback: true, fallbackTolerance: 4, onEnd: sync,
+      group: 'plan', handle: '.handle', animation: REDUCED ? 0 : 180, ghostClass: 'drag-ghost', chosenClass: 'drag-chosen', forceFallback: true, fallbackTolerance: 4, onEnd: resync,
     })));
     if ($('#pool [data-pool]')) {
       sortables.push(Sortable.create($('#pool'), {
         group: { name: 'plan', pull: 'clone', put: false }, sort: false, animation: REDUCED ? 0 : 180, ghostClass: 'drag-ghost', forceFallback: true, fallbackTolerance: 4,
-        onEnd: (e) => { if (e.to !== e.from) sync(); },
+        onEnd: (e) => { if (e.to !== e.from) resync(); },
       }));
     }
     $$('#plan-days .photo[data-photo]').forEach((node) => applyPhoto(node, node.dataset.photo));
@@ -2809,6 +2907,8 @@
     if ('flip' in ds) { t.closest('.tcard').classList.toggle('flipped'); return; }
     if (ds.plan !== undefined) { openPlan(ds.plan, ds.for ? { forCountry: ds.for } : {}); return; }
     if ('random' in ds) { openRandom(); return; }
+    if ('syncNow' in ds) { pushNow(); return; }
+    if ('lineLogin' in ds) { lineLogin(); return; }
     if (ds.album) { openAlbum(Number(ds.album)); return; }
     if (ds.countryCode) { openCountry(COUNTRIES[ds.countryCode].n); return; }
     if (ds.claim) { claimCard(ds.claim); return; }
@@ -2863,7 +2963,7 @@
       if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) return;
       const data = await res.json();
       Object.assign(CONFIG, {
-        ai: Boolean(data.ai), brand: data.brand || CONFIG.brand, esimUrl: data.esimUrl || CONFIG.esimUrl, guideVideo: data.guideVideo || '',
+        ai: Boolean(data.ai), brand: data.brand || CONFIG.brand, esimUrl: data.esimUrl || CONFIG.esimUrl, guideVideo: data.guideVideo || '', liff: data.liff || '',
       });
     } catch { /* static preview without the API */ }
   }
@@ -2876,5 +2976,10 @@
   Promise.all([loadConfig(), loadPhotos()]).finally(() => {
     if (user) showApp(); else showLogin();
     if (sharedAlbum) openAlbum(sharedAlbum.year, sharedAlbum);
+    // Inside the LINE app, coming back from LINE login, or on a later visit: sign in without another tap.
+    if (CONFIG.liff && !sharedAlbum) {
+      // Every visit with an active LINE login pulls, so changes made on another phone show up here.
+      loadLiff().then((liff) => { if (liff?.isLoggedIn() && (!user || user.line || liff.isInClient())) lineLogin(); });
+    }
   });
 }());

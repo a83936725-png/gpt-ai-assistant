@@ -74,6 +74,24 @@
 1. Threads App → 設定 → 帳號 → 下載你的資訊（或 Meta 帳號管理中心 → 你的資訊和權限 → 下載你的資訊），選 Threads、格式選 JSON。
 2. 收到檔案後解壓縮，執行 `node scripts/threads-import.js <解壓縮的資料夾>`，所有貼文與回覆會補進資料庫（會自動修正匯出檔的亂碼，已收錄的不會重複）。
 
+## LINE 登入與雲端同步
+
+設定好之後，登入頁會出現「用 LINE 登入（資料雲端同步）」；在 LINE 裡打開網址會自動登入。行程、行程表、預算、eSIM 訂單與設定都存在你的 Vercel Blob，換手機登入同一個 LINE 帳號就看得到。紀念冊裡自己上傳的照片太大，仍只存在手機。
+
+設定步驟：
+
+1. [LINE Developers](https://developers.line.biz/console/) → 選擇 LINE Bot 所在的 Provider → **Create a new channel** → **LINE Login**（App types 勾 Web app）。
+2. 進入這個 LINE Login channel → **LIFF** 分頁 → **Add**：
+   - Size：Full
+   - Endpoint URL：`https://<你的網域>/travel/`
+   - Scopes：勾選 `openid`、`profile`
+   - 加好友選項（Add friend option）：可選 On (normal)，讓使用者順便加官方帳號好友
+3. 複製 LIFF ID（格式像 `1234567890-AbCdEfGh`），在 Vercel 加環境變數 `TRAVEL_LIFF_ID`。
+4. 儲存空間：沿用 IKIGAI 的 Vercel Blob（`IKIGAI_BLOB_READ_WRITE_TOKEN`）即可；想分開就建立新的 Blob store，把 token 填進 `TRAVEL_BLOB_READ_WRITE_TOKEN`。
+5. Redeploy。用 `https://liff.line.me/<LIFF ID>` 這個網址分享，在 LINE 裡打開會直接登入。
+
+伺服器會向 LINE 驗證每次同步帶來的登入憑證（ID token），每個 LINE 帳號只能讀寫自己的資料。
+
 ## 三、環境變數（Vercel → Settings → Environment Variables）
 
 | 變數 | 預設 | 說明 |
@@ -82,6 +100,9 @@
 | `TRAVEL_AI_ENABLED` | `true` | AI 行程建議（使用既有的 `OPENAI_API_KEY`）。關閉時顯示內建行程 |
 | `TRAVEL_BRAND` | `旅圖 eSIM` | 頁面上的品牌名稱 |
 | `TRAVEL_ESIM_URL` | `https://www.ccesim.com/` | 「到官網購買」的連結 |
+| `TRAVEL_LIFF_ID` | （空） | LINE Login channel 的 LIFF ID，設定後開啟 LINE 登入與雲端同步 |
+| `TRAVEL_BLOB_READ_WRITE_TOKEN` | （沿用 IKIGAI 或 `BLOB_READ_WRITE_TOKEN`） | 存放同步資料的 Vercel Blob token |
+| `TRAVEL_LINE_CHANNEL_ID` | （LIFF ID 前半段） | 通常不用設；LINE Login channel ID 與 LIFF ID 不同時才需要 |
 | `TRAVEL_GUIDE_VIDEO_URL` | （空） | 安裝教學影片的網址（例如 YouTube），設定後圖文教學會多一個「看影片教學」按鈕 |
 | `TRAVEL_MAX_TOKENS` | `1500` | AI 行程建議的長度上限 |
 | `TRAVEL_TIMEOUT` | `50000` | AI 逾時（毫秒） |
@@ -89,7 +110,7 @@
 
 ## 四、目前是示範版的地方（上線前要換）
 
-- **登入與資料**：帳號、行程、預算都存在瀏覽器 localStorage，換手機就看不到。正式版要接 Google／LINE 登入與資料庫。
+- **登入與資料**：設定 `TRAVEL_LIFF_ID` 後可用 LINE 登入並雲端同步；沒設定時，資料只存在瀏覽器。
 - **eSIM 價格、方案與期限**：`web/travel-data.js` 裡的 `base`、`PACKS`、`PLAN_TYPES`（降速、說明）、`POLICY`（領取／安裝／開通期限）都是示意，請換成官網實際內容；結帳不會扣款，正式購買連到 `TRAVEL_ESIM_URL`。
 - **分享給親友**：示範版的連結只帶方案資訊（不是真的 eSIM），正式版要由伺服器產生一次性領取連結。
 - **門票價格**：2026 年參考價，匯率是概估，請定期對照景點官網。

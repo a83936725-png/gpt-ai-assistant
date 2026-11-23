@@ -8,6 +8,9 @@ import adviseTrip, {
   buildAdviceMessages, describeTravelError, normalizeAdviceInput, TravelInputError, TRAVEL_MAX_DAYS,
 } from '../utils/travel-advice.js';
 import { isRateLimited, resetRateLimit } from '../web/travel.js';
+import {
+  resetTravelData, sanitizeTravelData, TravelSyncError, verifyIdToken,
+} from '../utils/travel-sync.js';
 
 let server;
 let base;
@@ -122,4 +125,62 @@ test('GET /travel/travel-photos/:name serves only hashed photo names', async () 
   expect((await fetch(`${base}/travel/travel-photos/..%2F..%2Fpackage.json`)).status).toBe(404);
   expect((await fetch(`${base}/travel/travel-photos/not-a-photo.webp`)).status).toBe(404);
   expect((await fetch(`${base}/travel/travel-photos/000000000000.webp`)).status).toBe(404);
+});
+
+const sync = (path, body) => fetch(`${base}/travel/api/sync/${path}`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+test('verifyIdToken accepts test tokens outside production and rejects missing ones', async () => {
+  expect(await verifyIdToken('test:U123')).toEqual({ sub: 'U123', name: '測試帳號' });
+  await expect(verifyIdToken('')).rejects.toThrow(TravelSyncError);
+  await expect(verifyIdToken(42)).rejects.toThrow(TravelSyncError);
+});
+
+test('sanitizeTravelData keeps the shape, drops unsafe keys and caps sizes', () => {
+  const data = sanitizeTravelData({
+    user: { name: '小安'.repeat(30) },
+    trips: [{
+      id: 't1', city: '京都', tags: ['food'], plan: { days: [[{ name: '清水寺' }]] }, 'bad key!': 1, constructor: 'x',
+    }],
+    wish: ['kyoto', 3],
+    settings: { home: 'TPE' },
+    updatedAt: 123,
+  });
+  expect(data.user.name).toHaveLength(20);
+  expect(data.trips[0].plan.days[0][0].name).toBe('清水寺');
+  expect(data.trips[0]['bad key!']).toBeUndefined();
+  expect(Object.prototype.hasOwnProperty.call(data.trips[0], 'constructor')).toBe(false);
+  expect(data.wish).toEqual(['kyoto']);
+  expect(data.updatedAt).toBe(123);
+  expect(() => sanitizeTravelData(null)).toThrow(TravelSyncError);
+  const huge = {
+    trips: Array.from({ length: 300 }, (_, i) => ({
+      id: `t${i}`, note: 'x'.repeat(600), more: 'y'.repeat(600), memo: 'z'.repeat(600),
+    })),
+  };
+  expect(() => sanitizeTravelData(huge)).toThrow('資料太大');
+});
+
+test('POST /travel/api/sync saves a traveller\'s data and loads it back for the same LINE account', async () => {
+  resetTravelData();
+  const data = {
+    user: { name: '小安' }, trips: [{ id: 't1', city: '京都' }], orders: [], updatedAt: 1000,
+  };
+  expect((await sync('pull', { idToken: 'test:U1' }).then((r) => r.json())).data).toBeNull();
+  const pushed = await sync('push', { idToken: 'test:U1', data });
+  expect(pushed.status).toBe(200);
+  const pulled = await sync('pull', { idToken: 'test:U1' }).then((r) => r.json());
+  expect(pulled.data.trips[0].city).toBe('京都');
+  expect(pulled.data.updatedAt).toBe(1000);
+  expect((await sync('pull', { idToken: 'test:U2' }).then((r) => r.json())).data).toBeNull();
+  expect((await sync('pull', {})).status).toBe(401);
+  expect((await sync('push', { idToken: 'test:U1', data: 'nope' })).status).toBe(413);
+});
+
+test('GET /travel/api/status reports the LIFF ID (null when LINE login is not set up)', async () => {
+  const data = await fetch(`${base}/travel/api/status`).then((r) => r.json());
+  expect(data.liff).toBe(config.TRAVEL_LIFF_ID);
 });

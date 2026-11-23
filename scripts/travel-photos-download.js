@@ -19,8 +19,9 @@ import {
 import path from 'path';
 
 const ROOT = process.cwd();
-const LIST = path.join(ROOT, 'web', 'travel-photos.json');
-const DIR = path.join(ROOT, 'web', 'travel-photos');
+// TRAVEL_PHOTOS_LIST / TRAVEL_PHOTOS_DIR let a long download work in a staging copy.
+const LIST = process.env.TRAVEL_PHOTOS_LIST || path.join(ROOT, 'web', 'travel-photos.json');
+const DIR = process.env.TRAVEL_PHOTOS_DIR || path.join(ROOT, 'web', 'travel-photos');
 const HEADERS = { 'User-Agent': 'TravelPhotoManifest/1.0 (one-off build script; low volume)' };
 const HAS_FFMPEG = spawnSync('ffmpeg', ['-version']).status === 0;
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });

@@ -601,13 +601,14 @@
    "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/The_Parisian_2016.jpg/1280px-The_Parisian_2016.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:KH:阿莫克魚": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Fish_Amok_with_Rice.jpg/1280px-Fish_Amok_with_Rice.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/60d6852f6b0d.webp",
    "width": 1280,
    "height": 853,
    "page": "https://commons.wikimedia.org/wiki/File:Fish_Amok_with_Rice.jpg",
    "author": "sharonang",
    "license": "CC0",
-   "file": "Fish_Amok_with_Rice.jpg"
+   "file": "Fish_Amok_with_Rice.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Fish_Amok_with_Rice.jpg/1280px-Fish_Amok_with_Rice.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:KH:柬式粿條湯": {
    "src": "https://upload.wikimedia.org/wikipedia/commons/7/7b/Katieu.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",

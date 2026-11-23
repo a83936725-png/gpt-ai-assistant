@@ -21,7 +21,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-TW' });
   const p = await ctx.newPage();
-  await p.addInitScript(() => { window.__noShareMoments = true; });
+  await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
   p.on('pageerror', (e) => errors.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text()) && !/\/api\//.test((m.location() || {}).url || '')) errors.push(m.text()); });
   const S = (f, a) => p.evaluate(f, a);
@@ -55,7 +55,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   /* ---------- 1. 開始：懷孕 8 週 ---------- */
   await p.goto(BASE); await wait(300);
   await S(() => { App.isNight = () => false; App.applyTheme(); });
-  await p.click('text=開始使用'); await p.click('.ob-choice:has-text("懷孕中")'); await wait(200);
+  await p.click('.ob-choice:has-text("懷孕中")'); await wait(200);
   await p.fill('input[placeholder="怎麼稱呼你？（選填）"]', '小美');
   await p.fill('input[type=date] >> nth=0', await S(() => Core.dateKey(Core.addDays(new Date(), -56))));
   await shot('開始使用', '選「懷孕中」，填最後一次月經第一天，App 自動算出預產期。');

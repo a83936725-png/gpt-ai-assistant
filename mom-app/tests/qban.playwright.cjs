@@ -18,7 +18,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   const mk = async ({ scheme = 'light', motion = 'no-preference', width = 390, time = null } = {}) => {
     const c = await b.newContext({ viewport: { width, height: 844 }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', colorScheme: scheme, reducedMotion: motion });
     if (time) await c.clock.install({ time: new Date(time) });
-    await c.addInitScript(() => { window.__noShareMoments = true; window.open = () => null; });
+    await c.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null; });
     const p = await c.newPage();
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
@@ -149,11 +149,11 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   /* ---------- late at night ---------- */
   const N = await mk({ time: '2026-11-21T23:30:00+08:00' });
   await setup(N, { days: 50 }); await N.waitForTimeout(800);
-  ok('首頁 at 23:30: a sleepy 小滴 in a nightcap after 夜深 greeting (instead of 💜)', await S(N, () => !!document.querySelector('.greet-hi .md-sleepy') && !document.querySelector('.greet-hi .beat')));
+  ok('首頁 at 23:30: a sleepy 小滴 in a nightcap after 夜深 greeting', await S(N, () => !!document.querySelector('.greet-hi .md-sleepy') && !document.querySelector('.greet-hi .beat')));
   await N.context().close();
   const Dn = await mk({ time: '2026-11-21T10:30:00+08:00' });
   await setup(Dn, { days: 50 }); await Dn.waitForTimeout(800);
-  ok('…at 10:30: the 💜 as before', await S(Dn, () => !document.querySelector('.greet-hi .md') && !!document.querySelector('.greet-hi .beat')));
+  ok('…at 10:30: just 「早安，name」 (no 小滴, and no 💜 after the name since 0.9.2)', await S(Dn, () => !document.querySelector('.greet-hi .md') && !document.querySelector('.greet-hi .beat') && !/💜/.test(document.querySelector('.greet-hi').textContent)));
   await Dn.context().close();
 
   /* ---------- share cards ---------- */

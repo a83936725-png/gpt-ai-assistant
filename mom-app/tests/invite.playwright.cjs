@@ -15,7 +15,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     const c = await b.newContext({ viewport: { width, height } });
     await c.setExtraHTTPHeaders({ 'X-Forwarded-For': `10.${run}.${nets}.1` });
     const p = await c.newPage();
-    await p.addInitScript(() => { window.__noShareMoments = true; window.__opened = []; window.open = (u) => { window.__opened.push(u); return null; }; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.__opened = []; window.open = (u) => { window.__opened.push(u); return null; }; });
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
     return p;
@@ -111,7 +111,6 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   /* ---- D: 懷孕中, sets the app up for real, not a member: the card is at the top of 首頁 ---- */
   const D = await mk();
   await D.goto(link); await D.waitForTimeout(1200);
-  await D.click('text=開始使用'); await D.waitForTimeout(300);
   await D.click('.ob-choice >> nth=1'); await D.waitForTimeout(300);
   const lmp = await S(D, () => Core.dateKey(Core.addDays(new Date(), -140)));
   await D.fill('.onboard input[type=date] >> nth=0', lmp); await D.dispatchEvent('.onboard input[type=date] >> nth=0', 'change');
@@ -130,7 +129,6 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   await E.goto(link); await E.waitForTimeout(1200);
   await register(E, 'early', { fromWelcome: true });
   ok('signed up before setup: nothing yet (setup comes first)', (await pts(E)) === 0 && (await S(E, () => document.body.dataset.screen)) === 'onboarding');
-  await E.click('text=開始使用'); await E.waitForTimeout(300);
   await E.click('.ob-choice >> nth=0'); await E.waitForTimeout(300);
   await E.click('text=完成，開始使用'); await E.waitForTimeout(2200);
   ok('…set up: the welcome gift arrives (+30; 新手任務 adds its own +5 for 註冊會員)', /見面禮 \+30/.test(await lastSheet(E)) && (await welcomePts(E)) === 30 && (await pts(E)) === 35, `${await welcomePts(E)} / ${await pts(E)}`);

@@ -3,8 +3,6 @@
 /* ---------- home ---------- */
 .greet { margin: 6px 2px 12px; gap: 10px; }
 .greet-hi { font-size: 20px; font-weight: 800; }
-/* the next sunrise or sunset next to the date; it moves to its own line as a whole on a narrow phone */
-.greet-sun { white-space: nowrap; margin-left: .3em; }
 .home-slot + .home-slot, .home-slot { margin-top: 12px; }
 
 .baby-hero {
@@ -12,7 +10,7 @@
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px; margin-bottom: 12px;
   border-radius: 20px;
-  background: linear-gradient(120deg, var(--c-primary-soft) 0%, var(--c-surface) 85%);
+  background: color-mix(in srgb, var(--c-primary-soft) 55%, var(--c-surface)); /* flat, no gradient */
   border: 1px solid var(--c-border);
 }
 .hero-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; text-align: left; min-height: 56px; }
@@ -52,40 +50,47 @@
 }
 .quick-tile {
   position: relative; border-radius: 20px; background: var(--c-surface); border: 1px solid var(--c-border);
-  box-shadow: var(--shadow-1); padding-bottom: 22px;
+  padding-bottom: 22px;
 }
 .quick-tile.running { border-color: var(--tc); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc) 35%, transparent); }
 .qt-main {
   width: 100%; background: none; border: 0; padding: 10px 6px 4px;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
 }
+/* the record's own line icon in its colour (deepened so it reads in light and dark), no pastel disc behind it */
 .qt-ico {
-  width: 46px; height: 46px; border-radius: 50%; font-size: 24px;
+  width: 46px; height: 46px;
   display: flex; align-items: center; justify-content: center;
-  background: color-mix(in srgb, var(--tc) 18%, transparent);
+  color: color-mix(in srgb, var(--tc) 72%, var(--c-text));
 }
+.qt-ico svg { width: 30px; height: 30px; }
+.lt-tinted { color: color-mix(in srgb, var(--tc) 72%, var(--c-text)); }
+.li-icon svg, .type-ico svg { width: 24px; height: 24px; }
 .qt-label { font-weight: 700; font-size: 14.5px; }
 .qt-sub { color: var(--c-text-2); min-height: 18px; }
 .qt-running { color: var(--tc); color: color-mix(in srgb, var(--tc) 65%, var(--c-text)); font-weight: 700; } /* readable in light and dark */
-/* the ＋ says what one tap does: ＋計時, ＋濕尿布, ＋120ml, ✓完成 */
+/* the ＋ says what one tap does: ＋計時, ＋濕尿布, ＋120ml, ✓完成. One quiet style for all six (it used to be six
+   coloured pills): plum words on the card colour, a thin plum edge, a ring of the page colour to sit on the tile's edge */
 .qt-plus {
   position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%);
-  min-width: 44px; height: 44px; border-radius: 999px; border: 3px solid var(--c-bg);
-  background: var(--tc); color: #fff; font-size: 13.5px; font-weight: 800; line-height: 1; white-space: nowrap;
-  /* the words on it need 4.5:1 against white: each type's colour, deepened with plum (all ≥ 4.6:1) */
-  background: color-mix(in srgb, var(--tc) 60%, #2b1233);
+  min-width: 44px; height: 44px; border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--c-primary) 45%, var(--c-border));
+  background: var(--c-surface); color: var(--c-primary); font-size: 13.5px; font-weight: 800; line-height: 1; white-space: nowrap;
   display: flex; align-items: center; justify-content: center; gap: 1px; padding: 0 12px 0 9px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .12);
+  box-shadow: 0 0 0 3px var(--c-bg);
 }
+.quick-tile.running .qt-plus { background: var(--c-primary); color: var(--c-primary-ink); border-color: transparent; }
 .qt-plus-sign { font-size: 17px; }
 .time-chips { margin-top: 8px; gap: 6px; }
 .time-chips .chip { min-height: 40px; padding: 4px 10px; font-size: 13px; }
 .tl-ago { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--c-text-3); white-space: nowrap; }
 .qt-plus:active { transform: translateX(-50%) scale(.92); }
+/* today's count: 「今天 3」 in small grey type in the corner (it looked like a red-dot notification before) */
 .qt-badge {
-  position: absolute; top: -6px; right: -4px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
-  background: var(--tc); color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  position: absolute; top: 7px; right: 10px;
+  font-size: 11.5px; font-weight: 600; color: var(--c-text-2); font-variant-numeric: tabular-nums; line-height: 1.3;
 }
+.qt-badge::before { content: '今天 '; font-weight: 500; }
 .quick-row + .card { margin-top: 32px; }
 
 .active-timer {
@@ -98,7 +103,10 @@
 
 .next-card .card-title .tag { margin-left: auto; }
 .next-big { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
-.next-ico { font-size: 30px; }
+.next-ico { color: var(--c-primary); display: flex; }
+.next-ico svg { width: 30px; height: 30px; }
+.next-line-ico { display: flex; color: var(--c-text-2); padding-top: 1px; }
+.next-line-ico svg { width: 18px; height: 18px; }
 .next-big .big-num { font-size: 26px; color: var(--c-primary); }
 .big-suffix { font-size: 16px; font-weight: 600; margin-left: 2px; }
 /* text headlines (「可以準備哄睡了」) are wider than a countdown: a little smaller, and never leave one character alone on the second line */
@@ -123,10 +131,11 @@
 .tl-item:active { background: var(--c-surface-2); }
 .tl-time { width: 52px; flex: none; font-weight: 700; font-size: 16px; text-align: right; line-height: 1.2; }
 .tl-ico {
-  width: 40px; height: 40px; flex: none; border-radius: 12px; font-size: 21px;
+  width: 40px; height: 40px; flex: none; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  background: color-mix(in srgb, var(--tc) 18%, transparent);
+  color: color-mix(in srgb, var(--tc) 72%, var(--c-text)); background: color-mix(in srgb, var(--tc) 10%, transparent);
 }
+.tl-ico svg { width: 24px; height: 24px; }
 .tl-body { min-width: 0; flex: 1; }
 .tl-title { font-weight: 700; display: flex; gap: 6px; align-items: center; }
 .tl-sub { font-size: 13px; color: var(--c-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -137,7 +146,10 @@
 .datenav .icon-btn[disabled] { opacity: .25; }
 .sum-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
 .sum-chip { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 14px; background: var(--c-surface); border: 1px solid var(--c-border); text-align: center; }
-.sum-ico { font-size: 20px; }
+.sum-ico { display: flex; }
+.sum-ico svg { width: 24px; height: 24px; }
+.pump-day-ico { display: flex; }
+.pump-day-ico svg { width: 20px; height: 20px; }
 .daystrip-wrap { margin-top: 4px; }
 .daystrip { position: relative; height: 26px; border-radius: 8px; background: var(--c-surface-2); overflow: hidden; }
 .ds-sleep { position: absolute; top: 3px; bottom: 3px; border-radius: 4px; background: var(--t-sleep); opacity: .55; }
@@ -159,7 +171,7 @@ body:has(.fab) #view { padding-bottom: calc(var(--tabbar-h) + 96px + env(safe-ar
   display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px;
   border-radius: 16px; border: 1px solid var(--c-border); background: var(--c-surface); font-size: 13.5px; font-weight: 600;
 }
-.type-ico { width: 44px; height: 44px; border-radius: 50%; font-size: 23px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--tc) 18%, transparent); }
+.type-ico { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: color-mix(in srgb, var(--tc) 72%, var(--c-text)); background: color-mix(in srgb, var(--tc) 10%, transparent); }
 .swatches { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 .swatch { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; border-radius: 12px; border: 2px solid transparent; background: var(--c-surface); }
 .swatch.active { border-color: var(--c-primary); }
@@ -187,7 +199,7 @@ ul.tight li, ol.tight li { margin: 3px 0; }
 .cd-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
 .cd-day { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--c-text-3); }
 .cd-dot { width: 30px; height: 30px; border-radius: 50%; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; font-size: 15px; }
-.cd-day.on .cd-dot { background: var(--c-primary-soft); }
+.cd-day.on .cd-dot { background: var(--c-primary); } /* a filled dot for a day she checked in (it held a 💜 before) */
 .cd-day.today .tiny { color: var(--c-primary); font-weight: 700; }
 .cd-day.today .cd-dot { outline: 2px dashed var(--c-primary); outline-offset: 1px; }
 .brand-hero { padding: 10px 0 16px; }
@@ -233,23 +245,21 @@ input.switch:checked::after { transform: translateX(20px); }
 .ob-icon { width: 60px; height: 60px; border-radius: 18px; background: var(--c-primary-soft); padding: 8px; flex: none; }
 .ob-title { font-size: 28px; color: var(--c-primary); line-height: 1.15; margin: 0; }
 .ob-by { font-size: 13px; color: var(--c-text-3); margin-top: 2px; }
-.ob-tagline { text-align: center; color: var(--c-text-2); margin: 16px 0 6px; font-size: 16px; text-wrap: balance; }
-/* plain lines (not boxes that look tappable) */
-.ob-feats { list-style: none; padding: 0; margin: 14px 4px 0; display: grid; gap: 14px; }
-.ob-feats li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; color: var(--c-text-2); line-height: 1.45; }
-.ob-feats li b { display: block; color: var(--c-text); font-size: 15.5px; }
-.ob-feats li > span:last-child { text-wrap: pretty; }
-.ob-feat-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--c-surface); box-shadow: var(--shadow-1); display: flex; align-items: center; justify-content: center; font-size: 21px; }
 /* the actions stay at the bottom of the screen, within thumb reach on any phone */
 .ob-actions { position: sticky; bottom: 0; margin: 22px -16px -30px; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgba(0, 0, 0, 0), var(--c-bg) 18px); text-align: center; }
 .ob-actions .live-pill { margin: 0 auto 10px; }
 .ob-q { font-size: 22px; margin: 12px 0 16px; }
+.ob-hero .ob-q { text-align: center; margin: 28px 0 14px; }
+/* the three stages: plain rows with the words that matter, no emoji (the first question of the app) */
 .ob-choice {
   display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
-  padding: 16px; border-radius: 18px; border: 1px solid var(--c-border); background: var(--c-surface); box-shadow: var(--shadow-1);
+  padding: 16px 16px 16px 18px; border-radius: 18px; border: 1px solid var(--c-border); background: var(--c-surface);
 }
 .ob-choice:active { border-color: var(--c-primary); }
-.ob-choice-ico { font-size: 34px; }
+.ob-choice-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ob-choice-t b { font-size: 17px; }
+.ob-choice .chev { color: var(--c-text-3); font-size: 22px; line-height: 1; }
+.ob-note { text-align: center; margin: 16px 8px 0; text-wrap: balance; }
 body[data-screen="onboarding"] #view { padding-bottom: 40px; }
 
 /* ---------- undo toast / presets ---------- */
@@ -280,6 +290,8 @@ body[data-screen="onboarding"] #view { padding-bottom: 40px; }
 .daily-text { display: flex; flex-direction: column; line-height: 1.3; }
 .daily-item.done .daily-main { background: var(--c-primary-soft); border-color: transparent; }
 .daily-item.done .daily-ico { background: var(--c-primary); color: var(--c-primary-ink); font-weight: 800; }
+.daily-logo { width: 22px; height: 22px; object-fit: contain; }
+.daily-svg { display: flex; color: var(--c-primary); }
 .daily-minus { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--c-border); background: var(--c-surface); font-size: 20px; color: var(--c-text-2); flex: none; }
 
 /* ---------- 預防保健 ---------- */
@@ -292,7 +304,8 @@ body[data-screen="onboarding"] #view { padding-bottom: 40px; }
 
 /* ---------- 深夜 (夜間模式 from 22:00 until just before sunrise): larger targets for one-handed night feeds.
    Dark from sunset is body.night; the bigger buttons wait for the deep night, so an evening still looks like itself. */
-body.late .qt-ico { width: 52px; height: 52px; font-size: 27px; }
+body.late .qt-ico { width: 52px; height: 52px; }
+body.late .qt-ico svg { width: 34px; height: 34px; }
 body.late .qt-label { font-size: 16px; }
 body.late .qt-plus { min-width: 52px; height: 52px; bottom: -24px; font-size: 15px; }
 body.late .quick-row { row-gap: 34px; }

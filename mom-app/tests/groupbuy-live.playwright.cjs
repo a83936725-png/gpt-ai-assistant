@@ -23,7 +23,7 @@ const NOW = '2026-11-22T14:19:03+08:00';
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', colorScheme: scheme });
     ctxs.push(c);
     await c.clock.install({ time: new Date(NOW) });
-    await c.addInitScript(() => { window.__noShareMoments = true; window.open = () => null; });
+    await c.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null; });
     const p = await c.newPage();
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });

@@ -115,7 +115,7 @@
       if ((s.starter && s.starter.finished) || !next) { // (all done a moment before its points are given: already 完成)
         el.append(ui.card({ class: 'st-home st-done' },
           h('div', { class: 'row between' },
-            h('div', { class: 'card-title' }, '🎉 新手任務完成了'),
+            h('div', { class: 'card-title' }, '新手任務完成了'),
             h('button', { class: 'icon-btn st-x', 'aria-label': '收起來', onclick: () => { store.update((x) => { ensure(x).off = C.dateKey(); }); } }, '✕')),
           h('div', { class: 'row gap st-done-body' },
             App.mascot ? App.mascot.el({ mood: 'cheer', size: 50 }) : null,
@@ -126,7 +126,7 @@
       }
       el.append(ui.card({ class: 'st-home' },
         h('div', { class: 'row between' },
-          h('div', { class: 'card-title' }, '🌱 新手任務 ', h('span', { class: 'tag primary num st-count' }, `${n}/${tasks.length}`)),
+          h('div', { class: 'card-title' }, '新手任務 ', h('span', { class: 'tag primary num st-count' }, `${n}/${tasks.length}`)),
           h('button', {
             class: 'icon-btn st-x', 'aria-label': '不用了，收起新手任務',
             onclick: () => { store.update((x) => { ensure(x).off = C.dateKey(); }); ui.toast('新手任務收起來了；做到的事一樣會加好孕點數'); },
@@ -166,7 +166,7 @@
     if (document.body.classList.contains('has-sheet') || document.body.dataset.screen !== 'home' || !active()) return;
     const name = (u && u.nickname) || store.state.profile.momName || '';
     document.querySelectorAll('.toast:not(.has-action)').forEach((t) => t.remove()); // 「註冊成功」 is what the list says
-    open({ title: `🎉 歡迎加入${name ? `，${name}` : ''}！`, intro: '接下來做這幾件小事，熟悉 App 也能拿好孕點數：' });
+    open({ title: `歡迎加入${name ? `，${name}` : ''}！`, intro: '接下來做這幾件小事，熟悉 App 也能拿好孕點數：' });
   }
 
   function mark(id) {

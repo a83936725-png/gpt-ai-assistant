@@ -118,7 +118,7 @@
       const parts = [r.breast ? `親餵 ${fmt(r.breast)} 次` : '', r.bottle ? `瓶餵 ${fmt(r.bottle)} 次` : '', r.ml ? `共 ${litres(r.ml).v} ${litres(r.ml).u}` : ''].filter(Boolean);
       out.push({ id: 'feeds', tone: 1, kicker: '喝奶', big: r.feeds, unit: '次', sub: parts.join('・') });
     }
-    if (r.night) out.push({ id: 'night', tone: 2, kicker: '你在半夜起來餵奶', big: r.night, unit: '次', sub: `${r.nightHour != null ? `最常在凌晨 ${r.nightHour} 點左右。` : ''}那些安靜的夜裡，辛苦了 💜` });
+    if (r.night) out.push({ id: 'night', tone: 2, kicker: '你在半夜起來餵奶', big: r.night, unit: '次', sub: r.nightHour != null ? `最常在凌晨 ${r.nightHour} 點左右。` : '都在 0 點到 5 點之間。' });
     if (r.diapers) out.push({ id: 'diapers', tone: 3, kicker: '換了', big: r.diapers, unit: '片尿布', sub: `濕的 ${fmt(r.wet)} 片・有便便 ${fmt(r.dirty)} 片` });
     if (r.sleepMs >= C.HOUR) out.push({ id: 'sleep', tone: 4, kicker: '睡了', big: Math.round(r.sleepMs / C.HOUR), unit: '小時', sub: r.longest ? `最長一覺 ${hm(r.longest.ms)}（${md(r.longest.date)}）` : '' });
     const g = r.growth;
@@ -127,8 +127,8 @@
     if (r.foods.length) out.push({ id: 'foods', tone: 1, kicker: '吃過', big: r.foods.length, unit: '種副食品', sub: `第一口是 ${r.foods[0].item}（${md(r.foods[0].date)}）` });
     if (r.pumpMl) { const L = litres(r.pumpMl); out.push({ id: 'pump', tone: 2, kicker: '媽媽擠了', big: L.v, unit: `${L.u}母乳`, sub: `一共 ${fmt(r.pumps)} 次，每一滴都是你的愛` }); }
     if (r.photos.length) out.push({ id: 'photos', tone: 3, kicker: '每個月的你', photos: r.photos.slice(-9), sub: `${r.photos.length} 張月照` });
-    if (r.records >= 5) out.push({ id: 'you', tone: 4, kicker: '你記錄了', big: r.recordDays, unit: '天', sub: `${fmt(r.records)} 筆紀錄。每一筆，都是你很用心的證明` });
-    out.push({ id: 'end', tone: 5, title: '謝謝你，辛苦了 💜', sub: `${nameOf(b)}會長大，這些日子會一直在這裡。`, end: true });
+    if (r.records >= 5) out.push({ id: 'you', tone: 4, kicker: '你記錄了', big: r.recordDays, unit: '天', sub: `一共 ${fmt(r.records)} 筆紀錄` });
+    out.push({ id: 'end', tone: 5, title: '這些日子，都記下來了', sub: `${nameOf(b)}會長大，這些紀錄會一直在你的手機裡。`, end: true });
     return out;
   }
 
@@ -181,7 +181,7 @@
     });
     let y = gy + Math.ceil(ts.length / 2) * (th + gap) + 10;
     r.firsts.slice(-2).forEach((f) => { if (y < fy - 200) { say(`⭐ ${f.label}・${md(f.date)}`, cx, y, '600 34px', '#3d3442'); y += 52; } });
-    say('謝謝你，辛苦了 💜', cx, Math.min(y + 18, fy - 150), '800 44px', c1);
+    say('這些日子，都記下來了', cx, Math.min(y + 18, fy - 150), '800 44px', c1);
     D.paintFooter(ctx, W, fy, qs, { theme, path: 'home', campaign: 'recap' });
     return new Promise((res) => cv.toBlob((bl) => res(bl), 'image/png'));
   }
@@ -194,7 +194,7 @@
     if (g.w0 && g.w1 && g.w1 > g.w0) L.push(`📈 從 ${kg(g.w0)} kg 長到 ${kg(g.w1)} kg`);
     r.firsts.slice(-3).forEach((f) => L.push(`⭐ ${f.label}（${md(f.date)}）`));
     if (r.pumpMl) L.push(`🥛 媽媽擠了 ${litres(r.pumpMl).v} ${litres(r.pumpMl).u}母乳`);
-    L.push('謝謝你，辛苦了 💜');
+    L.push('這些日子，都記下來了。');
     L.push(`— 用「${B().appName || '易家做媽媽'}」記錄：${App.share.link({ path: 'home', channel: 'line', campaign: 'recap' })}`);
     return L.join('\n');
   }
@@ -205,7 +205,7 @@
     if (how === 'share') {
       const thanks = () => {
         const pts = App.share.record ? App.share.record('more', 'recap') : 0;
-        ui.toast(`謝謝分享 💜${pts ? ` 好孕點數 +${pts}` : ''}`);
+        ui.toast(`謝謝分享${pts ? `・好孕點數 +${pts}` : ''}`);
       };
       const s = await App.share.sharePicture(blob, name, { text: text(b, r), onShared: thanks });
       if (s === 'shared') { thanks(); return; }
@@ -325,7 +325,7 @@
         const left = k === 'now' ? 0 : P.days - d;
         return h('button', {
           type: 'button', class: `rc-tile${ok ? '' : ' locked'}`, dataset: { kind: k }, 'aria-label': ok ? `${P.label}，打開` : `${P.label}，還有 ${left} 天`,
-          onclick: () => { if (ok) open(b, k); else ui.toast(`${P.label}還有 ${left} 天，到時候再來看 💜`); },
+          onclick: () => { if (ok) open(b, k); else ui.toast(`${P.label}還有 ${left} 天，到時候再來看`); },
         }, h('span', { class: 'rc-te', 'aria-hidden': 'true' }, ok ? P.emoji : '🔒'), h('b', null, k === 'now' ? `${title(b, 'now', now)}` : P.label), h('small', null, ok ? (k === 'now' ? '到今天為止' : '已經可以看了') : `還有 ${left} 天`));
       })));
       if (params && params.kind && have.includes(params.kind) && !el.dataset.autoplay) { el.dataset.autoplay = '1'; setTimeout(() => open(b, params.kind), 80); }

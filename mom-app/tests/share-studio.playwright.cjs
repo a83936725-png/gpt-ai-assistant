@@ -16,7 +16,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   const mk = async ({ scheme = 'light', width = 400, motion = 'no-preference' } = {}) => {
     const c = await b.newContext({ viewport: { width, height: 860 }, locale: 'zh-TW', colorScheme: scheme, reducedMotion: motion, acceptDownloads: true });
     await c.addInitScript(() => {
-      window.__noShareMoments = true; window.open = (u) => { (window.__opened = window.__opened || []).push(String(u)); return null; };
+      window.__noShareMoments = true; window.__noNightAuto = true; window.open = (u) => { (window.__opened = window.__opened || []).push(String(u)); return null; };
       // a phone that can share files: keep what was handed over
       navigator.canShare = () => true;
       navigator.share = async (d) => { window.__shared = { text: d.text, file: d.files && d.files[0] ? { type: d.files[0].type, size: d.files[0].size } : null }; window.__sharedFile = d.files && d.files[0]; };

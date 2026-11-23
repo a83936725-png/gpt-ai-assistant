@@ -10,7 +10,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const errors = [];
   const ctx = await browser.newContext({ locale: 'zh-TW', viewport: { width: 390, height: 844 }, hasTouch: true });
   await ctx.addInitScript(() => {
-    window.__noShareMoments = true;
+    window.__noShareMoments = true; window.__noNightAuto = true;
     document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.toast-wrap{display:none!important}'; document.head.append(st); });
   });
   const p = await ctx.newPage();

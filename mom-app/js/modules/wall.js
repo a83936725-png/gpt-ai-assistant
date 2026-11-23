@@ -171,7 +171,7 @@
             h('button', { class: 'btn btn-ghost grow', onclick: () => App.navigate('wish', { w: w.id }) }, '👀 親友看到的樣子'))));
         if (pending.length) {
           box.append(h('div', { class: 'card no-print' },
-            h('div', { class: 'row gap' }, h('div', { class: 'card-title grow' }, `💌 等你確認（${pending.length}）`),
+            h('div', { class: 'row gap' }, h('div', { class: 'card-title grow' }, `等你確認（${pending.length}）`),
               pending.length > 1 ? h('button', { class: 'btn btn-sm btn-soft', onclick: () => act(null, 'approveAll') }, '全部顯示') : null),
             h('p', { class: 'tiny muted' }, '按「顯示」才會出現在牆上，不想公開的可以刪除。'),
             h('div', { class: 'stack-sm' }, pending.map((x) => wishCard(x, h('div', { class: 'wish-mod' },
@@ -197,7 +197,7 @@
           cache.set(w.id, { wishes: r.wishes, at: Date.now() });
           lastSeen = JSON.stringify(r.wishes);
           draw(cache.get(w.id));
-          if (action === 'approve' || action === 'approveAll') { ui.toast('已顯示在牆上 💜'); ui.celebrate && ui.celebrate({ emojis: [occ(w).sticker, '💜', '✨'] }); }
+          if (action === 'approve' || action === 'approveAll') { ui.toast('已顯示在牆上'); ui.celebrate && ui.celebrate({ emojis: [occ(w).sticker, '💜', '✨'] }); }
           loadAdmin(w).catch(() => {});
         } catch (e) { ui.toast(errText(e)); }
       }
@@ -244,7 +244,7 @@
     const agree = App.privacy ? App.privacy.box({ label: ['我了解知道連結的人都看得到牆上「已顯示」的祝福，並同意', App.privacy.link()] }) : null;
     const available = h('div');
     el.append(h('div', { class: 'stack' },
-      h('div', { class: 'card soft' }, h('div', { class: 'card-title' }, '💌 祝福牆'), h('p', { class: 'small' }, '滿月、百日、週歲（或懷孕時的好孕加油），開一面牆、把連結傳到家族群組。親友不用下載 App 就能留言，你按「顯示」才會出現在牆上，最後可以存成一張祝福卡。')),
+      h('div', { class: 'card soft' }, h('div', { class: 'card-title' }, '祝福牆'), h('p', { class: 'small' }, '滿月、百日、週歲（或懷孕時的好孕加油），開一面牆、把連結傳到家族群組。親友不用下載 App 就能留言，你按「顯示」才會出現在牆上，最後可以存成一張祝福卡。')),
       segEl, preview,
       ui.field('寶寶的名字或小名', baby, '會顯示在牆的標題，可以只寫小名'),
       ui.field('媽媽的名稱', mom),
@@ -329,7 +329,7 @@
         const send = h('button', { class: 'btn btn-primary btn-block', type: 'submit' }, `送出祝福 ${o.sticker}`);
         const agree = App.privacy ? App.privacy.box({ label: ['我同意我的名字和祝福在媽媽確認後顯示在這面牆上，並同意', App.privacy.link()] }) : null;
         const f = h('form', { class: 'card wish-form', novalidate: true },
-          h('div', { class: 'card-title' }, '✍️ 留下你的祝福'),
+          h('div', { class: 'card-title' }, '留下你的祝福'),
           ui.field('你的名字', name),
           h('div', { class: 'small muted' }, '點一下就能用：'), presets,
           ui.field('祝福的話', h('div', null, text, h('div', { class: 'wish-count' }, count))),
@@ -350,7 +350,7 @@
               x.wrote = { ...(x.wrote || {}) }; x.wrote[w.id] = [...(x.wrote[w.id] || []), r.wish].slice(-10);
             });
             ui.celebrate && ui.celebrate({ from: send, emojis: [sticker, '💜', '✨'], big: true });
-            ui.toast('已送出！媽媽確認後就會出現在牆上 💜', { ms: 3500 });
+            ui.toast('已送出，媽媽確認後就會出現在牆上', { ms: 3500 });
             load();
           } catch (ex) {
             err.textContent = errText(ex); err.hidden = false; send.disabled = false; send.textContent = `送出祝福 ${o.sticker}`;

@@ -219,7 +219,7 @@
   }
   // red card on 首頁 and 我的 while a save could not be kept (otherwise not shown at all)
   const storageAlert = () => (store.health !== 'failed' ? null : ui.card({ class: 'accent storage-alert', role: 'alert' },
-    h('div', { class: 'card-title' }, '⚠️ 最新的紀錄可能沒有存到'),
+    h('div', { class: 'card-title' }, '最新的紀錄可能沒有存到'),
     h('p', { class: 'small' }, '手機的儲存空間不足（或瀏覽器不允許儲存）。紀錄還在畫面上，但關掉 App 後可能會不見。請先匯出備份，再清出一些手機空間。'),
     h('button', { class: 'btn btn-primary btn-sm mt', onclick: exportData }, '⬇️ 立刻匯出備份')));
   App.storageAlert = storageAlert; // 首頁 shows it right under the greeting
@@ -239,7 +239,7 @@
     const st = store.state;
     if (!needsHomeScreen() || st.settings.a2hsDismissed || !worthKeeping(st)) return null;
     return ui.card({ class: 'soft keep-card', dataset: { keep: 'a2hs' } },
-      h('div', { class: 'card-title' }, '📲 加到主畫面，紀錄更安全'),
+      h('div', { class: 'card-title' }, '加到主畫面，紀錄更安全'),
       h('p', { class: 'small' }, 'iPhone 的 Safari 如果 7 天都沒打開這個網站，可能會自動清掉存在手機裡的紀錄；把 App 加到主畫面就不會。'),
       h('ol', { class: 'small tight' },
         h('li', null, '點 Safari 的「分享」按鈕（方框加上箭頭）'),
@@ -255,7 +255,7 @@
     if (days === null && C.diffDays(st.createdAt, new Date()) < 7) return null; // not in the first week
     if (st.settings.backupSnoozeUntil && Date.now() < Date.parse(st.settings.backupSnoozeUntil)) return null;
     return ui.card({ class: 'soft keep-card', dataset: { keep: 'backup' } },
-      h('div', { class: 'card-title' }, '💾 幫紀錄備份一下'),
+      h('div', { class: 'card-title' }, '幫紀錄備份一下'),
       h('p', { class: 'small' }, days === null
         ? '還沒匯出過備份。手機遺失、換手機或清除資料時，備份檔可以把紀錄全部找回來。'
         : `上次備份是 ${days} 天前。匯出一份新的備份，存到 LINE「Keep 筆記」或雲端硬碟比較安心。`),
@@ -350,7 +350,7 @@
       }
       if (r.type === 'chicken' && pastTime && n.chicken !== today && !s.chicken.log[today]) {
         n.chicken = today; setN(n);
-        say('滴雞精時光', '休息一下，溫熱一杯給自己 💜');
+        say('滴雞精時光', '今天的滴雞精時光還沒打卡');
       }
     });
   }
@@ -393,7 +393,7 @@
       const perm = 'Notification' in window ? Notification.permission : 'unsupported';
       if (App.push) el.append(App.push.card()); // 手機通知: also when the app is closed (members)
       el.append(h('section', { class: 'card soft' },
-        h('div', { class: 'card-title' }, '🔔 App 開著時的通知'),
+        h('div', { class: 'card-title' }, 'App 開著時的通知'),
         h('p', { class: 'small muted' }, perm === 'granted' ? '已開啟：App 開著或在背景時，到時間會跳出通知。' : perm === 'denied' ? '通知被封鎖了，請到瀏覽器設定開啟。' : perm === 'unsupported' ? '這個瀏覽器不支援通知，提醒會以畫面訊息顯示。' : '開啟後，App 開著或在背景時，到時間會跳出通知。iPhone 請先「加入主畫面」再開啟。'),
         perm === 'default' ? h('button', { class: 'btn btn-sm btn-primary mt', onclick: async () => { await Notification.requestPermission(); App.refresh(); } }, '開啟通知') : null));
       store.state.reminders.forEach((r) => {
@@ -518,33 +518,25 @@
       function draw() {
         if (ob.step === 0) {
           const inv = store.state.share && store.state.share.invitedBy;
-          // first impression: what the app does in one glance, and the two buttons always within thumb reach
-          // (even on a small iPhone SE): a compact brand line, three plain feature lines, actions pinned at the bottom
+          // first screen: the app asks who she is straight away. (It used to show a slogan and four emoji feature lines
+          // and ask this one tap later.) The sample data and 登入 stay within thumb reach at the bottom.
           wrap.append(h('div', { class: 'ob-hero' },
-            inv ? h('div', { class: 'ob-invited' }, `💌 ${store.state.share.inviterName || '朋友'}邀請你一起使用`,
+            inv ? h('div', { class: 'ob-invited' }, `${store.state.share.inviterName || '朋友'}邀請你一起使用`,
               // 雙向邀請禮 (only where the member service is there to give it)
-              App.gift ? h('span', { class: 'ob-gift needs-member', hidden: App.gift.ready() !== true }, '🎁 註冊會員，你們都有邀請禮') : null) : null,
+              App.gift ? h('span', { class: 'ob-gift needs-member', hidden: App.gift.ready() !== true }, '註冊會員，你們都有邀請禮') : null) : null,
             h('div', { class: 'ob-brand' },
               h('img', { src: B().logo, alt: '', class: 'ob-icon' }),
               h('div', null, h('h1', { class: 'ob-title' }, B().appName || '易家做媽媽'), h('div', { class: 'ob-by' }, `by ${B().brandName || '易家滴雞精'}`)),
               App.mascot ? App.mascot.el({ mood: 'wave', size: 50, cls: 'ob-md' }) : null),
-            h('p', { class: 'ob-tagline' }, '從備孕、懷孕到育兒，陪你記下每一步。'),
-            h('ul', { class: 'ob-feats' },
-              h('li', null, h('span', { class: 'ob-feat-ico', 'aria-hidden': 'true' }, '🍼'), h('span', null, h('b', null, '一鍵記錄'), '餵奶、尿布、睡眠，算好下一餐')),
-              h('li', null, h('span', { class: 'ob-feat-ico', 'aria-hidden': 'true' }, '🤰'), h('span', null, h('b', null, '孕期陪伴'), '每週寶寶變化、產檢、胎動')),
-              h('li', null, h('span', { class: 'ob-feat-ico', 'aria-hidden': 'true' }, '📈'), h('span', null, h('b', null, '成長與健康'), '成長曲線、疫苗、里程碑提醒')),
-              h('li', null, h('span', { class: 'ob-feat-ico', 'aria-hidden': 'true' }, '👨‍👩‍👧'), h('span', null, h('b', null, '全家一起'), '爸爸、阿嬤也能一起記錄')))),
+            h('h2', { class: 'ob-q' }, '你現在是？'),
+            h('div', { class: 'stack ob-stages' }, App.STAGES.map((st) => h('button', { class: 'ob-choice', onclick: () => go({ step: 2, stage: st.value }) },
+              h('span', { class: 'ob-choice-t' }, h('b', null, st.label), h('span', { class: 'small muted' }, { prep: '記錄經期、算排卵日、孕前檢查', preg: '孕週、產檢、胎動與宮縮', baby: '餵奶、尿布、睡眠、成長與疫苗' }[st.value])),
+              h('span', { class: 'chev', 'aria-hidden': 'true' }, '›')))),
+            h('p', { class: 'ob-note small muted' }, '不用註冊，紀錄預設只存在這支手機。')),
           h('div', { class: 'ob-actions' },
             App.livePill ? App.livePill('ob-live') : null,
-            h('button', { class: 'btn btn-primary btn-block', onclick: () => go({ step: 1 }) }, '開始使用'),
-            h('button', { class: 'btn btn-ghost btn-block mt', onclick: () => { ob = { step: 0, stage: null }; seedDemo(); } }, '先看看範例資料'),
+            h('button', { class: 'btn btn-ghost btn-block', onclick: () => { ob = { step: 0, stage: null }; seedDemo(); } }, '先看看範例資料'),
             App.screens.login ? h('button', { class: 'link-btn ob-login', onclick: () => App.navigate('login') }, '已有帳號？登入／註冊') : null));
-        } else if (ob.step === 1) {
-          wrap.append(ui.steps(OB_STEPS, 0), h('h2', { class: 'ob-q' }, '你現在是？'),
-            h('div', { class: 'stack' }, App.STAGES.map((st) => h('button', { class: 'ob-choice', onclick: () => go({ step: 2, stage: st.value }) },
-              h('span', { class: 'ob-choice-ico' }, st.icon),
-              h('span', null, h('b', null, st.label), h('br'), h('span', { class: 'small muted' }, { prep: '記錄經期、預測排卵、孕前準備', preg: '孕週、產檢、胎動與宮縮', baby: '餵奶、尿布、睡眠、成長與疫苗' }[st.value]))))),
-            h('button', { class: 'link-btn mt', onclick: () => go({ step: 0 }) }, '‹ 上一步'));
         } else {
           const name = h('input', { placeholder: '怎麼稱呼你？（選填）', value: store.state.profile.momName || '' });
           const fields = h('div');
@@ -579,7 +571,7 @@
           }
           wrap.append(ui.steps(OB_STEPS, 1), h('h2', { class: 'ob-q' }, '基本資料'), ui.field('你的暱稱', name), fields,
             h('button', { class: 'btn btn-primary btn-block mt', onclick: () => { store.update((s) => { s.profile.stage = ob.stage; s.profile.momName = name.value.trim(); collect(s); }); finish(); } }, '完成，開始使用'),
-            h('button', { class: 'link-btn mt', onclick: () => go({ step: 1 }) }, '‹ 上一步'));
+            h('button', { class: 'link-btn mt', onclick: () => go({ step: 0 }) }, '‹ 上一步'));
         }
       }
       draw();
@@ -612,10 +604,10 @@
       el.append(h('section', { class: 'card me-card' },
         h('div', { class: 'row gap' },
           h('button', { class: 'me-avatar av-me', 'aria-label': p.avatar ? '編輯我的 Q 版角色' : '建立我的 Q 版角色', onclick: () => App.navigate('avatar') },
-            p.avatar && App.avatar ? App.avatar.head(52) : '💜', p.avatar ? null : h('span', { class: 'av-me-plus' }, '＋')),
-          h('div', { class: 'grow' }, h('div', { class: 'card-title' }, p.momName || '媽媽'), h('div', { class: 'card-sub' }, `${stageLabel.icon} ${stageLabel.label}・這台裝置記錄者：${p.member}`)),
+            p.avatar && App.avatar ? App.avatar.head(52) : h('span', { class: 'av-me-initial' }, [...(p.momName || '我')][0]), p.avatar ? null : h('span', { class: 'av-me-plus' }, '＋')),
+          h('div', { class: 'grow' }, h('div', { class: 'card-title' }, p.momName || '媽媽'), h('div', { class: 'card-sub' }, `${stageLabel.label}・這台裝置記錄者：${p.member}`)),
           h('button', { class: 'btn btn-sm btn-soft', onclick: editProfile }, '編輯')),
-        h('div', { class: 'mt' }, ui.seg(App.STAGES.map((x) => ({ value: x.value, label: x.label, icon: x.icon })), p.stage, (v) => {
+        h('div', { class: 'mt' }, ui.seg(App.STAGES.map((x) => ({ value: x.value, label: x.label })), p.stage, (v) => {
           store.update((st) => { st.profile.stage = v; if (v !== 'baby') st.profile.pregnantToo = false; });
           if (v === 'baby' && !store.state.babies.length) editBaby();
           const ga = store.state.profile.lmp ? C.gestAge(store.state.profile.lmp) : null;
@@ -740,7 +732,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.9.1`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.9.2`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
         App.screens.privacy ? h('button', { class: 'btn btn-ghost btn-sm center-btn', onclick: () => App.navigate('privacy') }, '🔒 隱私權政策與使用條款') : null,
         // the web preview (no member service) can show the brand's dashboard with its sample numbers; never linked for moms

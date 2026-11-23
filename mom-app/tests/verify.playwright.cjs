@@ -37,7 +37,7 @@ process.on('exit', () => { if (server) server.kill(); }); // never leave the tes
     const c = await b.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme });
     await c.setExtraHTTPHeaders({ 'X-Forwarded-For': `10.${run}.${200 + nets}.4` });
     const p = await c.newPage();
-    await p.addInitScript(() => { window.__noShareMoments = true; window.open = () => null; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null; });
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
     return p;

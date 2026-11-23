@@ -373,7 +373,7 @@
       out.push({ kind: 'island', label: '好孕島稱號', campaign: 'island', path: 'island', spec: { emoji: '🏝️', kicker: '好孕島', title: title ? title.label : '島民', subtitle: `已收集 ${stamps}／${App.ISLAND.SPOTS.length} 個印章`, theme: 'night', path: 'island' }, text: `我在好孕島收集了 ${stamps} 個印章，成為「${title ? title.label : '島民'}」🏝️ 一起來逛！` });
     }
     const pp = App.journey && App.journey.ppInfo ? App.journey.ppInfo() : null;
-    if (pp && pp.day <= 45) out.push({ kind: 'pp', label: '坐月子卡', campaign: 'postpartum', spec: { emoji: '🍲', kicker: '坐月子日記', title: pp.day >= 30 ? '產後滿月，辛苦了！' : `產後第 ${pp.day} 天`, subtitle: '好好休息，也是在照顧寶寶', theme: 'peach' }, text: pp.day >= 30 ? '產後滿月了，謝謝一路陪伴的家人朋友 💜' : `坐月子第 ${pp.day} 天，好好休息中 🍲` });
+    if (pp && pp.day <= 45) out.push({ kind: 'pp', label: '坐月子卡', campaign: 'postpartum', spec: { emoji: '🍲', kicker: '坐月子日記', title: pp.day >= 30 ? '產後滿月' : `產後第 ${pp.day} 天`, subtitle: pp.day >= 30 ? '坐月子告一段落' : '坐月子中', theme: 'peach' }, text: pp.day >= 30 ? '產後滿月了，謝謝一路陪伴的家人朋友 💜' : `坐月子第 ${pp.day} 天，好好休息中 🍲` });
     return out;
   }
 
@@ -400,7 +400,7 @@
     const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
-  function thanks(gained) { ui.toast(gained ? `謝謝分享 💜 好孕點數 +${gained}` : '謝謝分享 💜'); }
+  function thanks(gained) { ui.toast(gained ? `謝謝分享・好孕點數 +${gained}` : '謝謝分享'); }
 
   /* ================= 分享工作室: the card she sends, her way =================
    * 樣式 (seven colours) and 格式 (限時動態 9:16, 貼文 4:5, 方形 1:1) are remembered for next time; for a list she
@@ -575,7 +575,7 @@
         if (navigator.share && (ch === 'more' || data.files)) {
           const done = () => thanks(record(ch, p.campaign));
           const no = () => ui.toast('無法分享，請改用其他方式');
-          const r = await shareSheet(data, { msg: data.files ? '圖片做好了 💜' : '準備好了 💜', onShared: done, onFail: no });
+          const r = await shareSheet(data, { msg: data.files ? '圖片做好了' : '準備好了', onShared: done, onFail: no });
           if (r === 'shared') done(); else if (r === 'none') no();
           return;
         }
@@ -662,7 +662,7 @@
     // 滿月、收涎、百日、度晬 are shown as a warm card on 首頁 (custom-moment below), not as a pop-up
     const pp = App.journey && App.journey.ppInfo ? App.journey.ppInfo() : null;
     const cuNow = store.baby() ? customFor(store.baby()) : null;
-    if (pp && pp.day >= 30 && pp.day <= 36 && !(cuNow && cuNow.id === 'm30') && moment(`pp30-${pp.start}`, { emoji: '🍲', msg: '產後滿月，坐月子辛苦了！', kind: 'pp' })) return;
+    if (pp && pp.day >= 30 && pp.day <= 36 && !(cuNow && cuNow.id === 'm30') && moment(`pp30-${pp.start}`, { emoji: '🍲', msg: '產後滿月了', kind: 'pp' })) return;
     const streak = App.chicken ? App.chicken.streak() : 0;
     const hit = [7, 14, 30, 60, 100].find((n) => streak === n);
     if (hit) moment(`streak-${hit}-${C.dateKey(C.addDays(new Date(), -hit))}`, { emoji: '💜', msg: `連續 ${hit} 天好好照顧自己！`, kind: 'streak' });
@@ -730,7 +730,8 @@
     const name = store.state.profile.momName;
     // 雙向邀請禮: the friend learns what joining brings (only where the member service can give it)
     const gift = App.gift && App.gift.ready() ? `\n用我的連結加入、註冊會員，你會拿到 ${App.gift.PTS().friend} 點見面禮 🎁` : '';
-    return `${name ? `${name}邀請你` : '推薦你'}一起用「${B().appName || '易家做媽媽'}」💜\n從備孕、懷孕到育兒：餵奶尿布一鍵記錄、孕產路線圖、好孕島衛教，全部免費！${gift}\n我的邀請碼：${ensure(store.state).code}`;
+    // said the way a friend would say it (it read like an ad: 「…一鍵記錄、孕產路線圖、好孕島衛教，全部免費！」)
+    return `${name ? `${name}推薦你` : '推薦你'}用「${B().appName || '易家做媽媽'}」記餵奶、尿布和產檢。免費，不用註冊就能用。${gift}\n我的邀請碼：${ensure(store.state).code}`;
   }
   App.screen('invite', {
     title: '邀請好友',
@@ -760,7 +761,7 @@
       const rewards = REWARDS();
       const next = rewards.find((r) => sh.points < r.points);
       el.append(ui.card({ class: 'mt' },
-        h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '⭐ 好孕點數'), h('span', { class: 'big-num num inv-pts' }, sh.points)),
+        h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '好孕點數'), h('span', { class: 'big-num num inv-pts' }, sh.points)),
         next ? h('div', { class: 'small muted' }, `再 ${next.points - sh.points} 點解鎖「${next.title}」`) : h('div', { class: 'small muted' }, '全部獎勵都解鎖了！'),
         ui.progress(next ? sh.points / next.points : 1),
         h('div', { class: 'inv-rewards' }, rewards.map((r) => {
@@ -773,7 +774,7 @@
         h('p', { class: 'tiny faint mt' }, `分享到 LINE／Facebook／Threads +10、IG 分享卡 +20、邀請連結 +15（每天最多 60 點）${App.gift && App.gift.ready() ? `；朋友加入：見面禮 +${App.gift.PTS().friend}、邀請禮 +${App.gift.PTS().inviter}（不算在每天上限裡）` : ''}。點數記錄在這支手機。`)));
       // card gallery
       const list = cards();
-      el.append(h('div', { class: 'section-title' }, '📸 製作分享卡（IG 限時動態尺寸）'));
+      el.append(h('div', { class: 'section-title' }, '製作分享卡（IG 限時動態尺寸）'));
       // 家族週報 has its own screen (the week, a line for the family, LINE)
       const weekly = App.weekly && App.weekly.kindNow() ? h('button', { class: 'inv-card inv-weekly', onclick: () => App.navigate('weekly') },
         h('span', { class: 'inv-card-emoji' }, '📮'), h('span', { class: 'bold small' }, '家族週報'), h('span', { class: 'tiny muted' }, '每週一張，傳到家族群組')) : null;
@@ -853,7 +854,7 @@
     const consult = h('button', {
       class: 'isl-consult', 'aria-label': '諮詢與購買',
       onclick: () => { if (b.lineOaUrl) openUrl(b.lineOaUrl); else App.navigate('brand'); },
-    }, b.lineOaUrl ? '💬 LINE 諮詢' : `💜 ${b.brandName || '品牌'}`);
+    }, b.lineOaUrl ? [h('span', { class: 'isl-consult-ico', html: ui.ICONS.line }), 'LINE 諮詢'] : [h('img', { src: b.logo || 'assets/logo.svg', alt: '', class: 'isl-consult-logo' }), b.brandName || '品牌']);
     document.body.append(consult); islandUI.els.push(consult);
     scheduleHeart(true);
   }
@@ -876,7 +877,7 @@
      A second tap while a share sheet is already open does nothing (it used to download the picture as well).
      → 'shared' | 'cancel' (she closed it) | 'open' (one is open already) | 'late' (the toast is waiting) | 'none' (cannot share this) */
   const shareWhy = (e) => { const n = e && e.name; return n === 'AbortError' ? 'cancel' : n === 'InvalidStateError' ? 'open' : n === 'NotAllowedError' ? 'late' : 'none'; };
-  async function shareSheet(data, { msg = '圖片做好了 💜', action = '分享', onShared = null, onFail = null } = {}) {
+  async function shareSheet(data, { msg = '圖片做好了', action = '分享', onShared = null, onFail = null } = {}) {
     try { await navigator.share(data); return 'shared'; } catch (e) {
       const r = shareWhy(e);
       if (r === 'late') {

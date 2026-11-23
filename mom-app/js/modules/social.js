@@ -216,7 +216,7 @@
       agree ? agree.el : null,
       App.avatar && !App.avatar.current() ? h('button', { class: 'btn btn-soft btn-block', onclick: () => { sh.close(); App.navigate('avatar'); } }, '🙂 先做我的 Q 版角色') : null);
     sh = ui.sheet({
-      title: '👭 島上的媽媽',
+      title: '島上的媽媽',
       body,
       footer: h('div', { class: 'row gap-sm' },
         h('button', { class: 'btn btn-ghost', onclick: () => sh.close() }, '先不要'),
@@ -315,7 +315,7 @@
     draw();
     poll(id);
     markRead();
-    ui.sheet({ title: `👭 ${isl.emoji} ${isl.name}的媽媽們`, body, onClose: () => { off(); markRead(); } });
+    ui.sheet({ title: `${isl.emoji} ${isl.name}的媽媽們`, body, onClose: () => { off(); markRead(); } });
   }
 
   function openSettings() {
@@ -351,7 +351,7 @@
     };
     draw();
     if (apiOk === null) api().then(() => { if (body.isConnected) draw(); });
-    sh = ui.sheet({ title: '👭 島上的媽媽・設定', body });
+    sh = ui.sheet({ title: '島上的媽媽・設定', body });
   }
 
   // everything social, off and gone: leave the islands and the circle, delete the walls this phone opened

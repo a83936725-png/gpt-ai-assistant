@@ -11,7 +11,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const errors = [];
   const open = async (opts = {}) => {
     const ctx = await browser.newContext({ ...devices['iPhone 13'], locale: 'zh-TW', acceptDownloads: true, ...opts });
-    await ctx.addInitScript(() => { window.__noShareMoments = true; });
+    await ctx.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errors.push(e.message));
     p.on('dialog', (d) => d.dismiss().catch(() => {}));

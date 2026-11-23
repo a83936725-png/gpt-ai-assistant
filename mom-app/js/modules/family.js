@@ -321,7 +321,7 @@
         });
         setPending(null);
         history.replaceState(null, '', '#/family'); // the key leaves the address bar
-        ui.toast('已加入家人共用紀錄 💜 正在同步…');
+        ui.toast('已加入家人共用紀錄，正在同步…');
         ui.celebrate({ from: go, emojis: ['💜', '👨‍👩‍👧', '✨'] });
         App.refresh();
         const got = await sync();
@@ -355,7 +355,7 @@
             id: r.family.id, key, role: 'owner', joinedAt: new Date().toISOString(), epoch: C.uid(), consentAt: new Date().toISOString(), invite: r.invite, members: 1,
           };
         });
-        ui.toast('已建立 💜 現在邀請家人吧');
+        ui.toast('建立好了，接著邀請家人');
         App.refresh();
         sync();
       } catch (e) {
@@ -408,7 +408,7 @@
         }, '移出') : null))));
     }
     // inviting
-    const shareText = (url) => `${store.state.profile.member || '我'}邀請你一起用「${B().appName || '易家做媽媽'}」記錄寶寶 💜\n點連結加入我們的共用紀錄（只傳給家人喔）：\n${url}`;
+    const shareText = (url) => `${store.state.profile.member || '我'}邀請你一起用「${B().appName || '易家做媽媽'}」記錄寶寶\n點連結加入我們的共用紀錄（只傳給家人喔）：\n${url}`;
     const qrBox = h('div', { class: 'fm-qr' });
     el.append(ui.card({ class: 'fm-card fm-invite' },
       h('div', { class: 'card-title' }, '邀請家人'),

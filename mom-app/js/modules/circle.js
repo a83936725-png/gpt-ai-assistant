@@ -141,7 +141,7 @@
     if (voted && !p.counts) box.append(waiting(p.total, d.minShown || 3));
     if (voted && p.counts && !compact) {
       const same = p.counts[p.mine] - 1;
-      box.append(h('p', { class: 'small cc-same' }, same > 0 ? `有 ${same} 位同週媽媽和你選一樣 💜` : '你的答案比較特別！'));
+      box.append(h('p', { class: 'small cc-same' }, same > 0 ? `有 ${same} 位同週媽媽和你選一樣` : '你的答案比較特別！'));
     }
     return box;
   }
@@ -191,13 +191,13 @@
         box.innerHTML = '';
         const co = cohort(); const lb = label(co);
         if (!co) {
-          box.append(ui.card({ class: 'soft' }, h('div', { class: 'card-title' }, '🗳️ 同週好孕圈'),
+          box.append(ui.card({ class: 'soft' }, h('div', { class: 'card-title' }, '同週好孕圈'),
             h('p', { class: 'small' }, store.stage === 'preg' ? '先填預產期，才知道你和哪一週的媽媽同一圈。' : '先填寶寶的生日，才知道你和哪個月出生的寶寶媽媽同一圈。'),
             h('button', { class: 'btn btn-primary btn-block', onclick: () => App.navigate('me') }, '到「我的」填寫')));
           return;
         }
         if (App.social && App.social.isReady() === false) {
-          box.append(ui.card({ class: 'soft' }, h('div', { class: 'card-title' }, '🗳️ 同週好孕圈'), h('p', { class: 'small muted' }, '需要連上會員服務才能和其他媽媽一起投票；目前連不到，連上網路後再試試。')));
+          box.append(ui.card({ class: 'soft' }, h('div', { class: 'card-title' }, '同週好孕圈'), h('p', { class: 'small muted' }, '需要連上會員服務才能和其他媽媽一起投票；目前連不到，連上網路後再試試。')));
           return;
         }
         if (!circ().on) {
@@ -209,7 +209,7 @@
             h('ul', { class: 'cc-list' },
               h('li', null, '🗳️ 每週一題小問題，看看大家怎麼選'),
               h('li', null, '🌤️ 分享這週的心情，原來大家都一樣累'),
-              h('li', null, '💜 每天按一下，為同一圈的媽媽加油')),
+              h('li', null, '每天按一下，為同一圈的媽媽加油')),
             h('div', { class: 'soc-privacy' },
               h('div', { class: 'soc-pv' }, h('strong', null, '會送出'), h('ul', null, h('li', null, co === 'prep' ? '你在備孕' : co.startsWith('p:') ? '預產期是哪一週（不是日期）' : '寶寶出生的年月（不是日期）'), h('li', null, '你的回答（大家只看到總數）'))),
               h('div', { class: 'soc-pv no' }, h('strong', null, '不會送出'), h('ul', null, h('li', null, '名字、照片、生日'), h('li', null, '任何紀錄'), h('li', null, '誰選了什麼（3 位以上回答才公布結果）')))),
@@ -236,7 +236,7 @@
         }
         // cheering
         box.append(ui.card({ class: 'cc-cheer' },
-          h('div', { class: 'grow' }, h('div', { class: 'card-title' }, '💜 互相加油'), h('div', { class: 'small muted' }, d.cheers.week ? `這週大家已經互相加油 ${d.cheers.week} 次` : '這週還沒有人加油，當第一個吧！')),
+          h('div', { class: 'grow' }, h('div', { class: 'card-title' }, '互相加油'), h('div', { class: 'small muted' }, d.cheers.week ? `這週大家已經互相加油 ${d.cheers.week} 次` : '這週還沒有人加油，當第一個吧！')),
           h('button', {
             class: `btn ${d.cheers.today ? 'btn-ghost' : 'btn-primary'}`, disabled: d.cheers.today,
             onclick: async (e) => { const b = e.currentTarget; b.disabled = true; const r = await act('cheer'); if (r) { if (ui.celebrate) ui.celebrate({ from: b, emojis: ['💜', '✨', '🌸'] }); ui.toast('已為同一圈的媽媽加油 💜'); } else b.disabled = false; },
@@ -244,11 +244,11 @@
         // the question of the week
         const spot = d.poll.spot && App.island && App.island.spots && App.island.spots.find((s) => s.id === d.poll.spot);
         box.append(ui.card({ class: 'cc-poll-card' },
-          h('div', { class: 'row gap' }, h('div', { class: 'card-title grow' }, '🗳️ 本週小問題'), h('span', { class: 'tiny muted' }, '每週一換新題')),
+          h('div', { class: 'row gap' }, h('div', { class: 'card-title grow' }, '本週小問題'), h('span', { class: 'tiny muted' }, '每週一換新題')),
           pollBlock(d),
           spot ? h('button', { class: 'link-btn small', onclick: () => App.navigate('island', { spot: spot.id }) }, `相關小知識：${spot.emoji || '📍'} ${spot.name} ›`) : null));
         // mood
-        box.append(ui.card(null, h('div', { class: 'card-title' }, '🌤️ 這週的心情'), h('p', { class: 'tiny muted' }, '選一個最接近的；大家只看得到每種心情有幾位。'), moodBlock(d)));
+        box.append(ui.card(null, h('div', { class: 'card-title' }, '這週的心情'), h('p', { class: 'tiny muted' }, '選一個最接近的；大家只看得到每種心情有幾位。'), moodBlock(d)));
         box.append(h('div', { class: 'row gap-sm' },
           h('button', { class: 'btn btn-soft grow', onclick: () => App.share.open({ title: '同週好孕圈', text: '我在「同週好孕圈」和同一週的媽媽一起回答每週小問題、互相打氣，你也一起來吧！', campaign: 'circle', path: 'circle' }) }, '📨 邀請朋友'),
           App.social ? h('button', { class: 'btn btn-ghost grow', onclick: () => App.navigate('island') }, '👭 島上的媽媽') : null));
@@ -294,7 +294,7 @@
       if (!d) return;
       if (d.poll.mine !== null && Date.now() - justVoted > 10 * 60 * 1000) return; // answered: nothing waiting here
       el.append(h('div', { class: 'card cc-home-poll' },
-        h('div', { class: 'row gap' }, h('div', { class: 'card-title grow' }, `🗳️ 同週媽媽的本週小問題`), h('button', { class: 'link-btn small', onclick: () => App.navigate('circle') }, `${d.members} 位媽媽 ›`)),
+        h('div', { class: 'row gap' }, h('div', { class: 'card-title grow' }, `同週媽媽的本週小問題`), h('button', { class: 'link-btn small', onclick: () => App.navigate('circle') }, `${d.members} 位媽媽 ›`)),
         pollBlock(d, { compact: true })));
     },
   });

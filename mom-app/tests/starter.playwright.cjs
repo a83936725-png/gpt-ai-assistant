@@ -49,7 +49,7 @@ process.on('exit', () => { if (server) server.kill(); });
     const c = await b.newContext({
       viewport: { width, height: 844 }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', colorScheme: scheme, extraHTTPHeaders: { 'X-Forwarded-For': `10.${run}.${100 + nets}.7` },
     });
-    await c.addInitScript(() => { window.__noShareMoments = true; window.open = (u) => { (window.__opened = window.__opened || []).push(String(u)); return null; }; });
+    await c.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = (u) => { (window.__opened = window.__opened || []).push(String(u)); return null; }; });
     const p = await c.newPage();
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
@@ -69,14 +69,12 @@ process.on('exit', () => { if (server) server.kill(); });
     ok(`a11y: ${label}`, !v.length, v.join(' || '));
   };
   const setupPreg = async (p) => {
-    await p.click('text=開始使用'); await p.waitForTimeout(300);
     await p.click('.ob-choice:has-text("懷孕")'); await p.waitForTimeout(300);
     await p.fill('.onboard input[placeholder="怎麼稱呼你？（選填）"]', '小雨');
     const d = p.locator('.onboard input[type=date]'); await d.nth(1).fill('2027-04-20'); await d.nth(1).dispatchEvent('change');
     await p.click('text=完成，開始使用'); await p.waitForTimeout(1600);
   };
   const setupBaby = async (p, days, weight = '') => {
-    await p.click('text=開始使用'); await p.waitForTimeout(300);
     await p.click('.ob-choice:has-text("育兒")'); await p.waitForTimeout(300);
     await p.fill('.onboard input[placeholder="寶寶的名字或小名"]', '小湯圓');
     await p.fill('.onboard input[type=date]', await S(p, (n) => Core.dateKey(Core.addDays(new Date(), -n)), days));
@@ -165,7 +163,7 @@ process.on('exit', () => { if (server) server.kill(); });
   await N.fill('.login-code', ((await text(N, '.login-code-hint')).match(/(\d{6})/) || [])[1] || '');
   await N.click('.login-form button[type=submit]'); await N.waitForTimeout(2500);
   const hello = await text(N, '.sheet-backdrop.open .sheet');
-  ok('signed up: 「🎉 歡迎加入」 with the list, 註冊會員 already ✓', /🎉 歡迎加入/.test(hello) && /註冊會員\s*完成・\+5 點/.test(hello), hello.replace(/\n/g, ' / '));
+  ok('signed up: 「歡迎加入」 with the list, 註冊會員 already ✓', /歡迎加入/.test(hello) && /註冊會員\s*完成・\+5 點/.test(hello), hello.replace(/\n/g, ' / '));
   ok('…and no toast lying on top of it', !(await N.isVisible('.toast.show')), await text(N, '.toast-wrap'));
   await N.keyboard.press('Escape'); await N.waitForTimeout(400);
   /* her own team is hers: never folded */

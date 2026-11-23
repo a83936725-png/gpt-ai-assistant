@@ -24,7 +24,7 @@ const AV_B = {
     const ctx = await b.newContext({
       ...devices[device], locale: 'zh-TW', reducedMotion: 'reduce', colorScheme: scheme, extraHTTPHeaders: { 'X-Forwarded-For': ip() },
     });
-    await ctx.addInitScript(() => { window.__noShareMoments = true; });
+    await ctx.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errors.push(`${who}: ${e.message}`));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errors.push(`${who}: ${m.text()}`); });

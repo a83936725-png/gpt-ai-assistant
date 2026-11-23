@@ -11,7 +11,7 @@
   --c-ok-soft: #e3f4ec;
   --c-warn: #d9921c;
   --c-warn-soft: #fbf1df;
-  --c-danger: #d24f4f;
+  --c-danger: #c43c3c; /* 5.2:1 on white, 4.9:1 on the page (#d24f4f was 4.2:1: the brand dashboard's red ▲ failed) */
   --c-danger-soft: #fbe6e6;
   --c-bg: #faf7f4;
   --c-surface: #ffffff;
@@ -393,6 +393,12 @@ html:has(body.has-sheet), body.has-sheet { overscroll-behavior: none; }
 .tile-icon { font-size: 26px; line-height: 1; }
 .tile-title { font-weight: 700; font-size: 15px; }
 .tile-desc { font-size: 12.5px; color: var(--c-text-2); line-height: 1.4; }
+/* 健康 tab: each group is one card of plain rows */
+.tool-list { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; }
+.tile.tool-row { flex-direction: row; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 14px 12px 16px; border: 0; border-radius: 0; box-shadow: none; background: none; }
+.tile.tool-row + .tile.tool-row { border-top: 1px solid var(--c-border); }
+.tool-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tool-row .tile-desc { font-size: 13px; }
 
 /* ---------- disclaimer ---------- */
 .disclaimer { font-size: 12px; color: var(--c-text-3); line-height: 1.6; padding: 12px 4px; }
@@ -433,3 +439,5 @@ html:has(body.has-sheet), body.has-sheet { overscroll-behavior: none; }
   .card { box-shadow: none; break-inside: avoid; }
   body { background: #fff; }
 }
+.tile.tool-row:hover { box-shadow: none; background: var(--c-surface-2); }
+.tile.tool-row:active { transform: none; background: var(--c-surface-2); }

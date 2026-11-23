@@ -254,7 +254,7 @@
       if (r.longest >= 2 * C.HOUR) out.push(`🌙 最長一覺睡了 ${C.fmtDuration(r.longest)}`);
       if (r.totals.baths) out.push(`🛁 洗澡 ${r.totals.baths} 次`);
       if (r.pp && r.pp.day <= 42) out.push(`🍲 媽媽產後第 ${Math.ceil(r.pp.day / 7)} 週，好好休息中`);
-      if (r.chicken >= 3) out.push(`💜 媽媽有 ${r.chicken} 天留了滴雞精時光給自己`);
+      if (r.chicken >= 3) out.push(`媽媽有 ${r.chicken} 天喝了滴雞精`);
       return out;
     }
     r.visits.forEach((v) => out.push(`🩺 完成第 ${v.no} 次產檢`));
@@ -492,7 +492,7 @@
   function markSent(wk, channel, msg) {
     store.update((s) => { ensure(s).sent[wk] = C.dateKey(); });
     const pts = App.share ? App.share.record(channel, 'weekly') : 0;
-    ui.toast(msg || `謝謝分享 💜${pts ? ` 好孕點數 +${pts}` : ''}`);
+    ui.toast(msg || `謝謝分享${pts ? `・好孕點數 +${pts}` : ''}`);
   }
   const lineUrl = (t) => `https://line.me/R/share?text=${encodeURIComponent(t)}`;
   // how: 'image' (the picture and the words through the phone's share sheet → LINE → the family group),
@@ -500,7 +500,7 @@
   async function send(how, { wk, words, blob, onSent }) {
     if (how === 'text') {
       window.open(lineUrl(words), '_blank', 'noopener');
-      markSent(wk, 'line', '已開啟 LINE，選家族群組就可以傳出去 💜');
+      markSent(wk, 'line', '已開啟 LINE，選家族群組就可以傳出去');
       if (onSent) onSent();
       return;
     }
@@ -661,7 +661,7 @@
     });
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
     el.append(ui.card({ class: 'mt wk-note-card' },
-      h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '💬 給家人的話'), count),
+      h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '給家人的話'), count),
       input,
       h('div', { class: 'chips wk-mt-sm' }, PRESETS[kind].map((t) => h('button', {
         type: 'button', class: 'chip', onclick: () => { input.value = t; saveNote(t); },
@@ -669,7 +669,7 @@
       h('p', { class: 'tiny faint wk-mt-sm' }, '選填，會放在週報卡片的最下面。')));
 
     // what goes on the card
-    const optCard = ui.card({ class: 'mt wk-opts' }, h('div', { class: 'card-title' }, '🖼️ 卡片內容'));
+    const optCard = ui.card({ class: 'mt wk-opts' }, h('div', { class: 'card-title' }, '卡片內容'));
     if (kind === 'baby') {
       const ms = metricsFor(r);
       const curM = view.metric && ms.includes(view.metric) ? view.metric : defaultMetric(r);
@@ -741,13 +741,12 @@
       const sub = parts.length ? parts.map((x, i) => [i ? '・' : null, h('span', { class: 'nowrap' }, x)]) : '這週的大事都整理好了';
       el.append(ui.card({ class: 'wk-home' },
         h('div', { class: 'row gap' },
-          h('span', { class: 'wk-home-ico', 'aria-hidden': 'true' }, '📮'),
           h('div', { class: 'grow' }, h('div', { class: 'bold' }, title), h('div', { class: 'small muted' }, sub)),
           h('button', {
             class: 'icon-btn wk-home-x', 'aria-label': '這週先不要',
             onclick: () => { store.update((s) => { ensure(s).skip[wk] = C.dateKey(); }); ui.toast('這週先不傳。週報隨時可以在「健康 → 家族週報」做'); },
           }, '✕')),
-        h('button', { class: 'btn btn-primary btn-block wk-mt-sm wk-home-go', onclick: () => App.navigate('weekly', { wk }) }, '📮 看週報，傳給家人')));
+        h('button', { class: 'btn btn-primary btn-block wk-mt-sm wk-home-go', onclick: () => App.navigate('weekly', { wk }) }, '看週報，傳給家人')));
     },
   });
 

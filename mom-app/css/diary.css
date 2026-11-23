@@ -95,3 +95,5 @@
   .src-all { display: none; }
   .src-link { color: #222; }
 }
+/* no Q版 yet: the first character of her name (it was a 💜) */
+.av-me-initial { font-size: 22px; font-weight: 800; color: var(--c-primary); line-height: 1; }

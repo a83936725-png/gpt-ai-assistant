@@ -21,7 +21,7 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mom-diary-'));
 
   const open = async (opts = {}) => {
     const ctx = await browser.newContext({ ...devices['iPhone 13'], locale: 'zh-TW', acceptDownloads: true, ...opts });
-    await ctx.addInitScript(() => { window.__noShareMoments = true; });
+    await ctx.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errors.push(e.message));
     p.on('dialog', (d) => d.accept().catch(() => {}));

@@ -1271,7 +1271,7 @@
           s.island.checks[spot.id] = s.island.checks[spot.id] || {};
           s.island.checks[spot.id][i] = input.checked;
         });
-        if (input.checked) ui.toast('做得好！💜');
+        if (input.checked) ui.toast('已打勾');
       });
       return h('label', { class: 'check-row' }, input, h('span', null, txt));
     }));
@@ -1378,7 +1378,7 @@
     if (isl.special === 'diary') {
       if (st.open) { App.navigate('diary'); return null; }
       return ui.sheet({
-        title: '💌 產檢日記島',
+        title: '產檢日記島',
         body: h('div', { class: 'isl-sh' },
           h('p', null, '懷孕後開放：每次產檢放一張超音波照片、寫一句想對寶寶說的話，慢慢收集成一本產檢日記，還能印成 PDF。'),
           h('p', { class: 'small muted' }, '照片只存在你的手機。')),
@@ -1427,7 +1427,7 @@
       islandActions(isl, true, close),
       cite ? cite.footer() : null,
       h('p', { class: 'disclaimer' }, DISCLAIMER));
-    sh = ui.sheet({ title: '🎉 新的小島開放了', body });
+    sh = ui.sheet({ title: '新的小島開放了', body });
     ui.celebrate({ big: true, emojis: [isl.emoji, '🎉', '🏝️', '✨', '💜'] });
     return sh;
   }
@@ -2005,7 +2005,7 @@
         h('div', { class: 'row gap-sm mt' },
           h('button', { class: 'btn btn-primary grow', onclick: () => { sh.close(); dismissCoach(); setTimeout(() => openIsland(here), 240); } }, `看${hereIsl.name}注意事項`),
           h('button', { class: 'btn btn-ghost', onclick: () => { sh.close(); dismissCoach(); } }, '開始逛')));
-      sh = ui.sheet({ title: '🏝️ 好孕群島怎麼玩', body, onClose: () => dismissCoach() });
+      sh = ui.sheet({ title: '好孕群島怎麼玩', body, onClose: () => dismissCoach() });
     };
     let afterTimer = 0;
     afterTimer = setTimeout(() => {
@@ -2132,8 +2132,8 @@
         'aria-label': next ? `好孕群島・${isl.name}，下一站：${pad2(next.no)} ${next.name}，這座島已蓋 ${n} / ${N} 個章` : `好孕群島・${isl.name}，開放的小島都蓋完章了`,
       },
       h('span', { class: 'isl-home-emoji', 'aria-hidden': 'true' }, next ? next.emoji : isl.emoji),
-      h('span', { class: 'grow' }, h('span', { class: 'tiny muted' }, `🏝️ ${isl.name}・下一站`), h('br'), h('strong', null, next ? `${pad2(next.no)} ${next.name}` : '都蓋完章了 🎉')),
-      h('span', { class: 'isl-home-count num' }, `🏅 ${n}/${N}`),
+      h('span', { class: 'grow' }, h('span', { class: 'tiny muted' }, `${isl.name}・下一站`), h('br'), h('strong', null, next ? `${pad2(next.no)} ${next.name}` : '都蓋完章了 🎉')),
+      h('span', { class: 'isl-home-count num', title: '這座島已蓋的章' }, `${n}/${N} 章`),
       h('span', { class: 'ic faint', html: App.ui.ICONS.chevron })));
     },
   });

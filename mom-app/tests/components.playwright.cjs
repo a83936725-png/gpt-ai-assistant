@@ -17,7 +17,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
     const c = await b.newContext({
       viewport: { width, height: 844 }, locale: 'zh-TW', colorScheme: scheme, reducedMotion: motion === 'reduce' ? 'reduce' : 'no-preference', forcedColors: forced,
     });
-    await c.addInitScript(() => { window.__noShareMoments = true; window.open = () => null; });
+    await c.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null; });
     const p = await c.newPage();
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
@@ -42,8 +42,8 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
 
   /* ---------- 設定: 步驟條, 分段 with a sliding pill, the focus ring, a checkbox ---------- */
   const P = await mk();
-  await P.click('text=開始使用'); await P.waitForTimeout(400);
-  ok('設定 step 1: a 3-step 步驟條 (你的階段 now)', (await S(P, () => [...document.querySelectorAll('.onboard .steps li')].map((li) => `${li.className}:${li.innerText.replace(/\n/g, '')}`).join(' '))) === 'now:1你的階段 :2基本資料 :3開始記錄');
+  // 0.9.2: the first screen asks the first question itself (it used to be a slogan and four emoji lines, then this)
+  ok('設定 step 1: the first screen asks 你現在是？ with the three stages, no emoji', await S(P, () => /你現在是？/.test(document.querySelector('.onboard').innerText) && [...document.querySelectorAll('.ob-choice b')].map((b) => b.textContent).join() === '備孕中,懷孕中,育兒中' && !/[\u{1F300}-\u{1FAFF}]/u.test(document.querySelector('.onboard').innerText)));
   await P.click('.ob-choice:has-text("育兒")'); await P.waitForTimeout(500);
   const st = await S(P, () => ({ li: [...document.querySelectorAll('.onboard .steps li')].map((li) => li.className).join(','), cur: document.querySelector('.onboard .steps li.now').getAttribute('aria-current'), label: document.querySelector('.onboard .steps').getAttribute('aria-label') }));
   ok('…step 2: the first is done ✓, this one is the current step (aria-current, 「第 2 步，共 3 步」)', st.li === 'done,now,' && st.cur === 'step' && st.label === '第 2 步，共 3 步', JSON.stringify(st));
@@ -90,12 +90,12 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   await axe(D, '待產包 checklist (dark)');
   await D.context().close();
   const R = await mk({ motion: 'reduce' });
-  await R.click('text=開始使用'); await R.waitForTimeout(300); await R.click('.ob-choice:has-text("育兒")'); await R.waitForTimeout(400);
+  await R.click('.ob-choice:has-text("育兒")'); await R.waitForTimeout(400);
   const rm = await pill(R, '.onboard .seg');
   ok('減少動態效果: the pill is there but does not slide (no transition)', rm.opacity === '1' && parseFloat(rm.transition) === 0, JSON.stringify(rm));
   await R.context().close();
   const F = await mk({ forced: 'active' });
-  await F.click('text=開始使用'); await F.waitForTimeout(300); await F.click('.ob-choice:has-text("育兒")'); await F.waitForTimeout(400);
+  await F.click('.ob-choice:has-text("育兒")'); await F.waitForTimeout(400);
   const fc = await S(F, () => { const c = document.querySelector('.ob-hepb input'); return { appearance: getComputedStyle(c).appearance, mark: getComputedStyle(c, '::before').content }; });
   ok('high contrast (forced colours): checkboxes are the phone\'s own (no drawn ✓)', /^(auto|checkbox)$/.test(fc.appearance) && fc.mark === 'none', JSON.stringify(fc));
   await F.context().close();

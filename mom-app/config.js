@@ -3,7 +3,7 @@
 window.BRAND = {
   appName: '易家做媽媽',
   brandName: '易家滴雞精',
-  tagline: '易家滴雞精・陪你從備孕到育兒',
+  tagline: '易家滴雞精 出品', // 標題列和分享卡上的一行（原本是「陪你從備孕到育兒」，太像口號）
   logo: 'assets/logo.svg', // 只有圖形的 LOGO（方形）
   logoFull: 'assets/logo-full.svg', // 圖形 + 字（啟動畫面、品牌頁、報告用）
   // 以下連結請換成你們自己的（留空就不顯示按鈕）

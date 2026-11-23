@@ -90,7 +90,7 @@
         stat('已解凍／室溫', sumOf((b) => b.thawedAt || b.storage === 'room'))));
       const expired = bags.filter((b) => C.milkExpiry(b) <= new Date());
       if (expired.length) {
-        el.append(h('div', { class: 'card accent mt' }, h('div', { class: 'card-title' }, `⚠️ 有 ${expired.length} 袋已超過建議保存時間`),
+        el.append(h('div', { class: 'card accent mt' }, h('div', { class: 'card-title' }, `有 ${expired.length} 袋已超過建議保存時間`),
           h('button', { class: 'btn btn-sm btn-ghost mt', onclick: async () => { if (await ui.confirm('把過期的母乳袋全部移除？', { ok: '移除', danger: true })) store.update((s) => { s.milk = s.milk.filter((b) => !expired.some((e) => e.id === b.id)); }); } }, '清除過期')));
       }
       el.append(h('div', { class: 'section-title' }, h('span', null, `庫存（${bags.length} 袋，先到期先用）`), h('button', { onclick: () => bagSheet() }, '＋ 新增')));
@@ -98,7 +98,7 @@
       else el.append(h('div', { class: 'list' }, bags.map(bagRow)));
 
       el.append(h('div', { class: 'card soft mt-lg' },
-        h('div', { class: 'card-title' }, '🧊 母乳保存參考'),
+        h('div', { class: 'card-title' }, '母乳保存參考'),
         h('ul', { class: 'small tight' },
           h('li', null, '室溫（25°C 以下）：4 小時內'),
           h('li', null, '冷藏（4°C）：4 天內'),

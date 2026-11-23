@@ -69,7 +69,7 @@
     const copy = {
       urgent: { title: '⚠️ 請立即就醫', text: '你記錄的狀況需要盡快由醫師評估。請直接前往產檢醫院或急診；情況緊急請撥 119。' },
       soon: { title: '請盡快聯絡醫師', text: '建議今天就聯絡你的產檢醫院或醫師，說明以下狀況：' },
-      crisis: { title: '你不是一個人 💜', text: '謝謝你願意說出來。請立刻告訴身邊信任的人，並撥打專線，有專人 24 小時陪你：' },
+      crisis: { title: '你不是一個人', text: '謝謝你願意說出來。請立刻告訴身邊信任的人，並撥打專線，有專人 24 小時陪你：' },
     }[level];
     const sh = ui.sheet({
       title: copy.title,
@@ -142,7 +142,7 @@
             sh.close();
             const { level, hits } = levelOf(rec.symptoms, J().PREG_SYMPTOMS, rec);
             if (level) setTimeout(() => alertSheet(level, hits), 260);
-            else ui.toast(isEdit ? '已更新' : '已記錄今天的身體狀況 💜');
+            else ui.toast(isEdit ? '已更新' : '已記錄今天的身體狀況');
           },
         }, '儲存')),
     });
@@ -191,7 +191,7 @@
             sh.close();
             const { level, hits } = levelOf(rec.symptoms, J().PP_SYMPTOMS, { temp: rec.temp });
             if (level) setTimeout(() => alertSheet(level, hits), 260);
-            else ui.toast(isEdit ? '已更新' : '已記錄，今天也辛苦了 💜');
+            else ui.toast(isEdit ? '已更新' : '已記錄');
           },
         }, '儲存')),
     });
@@ -219,7 +219,7 @@
     };
     date.addEventListener('change', updGa); updGa();
     const sh = ui.sheet({
-      title: '🎉 寶寶出生了！',
+      title: '寶寶出生了！',
       body: h('div', null,
         h('p', { class: 'small muted' }, '恭喜你！填寫生產紀錄，App 會切換到「育兒＋坐月子」，成長曲線也會從出生開始畫。', gaText),
         ui.field('寶寶名字', name), ui.field('性別', sex),
@@ -336,7 +336,7 @@
   }
   function hotlineCard() {
     return ui.card({ class: 'flat jr-hotlines' },
-      h('div', { class: 'card-title' }, '☎️ 需要幫忙時'),
+      h('div', { class: 'card-title' }, '需要幫忙時'),
       J().HOTLINES.map((x) => h('a', { class: 'list-item', href: `tel:${x.number.replace(/-/g, '')}` },
         h('span', { class: 'li-body' }, h('span', { class: 'li-title' }, x.label)), h('span', { class: 'li-right bold num' }, x.number))));
   }
@@ -489,7 +489,7 @@
       // mood support: several low days in the last 2 weeks
       const low = log.filter((x) => x.mood && x.mood <= 2 && Date.now() - new Date(x.at) < 14 * C.DAY).length;
       if (low >= 4) {
-        el.append(ui.card({ class: 'soft mt' }, h('div', { class: 'card-title' }, '💜 最近好像比較辛苦'),
+        el.append(ui.card({ class: 'soft mt' }, h('div', { class: 'card-title' }, '最近好像比較辛苦'),
           h('p', { class: 'small' }, `最近兩週有 ${low} 天心情低落。產後情緒起伏很常見，但如果持續超過兩週，或你覺得撐不住了，請讓家人知道，也可以打專線聊聊。`),
           J().HOTLINES.slice(1).map((x) => h('a', { class: 'btn btn-ghost btn-block mt', href: `tel:${x.number.replace(/-/g, '')}` }, `📞 ${x.label} ${x.number}`))));
       }
@@ -499,7 +499,7 @@
       if (log.length) {
         const recent = log.slice(0, 10).reverse();
         const colorOf = (c) => (J().LOCHIA.color.find((x) => x.value === c) || {}).hex || '#ccc';
-        el.append(ui.card({ class: 'mt' }, h('div', { class: 'card-title' }, '📈 最近的變化'),
+        el.append(ui.card({ class: 'mt' }, h('div', { class: 'card-title' }, '最近的變化'),
           h('div', { class: 'jr-trend' }, recent.map((x) => h('div', { class: 'jr-trend-col', title: C.fmtDate(x.at) },
             h('span', { class: 'jr-trend-mood' }, moodEmoji(x.mood) || '·'),
             h('span', { class: 'jr-trend-dot', style: { background: colorOf(x.lochia?.color), opacity: x.lochia?.amount === 'none' ? 0.25 : 1 } }),
@@ -523,7 +523,7 @@
         })));
       }
       const pf = J().PHASES.find((p) => p.id === 'pp');
-      el.append(ui.card({ class: 'flat mt jr-watch-card' }, h('div', { class: 'card-title' }, '⚠️ 產後要就醫的警訊'), h('ul', { class: 'jr-watch' }, pf.watch.map((x) => h('li', null, x)))));
+      el.append(ui.card({ class: 'flat mt jr-watch-card' }, h('div', { class: 'card-title' }, '產後要就醫的警訊'), h('ul', { class: 'jr-watch' }, pf.watch.map((x) => h('li', null, x)))));
       el.append(hotlineCard());
       el.append(h('p', { class: 'disclaimer' }, '內容為一般衛教資訊，不能取代醫師建議。'));
     },
@@ -540,7 +540,7 @@
       const done = store.state.journey.done;
       const next = p.todo.filter((t) => !done[t.id] && (!t.week || t.week <= cur.ga.weeks + 4)).slice(0, 2);
       el.append(ui.card({ class: 'jr-home' },
-        h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '🗺️ 孕產路線圖'), h('span', { class: 'tag primary' }, `${p.icon} ${p.title}`)),
+        h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '孕產路線圖'), h('span', { class: 'tag primary' }, `${p.icon} ${p.title}`)),
         next.length ? h('div', { class: 'jr-todos' }, next.map((t) => h('div', { class: 'jr-todo' },
           h('label', { class: 'jr-todo-main' }, h('input', { type: 'checkbox', onchange: () => toggleTodo(t.id) }), h('span', null, t.text)),
           (t.tool && App.screens[t.tool]) ? h('button', { class: 'btn btn-sm btn-soft', onclick: () => openTool(t) }, '前往') : null)))
@@ -559,7 +559,7 @@
       if (!pp || !pp.inConfinement) return;
       const loggedToday = (store.state.postpartum.log || []).some((x) => C.dateKey(new Date(x.at)) === C.dateKey());
       el.append(ui.card({ class: 'jr-home jr-pp-home' },
-        h('div', { class: 'row between' }, h('div', { class: 'card-title' }, `🍲 坐月子・產後第 ${pp.day} 天`), h('span', { class: `tag ${loggedToday ? 'ok' : 'warn'}` }, loggedToday ? '今天已記錄' : '今天還沒記錄')),
+        h('div', { class: 'row between' }, h('div', { class: 'card-title' }, `坐月子・產後第 ${pp.day} 天`), h('span', { class: `tag ${loggedToday ? 'ok' : 'warn'}` }, loggedToday ? '今天已記錄' : '今天還沒記錄')),
         h('div', { class: 'mt' }, ui.progress(pp.day / 42)),
         newbornChecks(),
         h('div', { class: 'row gap-sm mt' },

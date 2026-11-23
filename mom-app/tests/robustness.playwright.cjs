@@ -16,7 +16,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const open = async (opts, tag) => {
     const ctx = await browser.newContext({ locale: 'zh-TW', ...opts });
     const p = await ctx.newPage();
-    await p.addInitScript(() => { window.__noShareMoments = true; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     watch(p, tag);
     return p;
   };
@@ -148,7 +148,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   {
     const ctx = await browser.newContext({ viewport: { width: 360, height: 760 } });
     const p = await ctx.newPage();
-    await p.addInitScript(() => { window.__noShareMoments = true; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     watch(p, 'slow');
     const cdp = await ctx.newCDPSession(p);
     await cdp.send('Network.enable');
@@ -205,7 +205,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     };
     for (const [choice, label] of [['懷孕中', 'pregnant'], ['備孕中', 'trying'], ['育兒中', 'baby']]) {
       await p.goto(BASE); await S(p, () => { localStorage.clear(); }); await p.goto(BASE); await p.waitForTimeout(300);
-      await p.click('text=開始使用'); await p.click(`.ob-choice:has-text("${choice}")`).catch(() => {}); await p.waitForTimeout(200);
+      await p.click(`.ob-choice:has-text("${choice}")`).catch(() => {}); await p.waitForTimeout(200);
       const stage = await S(p, () => !!document.querySelector('.ob-q') && document.querySelector('.ob-q').textContent);
       await p.click('text=完成，開始使用'); await p.waitForTimeout(400);
       const before = errors.filter((e) => e.startsWith('[nodate]')).length;
@@ -215,7 +215,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     }
     // pregnant without a date → the roadmap asks for the date instead of breaking
     await p.goto(BASE); await S(p, () => { localStorage.clear(); }); await p.goto(BASE); await p.waitForTimeout(300);
-    await p.click('text=開始使用'); await p.click('.ob-choice:has-text("懷孕中")'); await p.click('text=完成，開始使用'); await p.waitForTimeout(300);
+    await p.click('.ob-choice:has-text("懷孕中")'); await p.click('text=完成，開始使用'); await p.waitForTimeout(300);
     await S(p, () => { location.hash = '#/journey'; }); await p.waitForTimeout(300);
     ok('pregnant without a date: roadmap asks for the due date', await p.isVisible('text=還沒設定預產期'));
     await p.click('button:has-text("設定預產期")'); await p.waitForTimeout(300);

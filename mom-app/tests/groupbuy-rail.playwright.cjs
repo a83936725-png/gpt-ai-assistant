@@ -24,7 +24,7 @@ const NOW = '2026-11-22T14:19:03+08:00'; // Sunday afternoon in Taiwan
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', colorScheme: scheme, reducedMotion: motion });
     ctxs.push(c);
     await c.clock.install({ time: new Date(time) });
-    await c.addInitScript(() => { window.__noShareMoments = true; window.open = () => null; });
+    await c.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null; });
     // a real member service that can't be reached right now (offline): the API calls fail without an answer
     if (apiDown) await c.addInitScript(() => { const f = window.fetch.bind(window); window.fetch = (u, o) => (/\/api\//.test(String(u)) ? Promise.reject(new TypeError('Failed to fetch')) : f(u, o)); });
     // a host that answers the API address with a plain page (403: a static host; 503: a real service having trouble)

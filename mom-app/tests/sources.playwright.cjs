@@ -12,7 +12,7 @@ const OFFICIAL = /^https:\/\/([a-z0-9-]+\.)*(gov\.tw|gov\.taipei|who\.int|cdc\.g
   const browser = await chromium.launch();
   const errors = [];
   const ctx = await browser.newContext({ ...devices['iPhone 13'], locale: 'zh-TW' });
-  await ctx.addInitScript(() => { window.__noShareMoments = true; });
+  await ctx.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errors.push(e.message));
   const S = (f, a) => p.evaluate(f, a);

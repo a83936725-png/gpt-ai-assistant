@@ -10,13 +10,13 @@
   const { h, ui } = App;
   const C = window.Core;
   const store = App.store;
+  // quiet, practical lines (no slogans: 「每一次夜奶，都是給寶寶的擁抱」 and 「天亮之前，你已經很努力了」 are gone)
   const WORDS = [
-    '慢慢來，寶寶在你懷裡很安心',
     '累了就靠著休息一下，計時會繼續',
-    '記得喝口水 💧',
-    '每一次夜奶，都是給寶寶的擁抱',
+    '記得喝口水',
     '肩膀放鬆，深呼吸一下',
-    '天亮之前，你已經很努力了',
+    '換邊的時候，按一下另一邊就好',
+    '餵完記得幫寶寶拍嗝',
   ];
   const isNow = (d = new Date()) => !!(App.isLate && App.isLate(d));
   // 凌晨 03:12, 清晨 05:40 (before a winter sunrise), 晚上 23:05 — and right for any hour it is opened by hand
@@ -122,7 +122,9 @@
     App.timers.start = function nightStart(type, extra, babyId) {
       const before = feedKey(babyId);
       const r = start.call(this, type, extra, babyId);
-      if ((type === 'breast' || type === 'feed') && !before && autoOn() && isNow() && !root) setTimeout(() => { if (feedKey()) open(); }, 250);
+      // (window.__noNightAuto: the test suites that run on the machine's real clock set it, like __noShareMoments, so a
+      // run in the middle of the night does not have this screen cover what they look at; tests/night checks it)
+      if ((type === 'breast' || type === 'feed') && !before && !window.__noNightAuto && autoOn() && isNow() && !root) setTimeout(() => { if (feedKey()) open(); }, 250);
       return r;
     };
     App.timers.start.__night = true;

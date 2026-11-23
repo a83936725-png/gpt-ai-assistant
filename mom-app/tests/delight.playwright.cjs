@@ -11,7 +11,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const errors = [];
   const open = async (opts = {}) => {
     const ctx = await browser.newContext({ ...devices['iPhone 13'], locale: 'zh-TW', ...opts });
-    await ctx.addInitScript(() => { window.__noShareMoments = true; });
+    await ctx.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errors.push(e.message));
     p.on('dialog', (d) => d.dismiss().catch(() => {}));
@@ -52,7 +52,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const before = await S(p, () => (document.querySelector('.quick-tile[data-type="diaper"] .qt-badge') || {}).textContent || '0');
   await p.tap('.quick-tile[data-type="diaper"] .qt-plus'); await p.waitForTimeout(120);
   const qa = await S(p, () => ({ n: document.querySelectorAll('.fx-layer .fx-p').length, pop: !!document.querySelector('.quick-tile[data-type="diaper"] .qt-badge.pop'), badge: (document.querySelector('.quick-tile[data-type="diaper"] .qt-badge') || {}).textContent }));
-  ok('＋尿布: a few 🧷 float up from the button and today\'s count pops', qa.n >= 3 && qa.n <= 8 && qa.pop && Number(qa.badge) === Number(before) + 1, JSON.stringify(qa));
+  ok('＋尿布: a few dots in the 尿布 colour float up from the button and today\'s count pops', qa.n >= 3 && qa.n <= 8 && qa.pop && Number(qa.badge) === Number(before) + 1, JSON.stringify(qa));
   await p.waitForTimeout(1500);
   await S(p, () => App.store.update((s) => { s.logs = s.logs.filter((l) => l.type !== 'bottle'); })); await go(p, 'home', 900);
   await p.tap('.quick-tile[data-type="bottle"] .qt-plus'); await p.waitForTimeout(200);
@@ -77,15 +77,16 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   ok('arriving on a screen: cards settle in; an update of the same screen does not replay it (no flicker)', entering && !updating);
 
   /* ---------- daily tasks and streaks ---------- */
-  await S(p, () => App.store.update((s) => { const k = Core.dateKey(); s.daily.log[k] = { water: 7 }; s.chicken.log[k] = 1; delete s.folic.log[k]; s.profile.stage = 'baby'; }));
+  await S(p, () => App.store.update((s) => { const k = Core.dateKey(); s.daily.log[k] = { water: 0 }; s.chicken.log[k] = 1; delete s.folic.log[k]; s.profile.stage = 'baby'; }));
   await go(p, 'home', 800);
   await p.click('.daily-item:has-text("喝水") .daily-main'); await p.waitForTimeout(400);
   const allDone = { toast: await toastText(p), n: await parts(p), cheered: await S(p, () => !!App.store.state.daily.log[Core.dateKey()].cheered) };
-  ok('the last daily task done (8th glass of water): 「今日小任務全部完成」 with confetti', /全部完成/.test(allDone.toast) && allDone.n > 0 && allDone.cheered, JSON.stringify(allDone));
-  await p.waitForFunction(() => ![...document.querySelectorAll('.toast')].some((t) => /全部完成/.test(t.textContent)), null, { timeout: 8000 });
+  // 0.9.2: everyday tasks are not a milestone — one quiet line, no confetti (and no 「8 杯」 target of ours: the first glass ticks it)
+  ok('the last daily task done (a glass of water): 「今天的 2 件小事都記了」, said once, no confetti', /今天的 2 件小事都記了/.test(allDone.toast) && allDone.n === 0 && allDone.cheered, JSON.stringify(allDone));
+  await p.waitForFunction(() => ![...document.querySelectorAll('.toast')].some((t) => /都記了/.test(t.textContent)), null, { timeout: 8000 });
   await p.click('.daily-item:has-text("喝水") .daily-minus'); await p.waitForTimeout(300);
   await p.click('.daily-item:has-text("喝水") .daily-main'); await p.waitForTimeout(400);
-  ok('…only once a day (undo and redo does not celebrate again)', !/全部完成/.test(await toastText(p)));
+  ok('…only once a day (undo and redo does not say it again)', !/都記了/.test(await toastText(p)));
   await S(p, () => App.store.update((s) => { s.chicken.log = {}; for (let i = 1; i <= 6; i += 1) s.chicken.log[Core.dateKey(Core.addDays(new Date(), -i))] = 1; }));
   await S(p, () => App.chicken.checkIn(1)); await p.waitForTimeout(200);
   ok('7 days of 滴雞精時光 in a row: a streak cheer', /連續 7 天/.test(await toastText(p)) && (await parts(p)) > 0);

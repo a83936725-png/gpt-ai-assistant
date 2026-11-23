@@ -270,7 +270,7 @@
   function cycleSummaryCard(info) {
     if (!info.last) {
       return ui.card({ class: 'soft' },
-        h('div', { class: 'card-title' }, '🌸 開始記錄月經'),
+        h('div', { class: 'card-title' }, '開始記錄月經'),
         h('p', { class: 'small muted' }, '記錄月經第一天，就能預測下次月經、排卵日和易孕期。'),
         h('button', { class: 'btn btn-primary mt', onclick: openLastPeriodSheet }, '記錄最近一次月經'));
     }
@@ -516,7 +516,7 @@
     if (!lmp) {
       add(el, 
         ui.card({ class: 'soft' },
-          h('div', { class: 'card-title' }, '🤰 先設定預產期'),
+          h('div', { class: 'card-title' }, '先設定預產期'),
           h('p', { class: 'small muted' }, '輸入最後一次月經的第一天或醫師告訴你的預產期，就能看到每週的寶寶變化、產檢時程與倒數。'),
           h('div', { class: 'mt' }, dueDateForm())),
         disclaimer());
@@ -674,7 +674,7 @@
             h('ul', { class: 'pg-items small' }, v.items.map((t) => h('li', null, t)))));
       })),
       ui.card({ class: 'flat mt' },
-        h('div', { class: 'card-title' }, '📘 公費產檢包含'),
+        h('div', { class: 'card-title' }, '公費產檢包含'),
         h('ul', { class: 'pg-items small' },
           h('li', null, '產前檢查 14 次（2023 年 7 月起由 10 次增加）'),
           h('li', null, '超音波 3 次（各孕期各一次）'),
@@ -764,7 +764,7 @@
       }
       add(el, 
         ui.card({ class: 'flat mt' },
-          h('div', { class: 'card-title' }, '💡 怎麼數胎動？'),
+          h('div', { class: 'card-title' }, '怎麼數胎動？'),
           h('ul', { class: 'pg-items small' },
             h('li', null, '一般從 28 週左右開始，每天固定一個寶寶比較活躍的時段（例如飯後）來數。'),
             h('li', null, '常見的方法是記錄感覺到 10 次胎動需要多久，並和平常的自己比較。'),
@@ -991,7 +991,7 @@
     const hcm = Number(p.heightCm); const pre = Number(p.prePregWeight);
     if (!hcm || !pre) {
       add(el, ui.card({ class: 'soft' },
-        h('div', { class: 'card-title' }, '⚖️ 先輸入身高和孕前體重'),
+        h('div', { class: 'card-title' }, '先輸入身高和孕前體重'),
         h('p', { class: 'small muted' }, '用來計算你的 BMI 和建議的孕期增重範圍。'),
         h('button', { class: 'btn btn-primary mt', onclick: openBodySheet }, '輸入資料')), disclaimer());
       return;
@@ -1066,7 +1066,7 @@
     render: (el) => {
       // when to pack (from the 易家待產包懶人包 and 孕產兒網)
       add(el, ui.card({ class: 'pg-bag-when' },
-        h('div', { class: 'card-title' }, '🗓️ 什麼時候準備'),
+        h('div', { class: 'card-title' }, '什麼時候準備'),
         h('ul', { class: 'small pg-bag-steps' },
           h('li', null, h('b', null, '32–34 週'), '：先問醫院和月子中心會提供哪些，再列自己的清單'),
           h('li', null, h('b', null, '34–36 週'), '：打包完成，放在門口或車上'),
@@ -1094,7 +1094,7 @@
     tab: 'health',
     render: (el) => {
       add(el, ui.card({ class: 'soft' },
-        h('div', { class: 'card-title' }, '🏠 住月子中心'),
+        h('div', { class: 'card-title' }, '住月子中心'),
         h('p', { class: 'small' }, '入住前問清楚、住的時候學起來、出月中前把回家銜接好。每間的規定不一樣：有提供的用品，也要問品牌、數量和怎麼補。')));
       renderChecklist(el, { groups: D.CONFINEMENT, stateKey: 'confinementCheck', intro: '月子中心清單', doneText: '🏠 都確認好了，回家也接得上。' });
       add(el, ui.card({ class: 'pg-alert-danger mt' },
@@ -1125,7 +1125,7 @@
       const info = cycleInfo();
       if (!info.last) {
         add(el, ui.card({ class: 'soft' },
-          h('div', { class: 'card-title' }, '🌸 經期・排卵'),
+          h('div', { class: 'card-title' }, '經期・排卵'),
           h('p', { class: 'small muted' }, '記錄最近一次月經，幫你預測排卵日與易孕期。'),
           h('button', { class: 'btn btn-primary btn-sm mt', onclick: openLastPeriodSheet }, '記錄最近一次月經')));
         return;
@@ -1134,7 +1134,7 @@
       const nextLine = info.late > 0 ? `月經晚了 ${info.late} 天` : info.daysToNext === 0 ? '月經預計今天來' : `距離下次月經 ${info.daysToNext} 天`;
       add(el, ui.card({ class: `tap pg-home-cycle${info.inFertile ? ' fertile' : ''}`, onclick: () => App.navigate('cycle') },
         h('div', { class: 'row between' },
-          h('div', { class: 'card-title' }, '🌸 經期・排卵'),
+          h('div', { class: 'card-title' }, '經期・排卵'),
           h('span', { class: `tag ${ph.cls}` }, ph.label)),
         h('div', { class: 'row gap mt' },
           h('div', { class: 'grow' },
@@ -1155,7 +1155,7 @@
       const lmp = pregLmp();
       if (!lmp) {
         add(el, ui.card({ class: 'soft' },
-          h('div', { class: 'card-title' }, '🤰 恭喜懷孕！'),
+          h('div', { class: 'card-title' }, '恭喜懷孕！'),
           h('p', { class: 'small muted' }, '設定預產期，看每週寶寶的變化與產檢時程。'),
           h('button', { class: 'btn btn-primary btn-sm mt', onclick: () => App.navigate('pregnancy') }, '設定預產期')));
         return;
@@ -1163,7 +1163,7 @@
       const ga = C.gestAge(lmp);
       if (ga.totalDays < 0 || ga.totalDays > 44 * 7) {
         add(el, ui.card({ class: 'soft' },
-          h('div', { class: 'card-title' }, '🤰 預產期需要確認'),
+          h('div', { class: 'card-title' }, '預產期需要確認'),
           h('p', { class: 'small muted' }, '目前的設定換算出來的週數不太對，請重新設定。'),
           h('button', { class: 'btn btn-primary btn-sm mt', onclick: openDueDateSheet }, '重新設定')));
         return;

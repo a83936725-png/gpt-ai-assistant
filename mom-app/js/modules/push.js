@@ -151,12 +151,12 @@
     denied: '通知被封鎖了：請到手機的「設定 → 通知」或瀏覽器的網站設定，允許這個 App 傳送通知，再回來開啟。',
   };
   function card() {
-    const box = h('section', { class: 'card push-card', 'aria-live': 'polite' }, h('div', { class: 'card-title' }, '📲 手機通知'), h('p', { class: 'small muted' }, '讀取中…'));
+    const box = h('section', { class: 'card push-card', 'aria-live': 'polite' }, h('div', { class: 'card-title' }, '手機通知'), h('p', { class: 'small muted' }, '讀取中…'));
     const paint = async () => {
       const st = await status();
       const line = await lineRow();
       box.innerHTML = '';
-      box.append(h('div', { class: 'card-title' }, '📲 手機通知'));
+      box.append(h('div', { class: 'card-title' }, '手機通知'));
       if (st.why !== 'on' && st.why !== 'off') {
         box.append(h('p', { class: 'small muted push-why', dataset: { why: st.why } }, WHY[st.why]));
         if (st.why === 'login') box.append(h('button', { class: 'btn btn-sm btn-primary mt', onclick: () => App.navigate('login') }, '登入／註冊'));
@@ -169,7 +169,7 @@
             class: 'btn btn-primary btn-block mt push-on',
             onclick: async (e) => {
               e.currentTarget.disabled = true;
-              try { await enable(); ui.toast('已開啟手機通知 💜'); ui.celebrate({ from: box, emojis: ['🔔', '💜'] }); } catch (er) {
+              try { await enable(); ui.toast('通知開了'); ui.celebrate({ from: box, emojis: ['🔔', '💜'] }); } catch (er) {
                 const c = er && er.code;
                 ui.toast(c === 'denied' ? '通知被封鎖了，請到設定允許通知' : c === 'dismissed' ? '沒有開啟通知' : c === 'login' ? '請先登入會員' : '開啟失敗，請稍後再試'); // eslint-disable-line no-nested-ternary
               }
@@ -226,7 +226,7 @@
         class: 'btn btn-sm btn-soft push-offer',
         onclick: async (e) => {
           const btn = e.currentTarget; btn.disabled = true;
-          try { await enable({ ...ALL_ON, [topic]: true }); btn.textContent = '已開啟通知 🔔'; ui.toast('有進度會通知你 💜'); } catch (er) { btn.disabled = false; ui.toast(er && er.code === 'denied' ? '通知被封鎖了，請到設定允許通知' : '沒有開啟通知'); }
+          try { await enable({ ...ALL_ON, [topic]: true }); btn.textContent = '已開啟通知 🔔'; ui.toast('有進度會通知你'); } catch (er) { btn.disabled = false; ui.toast(er && er.code === 'denied' ? '通知被封鎖了，請到設定允許通知' : '沒有開啟通知'); }
         },
       }, `🔔 ${text}`));
     });

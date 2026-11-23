@@ -365,7 +365,7 @@
     if (have.length) el.append(group({ id: 'have', name: '已有', emoji: '✅' }, have));
     if (skip.length) {
       el.append(h('details', { class: 'gd-group gd-skipped' },
-        h('summary', { class: 'section-title' }, `➖ 不需要（${skip.length}）`),
+        h('summary', { class: 'section-title' }, `不需要（${skip.length}）`),
         h('div', { class: 'list' }, skip.map(itemRow))));
     }
   }
@@ -421,7 +421,7 @@
     el.append(ui.card({ class: 'soft gd-wish-head center' },
       h('div', { class: 'gd-wish-emoji', 'aria-hidden': 'true' }, '🎁'),
       h('h2', { class: 'gd-wish-title' }, who ? `${who}的寶寶好物願望清單` : '寶寶好物願望清單'),
-      h('p', { class: 'small muted' }, `想送禮的話，點「我想送這個」用 LINE 跟${who || '準爸媽'}說一聲，避免大家送重複 💜`)));
+      h('p', { class: 'small muted' }, `想送禮的話，點「我想送這個」用 LINE 跟${who || '準爸媽'}說一聲，避免大家送重複`)));
     if (!items.length && !custom.length) {
       el.append(ui.empty('🎁', '這份清單是空的，或連結不完整。'));
     }
@@ -473,7 +473,7 @@
       const done = must.filter((x) => ['have', 'skip'].includes(statusOf(x.id))).length;
       if (must.length && done === must.length) return;
       el.append(ui.card({ class: 'gd-home' },
-        h('div', { class: 'card-title' }, '🛍️ 常見好物', h('span', { class: 'tag primary num' }, `必備 ${done}/${must.length}`)),
+        h('div', { class: 'card-title' }, '常見好物', h('span', { class: 'tag primary num' }, `必備 ${done}/${must.length}`)),
         h('p', { class: 'small muted' }, msg),
         h('div', { class: 'row gap mt' },
           h('button', { type: 'button', class: 'btn btn-primary grow', onclick: () => App.navigate('goods') }, '看清單'),

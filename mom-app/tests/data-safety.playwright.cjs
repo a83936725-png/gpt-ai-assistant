@@ -14,7 +14,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     const ctx = await browser.newContext({ locale: 'zh-TW', viewport: { width: 390, height: 844 }, acceptDownloads: true });
     ctxs.push(ctx);
     await ctx.addInitScript(() => {
-      window.__noShareMoments = true;
+      window.__noShareMoments = true; window.__noNightAuto = true;
       // keep every exported backup so the test can read it back
       const orig = URL.createObjectURL.bind(URL);
       URL.createObjectURL = (blob) => { window.__lastBlob = blob; return orig(blob); };
@@ -248,7 +248,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   {
     const phone = async (dev, init) => {
       const ctx = await browser.newContext({ ...devices[dev], locale: 'zh-TW' }); ctxs.push(ctx);
-      await ctx.addInitScript(() => { window.__noShareMoments = true; const o = URL.createObjectURL.bind(URL); URL.createObjectURL = (b) => { window.__lastBlob = b; return o(b); }; });
+      await ctx.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; const o = URL.createObjectURL.bind(URL); URL.createObjectURL = (b) => { window.__lastBlob = b; return o(b); }; });
       if (init) await ctx.addInitScript(init);
       const p = await ctx.newPage(); p.on('pageerror', (e) => errors.push(e.message));
       await p.goto(BASE); await p.waitForFunction(() => window.App && App.store && !App.store.loading && App.screens.goods);

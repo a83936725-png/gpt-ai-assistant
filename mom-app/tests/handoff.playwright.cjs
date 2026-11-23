@@ -24,7 +24,7 @@ const RUN = Date.now().toString(36);
   const mk = async (base, { width = 390, height = 844, demo = true, auth = null, clock = true } = {}) => {
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei' });
     if (clock) await c.clock.install({ time: new Date(NOW) });
-    await c.addInitScript(() => { window.__noShareMoments = true; window.open = (u) => { window.__opened = u; return null; }; });
+    await c.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = (u) => { window.__opened = u; return null; }; });
     const p = await c.newPage();
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });

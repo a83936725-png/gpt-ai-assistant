@@ -909,7 +909,7 @@
     if (!live.campaigns.length) return null;
     const c = live.campaigns[0];
     return ui.card({ class: 'gb-brand' },
-      h('div', { class: 'card-title' }, '🛒 團購揪團', demoTag(c)),
+      h('div', { class: 'card-title' }, '團購揪團', demoTag(c)),
       h('p', { class: 'small' }, `${c.title}：團購價 ${money(c.price)}，${c.size} 人成團${live.campaigns.length > 1 ? `（還有 ${live.campaigns.length - 1} 個團購）` : ''}`),
       h('button', { class: 'btn btn-primary btn-block', onclick: () => App.navigate('groupbuy') }, '看團購'));
   }

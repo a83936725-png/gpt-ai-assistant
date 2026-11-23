@@ -1,9 +1,10 @@
-// 易家做媽媽 試閱本 (lp/): the landing page. A magazine in front (cover, contents, a day in the life, six spreads with
-// an animated card pattern each), the real app behind (a live sandbox: ?sandbox=1, its own storage and sample data).
-// Checks: links and layout at phone and desktop sizes; the page turns night at 03:12 and back; loops run only on
-// screen; the arc fan, ring, gallery and rainbow respond to taps, keys, drags and swipes; the five trial tasks tick
-// off when done for real in the app; 重新開始 clears the trial; the visitor's own app data is never touched; with
-// 減少動態效果 nothing moves and everything is visible; accessibility (light, dark, phone); the first screen's
+// 易家做媽媽 試閱本 (lp/): the landing page. A magazine in front (cover, contents, a day in the life, four spreads),
+// the real app behind (a live sandbox: ?sandbox=1, its own storage and sample data).
+// Checks: links and layout at phone and desktop sizes; the page turns night at 03:12 and back, and nothing else
+// moves by itself (the 「AI 感」 pass: no loops, no auto-turning ring or gallery, no slide-ins, no emoji as icons, none
+// of the phrases that read as machine-made); the fan, ring, gallery and share cards respond to taps, keys, drags and
+// swipes; the five trial tasks tick off when done for real in the app; 重新開始 clears the trial; the visitor's own
+// app data is never touched; with 減少動態效果 nothing moves; accessibility (light, dark, phone); the first screen's
 // pictures stay under 1 MB.
 // Usage: BASE=http://localhost:8731/ AXE_PATH=<axe.min.js> node tests/landing.playwright.cjs
 const { chromium } = require('playwright');
@@ -23,7 +24,7 @@ const DAY = '2026-11-23T14:12:00+08:00';
   const mk = async ({ width = 1440, height = 900, reduced = false, scheme = 'light', touch = false } = {}) => {
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', reducedMotion: reduced ? 'reduce' : 'no-preference', colorScheme: scheme, hasTouch: touch, isMobile: touch });
     await c.clock.install({ time: new Date(DAY) });
-    await c.addInitScript(() => { window.__noShareMoments = true; });
+    await c.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     const p = await c.newPage();
     p.on('pageerror', (e) => errs.push(`${width}: ${e.message}`));
     // the static copy has no member server: the app's api/config 404 is expected
@@ -80,30 +81,31 @@ const DAY = '2026-11-23T14:12:00+08:00';
   await to(P, '#day-1100', 'center'); await P.waitForTimeout(900);
   ok('…and turns back to day when the story moves on', await S(P, () => !document.documentElement.dataset.scene));
 
-  // 01 phones: the loop runs on screen only
-  await to(P, '#start'); await P.waitForTimeout(800);
-  ok('01 編號裝置展示: the phones loop while on screen', await S(P, () => document.querySelector('.devices').classList.contains('on') && document.querySelector('.devices .device').getAnimations().length > 0));
-  ok('02 抽象賣點卡: the gauge has its 24 clock ticks', await S(P, () => document.querySelectorAll('.art-gauge .ticks line').length === 24));
-  await to(P, '#top'); await P.waitForTimeout(600);
-  ok('…and stop when scrolled away', await S(P, () => !document.querySelector('.devices').classList.contains('on')));
+  // the 「AI 感」 pass: what was taken out stays out
+  const text = await S(P, () => document.querySelector('.mag').innerText);
+  ok('the template sections are gone (三步上手, 看不見的貼心 with its 9f·3a·c1 packet) and nothing links to them', !/三步上手|看不見的貼心|9f·3a·c1/.test(text) && await S(P, () => !document.getElementById('start') && !document.getElementById('care')), '');
+  ok('no emoji on the page (the record cards use the app\'s line icons)', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(text) && await S(P, () => document.querySelectorAll('.fc-ico svg').length === 7), (text.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu) || []).join(''));
+  ok('none of the phrases that read as machine-made (手機小幫手, 放進口袋, VOL. 0.9, 不是編的)', !/手機小幫手|放進口袋|VOL\.|不是編的/.test(text));
+  ok('no price sticker and no tilted phones on the cover: the 03:12 screen as the cover picture, with a caption', await S(P, () => !document.querySelector('.phone-back, .phone-front, p.cover-price') && !!document.querySelector('.cover-shot img') && /封面/.test(document.querySelector('.cover-fig figcaption').textContent)));
+  ok('no 「設計筆記」 button for visitors', await S(P, () => !document.getElementById('notes-btn') && [...document.querySelectorAll('.pnote')].every((x) => getComputedStyle(x).display === 'none')));
 
-  // 03 arc fan
+  // 七種紀錄 (arc fan): it rests open; pointing lifts a card
   await to(P, '#logs'); await P.waitForTimeout(2600);
-  const up1 = await S(P, () => [...document.querySelectorAll('.arc li')].findIndex((li) => li.classList.contains('up')));
-  await P.waitForTimeout(1600);
-  const up2 = await S(P, () => [...document.querySelectorAll('.arc li')].findIndex((li) => li.classList.contains('up')));
-  ok('03 弧形扇卡: one card rises at a time, in turn', up1 >= 0 && up2 >= 0 && up1 !== up2, `${up1} → ${up2}`);
+  ok('七種紀錄: the fan rests open (no card rises by itself)', await S(P, () => !document.querySelector('.arc li.up')));
   ok('…the bar reads 七種紀錄', await S(P, () => document.getElementById('bar-now').textContent === '七種紀錄'));
   await P.hover('.arc li:nth-child(4)'); await P.waitForTimeout(700);
-  ok('…pointing at a card holds the fan still and lifts that card', await S(P, () => !document.querySelector('.arc li.up') && getComputedStyle(document.querySelector('.arc li:nth-child(4)')).transform !== 'none'));
+  ok('…pointing at a card lifts that card', await S(P, () => getComputedStyle(document.querySelector('.arc li:nth-child(4)')).getPropertyValue('--lift').trim() === '-22px'));
   await P.mouse.move(5, 5);
 
-  // 04 ring
+  // 好孕島 ring
   await to(P, '#island'); await P.waitForTimeout(900);
   let n0 = await ringN(P);
+  await P.waitForTimeout(2500);
+  ok('好孕島: the ring does not turn by itself', await ringN(P) === n0, `${n0} → ${await ringN(P)}`);
+  ok('…each station card has its number, a fact and the source the app cites', await S(P, () => [...document.querySelectorAll('.spot')].every((x) => /^站 \d\d$/.test(x.querySelector('.sp-no').textContent) && x.querySelector('.sp-d strong') && /^出處：/.test(x.querySelector('.sp-src').textContent))));
   await P.click('.rc-btn[data-ring="1"]'); await P.waitForTimeout(900);
   let n1 = await ringN(P);
-  ok('04 立體環視卡: → brings the next island to the front', n1 === (n0 % 12) + 1, `${n0} → ${n1}`);
+  ok('…→ brings the next station to the front', n1 === (n0 % 12) + 1, `${n0} → ${n1}`);
   await P.focus('.ring-stage'); await P.keyboard.press('ArrowLeft'); await P.waitForTimeout(900);
   ok('…← (arrow key) the one before', await ringN(P) === n0, `${await ringN(P)} (was ${n0})`);
   n0 = await ringN(P);
@@ -115,25 +117,26 @@ const DAY = '2026-11-23T14:12:00+08:00';
   ok('…dragging turns it', n1 !== n0, `${n0} → ${n1}`);
   ok('…every island card is a real 3D card (rotateY + translateZ)', await S(P, () => [...document.querySelectorAll('.spot')].every((s) => /rotateY\(.+translateZ\(/.test(s.style.transform))));
 
-  // 05 gallery
+  // 月照 gallery
   await to(P, '#monthly'); await P.waitForTimeout(4200);
-  ok('05 精選畫廊卡: the next frame takes the stage by itself', await S(P, () => document.querySelector('.gal-cap b').textContent !== '奶油'), await S(P, () => document.querySelector('.gal-cap b').textContent));
+  ok('寶寶月照: the gallery does not change by itself', await S(P, () => document.querySelector('.gal-cap b').textContent === '奶油'), await S(P, () => document.querySelector('.gal-cap b').textContent));
   await P.click('.gt:nth-child(4)'); await P.waitForTimeout(500);
   ok('…tapping 夜空 shows it large, with its caption', await S(P, () => document.querySelector('.gal-cap b').textContent === '夜空' && document.querySelectorAll('.gm')[3].classList.contains('on') && document.querySelectorAll('.gt')[3].getAttribute('aria-pressed') === 'true'));
   ok('…the large picture is really big (desktop)', await S(P, () => document.querySelector('.gal-main').getBoundingClientRect().width > 500));
 
-  // 06 rainbow
+  // 分享卡 fan
   await to(P, '#share'); await P.waitForTimeout(900);
-  ok('06 彩虹扇卡: a wave runs through the seven colours', await S(P, () => document.querySelector('.rainbow li').getAnimations().length > 0));
+  ok('分享卡: the cards rest (no wave running through them)', await S(P, () => [...document.querySelectorAll('.rainbow li')].every((li) => !li.getAnimations().some((a) => a.playState === 'running'))));
+  ok('nothing on the page is animating by itself (scrolled through the spreads)', await S(P, () => document.getAnimations().filter((a) => a.playState === 'running' && !(a instanceof CSSTransition)).length === 0), await S(P, () => document.getAnimations().filter((a) => a.playState === 'running').map((a) => a.animationName || a.transitionProperty).join(',')));
   await P.click('.rainbow li:nth-child(4) button'); await P.waitForTimeout(500);
-  ok('…tapping one picks it (the wave stops)', await S(P, () => document.querySelector('.rainbow li:nth-child(4)').classList.contains('pick') && document.querySelector('.rainbow').classList.contains('picked') && document.querySelector('.rainbow li:nth-child(4) button').getAttribute('aria-pressed') === 'true'));
+  ok('…tapping one picks it', await S(P, () => document.querySelector('.rainbow li:nth-child(4)').classList.contains('pick') && document.querySelector('.rainbow').classList.contains('picked') && document.querySelector('.rainbow li:nth-child(4) button').getAttribute('aria-pressed') === 'true'));
   await P.click('.rainbow li:nth-child(4) button'); await P.waitForTimeout(300);
   ok('…tapping it again lets it go', await S(P, () => !document.querySelector('.rainbow').classList.contains('picked')));
 
-  // notes for the team
-  await P.click('#notes-btn'); await P.waitForTimeout(200);
-  ok('設計筆記: the six card patterns are named for the team', await S(P, () => [...document.querySelectorAll('.pnote')].filter((x) => getComputedStyle(x).display !== 'none').length === 6));
-  await P.click('#notes-btn');
+  // notes for the team: only with #notes in the address
+  await S(P, () => { location.hash = 'notes'; }); await P.waitForTimeout(200);
+  ok('設計筆記 (#notes): the four card patterns are named for the team', await S(P, () => [...document.querySelectorAll('.pnote')].filter((x) => getComputedStyle(x).display !== 'none').length === 4));
+  await S(P, () => { history.replaceState(null, '', location.pathname); window.dispatchEvent(new HashChangeEvent('hashchange')); }); await P.waitForTimeout(100);
   ok('打開 App + its QR code', await S(P, () => document.getElementById('open-app').href === new URL('../index.html', location.href).href && document.querySelector('#qr svg path').getAttribute('d').length > 200));
 
   /* ---------- 2. the live app: five tasks done for real ---------- */
@@ -184,7 +187,8 @@ const DAY = '2026-11-23T14:12:00+08:00';
   const M = (await mk({ width: 390, height: 844, touch: true })).p;
   await M.goto(LP, { waitUntil: 'networkidle' }); await M.waitForTimeout(500);
   ok('390 px: no sideways scrolling', await S(M, () => document.documentElement.scrollWidth <= innerWidth));
-  ok('…the price sticker and the phones stay on screen', await S(M, () => ['.cover-price', '.phone-back', '.phone-front'].every((s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 1; })));
+  ok('…the cover picture and the top line stay on screen', await S(M, () => ['.cover-shot', '.cover-top', '.masthead'].every((s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 1; })));
+  ok('…no QR code on a phone (it would point at the phone it is shown on)', await S(M, () => getComputedStyle(document.querySelector('.qr')).display === 'none'));
   await shot(M, 'lp-phone-cover');
   await axe(M, 'phone', ['.ring-stage .spot:not(.front)']);
   await to(M, '#logs'); await M.waitForTimeout(2600);
@@ -201,7 +205,7 @@ const DAY = '2026-11-23T14:12:00+08:00';
   const a2 = await upAt();
   await swipe('.arc-stage', 90); await M.waitForTimeout(300);
   const a3 = await upAt();
-  ok('03 on a phone: a short swipe flips one card, a longer one several, either way', a1 >= 0 && a2 === a1 + 1 && a3 === a2 - 3, `${a1} → ${a2} → ${a3}`);
+  ok('七種紀錄 on a phone: a short swipe lifts the next card, a longer one several, either way', a1 >= 0 && a2 === a1 + 1 && a3 === a2 - 3, `${a1} → ${a2} → ${a3}`);
   await to(M, '#island'); await M.waitForTimeout(900);
   const r0 = await ringN(M);
   await S(M, () => {
@@ -210,21 +214,21 @@ const DAY = '2026-11-23T14:12:00+08:00';
     ev('pointerdown', 300); for (let i = 1; i <= 10; i += 1) ev('pointermove', 300 - i * 22); ev('pointerup', 80);
   });
   await M.waitForTimeout(1200);
-  ok('04 on a phone: a finger turns the ring', await ringN(M) !== r0, `${r0} → ${await ringN(M)}`);
+  ok('好孕島 on a phone: a finger turns the ring', await ringN(M) !== r0, `${r0} → ${await ringN(M)}`);
   await to(M, '#try'); await M.waitForTimeout(400);
   ok('試玩 on a phone: the app is full width, with the tip about scrolling outside it', await S(M, () => { const r = document.getElementById('try-frame').getBoundingClientRect(); return r.width >= innerWidth - 40 && r.right <= innerWidth && getComputedStyle(document.querySelector('.try-tip')).display !== 'none'; }));
   const W = (await mk({ width: 320, height: 568, touch: true })).p;
   await W.goto(LP, { waitUntil: 'networkidle' }); await W.waitForTimeout(400);
-  ok('320 px: no sideways scrolling anywhere', await S(W, async () => { for (const id of ['top', 'day', 'start', 'logs', 'island', 'monthly', 'share', 'try', 'get']) { document.getElementById(id).scrollIntoView(); await new Promise((r) => setTimeout(r, 120)); if (document.documentElement.scrollWidth > innerWidth) return false; } return true; }));
+  ok('320 px: no sideways scrolling anywhere', await S(W, async () => { for (const id of ['top', 'day', 'logs', 'island', 'monthly', 'share', 'try', 'get']) { document.getElementById(id).scrollIntoView(); await new Promise((r) => setTimeout(r, 120)); if (document.documentElement.scrollWidth > innerWidth) return false; } return true; }));
 
   /* ---------- 5. 減少動態效果 ---------- */
   const R = (await mk({ reduced: true })).p;
   await R.goto(LP, { waitUntil: 'networkidle' }); await R.waitForTimeout(500);
   await to(R, '#day-0312', 'center'); await R.waitForTimeout(900);
   ok('reduced motion: the page does not change colour at 03:12', await S(R, () => !document.documentElement.dataset.scene));
-  ok('…every picture is there already (nothing waits to slide in)', await S(R, () => !document.querySelector('.reveal.pre') && [...document.querySelectorAll('.reveal')].every((x) => getComputedStyle(x).opacity === '1')));
-  for (const id of ['#start', '#care', '#logs', '#share']) { await to(R, id); await R.waitForTimeout(500); }
-  ok('…no loops run (the phones, diagrams, fans)', await S(R, () => document.getAnimations().filter((a) => a.playState === 'running').length === 0), await S(R, () => document.getAnimations().map((a) => a.animationName || a.constructor.name).join(',')));
+  ok('…every picture is there already (nothing waits to slide in)', await S(R, () => [...document.querySelectorAll('.stop-fig, .cover-fig, .gal-main')].every((x) => getComputedStyle(x).opacity === '1')));
+  for (const id of ['#logs', '#island', '#share']) { await to(R, id); await R.waitForTimeout(500); }
+  ok('…no animations run', await S(R, () => document.getAnimations().filter((a) => a.playState === 'running').length === 0), await S(R, () => document.getAnimations().map((a) => a.animationName || a.constructor.name).join(',')));
   ok('…the fans rest open', await S(R, () => !document.querySelector('.fan.pre') && !document.querySelector('.arc li.up')));
   await to(R, '#island'); await R.waitForTimeout(400);
   const s0 = await ringN(R); await R.waitForTimeout(2500);

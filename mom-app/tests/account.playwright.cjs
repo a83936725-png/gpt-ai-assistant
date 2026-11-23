@@ -9,7 +9,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
   const b = await chromium.launch();
   const mk = async () => {
     const c = await b.newContext({ viewport: { width: 390, height: 844 } }); const p = await c.newPage();
-    await p.addInitScript(() => { window.__noShareMoments = true; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) errs.push(m.text()); });
     return p;

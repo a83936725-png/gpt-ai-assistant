@@ -207,13 +207,14 @@
     const r = from && (typeof from.getBoundingClientRect === 'function' ? from.getBoundingClientRect() : from);
     return r && r.width !== undefined ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: window.innerWidth / 2, y: window.innerHeight * 0.38 };
   };
-  function particles(from, emojis, { count, dist, up, fall, size }) {
+  function particles(from, emojis, { count, dist, up, fall, size, color }) {
     if (reducedMotion() || !document.body || typeof Element.prototype.animate !== 'function') return 0;
     const layer = fxLayer();
     const { x, y } = originOf(from);
     for (let i = 0; i < count; i += 1) {
       const p = h('span', { class: 'fx-p' }, emojis[i % emojis.length]);
       p.style.left = `${x}px`; p.style.top = `${y}px`; p.style.fontSize = `${size * (0.8 + Math.random() * 0.5)}px`;
+      if (color) p.style.color = color;
       layer.appendChild(p);
       const ang = up ? -Math.PI / 2 + (Math.random() - 0.5) * 0.9 : Math.random() * Math.PI * 2;
       const d = dist * (0.55 + Math.random() * 0.6);
@@ -234,8 +235,8 @@
     if (big && window.App && window.App.mascot) window.App.mascot.cheer(); // 小滴 hops up by the corner
     return particles(from, emojis, { count: big ? 40 : 24, dist: big ? 230 : 150, up: false, fall: big ? 220 : 150, size: big ? 26 : 22 });
   }
-  // one-tap logging: a few icons float up from the button
-  const burst = (from, emoji) => particles(from, [emoji], { count: 5, dist: 70, up: true, fall: -10, size: 18 });
+  // one-tap logging: a few marks float up from the button (首頁 sends small dots in the record's colour)
+  const burst = (from, mark, { color = '', size = 18 } = {}) => particles(from, [mark], { count: 5, dist: 70, up: true, fall: -10, size, color });
 
   // a short buzz when a tap records something (Android phones; iPhone browsers ignore it); off with reduced motion
   function haptic(ms = 12) {
@@ -369,6 +370,7 @@
     check: svgIcon('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
     clock: svgIcon('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
     chart: svgIcon('<path d="M4 19.5h16"/><path d="M7 16v-5M12 16V7M17 16v-8"/>'),
+    syringe: svgIcon('<g transform="rotate(45 12 12)"><rect x="9.5" y="6.5" width="5" height="10" rx="1"/><path d="M12 6.5V3M10 3h4M12 16.5v5M9.5 9.5H11M9.5 12.5H11"/></g>'),
     gear: svgIcon('<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>'),
     play: svgIcon('<path d="M8 5.5v13l10-6.5Z"/>'),
     stop: svgIcon('<rect x="6.5" y="6.5" width="11" height="11" rx="2"/>'),

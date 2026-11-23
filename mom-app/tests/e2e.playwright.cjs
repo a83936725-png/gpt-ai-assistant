@@ -16,7 +16,7 @@ const ok = (name, cond, info = '') => { results.push({ name, pass: !!cond, info 
   const newPage = async () => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-TW', acceptDownloads: true });
     const p = await ctx.newPage();
-    await p.addInitScript(() => { window.__noShareMoments = true; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     p.on('pageerror', (e) => pageErrors.push(`${p.url()} :: ${e.message}`));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text()) && !/\/api\//.test((m.location() || {}).url || '')) pageErrors.push(`${p.url()} :: console ${m.text()}`); });
     return p;
@@ -31,8 +31,8 @@ const ok = (name, cond, info = '') => { results.push({ name, pass: !!cond, info 
   for (const [stage, label] of [['baby', '育兒中'], ['preg', '懷孕中'], ['prep', '備孕中']]) {
     const p = await newPage();
     await p.goto(BASE); await p.waitForTimeout(300);
-    ok(`onboarding(${stage}): welcome shown, no appbar`, await p.isVisible('text=開始使用') && !(await p.isVisible('#appbar')));
-    await p.click('text=開始使用'); await p.click(`.ob-choice:has-text("${label}")`); await p.waitForTimeout(200);
+    ok(`onboarding(${stage}): welcome shown, no appbar`, await p.isVisible('text=你現在是？') && !(await p.isVisible('#appbar')));
+    await p.click(`.ob-choice:has-text("${label}")`); await p.waitForTimeout(200);
     if (stage === 'baby') await p.fill('input[placeholder="寶寶的名字或小名"]', '測試寶');
     if (stage === 'preg') await p.fill('input[type=date] >> nth=0', await S(p, () => Core.dateKey(Core.addDays(new Date(), -100))));
     if (stage === 'prep') await p.fill('input[type=date] >> nth=0', await S(p, () => Core.dateKey(Core.addDays(new Date(), -10))));
@@ -222,7 +222,7 @@ const ok = (name, cond, info = '') => { results.push({ name, pass: !!cond, info 
   const [dl] = await Promise.all([p.waitForEvent('download'), p.click('text=匯出備份')]);
   const file = `${SHOT}backup.json`; await dl.saveAs(file);
   const p2 = await newPage(); await p2.goto(BASE); await p2.waitForTimeout(200);
-  await p2.click('text=開始使用'); await p2.click('.ob-choice:has-text("育兒中")'); await p2.click('text=完成，開始使用'); await p2.waitForTimeout(300);
+  await p2.click('.ob-choice:has-text("育兒中")'); await p2.click('text=完成，開始使用'); await p2.waitForTimeout(300);
   await go(p2, 'me'); await p2.click('text=匯入／合併家人的備份'); await p2.waitForTimeout(300);
   await p2.setInputFiles('.sheet input[type=file]', file); await p2.waitForTimeout(500);
   const merged = await S(p2, () => ({ babies: App.store.state.babies.length, logs: App.store.state.logs.length }));

@@ -575,7 +575,7 @@
     }, h('span', { 'aria-hidden': 'true' }, '🩺'), '回診／打疫苗'));
 
     el.append(ui.card({ class: 'ot-opts' },
-      h('div', { class: 'card-title' }, `🎒 帶${baby.name}出門`),
+      h('div', { class: 'card-title' }, `帶${baby.name}出門`),
       h('p', { class: 'small muted' }, `${age ? `${age.text}・` : ''}選好時間和狀況，清單會自動算好`),
       group('外出多久', hours),
       b.hours === 'night' ? group('住幾晚', nights) : null,
@@ -584,7 +584,7 @@
       group('這趟要', visit)));
 
     el.append(ui.card({ class: 'ot-est' },
-      h('div', { class: 'card-title' }, '📏 估算結果', h('span', { class: 'tiny muted ot-est-h' }, durationLabel(b))),
+      h('div', { class: 'card-title' }, '估算結果', h('span', { class: 'tiny muted ot-est-h' }, durationLabel(b))),
       h('div', { class: 'ot-sum' }, L.summary.map((s) => h('div', { class: 'ot-sum-item', dataset: { sum: s.id } },
         h('div', { class: 'ot-sum-ico', 'aria-hidden': 'true' }, s.icon),
         h('div', { class: 'ot-sum-val num' }, s.value),
@@ -716,7 +716,7 @@
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
     const canClip = !!(navigator.clipboard && navigator.clipboard.readText);
     return ui.card({ class: 'soft ot-paste' },
-      h('div', { class: 'card-title' }, '🔗 從連結新增'),
+      h('div', { class: 'card-title' }, '從連結新增'),
       h('p', { class: 'small muted' }, '在活動網站或 LINE 看到想去的活動，複製連結貼在這裡，存成自己的週末計畫。'),
       h('div', { class: 'row gap' }, input, h('button', { type: 'button', class: 'btn btn-primary ot-paste-go', onclick: go }, '新增')),
       canClip ? h('button', {
@@ -856,17 +856,17 @@
     const [first, ...rest] = D().LINKS;
     el.append(h('div', { class: 'card soft ot-ext-note' },
       h('p', { class: 'small' }, '🔗 這裡的連結都會「另開新分頁」前往外部網站。活動時間、地點、名額請以各網站與主辦單位公告為準；本 App 只提供連結，與這些網站沒有合作關係。')));
-    el.append(h('div', { class: 'section-title' }, '🗓️ 找親子活動'));
+    el.append(h('div', { class: 'section-title' }, '找親子活動'));
     el.append(h('div', { class: 'list' }, linkRow(first)));
     el.append(h('div', { class: 'ot-howto small muted' },
       h('span', null, '看到想去的活動 → 複製連結 → 回到「週末計畫」貼上，就能存起來、分享給家人。'),
       h('button', { type: 'button', class: 'link-btn ot-go-plans', onclick: () => setSection('plans') }, '前往週末計畫 ›')));
-    el.append(h('div', { class: 'section-title' }, '📍 找附近設施（Google 地圖）'));
+    el.append(h('div', { class: 'section-title' }, '找附近設施（Google 地圖）'));
     el.append(h('div', { class: 'list' }, rest.map(linkRow)));
     el.append(h('p', { class: 'tiny faint ot-maps-note' }, '在 Google 地圖用你的位置搜尋，允許定位才會顯示附近結果。'));
     if (!standalone()) {
       el.append(ui.card({ class: 'ot-a2hs' },
-        h('div', { class: 'card-title' }, '📲 加到手機桌面'),
+        h('div', { class: 'card-title' }, '加到手機桌面'),
         h('p', { class: 'small muted' }, `把「${appName()}」加到主畫面，外出包和週末計畫沒網路也能看。`),
         h('ul', { class: 'small tight' },
           h('li', null, 'iPhone（Safari）：點「分享」→「加入主畫面」'),
@@ -913,7 +913,7 @@
       const su = next && signupInfo(next, now);
       if (next) el.dataset.personal = '1'; // her own plan: never folded away (首頁 in 坐月子)
       el.append(ui.card({ class: 'ot-home' },
-        h('div', { class: 'card-title' }, '🎒 外出好幫手', h('span', { class: 'tag primary' }, kicker)),
+        h('div', { class: 'card-title' }, '外出好幫手', h('span', { class: 'tag primary' }, kicker)),
         next
           ? h('div', { class: 'ot-home-plan' },
             h('div', { class: 'bold' }, next.title),

@@ -18,7 +18,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     const c = await b.newContext({ viewport: { width, height }, permissions: ['clipboard-read', 'clipboard-write'] });
     await c.setExtraHTTPHeaders({ 'X-Forwarded-For': `10.${run}.${100 + nets}.3` });
     const p = await c.newPage();
-    await p.addInitScript(() => { window.__noShareMoments = true; window.__opened = []; window.open = (u) => { window.__opened.push(u); return null; }; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.__opened = []; window.open = (u) => { window.__opened.push(u); return null; }; });
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
     return p;

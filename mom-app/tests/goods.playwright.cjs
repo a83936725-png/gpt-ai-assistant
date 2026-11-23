@@ -23,7 +23,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: t
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-TW', ...opts });
     const p = await ctx.newPage();
     await p.addInitScript(() => {
-      window.__noShareMoments = true;
+      window.__noShareMoments = true; window.__noNightAuto = true;
       window.__opened = [];
       window.open = (u) => { window.__opened.push(String(u)); return null; };
     });
@@ -141,7 +141,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: t
   ok('CTA invites the friend to start', await f.isVisible('.gd-cta button:has-text("免費開始使用")'));
   await shot(f, 'wishlist', true);
   await f.click('.gd-cta button'); await wait(f, 300);
-  ok('CTA goes to onboarding', await f.isVisible('text=開始使用'));
+  ok('CTA goes to onboarding', await f.isVisible('text=你現在是？'));
   await f.context().close();
 
   /* ================= 5. custom items ================= */

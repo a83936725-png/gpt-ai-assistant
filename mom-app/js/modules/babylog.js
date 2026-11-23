@@ -200,7 +200,7 @@
       body: h('div', { class: 'type-grid' }, App.LOG_ORDER.map((t) => {
         const def = T()[t];
         return h('button', { class: 'type-btn', style: { '--tc': def.color }, onclick: () => { sh.close(); setTimeout(() => openAdd(t), 230); } },
-          h('span', { class: 'type-ico' }, def.icon), h('span', null, def.label));
+          App.logIcon(t, 'type-ico'), h('span', null, def.label));
       })),
     });
   }
@@ -220,7 +220,7 @@
       const running = timers.get('breast');
       if (!isEdit) {
         body.append(h('div', { class: 'card soft mb' },
-          h('div', { class: 'card-title' }, '⏱ 計時餵奶'),
+          h('div', { class: 'card-title' }, '計時餵奶'),
           h('p', { class: 'small muted' }, '按左或右開始計時，換邊直接按另一側，結束再按「完成」。'),
           running ? h('p', { class: 'small' }, '目前已在計時中，可以在首頁或下方控制。') : null,
           h('div', { class: 'grid-2 mt' },
@@ -418,7 +418,7 @@
       startIn.addEventListener('input', () => chips.querySelectorAll('.chip').forEach((c) => c.classList.remove('active')));
       startIn.insertAdjacentElement('afterend', chips);
     }
-    const sh = ui.sheet({ title: `${def.icon} ${isEdit ? '編輯' : ''}${def.label}`, body, footer });
+    const sh = ui.sheet({ title: `${isEdit ? '編輯' : ''}${def.label}`, body, footer });
   }
   App.babylog = { openAdd, typePicker, quickLog, withUndo, handleAction };
 
@@ -502,7 +502,7 @@
       // always the full time (a lone ":20" read like a glitch); how long ago sits beside the title instead
       list.append(h('button', { class: 'tl-item', onclick: () => openAdd(l.type, l) },
         h('div', { class: 'tl-time num' }, C.fmtTime(d)),
-        h('span', { class: 'tl-ico', style: { '--tc': def.color } }, def.icon),
+        Object.assign(App.logIcon(T()[l.type] ? l.type : 'other', 'tl-ico'), { style: `--tc:${def.color}` }),
         h('div', { class: 'tl-body' },
           h('div', { class: 'tl-title' }, def.label, l.by && l.by !== store.state.profile.member ? h('span', { class: 'tag' }, l.by) : null,
             i === 0 && showAgoFirst ? h('span', { class: 'tl-ago', dataset: { ago: l.start } }, C.ago(l.start)) : null),
@@ -552,11 +552,11 @@
     const logs = store.logsOn(viewDay);
     const s = App.babylog.daySummary(logs);
     el.append(h('div', { class: 'sum-row' },
-      sumChip('🍼', `${s.bottleCount} 次`, `${s.bottleMl} ml`),
-      sumChip('🤱', `${s.breastCount} 次`, '親餵'),
-      sumChip('🧷', `${s.diaperCount} 次`, `💧${s.wet} 💩${s.dirty}`),
+      sumChip('bottle', `${s.bottleCount} 次`, `${s.bottleMl} ml`),
+      sumChip('breast', `${s.breastCount} 次`, '親餵'),
+      sumChip('diaper', `${s.diaperCount} 次`, `濕 ${s.wet}・便 ${s.dirty}`),
       // 8.5 小時 fits the tile; 8 小時 30 分 wrapped over three lines
-      sumChip('😴', !s.sleepMs ? '0' : s.sleepMs >= C.HOUR ? `${(s.sleepMs / C.HOUR).toFixed(1).replace(/\.0$/, '')} 小時` : C.fmtDuration(s.sleepMs), '睡眠')));
+      sumChip('sleep', !s.sleepMs ? '0' : s.sleepMs >= C.HOUR ? `${(s.sleepMs / C.HOUR).toFixed(1).replace(/\.0$/, '')} 小時` : C.fmtDuration(s.sleepMs), '睡眠')));
     const pumps = logs.filter((l) => l.type === 'pump');
     if (pumps.length) el.append(pumpDayLine(pumps));
     el.append(dayStrip(viewDay, logs));
@@ -660,7 +660,7 @@
   function pumpDayLine(pumps) {
     const L = C.sum(pumps, (l) => Number(l.data?.left) || 0); const R = C.sum(pumps, (l) => Number(l.data?.right) || 0);
     return h('button', { class: 'pump-day', onclick: () => { filter = 'pump'; App.refresh(); }, 'aria-label': `擠奶 ${pumps.length} 次，共 ${C.sum(pumps, App.pumpMl)} ml，看擠奶紀錄` },
-      h('span', { 'aria-hidden': 'true' }, '🥛'), h('b', { class: 'num' }, `擠奶 ${pumps.length} 次・${C.sum(pumps, App.pumpMl)} ml`),
+      Object.assign(App.logIcon('pump', 'pump-day-ico lt-tinted'), { style: `--tc:${App.LOG_TYPES.pump.color}` }), h('b', { class: 'num' }, `擠奶 ${pumps.length} 次・${C.sum(pumps, App.pumpMl)} ml`),
       L || R ? h('span', { class: 'small muted num' }, `（左 ${L}／右 ${R}）`) : null,
       h('span', { class: 'chev', 'aria-hidden': 'true' }, '›'));
   }
@@ -674,7 +674,7 @@
     const withData = days.filter((x) => x.n);
     const sessions = C.sum(withData, (x) => x.n);
     return ui.card({ class: 'pump-week' },
-      h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '🥛 近 7 天擠奶量'),
+      h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '近 7 天擠奶量'),
         withData.length ? h('span', { class: 'small muted' }, `平均 ${Math.round(C.sum(withData, (x) => x.ml) / withData.length)} ml／天`) : null),
       h('div', { class: 'pw-bars', role: 'img', 'aria-label': days.map((x) => `${C.fmtDate(x.d, false)} ${x.ml} ml`).join('，') },
         days.map((x) => h('div', { class: `pw-col${C.dateKey(x.d) === endDay ? ' on' : ''}` },
@@ -685,7 +685,8 @@
       h('div', { class: 'tiny muted' }, withData.length ? `${sessions} 次・每次平均 ${Math.round(C.sum(withData, (x) => x.ml) / Math.max(1, sessions))} ml` : '這 7 天還沒有擠奶紀錄。'));
   }
 
-  const sumChip = (ico, a, b) => h('div', { class: 'sum-chip' }, h('span', { class: 'sum-ico' }, ico), h('div', null, h('div', { class: 'bold num' }, a), h('div', { class: 'tiny muted' }, b)));
+  // the day's totals, each with its record type's line icon (the same drawings as 首頁)
+  const sumChip = (type, a, b) => h('div', { class: 'sum-chip', style: { '--tc': App.LOG_TYPES[type].color } }, App.logIcon(type, 'sum-ico lt-tinted'), h('div', null, h('div', { class: 'bold num' }, a), h('div', { class: 'tiny muted' }, b)));
 
   App.screen('log', {
     title: () => ({ prep: '經期紀錄', preg: '孕期紀錄', baby: '育兒紀錄' }[store.stage]),

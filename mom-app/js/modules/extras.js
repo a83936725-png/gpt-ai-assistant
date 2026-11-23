@@ -78,7 +78,7 @@
     });
     const r = store.state.fertility.result;
     el.append(ui.card({ class: 'soft' },
-      h('div', { class: 'card-title' }, '🧪 生育力自我評估'),
+      h('div', { class: 'card-title' }, '生育力自我評估'),
       h('p', { class: 'small muted' }, '回答幾個問題，幫你判斷什麼時候該找生殖醫學專科，以及現在可以先做什麼。答案只存在你的手機。')));
     if (r) el.append(resultCard(r));
     el.append(h('div', { class: 'section-title' }, r ? '重新評估' : '開始評估'));
@@ -165,14 +165,14 @@
       const all = X().BENEFITS;
       const doneCount = all.filter((b) => (store.state.benefits[b.id] || {}).status === 'done').length;
       el.append(ui.card({ class: 'soft' },
-        h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '🏛️ 補助福利清單'), h('span', { class: 'tag primary' }, `完成 ${doneCount}/${all.length}`)),
+        h('div', { class: 'row between' }, h('div', { class: 'card-title' }, '補助福利清單'), h('span', { class: 'tag primary' }, `完成 ${doneCount}/${all.length}`)),
         h('p', { class: 'small muted' }, '從備孕到育兒可以領的補助、可以請的假和要辦的手續，標出金額、什麼時候辦，一項一項打勾。金額與資格整理自 2026 年 11 月的公告，以政府最新公告為準。'),
         ui.progress(doneCount / all.length)));
       // the money most families can count on, at a glance (each line opens its item)
       if (store.inStage(['preg', 'baby'])) {
         const cash = ['birth-pay', 'allowance-02', 'parental', 'tax-preschool'].map((id) => all.find((b) => b.id === id)).filter(Boolean);
         el.append(ui.card({ class: 'bn-cash' },
-          h('div', { class: 'card-title' }, '💰 寶寶出生後常見的現金福利'),
+          h('div', { class: 'card-title' }, '寶寶出生後常見的現金福利'),
           h('div', { class: 'bn-rows' }, cash.map((b) => h('button', { class: 'bn-row', onclick: () => openBenefit(b) },
             h('span', { class: 'grow' }, h('b', null, b.title), h('span', { class: 'small muted bn-row-sub' }, `${b.amount}${b.when ? `・${b.when.split('；')[0].split('（')[0]}` : ''}`)),
             h('span', { class: 'chev', 'aria-hidden': 'true' }, '›')))),
@@ -227,7 +227,7 @@
       if (!items.length) return;
       el.append(ui.card({ class: 'bn-home' },
         h('div', { class: 'row between' },
-          h('div', { class: 'card-title' }, '💰 現在可以申請的福利'),
+          h('div', { class: 'card-title' }, '現在可以申請的福利'),
           h('button', {
             class: 'icon-btn bn-home-x', 'aria-label': '先不要提醒',
             onclick: () => { store.update((s) => { s.benefitsHomeOff = C.dateKey(); }); ui.toast('兩週內不提醒；福利清單隨時在「健康 → 補助福利清單」'); },

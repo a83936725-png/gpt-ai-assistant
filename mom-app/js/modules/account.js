@@ -167,7 +167,7 @@
             try {
               const r = await call('POST', 'me', { consent: App.privacy.VERSION, marketing: mkt.checked });
               store.update((s) => { if (s.auth) s.auth.user = r.user; });
-              done = true; sh.close(); ui.toast('謝謝你 💜');
+              done = true; sh.close(); ui.toast('謝謝你的回饋');
               if (App.gift) App.gift.sync(r.user); // a friend's welcome gift waits for this
             } catch (err) { btn.disabled = false; ui.toast(errText(err)); }
           },
@@ -232,7 +232,7 @@
           await call('POST', 'auth/delete', pw ? { password: pw.value } : {});
           if (also && also.checked && App.social && App.social.forgetAll) await App.social.forgetAll();
           sh.close(); logout({ quiet: true });
-          ui.toast('帳號已刪除。謝謝你陪我們走過這一段 💜'); App.refresh();
+          ui.toast('帳號已刪除'); App.refresh();
         } catch (e) {
           err.textContent = e.code === 'invalid' ? '密碼不正確' : errText(e); err.hidden = false; go.disabled = false;
         }
@@ -295,7 +295,7 @@
         const r = await call('POST', 'auth/reset', { account: account.value, code: codeUI.input.value, password: npw.value });
         sh.close();
         setAuth(r.token, r.user);
-        ui.toast('密碼已更新，其他裝置都已登出 💜');
+        ui.toast('密碼已更新，其他裝置都已登出');
         goOn();
       } catch (e) { err.textContent = errText(e); err.hidden = false; go.disabled = false; }
     };
@@ -318,7 +318,7 @@
     let stage = 1;
     async function send(again) {
       const r = await call('POST', 'auth/verify/send', {});
-      if (r.already) { sh.close(); ui.toast('已經驗證過了 💜'); refreshMe(); return; }
+      if (r.already) { sh.close(); ui.toast('已經驗證過了'); refreshMe(); return; }
       stage = 2; step2.hidden = false; go.textContent = '確認驗證碼';
       codeUI.hint.textContent = `已寄出 6 位數驗證碼到 ${u.accountHint}（10 分鐘內有效）${r.devCode ? `（測試環境：${r.devCode}）` : ''}`;
       codeUI.cool(60);
@@ -331,7 +331,7 @@
         const r = await call('POST', 'auth/verify', { code: codeUI.input.value });
         store.update((s) => { if (s.auth) s.auth.user = r.user; });
         sh.close();
-        ui.toast('驗證完成 💜');
+        ui.toast('驗證好了');
         if (App.gift) App.gift.sync(r.user); // a welcome gift that was waiting for this
       } catch (e) { err.textContent = errText(e); err.hidden = false; go.disabled = false; }
     };
@@ -406,7 +406,7 @@
         store.update((s) => { s.auth = { token: params.token, user: null }; });
         call('GET', 'me').then(({ user }) => {
           setAuth(params.token, user);
-          ui.toast(`歡迎，${user.nickname} 💜`);
+          ui.toast(`歡迎，${user.nickname}`);
           goOn();
           setTimeout(() => ensureConsent(user), 300); // a new LINE account agrees before anything else
         }).catch((e) => { store.update((s) => { delete s.auth; }); box.innerHTML = ''; box.append(h('p', { class: 'login-err' }, errText(e))); drawForm(); });
@@ -523,7 +523,7 @@
               const res = await call('POST', mode === 'login' ? 'auth/login' : 'auth/register', body);
               if (mode !== 'login' && App.starter) App.starter.hush(); // the welcome list shows 註冊會員 ✓
               setAuth(res.token, res.user);
-              ui.toast(mode === 'login' ? `歡迎回來，${res.user.nickname} 💜` : `註冊成功！歡迎 ${res.user.nickname} 💜`);
+              ui.toast(mode === 'login' ? `歡迎回來，${res.user.nickname}` : `註冊好了，歡迎 ${res.user.nickname}`);
               const joined = mode !== 'login';
               mode = 'login';
               goOn();
@@ -553,7 +553,7 @@
         return ui.card({ class: 'acct-card' },
           h('div', { class: 'row gap acct-row' },
             h('div', { class: 'grow' },
-              h('div', { class: 'card-title' }, `👤 ${u.nickname}`, h('span', { class: 'tag primary' }, { line: 'LINE', email: 'Email', phone: '手機' }[u.provider] || '')),
+              h('div', { class: 'card-title' }, `${u.nickname}`, h('span', { class: 'tag primary' }, { line: 'LINE', email: 'Email', phone: '手機' }[u.provider] || '')),
               h('div', { class: 'small muted' }, `${u.accountHint}・邀請碼 ${u.code}`),
               h('div', { class: 'small' }, `已成功邀請 ${u.referrals || 0} 位加入`),
               needVerify(u) ? h('div', { class: 'acct-verify' },

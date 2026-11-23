@@ -16,7 +16,7 @@ const T = (s) => new Date(`${s}+08:00`); // Taipei time
   p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
   const opened = [];
   await p.exposeFunction('__opened', (u) => opened.push(u));
-  await p.addInitScript(() => { window.open = (u) => { window.__opened(String(u)); return null; }; window.__noShareMoments = true; });
+  await p.addInitScript(() => { window.open = (u) => { window.__opened(String(u)); return null; }; window.__noShareMoments = true; window.__noNightAuto = true; });
   await p.clock.setFixedTime(T('2026-11-18T10:00:00'));
   const S = (f, a) => p.evaluate(f, a);
   const wait = (ms = 300) => p.waitForTimeout(ms);
@@ -104,7 +104,7 @@ const T = (s) => new Date(`${s}+08:00`); // Taipei time
   ok('highlights in order: 百日, two skills, growth, first foods, longest sleep, bath, 滴雞精',
     r.lines[0] === '💯 11/12 百日快樂！' && r.lines[1] === '⭐ 新技能：趴著時能短暫抬頭' && r.lines[2] === '⭐ 新技能：抱坐時頭部穩定'
     && r.lines[3] === '📏 體重 5.65 公斤（比上次 +0.55）・身長 59.2 公分' && r.lines[4] === '🥣 第一次吃：米粉、南瓜' && r.lines[5] === '🌙 最長一覺睡了 5 小時'
-    && r.lines[6] === '🛁 洗澡 1 次' && r.lines[7] === '💜 媽媽有 3 天留了滴雞精時光給自己', r.lines.join(' | '));
+    && r.lines[6] === '🛁 洗澡 1 次' && r.lines[7] === '媽媽有 3 天喝了滴雞精', r.lines.join(' | '));
   ok('card title: name, age at the end of the week', r.title === '小乖 這週' && r.sub === '3 個月 10 天' && r.sub2 === '出生第 103 天', `${r.title} ${r.sub} ${r.sub2}`);
   ok('chart: milk per day, the empty days are 0', r.chart === '每天喝奶（ml）' && JSON.stringify(r.bars) === '[390,600,0,200,0,0,0]', JSON.stringify(r.bars));
   const medical = /體溫|38\.4|°C|看診|小兒科|發燒|感冒|退燒|用藥|疫苗|五合一|dtap/;

@@ -12,7 +12,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info })
     const ctx = await browser.newContext({ ...devices[dev], locale: 'zh-TW', ...extra });
     const p = await ctx.newPage();
     await p.addInitScript(() => {
-      window.__noShareMoments = true;
+      window.__noShareMoments = true; window.__noNightAuto = true;
       window.__vibrations = [];
       try { Object.defineProperty(navigator, 'vibrate', { configurable: true, value: (ms) => { window.__vibrations.push(ms); return true; } }); } catch (e) { /* ignore */ }
       document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.toast-wrap{display:none!important}'; document.head.append(st); });

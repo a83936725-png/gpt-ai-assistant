@@ -1,11 +1,13 @@
 /* 易家做媽媽 試閱本 — what the landing page does (lp/index.html, lp.css).
- *  · loops ([data-loop]) run only while on screen; with 減少動態效果 everything stays still
- *  · while the 03:12 story is on screen the page turns night (the app's night colours), then back
+ *  · nothing moves by itself except one thing: while the 03:12 story is on screen the page turns night (the app's
+ *    night colours), then back. (The looping phones, the auto-turning ring, the gallery that changed every few
+ *    seconds and the colour wave were taken out in the 「AI 感」 pass: motion that is there to show off reads as a
+ *    template.) With 減少動態效果 even the night turn stays off.
  *  · the bar at the top names the section being read
- *  · 01 phones and 02 diagrams loop in CSS; 03 arc fan: one card up at a time, tap one to log it in the live app
- *  · 04 ring: real 3D, turns slowly; drag it, arrow keys, or ← →
- *  · 05 gallery: the next frame takes the stage every few seconds; tap a small one
- *  · 06 rainbow: a wave runs through it (CSS); tap a card to pick it
+ *  · 七種紀錄 fan: tap a card to log it in the live app; on a phone a sideways swipe lifts the cards in turn
+ *  · 好孕島 ring: real 3D; it turns only when she drags it, uses the arrow keys or ← →
+ *  · 月照 gallery: tap a small frame to see it large
+ *  · 分享卡 fan: tap a card to pick it
  *  · 試玩: the real app with ?sandbox=1 (its own storage and sample data, never the visitor's own) in a frame;
  *    five tasks tick themselves off; 「帶我去」 and the buttons in the magazine drive the app; 重新開始 clears it
  *  · 打開 App + its QR code (drawn with the app's own QR library) */
@@ -31,20 +33,6 @@
     els.forEach((el) => io.observe(el));
   }
 
-  /* ---- loops run only on screen ---- */
-  watch($$('[data-loop]'), (el, on) => {
-    if (el.classList.contains('on') === on) return;
-    el.classList.toggle('on', on);
-    el.dispatchEvent(new CustomEvent(on ? 'loop:on' : 'loop:off'));
-  }, { threshold: 0.15 });
-
-  /* ---- pictures slide in once (only those below the first screen) ---- */
-  if (!still() && hasIO) {
-    const rv = $$('.reveal').filter((el) => el.getBoundingClientRect().top > window.innerHeight);
-    rv.forEach((el) => el.classList.add('pre'));
-    watch(rv, (el, on) => { if (on) el.classList.remove('pre'); }, { threshold: 0.1 });
-  }
-
   /* ---- 03:12: the page turns night ---- */
   const nightStop = $('[data-scene="night"]');
   if (nightStop && !still()) {
@@ -60,56 +48,25 @@
   const barNow = $('#bar-now');
   if (barNow) watch($$('[data-title]'), (el, on) => { if (on) barNow.textContent = el.dataset.title; }, { rootMargin: '-40% 0px -55% 0px' });
 
-  /* ---- 02: the gauge's clock ticks ---- */
-  const ticks = $('.art-gauge .ticks');
-  if (ticks) {
-    const NS = 'http://www.w3.org/2000/svg';
-    for (let i = 0; i < 24; i += 1) {
-      const a = (i / 24) * Math.PI * 2; const r1 = i % 6 === 0 ? 82 : 87; const r2 = 92;
-      const l = document.createElementNS(NS, 'line');
-      l.setAttribute('x1', (100 + r1 * Math.sin(a)).toFixed(1)); l.setAttribute('y1', (100 - r1 * Math.cos(a)).toFixed(1));
-      l.setAttribute('x2', (100 + r2 * Math.sin(a)).toFixed(1)); l.setAttribute('y2', (100 - r2 * Math.cos(a)).toFixed(1));
-      ticks.append(l);
-    }
-  }
-
-  /* ---- fans: dealt open the first time they come into view ---- */
-  $$('.fan').forEach((fan) => {
-    const stage = fan.closest('[data-loop]');
-    if (still() || !hasIO || !stage || stage.getBoundingClientRect().top < window.innerHeight * 0.9) return;
-    fan.classList.add('pre');
-    stage.addEventListener('loop:on', () => requestAnimationFrame(() => requestAnimationFrame(() => fan.classList.remove('pre'))), { once: true });
-  });
-
-  /* ---- 03 arc fan: one card up at a time; on a phone a sideways swipe flips through them ---- */
+  /* ---- 七種紀錄 fan: it rests open; on a phone a sideways swipe lifts the cards one by one (a mouse lifts by hovering) ---- */
   const arc = $('.arc');
   if (arc) {
-    const stage = arc.closest('[data-loop]'); const items = $$('li', arc);
-    let cur = -1; let timer = 0; let hold = 0; let sx = null;
+    const stage = arc.closest('.arc-stage'); const items = $$('li', arc);
+    let cur = -1; let sx = null;
     const setUp = (k) => { cur = k; items.forEach((li, n) => li.classList.toggle('up', n === k)); };
-    stage.addEventListener('loop:on', () => {
-      if (still() || timer) return;
-      setTimeout(() => { if (cur < 0) setUp(0); }, 700);
-      timer = setInterval(() => { if (performance.now() > hold) setUp((cur + 1) % items.length); }, 1500);
-    });
-    stage.addEventListener('loop:off', () => { clearInterval(timer); timer = 0; setUp(-1); });
-    stage.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { hold = Infinity; setUp(-1); } });
-    stage.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') hold = 0; });
-    stage.addEventListener('focusin', () => { hold = Infinity; setUp(-1); });
-    stage.addEventListener('focusout', () => { hold = 0; });
     stage.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') sx = e.clientX; });
     stage.addEventListener('pointermove', (e) => {
       if (sx === null) return;
       const dx = e.clientX - sx;
       if (Math.abs(dx) < 26) return;
-      sx = e.clientX; hold = performance.now() + 4000;
+      sx = e.clientX;
       setUp(Math.max(0, Math.min(items.length - 1, (cur < 0 ? 3 : cur) + (dx < 0 ? 1 : -1))));
     });
     const lift = () => { sx = null; };
     stage.addEventListener('pointerup', lift); stage.addEventListener('pointercancel', lift);
   }
 
-  /* ---- 06 rainbow: tap a card to pick it (the wave stops while one is picked) ---- */
+  /* ---- 分享卡 fan: tap a card to pick it ---- */
   const rainbow = $('.rainbow');
   if (rainbow) {
     $$('button', rainbow).forEach((b) => b.addEventListener('click', () => {
@@ -125,7 +82,7 @@
   if (ringStage) {
     const cards = $$('.spot', ringStage); const N = cards.length; const STEP = 360 / N;
     const now = $('.ring-now');
-    let angle = 0; let target = null; let vel = 0; let drag = null; let raf = 0; let on = false; let idle = 0; let last = 0; let front = -1;
+    let angle = 0; let target = null; let vel = 0; let drag = null; let raf = 0; let last = 0; let front = -1;
     const radius = () => parseFloat(getComputedStyle(ringStage).getPropertyValue('--r')) || 300;
     const paint = () => {
       const r = radius(); let best = 0; let bestZ = -2;
@@ -144,20 +101,19 @@
     const frame = (t) => {
       const dt = last ? Math.min(64, t - last) : 16; last = t;
       if (!drag) {
-        if (target !== null) { const d = target - angle; angle += d * Math.min(1, dt / 110); if (Math.abs(d) < 0.05) { angle = target; target = null; } } else if (Math.abs(vel) > 0.003) { angle += vel * dt; vel *= Math.pow(0.93, dt / 16); } else if (!still() && performance.now() > idle) angle -= dt * 0.011; // a full turn in about 33 s
+        // it turns only when asked: easing to a station, or the glide after a flick (no slow turn of its own)
+        if (target !== null) { const d = target - angle; angle += d * Math.min(1, dt / 110); if (Math.abs(d) < 0.05) { angle = target; target = null; } } else if (Math.abs(vel) > 0.003) { angle += vel * dt; vel *= Math.pow(0.93, dt / 16); } else if (vel) { vel = 0; target = -Math.round(-angle / STEP) * STEP; }
       }
       paint();
-      raf = on || target !== null ? requestAnimationFrame(frame) : 0;
+      raf = target !== null || Math.abs(vel) > 0.003 ? requestAnimationFrame(frame) : 0;
     };
     const run = () => { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } };
     const snap = (dir) => {
       const k = Math.round(-angle / STEP) + dir;
-      vel = 0; idle = performance.now() + 5000;
+      vel = 0;
       if (still()) { angle = -k * STEP; target = null; paint(); return; }
       target = -k * STEP; run();
     };
-    ringStage.addEventListener('loop:on', () => { on = true; run(); });
-    ringStage.addEventListener('loop:off', () => { on = false; });
     ringStage.addEventListener('pointerdown', (e) => {
       if (e.button !== undefined && e.button !== 0) return;
       drag = { x: e.clientX, a: angle, t: performance.now(), v: 0 }; target = null; vel = 0;
@@ -172,9 +128,9 @@
     });
     const end = () => {
       if (!drag) return;
-      vel = still() ? 0 : Math.max(-0.6, Math.min(0.6, drag.v)); drag = null; idle = performance.now() + 5000;
+      vel = still() ? 0 : Math.max(-0.6, Math.min(0.6, drag.v)); drag = null;
       ringStage.classList.remove('drag');
-      if (still() || !on) snap(0); else run();
+      if (still() || Math.abs(vel) <= 0.003) snap(0); else run();
     };
     ringStage.addEventListener('pointerup', end); ringStage.addEventListener('pointercancel', end);
     ringStage.addEventListener('keydown', (e) => {
@@ -185,12 +141,12 @@
     paint();
   }
 
-  /* ---- 05 gallery ---- */
+  /* ---- 月照 gallery: tap a small frame (it does not change by itself) ---- */
   const gal = $('.gal');
   if (gal) {
     const mains = $$('.gm', gal); const thumbs = $$('.gt', gal); const cap = $('.gal-cap', gal);
-    let k = 0; let timer = 0; let hold = 0;
-    const show = (n, byHand) => {
+    let k = 0;
+    const show = (n) => {
       k = (n + mains.length) % mains.length;
       mains.forEach((m, i) => { m.classList.toggle('on', i === k); if (i === k) m.removeAttribute('aria-hidden'); else m.setAttribute('aria-hidden', 'true'); });
       thumbs.forEach((b, i) => b.setAttribute('aria-pressed', String(i === k)));
@@ -198,16 +154,8 @@
       const b = document.createElement('b'); b.textContent = thumbs[k].dataset.name;
       const s = document.createElement('span'); s.textContent = thumbs[k].dataset.desc;
       cap.append(b, s);
-      if (byHand) hold = performance.now() + 9000;
-      gal.classList.remove('tick'); void gal.offsetWidth; gal.classList.add('tick');
     };
-    thumbs.forEach((b, i) => b.addEventListener('click', () => show(i, true)));
-    gal.addEventListener('loop:on', () => {
-      if (still() || timer) return;
-      gal.classList.add('tick');
-      timer = setInterval(() => { if (performance.now() > hold) show(k + 1); }, 3600);
-    });
-    gal.addEventListener('loop:off', () => { clearInterval(timer); timer = 0; gal.classList.remove('tick'); });
+    thumbs.forEach((b, i) => b.addEventListener('click', () => show(i)));
   }
 
   /* ---- 試玩: the real app in a frame ---- */
@@ -338,12 +286,7 @@
     document.head.append(s);
   }
 
-  /* ---- 設計筆記: the card patterns' names, for the team ---- */
-  const notesBtn = $('#notes-btn');
-  const setNotes = (onOff) => {
-    mag.classList.toggle('notes', onOff);
-    if (notesBtn) { notesBtn.setAttribute('aria-pressed', String(onOff)); notesBtn.textContent = onOff ? '設計筆記：隱藏卡片名稱' : '設計筆記：顯示卡片名稱'; }
-  };
-  if (notesBtn) notesBtn.addEventListener('click', () => setNotes(!mag.classList.contains('notes')));
-  if (location.hash === '#notes') setNotes(true);
+  /* ---- 設計筆記: the card patterns' names, for the team only (open the page with #notes; no button for visitors) ---- */
+  const notes = () => mag.classList.toggle('notes', location.hash === '#notes');
+  notes(); window.addEventListener('hashchange', notes);
 }());

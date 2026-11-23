@@ -87,7 +87,7 @@
     setTimeout(() => whenFree(fn, tries + 1), 500);
   }
   function thank(counted) {
-    const text = `我加入「${B().appName || '易家做媽媽'}」了，謝謝你的邀請 💜${counted ? '我們都拿到邀請禮了！' : ''}`;
+    const text = `我加入「${B().appName || '易家做媽媽'}」了，謝謝你的邀請。${counted ? '我們都拿到邀請禮了！' : ''}`;
     window.open(`https://line.me/R/share?text=${enc(text)}`, '_blank', 'noopener');
   }
   function celebrateFriend(r, pts, unlocked) {
@@ -95,9 +95,9 @@
       ui.celebrate({ emojis: ['🎁', '💜', '🎉', '✨'], big: true });
       const total = (sh().points) || 0;
       const sheet = ui.sheet({
-        title: `🎁 見面禮 +${pts} 好孕點數`,
+        title: `見面禮 +${pts} 好孕點數`,
         body: h('div', { class: 'gift-sheet' },
-          h('p', null, `謝謝你接受${who()}的邀請，歡迎一起做媽媽 💜`),
+          h('p', null, `謝謝你接受${who()}的邀請，歡迎一起做媽媽`),
           r.counted ? h('p', { class: 'small muted' }, `${who()}也收到了 ${PTS().inviter} 點邀請禮。`) : null,
           unlocked ? h('p', { class: 'gift-unlock' }, `${unlocked.icon} 解鎖「${unlocked.title}」`) : null,
           h('p', { class: 'small muted' }, `你現在有 ${total} 點好孕點數，在「我的 → 邀請好友」看還能解鎖什麼。`),
@@ -255,7 +255,7 @@
     const points = s.points || 0;
     const m = mine(u);
     const kids = [
-      h('div', { class: 'card-title' }, '🎁 雙向邀請禮'),
+      h('div', { class: 'card-title' }, '雙向邀請禮'),
       App.livePill ? App.livePill('inv-live') : null,
       h('div', { class: 'gift-two' },
         h('div', { class: 'gift-side' }, h('span', { class: 'gift-side-e', 'aria-hidden': 'true' }, '💌'), h('b', null, `朋友 +${P.friend} 點`), h('span', { class: 'tiny muted' }, '見面禮')),
@@ -277,7 +277,7 @@
     // her own invitation
     if (m === 'given') {
       kids.push(h('div', { class: 'gift-mine' },
-        h('div', { class: 'small' }, `🎁 見面禮已領取${g.friendPts ? `（+${g.friendPts}）` : ''}・謝謝${who()}的邀請 💜`),
+        h('div', { class: 'small' }, `🎁 見面禮已領取${g.friendPts ? `（+${g.friendPts}）` : ''}・謝謝${who()}的邀請`),
         h('button', { class: 'link-btn small', onclick: () => thank(!!g.counted) }, `跟${nameOf() || '朋友'}說聲謝謝`)));
     } else if (m === 'register' || m === 'claim') {
       const btn = h('button', { class: 'btn btn-sm btn-primary gift-mine-go', onclick: () => go({ mode: m }, btn) }, m === 'claim' ? '領取' : '註冊領取');
@@ -285,7 +285,7 @@
     } else if (m === 'failed') {
       kids.push(h('div', { class: 'small gift-mine' }, `連結裡的邀請碼 ${s.invitedBy} 目前無法使用（邀請你的朋友可能還沒登入會員）。可以請朋友再給你一次邀請碼，在下面輸入。`));
     } else if (m === 'closed') {
-      kids.push(h('div', { class: 'small gift-mine' }, `你是由${who()}邀請加入的（邀請碼 ${s.invitedBy || u.invite.by}）💜`));
+      kids.push(h('div', { class: 'small gift-mine' }, `你是由${who()}邀請加入的（邀請碼 ${s.invitedBy || u.invite.by}）`));
     }
     // joined without the link (or the link's code didn't work): type a friend's code
     if (u && u.invite && u.invite.open && !u.invite.by && !linkCode(u) && !g.friendAt) kids.push(codeBox());

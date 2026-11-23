@@ -22,7 +22,7 @@ const pngSize = (buf) => (buf.slice(1, 4).toString() === 'PNG' ? { w: buf.readUI
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', acceptDownloads: true, reducedMotion: reduced ? 'reduce' : 'no-preference' });
     await c.clock.install({ time: new Date(NOW) });
     await c.addInitScript((sh) => {
-      window.__noShareMoments = true; window.open = () => null;
+      window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null;
       if (sh) {
         Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => true });
         Object.defineProperty(navigator, 'share', { configurable: true, value: async (d) => { window.__shared = { name: d.files[0].name, size: d.files[0].size, text: d.text }; } });
@@ -93,7 +93,7 @@ const pngSize = (buf) => (buf.slice(1, 4).toString() === 'PNG' ? { w: buf.readUI
   ok('滿月回顧 counts only the first 30 days', u.m1.feeds === 60 && u.m1.night === 30, JSON.stringify(u.m1));
   ok('100 days old: 到今天, 滿月, 百日 (第一年 not yet)', u.av.join() === 'now,m1,d100', u.av.join());
   ok('the story: intro, feeds, nights, diapers, sleep, growth, firsts, foods, pumping, the days, thank-you', u.sl.join() === 'intro,feeds,night,diapers,sleep,grow,firsts,foods,pump,you,end', u.sl.join());
-  ok('the text has the counts and a thank-you, and nothing medical (體溫、用藥、看診)', /喝奶 80 次（半夜 40 次）/.test(u.txt) && /從 3\.4 kg 長到 5\.85 kg/.test(u.txt) && /謝謝你，辛苦了/.test(u.txt) && !/38\.4|退燒|安安|發燒|看診|體溫/.test(u.txt), u.txt);
+  ok('the text has the counts and a closing line (no 「辛苦了 💜」 since 0.9.2), and nothing medical (體溫、用藥、看診)', /喝奶 80 次（半夜 40 次）/.test(u.txt) && /從 3\.4 kg 長到 5\.85 kg/.test(u.txt) && /這些日子，都記下來了/.test(u.txt) && !/辛苦了|💜/.test(u.txt) && !/38\.4|退燒|安安|發燒|看診|體溫/.test(u.txt), u.txt);
   ok('the card tiles: counts only', u.tiles.join() === '喝奶:80次,半夜餵奶:40次,尿布:40片,睡眠:87小時,長大了:+2.45kg,擠的母乳:1.6公升', u.tiles.join());
 
   /* ---------- 2. the screen and the story ---------- */
@@ -114,7 +114,7 @@ const pngSize = (buf) => (buf.slice(1, 4).toString() === 'PNG' ? { w: buf.readUI
   ok('tap right: the next slide, its number counts up to 80', s.id === 'feeds' && /80/.test(s.text) && /親餵 40 次・瓶餵 40 次・共 4 公升/.test(s.text), s.text);
   await P.keyboard.press('ArrowRight'); await P.waitForTimeout(1400);
   s = await slide(P);
-  ok('→ key: the nights (40, mostly 2 a.m., a thank-you)', s.id === 'night' && /40/.test(s.text) && /凌晨 2 點/.test(s.text) && /辛苦了/.test(s.text), s.text);
+  ok('→ key: the nights (40, mostly 2 a.m.; the number says it, no 「辛苦了」 line)', s.id === 'night' && /40/.test(s.text) && /凌晨 2 點/.test(s.text) && !/辛苦了/.test(s.text), s.text);
   await shot(P, 'recap-night');
   await P.keyboard.press('ArrowLeft'); await P.waitForTimeout(400);
   ok('← key: back', (await slide(P)).id === 'feeds');
@@ -128,7 +128,7 @@ const pngSize = (buf) => (buf.slice(1, 4).toString() === 'PNG' ? { w: buf.readUI
   await P.mouse.up(); await P.waitForTimeout(200);
   for (let i = 0; i < 12; i += 1) { if ((await slide(P)).id === 'end') break; await P.click('.rc-next'); await P.waitForTimeout(250); } // eslint-disable-line no-await-in-loop
   s = await slide(P);
-  ok('the end: 謝謝你，辛苦了, with 分享、存圖片、再看一次', s.id === 'end' && /謝謝你，辛苦了/.test(s.text) && /分享回顧卡/.test(s.text) && /存圖片/.test(s.text) && /再看一次/.test(s.text), s.text);
+  ok('the end: 這些日子，都記下來了, with 分享、存圖片、再看一次', s.id === 'end' && /這些日子，都記下來了/.test(s.text) && /分享回顧卡/.test(s.text) && /存圖片/.test(s.text) && /再看一次/.test(s.text), s.text);
   await shot(P, 'recap-end');
   const [dl] = await Promise.all([P.waitForEvent('download'), P.click('.rc-save')]);
   const dim = pngSize(fs.readFileSync(await dl.path()));

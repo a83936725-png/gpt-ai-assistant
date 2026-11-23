@@ -38,7 +38,7 @@ const jpegSize = (buf) => {
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', colorScheme: scheme, acceptDownloads: true });
     await c.clock.install({ time: new Date(NOW) });
     await c.addInitScript((sh) => {
-      window.__noShareMoments = true; window.open = () => null;
+      window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null;
       if (sh) {
         Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => true });
         Object.defineProperty(navigator, 'share', { configurable: true, value: async (d) => { window.__shared = { name: d.files[0].name, type: d.files[0].type, size: d.files[0].size, text: d.text }; } });

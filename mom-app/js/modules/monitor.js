@@ -1087,11 +1087,11 @@
         : null));
     }
     if (has) {
-      out.push(h('section', { class: 'card' }, h('div', { class: 'card-title' }, '⚙️ 攝影機設定'), awakeToggle(),
+      out.push(h('section', { class: 'card' }, h('div', { class: 'card-title' }, '攝影機設定'), awakeToggle(),
         h('p', { class: 'tiny faint' }, '這個畫面要保持開著；鎖定螢幕或切到別的 App，鏡頭就會被系統關掉。')));
     } else {
       out.push(h('section', { class: 'card' },
-        h('div', { class: 'card-title' }, '📍 擺放小撇步'),
+        h('div', { class: 'card-title' }, '擺放小撇步'),
         h('ul', { class: 'small tight mon-tips' },
           h('li', null, '找一支不用的舊手機或平板，跟看的手機連同一個 Wi-Fi。'),
           h('li', null, '放高一點、離床 1 公尺以上，電線收好，寶寶碰不到。'),
@@ -1113,7 +1113,7 @@
       sensRow.lastChild.setAttribute('aria-labelledby', 'mon-sens-label');
       sensRow.hidden = !prefs.cry;
       out.push(h('section', { class: 'card' },
-        h('div', { class: 'card-title' }, '🔔 提醒'),
+        h('div', { class: 'card-title' }, '提醒'),
         toggle({
           label: '哭聲提醒', sub: '聲音持續變大約 3 秒，就震動手機並跳出提醒', checked: prefs.cry,
           onChange: (on) => { prefs.cry = on; savePrefs(); sensRow.hidden = !on; if (!on) hideCry(); S.loud = 0; updateStage(); },
@@ -1146,7 +1146,7 @@
   }
 
   const notesCard = () => h('section', { class: 'card soft mon-notes' },
-    h('div', { class: 'card-title' }, '🔒 隱私與連線'),
+    h('div', { class: 'card-title' }, '隱私與連線'),
     h('ul', { class: 'mon-notelist' },
       h('li', null, h('strong', null, '影像只在兩台裝置之間直接傳送，不經過伺服器、不會錄影或儲存。'), '畫面全程加密，從攝影機那台直接傳到看的手機。'),
       h('li', null, '📶 兩台要連同一個家用 Wi-Fi，在家裡最順。用 4G 或出門在外看，需要「中繼伺服器」，預計在之後的版本提供。'),

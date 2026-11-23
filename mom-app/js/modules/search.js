@@ -345,7 +345,7 @@
   }
   function crisisCard() {
     return ui.card({ class: 'sr-crisis', role: 'note', 'aria-label': '心理支持專線' },
-      h('div', { class: 'sr-urgent-title' }, '💜 你不是一個人'),
+      h('div', { class: 'sr-urgent-title' }, '你不是一個人'),
       h('p', null, '現在很辛苦的話，請馬上找人說說話，也請身邊的人陪著你。有立即危險請撥 119。'),
       h('div', { class: 'sr-urgent-actions' },
         tel('1925', '📞 安心專線 1925（24 小時）', 'btn btn-primary'),
@@ -421,7 +421,7 @@
         h('div', { class: 'sr-fb-q', id: `sr-fb-${f.id}` }, '這有幫助嗎？'),
         h('div', { class: 'sr-fb-row', role: 'group', 'aria-labelledby': `sr-fb-${f.id}` }, b('up', '👍', '有幫助'), b('down', '👎', '沒幫助')));
       // native append() prints null as the text "null", so only append the thank-you line when there is one
-      if (cur) box.append(h('p', { class: 'small muted sr-fb-thanks', role: 'status' }, cur === 'up' ? '謝謝你！很高興幫上忙 💜' : '謝謝回饋！可以換個說法再搜尋，或直接詢問醫師。'));
+      if (cur) box.append(h('p', { class: 'small muted sr-fb-thanks', role: 'status' }, cur === 'up' ? '謝謝回饋' : '謝謝回饋！可以換個說法再搜尋，或直接詢問醫師。'));
     };
     draw();
     return box;

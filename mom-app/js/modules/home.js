@@ -26,14 +26,7 @@
     if (phase === 'evening') return '晚安';
     return hour < 11 ? '早安' : hour < 14 ? '午安' : '午後好';
   }
-  // under the date: the next sunrise or sunset (nothing with the fixed clock)
-  function sunNote(now = new Date()) {
-    if (!App.sun || App.sunPlace() === 'clock') return null;
-    const s = App.sun(now);
-    if (now < s.sunrise) return { icon: '🌅', text: `日出 ${C.fmtTime(s.sunrise)}` };
-    if (now < s.sunset) return { icon: '🌇', text: `日落 ${C.fmtTime(s.sunset)}` };
-    return { icon: '🌅', text: `明早日出 ${C.fmtTime(App.sun(C.addDays(now, 1)).sunrise)}` };
-  }
+  // (the next sunrise or sunset used to sit under the date; it is in 我的 → 夜間模式, where it explains something)
   App.greeting = greeting;
 
   const STAGES = [
@@ -53,16 +46,16 @@
   // the one thing a tired parent wants at a glance: when is the next feed (and which side was last)
   function feedStatus(baby) {
     const run = App.timers && App.timers.get('breast', baby.id);
-    if (run) return `🤱 親餵中・${run.side === 'L' ? '左' : '右'}邊`;
+    if (run) return `親餵中・${run.side === 'L' ? '左' : '右'}邊`;
     const pred = App.predict && App.predict.feed();
-    if (!pred) return '🍼 記一次餵奶，我幫你算下一餐';
+    if (!pred) return '記一次餵奶，就會算出下一餐大約幾點';
     const mins = Math.round((pred.next.getTime() - Date.now()) / C.MIN);
     const side = pred.last.type === 'breast' && pred.last.data && pred.last.data.lastSide ? `・上次${pred.last.data.lastSide === 'L' ? '左' : '右'}邊` : '';
     // short enough for a small phone: the time is what matters; a countdown only when it is close
-    if (mins >= 60) return `🍼 下一餐約 ${C.fmtTime(pred.next)}${side}`;
-    if (mins > 0) return `🍼 ${mins} 分後下一餐・${C.fmtTime(pred.next)}${side}`; // countdown first: it is what fits
-    if (mins > -90) return `🍼 差不多該餵了（約 ${C.fmtTime(pred.next)}）${side}`;
-    return `🍼 上次餵奶 ${C.ago(pred.last.start)}${side}`;
+    if (mins >= 60) return `下一餐約 ${C.fmtTime(pred.next)}${side}`;
+    if (mins > 0) return `${mins} 分後下一餐・${C.fmtTime(pred.next)}${side}`; // countdown first: it is what fits
+    if (mins > -90) return `差不多該餵了（約 ${C.fmtTime(pred.next)}）${side}`;
+    return `上次餵奶 ${C.ago(pred.last.start)}${side}`;
   }
 
   // one compact card: avatar | name / age・weight・length / next feed
@@ -137,7 +130,7 @@
         const on = chosen.includes(t);
         const cb = h('input', { type: 'checkbox', checked: on, disabled: !on && chosen.length >= MAX_TILES });
         cb.addEventListener('change', () => { chosen = cb.checked ? App.LOG_ORDER.filter((x) => x === t || chosen.includes(x)) : chosen.filter((x) => x !== t); draw(); });
-        list.append(h('label', { class: 'list-item check-row' }, cb, h('span', { class: 'li-icon' }, def.icon),
+        list.append(h('label', { class: 'list-item check-row', style: { '--tc': def.color } }, cb, App.logIcon(t, 'li-icon lt-tinted'),
           h('span', { class: 'li-body' }, h('span', { class: 'li-title' }, def.label), h('span', { class: 'li-sub', style: { display: 'block' } }, `＋：${QUICK_DEFS[t].plusHint}`))));
       });
     };
@@ -179,9 +172,10 @@
       const extra = q.type === 'breast' && last?.data?.lastSide && !running ? `・上次${last.data.lastSide === 'L' ? '左' : '右'}` : '';
       const plusLabel = running ? `完成${def.label}` : `${def.label}：${q.type === 'bottle' && last ? `${last.data?.ml || ''} ml ${q.plusHint}` : q.plusHint}`;
       wrap.append(h('div', { class: `quick-tile${running ? ' running' : ''}`, role: 'listitem', style: { '--tc': def.color }, dataset: { type: q.type } },
+        // today's count, as a quiet 「今天 3」 (the word comes from the style sheet): not a red-dot notification
         todayCount ? h('span', { class: 'qt-badge', 'aria-label': `今天 ${todayCount} 次` }, todayCount) : null,
         h('button', { class: 'qt-main', onclick: () => { if (quickTapOk(q.type)) App.babylog.openAdd(q.type); }, 'aria-label': `新增${def.label}（完整表單）` },
-          h('span', { class: 'qt-ico' }, def.icon),
+          App.logIcon(q.type, 'qt-ico'),
           h('span', { class: 'qt-label' }, q.label),
           h('span', { class: 'qt-sub tiny' }, sub, extra)),
         h('button', {
@@ -196,7 +190,7 @@
             else App.babylog.quickLog(q.type);
             // logged (not a form that opened instead): a little puff from the button, and today's count pops
             if (!document.body.classList.contains('has-sheet')) {
-              ui.burst(at, def.icon);
+              ui.burst(at, '●', { color: def.color, size: 9 }); // a few dots in the record's colour
               if (store.logsOn(new Date()).length > n0) {
                 requestAnimationFrame(() => { const b = document.querySelector(`.quick-tile[data-type="${q.type}"] .qt-badge`); if (b) b.classList.add('pop'); });
                 if (App.qbaby) requestAnimationFrame(App.qbaby.hop); // the Q版 baby hops
@@ -216,12 +210,12 @@
     const sleep = P.sleep();
     const diaper = P.diaper();
     if (!feed && !sleep && !diaper) {
-      return ui.card({ class: 'next-card' }, h('div', { class: 'card-title' }, '✨ 接下來'),
+      return ui.card({ class: 'next-card' }, h('div', { class: 'card-title' }, '接下來'),
         h('p', { class: 'small muted' }, '開始記錄餵奶、睡眠、尿布後，這裡會預測寶寶下一次的需求。紀錄越多，預測越貼近寶寶的作息。'));
     }
     const rows = [];
     if (sleep && sleep.sleeping) {
-      rows.push(h('div', { class: 'next-big' }, h('span', { class: 'next-ico' }, '😴'),
+      rows.push(h('div', { class: 'next-big' }, App.logIcon('sleep', 'next-ico'),
         h('div', null, h('div', { class: 'small muted' }, '寶寶已經睡了'), h('div', { class: 'big-num num', dataset: { clock: sleep.since } }, '00:00'))));
     } else if (sleep) {
       const now = Date.now();
@@ -230,7 +224,7 @@
       const span = Math.max(1, to - start);
       const nowPct = C.clamp(((now - start) / span) * 100, 0, 100);
       const fromPct = C.clamp(((from - start) / span) * 100, 0, 100);
-      rows.push(h('div', { class: 'next-big' }, h('span', { class: 'next-ico' }, '🌙'),
+      rows.push(h('div', { class: 'next-big' }, App.logIcon('sleep', 'next-ico'),
         h('div', { class: 'grow' },
           h('div', { class: 'small muted' }, now < from ? '寶寶可能想睡的時間' : now <= to ? '現在是睡意窗口' : '已超過建議清醒時間'),
           now < from ? h('div', { class: 'big-num num' }, h('span', { dataset: { countdown: sleep.from.toISOString() } }, C.fmtDuration(from - now)), h('small', { class: 'big-suffix' }, '後'))
@@ -244,18 +238,18 @@
     const lines = [];
     if (feed) {
       const ms = feed.next.getTime() - Date.now();
-      lines.push(h('div', { class: 'next-line' }, h('span', null, '🍼'),
+      lines.push(h('div', { class: 'next-line' }, App.logIcon('bottle', 'next-line-ico'),
         ms > 0 ? h('span', null, '下一次餵食可能在 ', h('b', { dataset: { countdown: feed.next.toISOString() } }, C.fmtDuration(ms)), '後（', C.fmtTime(feed.next), '）')
           : h('span', null, '已到平常的餵食時間（上次 ', h('b', { dataset: { ago: feed.last.start } }, C.ago(feed.last.start)), '）')));
     }
     if (diaper) {
       const ms = diaper.next.getTime() - Date.now();
-      lines.push(h('div', { class: 'next-line' }, h('span', null, '🧷'),
+      lines.push(h('div', { class: 'next-line' }, App.logIcon('diaper', 'next-line-ico'),
         ms > 0 ? h('span', null, '約 ', h('b', { dataset: { countdown: diaper.next.toISOString() } }, C.fmtDuration(ms)), '後檢查尿布') : h('span', null, '可以檢查一下尿布囉')));
     }
     return ui.card({ class: 'next-card' },
-      h('div', { class: 'card-title' }, '✨ 接下來', h('span', { class: 'tag primary' }, '預測'),
-        App.handoff ? h('button', { class: 'link-btn small next-handoff', onclick: () => App.handoff.open() }, '🤝 交接') : null),
+      h('div', { class: 'card-title' }, '接下來', h('span', { class: 'tag primary' }, '預測'),
+        App.handoff ? h('button', { class: 'link-btn small next-handoff', onclick: () => App.handoff.open() }, '交接卡') : null),
       rows, lines.length ? h('div', { class: 'next-lines' }, lines) : null,
       h('div', { class: 'tiny faint center mt' }, `依最近 ${feed ? feed.samples : 0} 次餵食與寶寶月齡估算・紀錄越多越準`));
   }
@@ -311,16 +305,15 @@
       const name = store.state.profile.momName;
       const now = new Date();
       const greet = greeting(now);
-      const sn = sunNote(now);
       const stageLabel = STAGES.find((s) => s.value === stage) || STAGES[2];
       const myHead = App.avatar && App.avatar.head(44);
+      // 「早安，小美」 and the date: no heart after her name (a person would not write one), 小滴 only in the night
       el.append(h('div', { class: 'greet row between' },
         h('div', { class: 'row' },
           myHead ? h('button', { class: 'greet-av', 'aria-label': '我的 Q 版角色', onclick: () => App.navigate('avatar') }, myHead) : null,
           h('div', null, h('div', { class: 'greet-hi' }, `${greet}${name ? `，${name}` : ''} `,
-            App.mascot && App.mascot.night() ? App.mascot.el({ mood: 'sleepy', size: 30, cls: 'greet-md' }) : h('span', { class: 'beat' }, '💜')), h('div', { class: 'tiny muted greet-date' }, C.fmtDateLong(now),
-            sn ? [' ', h('span', { class: 'greet-sun' }, h('span', { 'aria-hidden': 'true' }, sn.icon), ` ${sn.text}`)] : null))),
-        h('a', { class: 'stage-pill', href: '#/me', title: '到「我的」切換階段' }, `${stageLabel.icon} ${stageLabel.label}${store.state.profile.pregnantToo && stage === 'baby' ? '＋懷孕' : ''}`)));
+            App.mascot && App.mascot.night() ? App.mascot.el({ mood: 'sleepy', size: 30, cls: 'greet-md' }) : null), h('div', { class: 'tiny muted greet-date' }, C.fmtDateLong(now)))),
+        h('a', { class: 'stage-pill', href: '#/me', title: '到「我的」切換階段' }, `${stageLabel.label}${store.state.profile.pregnantToo && stage === 'baby' ? '＋懷孕' : ''}`)));
       if (App.livePill) el.append(App.livePill('home-live'));
       // a save that could not be kept: the warning goes right under the greeting, above everything else
       const storageAlert = App.storageAlert && App.storageAlert();

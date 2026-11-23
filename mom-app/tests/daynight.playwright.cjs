@@ -55,7 +55,9 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
       phase: document.body.dataset.phase,
       theme: document.documentElement.getAttribute('data-theme'),
       greet: (document.querySelector('.greet-hi') || {}).textContent || '',
-      sun: (document.querySelector('.greet-sun') || {}).textContent || '',
+      // the next sunrise or sunset as the app works it out (首頁 no longer shows it under the date: 0.9.2 moved it to 我的)
+      sun: (() => { if (!App.sun || App.sunPlace() === 'clock') return ''; const now = new Date(); const s = App.sun(now); const t = Core.fmtTime; return now < s.sunrise ? `🌅 日出 ${t(s.sunrise)}` : now < s.sunset ? `🌇 日落 ${t(s.sunset)}` : `🌅 明早日出 ${t(App.sun(Core.addDays(now, 1)).sunrise)}`; })(),
+      homeSun: !!document.querySelector('.greet-sun'),
       sleepy: !!document.querySelector('.greet-hi .md[data-mood="sleepy"]'),
       plus: plus ? Math.round(plus.getBoundingClientRect().height) : 0, // the ＋ under a tile: 44px, 52px late at night
     };
@@ -66,7 +68,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   let p = await mk({ time: '2026-06-21T18:30:00+08:00' });
   let v = await look(p);
   ok('夏至 18:30 (北部日落 18:47): still light, 黃昏, greeting 傍晚好', !v.night && v.phase === 'dusk' && !v.theme && v.greet.startsWith('傍晚好'), JSON.stringify(v));
-  ok('…the date line says when the sun sets: 🌇 日落 18:4x', /^🌇 日落 18:4\d$/.test(v.sun), v.sun);
+  ok('…the sun sets at 18:4x (首頁 does not print it under the date any more)', /^🌇 日落 18:4\d$/.test(v.sun) && !v.homeSun, JSON.stringify(v));
   await shot(p, 'summer-1830');
   // the theme follows by itself: run the clock past sunset, the minute check turns the screen dark
   await p.clock.runFor(20 * 60 * 1000);
@@ -194,7 +196,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
     const g = document.querySelector('.greet'); const sn = document.querySelector('.greet-sun'); const d = document.querySelector('.greet-date');
     return { gw: Math.round(g.getBoundingClientRect().right), sw: document.documentElement.scrollWidth, snRight: sn && Math.round(sn.getBoundingClientRect().right), oneLine: sn && sn.getClientRects().length === 1, dateH: d && Math.round(d.getBoundingClientRect().height) };
   });
-  ok('320px phone: the greeting row and the sunset note fit, the note never breaks in the middle', small.gw <= 320 && small.sw <= 320 && small.snRight <= 320 && small.oneLine, JSON.stringify(small));
+  ok('320px phone: the greeting row fits, and the date stays on one line (the sunset note moved to 我的 in 0.9.2)', small.gw <= 320 && small.sw <= 320 && !small.snRight && small.dateH > 0 && small.dateH < 26, JSON.stringify(small));
   await shot(p, 'small-320');
 
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));

@@ -11,7 +11,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
     const c = await b.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Taipei' });
     const p = await c.newPage();
     await p.clock.setFixedTime(new Date(when));
-    await p.addInitScript(() => { window.__noShareMoments = true; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
     await p.goto(BASE); await p.waitForTimeout(700);
@@ -29,7 +29,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   await baby(P, 10);
   await go(P, 'home');
   const card = await text(P, '.bn-home');
-  ok('首頁 (10 days old): 出生登記 first with 還剩 50 天, then 育兒津貼 (same deadline), at most 3 rows', /^💰 現在可以申請的福利/.test(card) && (await S(P, () => document.querySelectorAll('.bn-row').length)) === 3
+  ok('首頁 (10 days old): 出生登記 first with 還剩 50 天, then 育兒津貼 (same deadline), at most 3 rows', /^現在可以申請的福利/.test(card) && (await S(P, () => document.querySelectorAll('.bn-row').length)) === 3
     && (await text(P, '.bn-row')).startsWith('出生登記') && /出生登記\s*還剩 50 天/.test(card) && /未滿 2 歲育兒津貼\s*還剩 50 天・每月 5,000–7,000 元/.test(card), card);
   ok('…and a way to the whole list', /看全部福利（29 項）/.test(card));
   await P.click('.bn-row >> nth=0'); await P.waitForTimeout(400);

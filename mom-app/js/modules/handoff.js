@@ -131,7 +131,7 @@
       rows(s).length ? list : h('p', { class: 'small muted' }, '還沒有今天的紀錄。記一筆餵奶或尿布，交接卡就會自動整理。'),
       from ? null : h('div', { class: 'ho-lbl small bold' }, '交代事項'), from ? null : note,
       from ? null : h('p', { class: 'tiny faint ho-how' }, famOn() ? '交接卡會加密傳到家人手機，通知只寫「換你囉」，伺服器看不到內容。' : '開啟「家人共用紀錄」，家人的手機會自動收到交接卡和通知。用 LINE 傳的文字不包含用藥和體溫。'));
-    const footer = from ? h('button', { class: 'btn btn-primary btn-block ho-ok', onclick: () => done() }, '知道了 💜') : h('div', { class: 'row gap' }, copyBtn, sendBtn);
+    const footer = from ? h('button', { class: 'btn btn-primary btn-block ho-ok', onclick: () => done() }, '知道了') : h('div', { class: 'row gap' }, copyBtn, sendBtn);
     copyBtn.addEventListener('click', async () => {
       const words = text(summary(b), cleanNote(note.value));
       try { if (App.share && App.share.copyText) await App.share.copyText(words); else await navigator.clipboard.writeText(words); ui.toast('已複製交接內容'); } catch (e) { ui.toast('複製失敗'); }
@@ -152,7 +152,7 @@
         await App.family.sync(); // the card is on the family's server before anyone is told
         const r = await App.account.call('POST', 'family/nudge', { kind: 'handoff' });
         done();
-        ui.toast(r && r.sent ? '已通知家人：換你顧寶寶囉 💜' : '交接卡已傳給家人（家人沒開手機通知，打開 App 就會看到）');
+        ui.toast(r && r.sent ? '已通知家人：換你顧寶寶囉' : '交接卡已傳給家人（家人沒開手機通知，打開 App 就會看到）');
         ui.celebrate({ emojis: ['🤝', '💜'] });
       } catch (e) { sendBtn.disabled = false; ui.toast('暫時傳不出去，交接卡會在連上網路後同步'); }
     });
@@ -162,7 +162,7 @@
     if (!b) { ui.toast('先新增寶寶，才能做交接卡'); return null; }
     let sh = null;
     const p = parts(b, { from, done: () => sh && sh.close() });
-    sh = ui.sheet({ title: `🤝 交接卡・${b.name || '寶寶'}`, body: p.body, footer: p.footer });
+    sh = ui.sheet({ title: `交接卡・${b.name || '寶寶'}`, body: p.body, footer: p.footer });
     return sh;
   }
   App.screen('handoff', {
@@ -173,7 +173,7 @@
       const b = store.baby();
       if (!b) { el.append(ui.card({ class: 'soft center' }, h('p', null, '先新增寶寶，才能做交接卡。'))); return; }
       const p = parts(b, { done: () => App.navigate('home') });
-      el.append(ui.card({ class: 'ho-card' }, h('div', { class: 'card-title' }, `🤝 ${b.name || '寶寶'}的交接卡`), p.body), h('div', { class: 'ho-foot' }, p.footer));
+      el.append(ui.card({ class: 'ho-card' }, h('div', { class: 'card-title' }, `${b.name || '寶寶'}的交接卡`), p.body), h('div', { class: 'ho-foot' }, p.footer));
     },
   });
 

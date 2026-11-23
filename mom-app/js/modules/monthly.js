@@ -362,7 +362,7 @@
     if (how === 'share') {
       const thanks = () => {
         const pts = App.share.record ? App.share.record('more', 'monthly') : 0;
-        ui.toast(`謝謝分享 💜${pts ? ` 好孕點數 +${pts}` : ''}`);
+        ui.toast(`謝謝分享${pts ? `・好孕點數 +${pts}` : ''}`);
         done();
       };
       const r = await App.share.sharePicture(blob, fileName, { text: words, onShared: thanks });
@@ -505,7 +505,7 @@
       if (old && old !== id && App.media) App.media.del(old); // the photo it replaces (the original is still in her album)
       sync(); paint();
       if (first) {
-        ui.toast(`已放進${lead(L.text === '出生' ? '出生照' : L.text)}的相框 💜`);
+        ui.toast(`已放進${lead(L.text === '出生' ? '出生照' : L.text)}的相框`);
         ui.celebrate({ from: cv, emojis: ['📸', '💜', '✨'] });
       }
     });
@@ -552,7 +552,7 @@
 
     const whenText = `${C.fmtDate(date, false)}${date > C.dateKey() ? `（還有 ${C.diffDays(new Date(), C.parseKey(date))} 天）` : ''}`;
     const sheet = ui.sheet({
-      title: `📸 ${b.name || '寶寶'} ${L.text}`,
+      title: `${b.name || '寶寶'} ${L.text}`,
       body: h('div', { class: 'mo-ed' },
         h('p', { class: 'tiny muted center mo-when' }, `${photoName(L)}・${whenText}`),
         h('div', { class: 'mo-stage' }, cv), hint, demoNote,
@@ -605,7 +605,7 @@
     const colSave = h('button', { type: 'button', class: 'btn btn-soft grow mo-save', onclick: () => ui.busy(colSave, () => out('save'), { also: [colShare] }) }, '💾 存圖片');
     const colShare = h('button', { type: 'button', class: 'btn btn-primary grow mo-share', onclick: () => ui.busy(colShare, () => out('share'), { also: [colSave] }) }, '📤 分享');
     const sheet = ui.sheet({
-      title: `🧩 ${title}`,
+      title: `${title}`,
       body: h('div', { class: 'mo-ed' },
         h('div', { class: 'mo-stage' }, cv),
         h('p', { class: 'small muted center mo-count' }, have >= months.length ? `${months.length} 個月都到齊了 🎉` : `已放 ${have}／${months.length} 張，還沒拍的月份會留白`),
@@ -674,7 +674,7 @@
     if (next == null) next = range(a.months + 1, LAST).find((m) => !slotOf(b.id, m));
     let nextLine;
     if (a.months > LAST) nextLine = '兩歲以前的每個月都在這裡，隨時可以補拍';
-    else if (next == null) nextLine = '每個月都拍好了，真棒 💜';
+    else if (next == null) nextLine = '每個月都拍好了。';
     else if (next === 0) nextLine = '先放一張出生時的照片吧';
     else if (next === a.months) nextLine = `這個月（${label(next).text}）還沒拍，現在就來拍一張`;
     else nextLine = `下一張：${label(next).text}・${C.fmtDate(slotDate(b, next), false)}（還有 ${C.diffDays(now, C.parseKey(slotDate(b, next)))} 天）`;

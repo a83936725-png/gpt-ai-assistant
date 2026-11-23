@@ -15,7 +15,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: t
   const newPage = async (opts = {}) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-TW', ...opts });
     const p = await ctx.newPage();
-    await p.addInitScript(() => { window.__noShareMoments = true; window.open = () => null; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null; });
     p.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text()) && !/\/api\//.test((m.location() || {}).url || '') && !/ERR_INTERNET_DISCONNECTED/.test(m.text())) errors.push(`console: ${m.text()}`); });
     return p;

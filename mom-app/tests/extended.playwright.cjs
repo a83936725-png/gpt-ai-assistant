@@ -19,7 +19,7 @@ const errs = [];
   const mk = async (vp = { width: 390, height: 844 }, opts = {}) => {
     const ctx = await browser.newContext({ viewport: vp, locale: 'zh-TW', ...opts });
     const p = await ctx.newPage();
-    await p.addInitScript(() => { window.__noShareMoments = true; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; });
     p.on('pageerror', (e) => errs.push(`[${vp.width}] ${p.url()} :: ${e.message}`));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|ERR_INTERNET_DISCONNECTED/.test(m.text()) && !/\/api\//.test((m.location() || {}).url || '')) errs.push(`[${vp.width}] ${p.url()} :: ${m.text()}`); });
     return p;
@@ -96,12 +96,12 @@ const errs = [];
     const after = await S(p, () => ({ n: App.store.state.logs.length, sleep: App.store.state.active.sleep?.start, clock: document.querySelector('[data-clock]')?.textContent }));
     ok('C. data + running timer survive reload', before.n === after.n && before.sleep === after.sleep && after.clock && after.clock !== '00:00', JSON.stringify(after));
     await S(p, () => localStorage.setItem('yijia-mom-app-v1', '{broken json'));
-    await p.reload(); await p.waitForTimeout(400);
-    ok('C. corrupt storage → app recovers to welcome screen', await p.isVisible('text=開始使用'));
+    await p.reload(); await p.waitForSelector('text=你現在是？', { timeout: 6000 }).catch(() => {}); // the welcome screen, however busy the machine is
+    ok('C. corrupt storage → app recovers to welcome screen', await p.isVisible('text=你現在是？'));
     await p.context().close();
     const q = await mk(); await q.addInitScript(() => { const thrower = () => { throw new Error('blocked'); }; Object.defineProperty(window, 'localStorage', { get: thrower }); });
-    await q.goto(BASE); await q.waitForTimeout(400);
-    const okBlocked = await q.isVisible('text=開始使用');
+    await q.goto(BASE); await q.waitForSelector('text=你現在是？', { timeout: 6000 }).catch(() => {});
+    const okBlocked = await q.isVisible('text=你現在是？');
     if (okBlocked) { await q.click('text=先看看範例資料'); await q.waitForTimeout(400); }
     ok('C. storage blocked (private mode) → app still works in memory', okBlocked && (await S(q, () => App.store.state.logs.length)) > 10);
     await q.context().close();

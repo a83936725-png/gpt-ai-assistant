@@ -144,4 +144,4 @@ const DAY = '2026-11-23T14:12:00+08:00';
   process.exit(pass === results.length ? 0 : 1);
 })().catch((e) => { console.error(e); process.exit(1); });
 
-function WORDS_OK(text) { return /(慢慢來|休息一下|喝口水|擁抱|深呼吸|很努力)/.test(text) && !/(治療|改善|療效|預防)/.test(text); }
+function WORDS_OK(text) { return /(休息一下|喝口水|深呼吸|換邊|拍嗝)/.test(text) && !/(治療|改善|療效|預防)/.test(text); }

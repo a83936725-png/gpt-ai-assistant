@@ -24,7 +24,7 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', ...(ua ? { userAgent: ua } : {}) });
     await c.clock.install({ time: new Date(NOW) });
     await c.addInitScript((granted) => {
-      window.__noShareMoments = true; window.open = () => null;
+      window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null;
       // headless Chromium has no notification permission prompt: stand in for the person's answer
       if (window.Notification && granted) {
         Object.defineProperty(Notification, 'permission', { get: () => 'granted', configurable: true });

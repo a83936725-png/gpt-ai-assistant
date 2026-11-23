@@ -23,7 +23,7 @@ const NOW = '2026-11-22T14:19:03+08:00';
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', colorScheme: scheme });
     ctxs.push(c);
     await c.clock.install({ time: new Date(NOW) });
-    await c.addInitScript(() => { window.__noShareMoments = true; window.open = () => null; });
+    await c.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null; });
     const p = await c.newPage();
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
@@ -98,7 +98,7 @@ const NOW = '2026-11-22T14:19:03+08:00';
   /* ---------- 紀錄 ---------- */
   await go(P, 'log', 900);
   const line = (await S(P, () => (document.querySelector('.pump-day') || {}).innerText || '')).replace(/\s+/g, '');
-  ok('紀錄: the day\'s 擠奶 line — 2 次・250 ml（左 140／右 110）', line === '🥛擠奶2次・250ml（左140／右110）›', line);
+  ok('紀錄: the day\'s 擠奶 line — 2 次・250 ml（左 140／右 110）', line === '擠奶2次・250ml（左140／右110）›', line);
   await P.click('.timeline .tl-item:has-text("擠奶") >> nth=0'); await P.waitForTimeout(600);
   f = await form(P);
   ok('edit a saved session: its own 80 / 60, no timer button', !f.timer && f.left === '80' && f.right === '60', JSON.stringify(f));

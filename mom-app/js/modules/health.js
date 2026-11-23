@@ -500,13 +500,12 @@
       });
       groups.forEach((g) => {
         el.append(h('div', { class: 'section-title' }, g.name));
-        el.append(h('div', { class: 'grid-2' }, g.tools.map((t) => h('button', {
-          class: 'tile', type: 'button', onclick: () => App.navigate(t.screen || t.id, t.params),
-          style: t.color ? { borderTop: `3px solid ${t.color}` } : null,
+        // one list per group, plain rows with a chevron (it was a grid of big-emoji tiles, with lone tiles in half-empty rows)
+        el.append(h('div', { class: 'tool-list' }, g.tools.map((t) => h('button', {
+          class: 'tile tool-row', type: 'button', onclick: () => App.navigate(t.screen || t.id, t.params),
         },
-        h('span', { class: 'tile-icon' }, t.icon || '✨'),
-        h('span', { class: 'tile-title' }, t.title),
-        t.desc ? h('span', { class: 'tile-desc' }, t.desc) : null))));
+        h('span', { class: 'tool-text' }, h('span', { class: 'tile-title' }, t.title), t.desc ? h('span', { class: 'tile-desc' }, t.desc) : null),
+        h('span', { class: 'ic faint', html: ui.ICONS.chevron })))));
       });
       el.append(h('p', { class: 'disclaimer' }, '本 App 內容僅供衛教參考，不能取代醫師診斷；如有任何身體不適，請儘速就醫。'));
     },
@@ -762,7 +761,7 @@
       const visits = items.filter((x) => x.c.kind === 'visit' && x.st.key !== 'na'); // visits that apply to this child
       const cur = items.find((x) => x.st.key === 'now');
       el.append(ui.card({ class: 'soft' },
-        h('div', { class: 'card-title' }, `🩺 公費兒童預防保健 ${items.filter((x) => x.c.kind === 'visit').length} 次`),
+        h('div', { class: 'card-title' }, `公費兒童預防保健 ${items.filter((x) => x.c.kind === 'visit').length} 次`),
         h('p', { class: 'small muted', style: { marginBottom: 6 } }, '2026 年 7 月起由 7 次增為 9 次（7+2）。內容包含身體檢查、生長發育評估與衛教指導，可到健保特約的兒科或家醫科診所；另有 6 次公費兒童發展篩檢，可一起做。'),
         h('div', { class: 'row between small' },
           h('span', null, `已完成 ${visits.filter((x) => x.st.key === 'done').length} / ${visits.length} 次`),
@@ -813,7 +812,7 @@
     render: needBaby((el, params, b) => {
       if (params.tab) prevTab = params.tab;
       const todo = preventionTodo(b);
-      const card = ui.card({ class: 'soft prev-next' }, h('div', { class: 'card-title' }, '🗓️ 下一步要做的'),
+      const card = ui.card({ class: 'soft prev-next' }, h('div', { class: 'card-title' }, '下一步要做的'),
         h('p', { class: 'tiny muted' }, '台灣常在同一次門診一起打疫苗、做兒童健檢，可以一起安排。'));
       if (!todo.length) card.append(h('p', { class: 'small' }, '目前沒有待辦的疫苗或健檢 👍'));
       else {
@@ -854,7 +853,7 @@
       const done = Object.keys(doneMap).length;
       el.append(ui.card({ class: 'soft' },
         h('div', { class: 'row between' },
-          h('div', null, h('div', { class: 'card-title' }, '⭐ 發展里程碑'),
+          h('div', null, h('div', { class: 'card-title' }, '發展里程碑'),
             h('div', { class: 'card-sub' }, `${b.name || '寶寶'} 目前 ${C.babyAge(b.birthday).text}`)),
           h('div', { class: 'big-num' }, `${done}`, h('small', { class: 'small muted' }, ` / ${total}`))),
         h('div', { class: 'chips mt' }, Object.values(H.MILESTONE_CATS).map((c) => h('span', { class: 'chip' }, `${c.icon} ${c.label}`)))));
@@ -994,7 +993,7 @@
     if (diaper.p && diaper.pct <= -25) insights.push('尿布片數明顯變少，留意喝奶量與精神');
     if (!insights.length) insights.push('各項數字和上週差不多，作息很穩定 👍');
     return ui.card({ class: 'week-card' },
-      h('div', { class: 'card-title' }, '📊 本週重點', h('span', { class: 'tiny muted' }, '近 7 天 vs 前 7 天・每天平均')),
+      h('div', { class: 'card-title' }, '本週重點', h('span', { class: 'tiny muted' }, '近 7 天 vs 前 7 天・每天平均')),
       h('div', { class: 'week-rows' }, rows.map((r) => {
         const up = r.pct > 3; const down = r.pct < -3;
         return h('div', { class: 'week-row' },
@@ -1140,7 +1139,7 @@
       const nv = nextVaccine(b);
       const latest = latestGrowth(b);
       const row = (icon, title, sub, screen, right) => h('button', { type: 'button', class: 'hc-row', onclick: () => App.navigate(screen) },
-        h('span', { class: 'hc-icon' }, icon),
+        h('span', { class: 'hc-icon', html: ui.ICONS[icon] || '' }), // the app's line icons (they were 💉 and 📈)
         h('span', { class: 'grow' },
           h('span', { class: 'hc-title' }, title),
           h('span', { class: 'hc-sub' }, sub)),
@@ -1149,14 +1148,14 @@
       const card = ui.card({ class: 'home-health' }, h('div', { class: 'card-title' }, '健康追蹤'));
       if (nv) {
         const when = nv.st.key === 'overdue' ? '已逾期' : nv.st.daysToDue > 0 ? `還有 ${nv.st.daysToDue} 天` : '現在可接種';
-        card.append(row('💉', `下一劑：${nv.v.name.replace(/（.*?）/g, '')} ${nv.v.dose}`, `${fmtYMD(nv.st.due)}・${when}`, 'prevention',
+        card.append(row('syringe', `下一劑：${nv.v.name.replace(/（.*?）/g, '')} ${nv.v.dose}`, `${fmtYMD(nv.st.due)}・${when}`, 'prevention',
           nv.st.cls ? h('span', { class: `tag ${nv.st.cls}` }, nv.st.label) : null));
       }
       const parts = ['weight', 'length'].filter((k) => latest[k]).map((k) => {
         const d = H.GROWTH_METRICS[k];
         return `${fmtNum(latest[k].value, d.digits)} ${d.unit}${latest[k].pct !== null ? `（${pctShort(latest[k].pct)}）` : ''}`;
       });
-      card.append(row('📈', parts.length ? `最新：${parts.join('・')}` : '記錄第一次身高體重', parts.length ? `依 WHO 兒童生長標準・${fmtYMD((latest.weight || latest.length).date)}` : '看看寶寶落在哪個百分位', 'growth'));
+      card.append(row('chart', parts.length ? `最新：${parts.join('・')}` : '記錄第一次身高體重', parts.length ? `依 WHO 兒童生長標準・${fmtYMD((latest.weight || latest.length).date)}` : '看看寶寶落在哪個百分位', 'growth'));
       el.append(card);
     },
   });

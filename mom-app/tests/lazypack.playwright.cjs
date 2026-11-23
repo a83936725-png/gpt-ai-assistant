@@ -19,7 +19,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
     const c = await b.newContext({ viewport: { width, height: 844 }, locale: 'zh-TW', timezoneId: 'Asia/Taipei' });
     const p = await c.newPage();
     await p.clock.setFixedTime(new Date(when));
-    await p.addInitScript(() => { window.__noShareMoments = true; window.open = () => null; });
+    await p.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null; });
     p.on('pageerror', (e) => errs.push(e.message));
     p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text()); });
     await p.goto(BASE); await p.waitForTimeout(700);
@@ -72,7 +72,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   ok('首頁 (10 days old, 11/21): 租金補貼 is there with 40 days left, after the items for every family', ri === now.length - 1 && now[ri][1] === 40 && now[0][0] === 'register', JSON.stringify(now));
   await go(P, 'home', 900);
   const home = await text(P, '.bn-home');
-  ok('…the card still starts with 出生登記 and shows 3 rows', /^💰 現在可以申請的福利/.test(home) && (await S(P, () => document.querySelectorAll('.bn-home .bn-row').length)) === 3 && /出生登記/.test(home.split('\n').slice(0, 3).join(' ')), home.slice(0, 120));
+  ok('…the card still starts with 出生登記 and shows 3 rows', /^現在可以申請的福利/.test(home) && (await S(P, () => document.querySelectorAll('.bn-home .bn-row').length)) === 3 && /出生登記/.test(home.split('\n').slice(0, 3).join(' ')), home.slice(0, 120));
   await go(P, 'benefits', 900);
   await P.click('.seg button:has-text("生產")'); await P.waitForTimeout(500);
   const row = await S(P, () => [...document.querySelectorAll('.bn-item')].map((x) => x.innerText.replace(/\n/g, ' ')).find((t) => /租金補貼/.test(t)) || '');
@@ -121,7 +121,7 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   /* ---------- 待產包 and 月子中心清單 ---------- */
   await go(F, 'hospitalbag', 900);
   const bag = await text(F, '#view');
-  ok('待產包: 「什麼時候準備」 32–34 週、34–36 週、最後一週', /🗓️ 什麼時候準備/.test(bag) && /32–34 週/.test(bag) && /34–36 週/.test(bag) && /最後一週/.test(bag));
+  ok('待產包: 「什麼時候準備」 32–34 週、34–36 週、最後一週', /什麼時候準備/.test(bag) && /32–34 週/.test(bag) && /34–36 週/.test(bag) && /最後一週/.test(bag));
   ok('…amounts as hints (安睡褲 3–5 包、哺乳內衣 2–3 件、紗布巾 2–3 條) and a 「剖腹產再加」 group (束腹帶)', /3–5 包/.test(bag) && /哺乳內衣 2–3 件/.test(bag) && /紗布巾 2–3 條/.test(bag) && /剖腹產再加/.test(bag) && /束腹帶/.test(bag));
   ok('…「這些情況直接去醫院」: 破水 (不論有沒有宮縮)、5-1-1, with a button to 宮縮計時', /🚨 這些情況直接去醫院/.test(bag) && /破水（不論有沒有宮縮）/.test(bag) && /5-1-1/.test(bag) && await F.isVisible('.pg-go-now button:has-text("宮縮計時")'));
   await axe(F, '待產包');

@@ -17,6 +17,8 @@ module.exports = {
       files: [
         'web/travel-app.js',
         'web/travel-data.js',
+        'web/travel-geo.js',
+        'web/travel-map.js',
       ],
       env: {
         browser: true,

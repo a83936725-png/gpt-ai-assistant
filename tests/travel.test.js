@@ -198,3 +198,36 @@ test('the travel page can be installed: manifest, service worker and icons', asy
   expect(icon.headers.get('content-type')).toBe('image/png');
   expect((await fetch(`${base}/travel/travel-icons/other.png`)).status).toBe(404);
 });
+
+test('the realistic map: satellite images, map script, country data and 110m outlines', async () => {
+  const scripts = await Promise.all(['travel-map.js', 'travel-geo.js'].map((path) => fetch(`${base}/travel/${path}`)));
+  scripts.forEach((res) => expect(res.headers.get('content-type')).toContain('javascript'));
+  expect((await (await fetch(`${base}/travel/vendor/countries-110m.json`)).json()).type).toBe('Topology');
+  const earth = await fetch(`${base}/travel/travel-earth/merc-2048.webp`);
+  expect(earth.headers.get('content-type')).toBe('image/webp');
+  expect((await fetch(`${base}/travel/travel-earth/merc-9999.webp`)).status).toBe(404);
+  expect((await fetch(`${base}/travel/travel-earth/..%2F..%2Fpackage.json`)).status).toBe(404);
+});
+
+test('GET /travel/flags/:code.svg serves real flags and nothing else', async () => {
+  const jp = await fetch(`${base}/travel/flags/jp.svg`);
+  expect(jp.headers.get('content-type')).toBe('image/svg+xml');
+  expect(jp.headers.get('content-security-policy')).toContain("default-src 'none'");
+  expect(await jp.text()).toContain('<svg');
+  expect((await fetch(`${base}/travel/flags/JP.svg`)).status).toBe(404);
+  expect((await fetch(`${base}/travel/flags/zz.svg`)).status).toBe(404);
+  expect((await fetch(`${base}/travel/flags/..%2Ftravel.js`)).status).toBe(404);
+});
+
+test('every country on the page has a flag, and every listed country has a place on the map', async () => {
+  const { existsSync, readFileSync } = await import('fs');
+  const vm = await import('vm');
+  const sandbox = {};
+  vm.runInNewContext(readFileSync('web/travel-data.js', 'utf8'), sandbox);
+  vm.runInNewContext(readFileSync('web/travel-geo.js', 'utf8'), sandbox);
+  const { COUNTRIES, WORLD } = sandbox.TRAVEL_DATA;
+  const onMap = new Set(Object.values(sandbox.TRAVEL_GEO).map((g) => g[0]));
+  const codes = [...new Set([...Object.keys(COUNTRIES), ...Object.values(WORLD).flatMap((v) => v.split(' '))])];
+  expect(codes.filter((c) => !existsSync(`web/flags/${c.toLowerCase()}.svg`))).toEqual([]);
+  expect(Object.keys(COUNTRIES).filter((c) => !onMap.has(c))).toEqual([]);
+});

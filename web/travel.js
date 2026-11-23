@@ -16,6 +16,8 @@ const FILES = {
   '': { file: 'travel.html', type: 'text/html; charset=utf-8', maxAge: 300 },
   'travel-app.js': { file: 'travel-app.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
   'travel-data.js': { file: 'travel-data.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
+  'travel-geo.js': { file: 'travel-geo.js', type: 'application/javascript; charset=utf-8', maxAge: 3600 },
+  'travel-map.js': { file: 'travel-map.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
   'travel-photos.json': { file: 'travel-photos.json', type: 'application/json; charset=utf-8', maxAge: 3600 },
   'manifest.webmanifest': { file: 'travel-manifest.webmanifest', type: 'application/manifest+json; charset=utf-8', maxAge: 3600 },
   // The service worker must not be cached, so a new version reaches installed apps at once.
@@ -24,6 +26,7 @@ const FILES = {
   'vendor/topojson-client.min.js': { file: 'vendor/topojson-client.min.js', type: 'application/javascript; charset=utf-8', maxAge: 86400 },
   'vendor/Sortable.min.js': { file: 'vendor/Sortable.min.js', type: 'application/javascript; charset=utf-8', maxAge: 86400 },
   'vendor/countries-50m.json': { file: 'vendor/countries-50m.json', type: 'application/json; charset=utf-8', maxAge: 86400 },
+  'vendor/countries-110m.json': { file: 'vendor/countries-110m.json', type: 'application/json; charset=utf-8', maxAge: 86400 },
 };
 
 const cache = new Map();
@@ -113,6 +116,32 @@ router.get('/travel-photos/:name', (req, res) => {
   res.set('Content-Type', match[1] === 'webp' ? 'image/webp' : 'image/jpeg');
   res.set('Cache-Control', 'public, max-age=2592000, immutable');
   res.send(readFileSync(file));
+});
+
+// Country flags (web/flags, from country-flag-icons, MIT). The name pattern is the allowlist.
+router.get('/flags/:name', (req, res) => {
+  const { name } = req.params;
+  const file = /^[a-z]{2}\.svg$/.test(name) && path.join(WEB_DIR, 'flags', name);
+  if (!file || !existsSync(file)) {
+    res.sendStatus(404);
+    return;
+  }
+  res.set('Content-Type', 'image/svg+xml');
+  res.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
+  res.set('Cache-Control', 'public, max-age=2592000');
+  res.send(readFileSync(file));
+});
+
+// Satellite imagery for the map (NASA Blue Marble, public domain; scripts/travel-earth.py).
+router.get('/travel-earth/:name', (req, res) => {
+  const { name } = req.params;
+  if (!/^(earth|merc)-(2048|4096)\.webp$/.test(name)) {
+    res.sendStatus(404);
+    return;
+  }
+  res.set('Content-Type', 'image/webp');
+  res.set('Cache-Control', 'public, max-age=2592000');
+  res.send(readFileSync(path.join(WEB_DIR, 'travel-earth', name)));
 });
 
 router.get('/api/status', (req, res) => {

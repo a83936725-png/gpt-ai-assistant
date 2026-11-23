@@ -26,8 +26,13 @@
   const fmtKm = (km) => (km < 10 ? `${km.toFixed(1)} 公里` : `${fmt(km)} 公里`);
   const sum = (list, fn) => list.reduce((s, x) => s + (fn(x) || 0), 0);
   const uid = () => Math.random().toString(36).slice(2, 10);
-  const flag = (code) => (code && code.length === 2
-    ? String.fromCodePoint(...[...code.toUpperCase()].map((c) => 127397 + c.charCodeAt(0))) : '🌐');
+  // Emoji flags only for plain text (select options, share text). Everywhere else real flag images
+  // (web/flags, MIT): Windows shows emoji flags as two letters.
+  const flagText = (code) => (code && code.length === 2
+    ? String.fromCodePoint(...[...code.toUpperCase()].map((c) => 127397 + c.charCodeAt(0))) : '');
+  const flagSrc = (code) => `flags/${String(code).toLowerCase()}.svg`;
+  const flag = (code, cls = '') => (/^[A-Za-z]{2}$/.test(code || '')
+    ? `<img class="fl ${cls}" src="${flagSrc(code)}" alt="" loading="lazy" decoding="async">` : `<span class="fl fl-none ${cls}"></span>`);
   const gmaps = (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
   const gsearch = (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`;
   const haversine = (a, b) => {
@@ -71,6 +76,9 @@
     gift: '<rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M12 9v12M3 13h18M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/>',
     calendar: '<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/>',
     pin: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>',
+    flight: '<path d="M10.5 21l1.8-1.2V14l7.7 3v-2l-7.7-5.2V4.5a1.3 1.3 0 0 0-2.6 0v5.3L2 15v2l7.7-3v5.8z"/>',
+    check: '<path d="M5 12.5l4.2 4.2L19 7"/>',
   };
   const icon = (name, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 
@@ -97,6 +105,50 @@
     origin: null, tags: [], month: new Date().getMonth() + 1, hours: 0, fee: 'any', unvisited: false, gps: null, budget: 0,
   };
   const home = () => HOMES[settings.home] || HOMES.TPE;
+
+  // ---------- flight time (概估): great-circle distance from home to where flights usually land.
+  // Nonstop routes are the ones Taiwan's airports usually fly; elsewhere one stop of about 2.5 hours.
+  const GEO = {};
+  Object.entries(window.TRAVEL_GEO || {}).forEach(([n, g]) => { GEO[g[0]] = { n, lng: g[1], lat: g[2], area: g[3], hub: { lng: g[4], lat: g[5] } }; });
+  const DIRECT = {
+    TPE: new Set('JP KR CN HK MO TH VN SG MY ID PH KH MM US CA AU NZ GB FR DE NL AT CZ IT TR AE PW GU'.split(' ')),
+    other: new Set('JP KR CN HK MO TH VN SG MY PH'.split(' ')),
+  };
+  const half = (h) => Math.max(1, Math.round(h * 2) / 2);
+  function flightInfo(code) {
+    const g = GEO[code];
+    const dests = DESTS.filter((d) => d.c === code);
+    if (!code || code === 'TW' || !(g || dests.length)) return null;
+    const direct = (DIRECT[settings.home] || DIRECT.other).has(code);
+    const to = g ? g.hub : dests[0];
+    const km = haversine(home(), to);
+    const speed = to.lng < -25 ? 900 : 790; // the jet stream speeds up flights to the Americas
+    let hours = (km * (direct ? 1 : 1.15)) / speed + 0.6 + (direct ? 0 : 2.5);
+    let range = null;
+    if (direct && settings.home === 'TPE' && dests.length) {
+      const hs = dests.map((d) => d.hours);
+      hours = Math.min(...hs);
+      if (Math.max(...hs) - hours >= 1.5) range = [hours, Math.max(...hs)];
+    }
+    const span = range ? `${half(range[0])}–${half(range[1])}` : half(hours);
+    return {
+      direct, km, hours: half(hours), text: `${direct ? '直飛' : '轉機'}約 ${span} 小時`,
+    };
+  }
+  const flightChip = (code) => { const f = flightInfo(code); return f ? `<span class="flight-chip">${icon('flight')}${f.text}</span>` : ''; };
+  // A trip's own flight: the city's nonstop time when known, otherwise worked out from where it is.
+  function tripFlight(t) {
+    const f = flightInfo(country(t.n).code);
+    if (!f) return null;
+    const d = DEST[t.dest];
+    if (d && f.direct && settings.home === 'TPE') return { ...f, hours: d.hours, text: `直飛約 ${d.hours} 小時` };
+    const km = haversine(home(), t);
+    const hours = half((km * (f.direct ? 1 : 1.15)) / (t.lng < -25 ? 900 : 790) + 0.6 + (f.direct ? 0 : 2.5));
+    return {
+      ...f, km, hours, text: `${f.direct ? '直飛' : '轉機'}約 ${hours} 小時`,
+    };
+  }
+  const tripFlightChip = (t) => { const f = tripFlight(t); return f ? `<span class="flight-chip">${icon('flight')}${f.text}</span>` : ''; };
   // fromCloud: the data just came from the LINE sync, so it is not pushed back or re-stamped.
   const save = (fromCloud) => {
     store.set('user', user); store.set('trips', trips); store.set('orders', orders); store.set('wish', wish); store.set('settings', settings); store.set('cart', cart);
@@ -130,8 +182,8 @@
     return km + haversine(prev, home());
   };
 
-  function stats(year) {
-    const list = tripsIn(year);
+  function stats(year) { return statsOf(tripsIn(year)); } // eslint-disable-line no-use-before-define
+  function statsOf(list) {
     const past = list.filter((t) => !isUpcoming(t));
     const countries = new Set(past.map((t) => t.n));
     const elements = {};
@@ -158,19 +210,74 @@
     };
   }
 
+  // ---------- badges: 30 of them; each opens the trips, food and sights that earned it
+  const SEASONS = ['冬', '冬', '春', '春', '春', '夏', '夏', '夏', '秋', '秋', '秋', '冬'];
+  const tripSeasons = (t) => {
+    const out = new Set();
+    for (let d = t.start; d <= t.end && d <= TODAY; d = addDays(d, 1)) out.add(SEASONS[Number(d.slice(5, 7)) - 1]);
+    return out;
+  };
+  const ateOf = (t) => (Array.isArray(t.ate) ? t.ate : []);
+  const didOf = (t) => (Array.isArray(t.did) ? t.did : []);
+  const flightHours = (t) => tripFlight(t)?.hours || 0;
+  const countBy = (list) => { const m = {}; list.forEach((t) => { m[t.n] = (m[t.n] || 0) + 1; }); return m; };
+  const hasMemory = (t) => Boolean(t.memo) || albumPhotos(t.id).length > 0; // eslint-disable-line no-use-before-define
+  const GOLD = ['#f6c453', '#b7700b']; const BLUE = ['#5ab8ff', '#1d4fd8']; const TEAL = ['#34d6c0', '#0b6f68'];
+  const VIOLET = ['#b39bff', '#6327d6']; const ROSE = ['#ff8aa0', '#c0173f'];
+  const tagBadge = (tag, name, goal) => ({
+    key: tag, group: 'element', tag, name, color: TAG_COLORS[tag], desc: `${goal} 趟${el(tag).label}之旅`,
+    progress: (s) => [s.elements[tag] || 0, goal], trips: (s) => s.past.filter((t) => t.tags.includes(tag)),
+  });
+  const pastWhere = (fn) => (s) => s.past.filter(fn);
+  const shortTrip = (t) => daysBetween(t.start, t.end) <= 3;
+  const slowTrip = (t) => daysBetween(t.start, t.end) >= 10;
   const BADGES = [
-    { icon: '🌏', name: '亞洲通', desc: '去 4 個亞洲國家/地區', progress: (s) => [s.byRegion.asia || 0, 4] },
-    { icon: '✈️', name: '跨洲旅人', desc: '足跡跨 2 個洲', progress: (s) => [s.regions.size, 2] },
-    { icon: '🍜', name: '美食獵人', desc: '3 趟美食之旅', progress: (s) => [s.elements.food || 0, 3] },
-    { icon: '🏝️', name: '海島控', desc: '2 趟海島旅行', progress: (s) => [s.elements.island || 0, 2] },
-    { icon: '⛩️', name: '文化探索家', desc: '2 趟文化之旅', progress: (s) => [s.elements.culture || 0, 2] },
-    { icon: '📶', name: 'eSIM 達人', desc: '用 eSIM 出國 4 次', progress: (s) => [s.esimCount, 4] },
-    { icon: '🛫', name: '萬里旅人', desc: '飛行 2 萬公里', progress: (s) => [Math.round(s.km), 20000] },
-    { icon: '🗓️', name: '一個月在路上', desc: '旅行 30 天', progress: (s) => [s.days, 30] },
+    { key: 'first', group: 'milestone', color: GOLD, name: '第一次出國', desc: '完成第一趟旅行', progress: (s) => [s.past.length, 1], trips: (s) => s.past },
+    { key: 'c5', group: 'milestone', color: BLUE, name: '五國旅人', desc: '去過 5 個國家・地區', kind: 'country', progress: (s) => [s.countries.size, 5] },
+    { key: 'c10', group: 'milestone', color: BLUE, name: '十國收藏家', desc: '去過 10 個國家・地區', kind: 'country', progress: (s) => [s.countries.size, 10] },
+    {
+      key: 'asia', group: 'milestone', color: ROSE, name: '亞洲通', desc: '去 4 個亞洲國家・地區', kind: 'country', region: 'asia', progress: (s) => [s.byRegion.asia || 0, 4],
+    },
+    {
+      key: 'europe', group: 'milestone', color: VIOLET, name: '歐洲漫遊者', desc: '去 3 個歐洲國家', kind: 'country', region: 'europe', progress: (s) => [s.byRegion.europe || 0, 3],
+    },
+    { key: 'world2', group: 'milestone', color: TEAL, name: '跨洲旅人', desc: '足跡跨 2 個洲', kind: 'region', progress: (s) => [s.regions.size, 2] },
+    { key: 'world3', group: 'milestone', color: TEAL, name: '三洲制霸', desc: '足跡跨 3 個洲', kind: 'region', progress: (s) => [s.regions.size, 3] },
+    tagBadge('food', '美食獵人', 3), tagBadge('culture', '文化探索家', 2), tagBadge('nature', '山海知己', 2), tagBadge('island', '海島控', 2),
+    tagBadge('city', '城市漫遊者', 3), tagBadge('shopping', '購物狂', 2), tagBadge('onsen', '溫泉達人', 2), tagBadge('snow', '雪國旅人', 1),
+    tagBadge('family', '親子玩家', 2), tagBadge('night', '夜貓子', 2), tagBadge('art', '藝術控', 2), tagBadge('adventure', '冒險王', 1),
+    {
+      key: 'eat10', group: 'element', color: TAG_COLORS.food, name: '吃貨認證', desc: '在足跡打卡 10 道在地美食', kind: 'eat', progress: (s) => [sum(s.past, (t) => ateOf(t).length), 10], trips: pastWhere((t) => ateOf(t).length),
+    },
+    { key: 'esim', group: 'style', color: BLUE, name: 'eSIM 達人', desc: '用 eSIM 出國 4 次', progress: (s) => [s.esimCount, 4], trips: pastWhere((t) => Number(t.gb) > 0) },
+    { key: 'km', group: 'style', color: TEAL, name: '萬里旅人', desc: '飛行 2 萬公里', kind: 'km', progress: (s) => [Math.round(s.km), 20000] },
+    { key: 'earth', group: 'style', color: TEAL, name: '繞地球一圈', desc: '飛行 40,075 公里', kind: 'km', progress: (s) => [Math.round(s.km), 40075] },
+    { key: 'long', group: 'style', color: VIOLET, name: '長途飛行', desc: '飛到 10 小時以上的地方', progress: (s) => [s.past.filter((t) => flightHours(t) >= 10).length, 1], trips: pastWhere((t) => flightHours(t) >= 10) },
+    { key: 'month', group: 'style', color: GOLD, name: '一個月在路上', desc: '旅行 30 天', kind: 'days', progress: (s) => [s.days, 30] },
+    { key: 'weekend', group: 'style', color: ROSE, name: '週末快閃', desc: '去一趟 3 天內的小旅行', progress: (s) => [s.past.filter(shortTrip).length, 1], trips: pastWhere(shortTrip) },
+    { key: 'slow', group: 'style', color: TEAL, name: '慢旅行', desc: '一趟待 10 天以上', progress: (s) => [s.past.filter(slowTrip).length, 1], trips: pastWhere(slowTrip) },
+    { key: 'seasons', group: 'style', color: GOLD, name: '四季旅人', desc: '春夏秋冬都出國', kind: 'season', progress: (s) => [new Set(s.past.flatMap((t) => [...tripSeasons(t)])).size, 4] },
+    {
+      key: 'again', group: 'style', color: ROSE, name: '回訪老朋友', desc: '同一個國家去 2 次', progress: (s) => [Math.max(0, ...Object.values(countBy(s.past))), 2], trips: (s) => { const c = countBy(s.past); return s.past.filter((t) => c[t.n] > 1); },
+    },
+    { key: 'memory', group: 'style', color: VIOLET, name: '紀念冊作者', desc: '幫一趟旅行寫回憶或放照片', progress: (s) => [s.past.filter(hasMemory).length, 1], trips: pastWhere(hasMemory) },
   ];
+  const BADGE_GROUPS = { milestone: '里程碑', element: '旅行元素', style: '旅行方式' };
+  const badgeState = (b, s) => {
+    const [v, goal] = b.progress(s);
+    return {
+      v, goal, ok: v >= goal, pct: Math.min(100, Math.round((v / goal) * 100)),
+    };
+  };
 
   // Badge emblem: the first character, or a short Latin word such as "eSIM".
   const monogram = (name) => (/^[A-Za-z]/.test(name) ? name.match(/^[A-Za-z]+/)[0].slice(0, 4) : name.slice(0, 1));
+  const medal = (b, ok = true, size = '') => `<span class="medal ${size} ${ok ? '' : 'locked'} ${/^[A-Za-z]/.test(b.name) ? 'latin' : ''}" style="--m1:${b.color[0]};--m2:${b.color[1]}">${esc(monogram(b.name))}</span>`;
+  const medalByName = (name, size = '') => medal(BADGES.find((b) => b.name === name) || { name, color: GOLD }, true, size);
+  const badgeTile = (b, s, year) => {
+    const st = badgeState(b, s);
+    return `<button class="badge ${st.ok ? '' : 'locked'}" data-badge="${b.key}" data-by="${year}">${medal(b, st.ok)}<span>${esc(b.name)}</span><small>${st.ok ? '已解鎖' : `${fmt(Math.min(st.v, st.goal))}/${fmt(st.goal)}`}</small></button>`;
+  };
   const travelerType = (s) => {
     const top = s.topElements.slice(0, 2).map(([k]) => el(k).label);
     if (!top.length) return '還沒有旅行紀錄';
@@ -190,7 +297,14 @@
   const freeCount = (d) => d.spots.filter((s) => s.fee === 0).length;
 
   // ---------- eSIM plans, pricing and card states
-  const target = (key) => (PACKS[key] ? { ...PACKS[key], key, pack: true } : { ...COUNTRIES[key], key, icon: flag(key) });
+  const packIcon = (key) => {
+    if (key === 'EU') return flag('EU');
+    if (key === 'GLOBAL') return icon('globe');
+    return `<span class="fl-stack">${PACKS[key].countries.slice(0, 3).map((c) => flag(c)).join('')}</span>`;
+  };
+  const target = (key) => (PACKS[key] ? {
+    ...PACKS[key], key, pack: true, icon: packIcon(key),
+  } : { ...COUNTRIES[key], key, icon: flag(key) });
   const nice = (v) => Math.max(29, Math.ceil(v / 10) * 10 - 1);
   const planOpt = (plan) => PLAN_TYPES[plan.type]?.options.find((o) => o.size === String(plan.size)) || PLAN_TYPES.daily.options[1];
   const planDays = (plan) => (plan.type === 'total' ? planOpt(plan).days : plan.days);
@@ -563,7 +677,11 @@
       renderCartFab();
       animateIn($(`[data-view="${tab}"]`));
     };
-    if (document.startViewTransition && !REDUCED) document.startViewTransition(swap); else swap();
+    if (document.startViewTransition && !REDUCED) {
+      // A transition can be cut short (e.g. the phone rotates); the tab still switches.
+      const vt = document.startViewTransition(swap);
+      vt.ready.catch(() => {}); vt.finished.catch(() => {});
+    } else swap();
   }
   $$('[data-tab]').forEach((b) => b.addEventListener('click', () => go(b.dataset.tab)));
   document.addEventListener('click', (e) => {
@@ -641,15 +759,20 @@
     animateIn($('#stats'));
   }
 
-  // ---------- map
-  let svg; let zoom; let projection; let mapSize = [0, 0];
+  // ---------- map (web/travel-map.js): NASA satellite imagery as a 3D globe or a flat map
+  let worldMap = null;
   async function loadWorld() {
     try {
-      const res = await fetch('vendor/countries-50m.json');
-      const topo = await res.json();
-      const fc = topojson.feature(topo, topo.objects.countries);
-      const features = fc.features.filter((f) => f.id !== '010'); // 南極洲
-      world = { features, byId: new Map(features.map((f) => [f.id, f])), bounds: features.map((f) => d3.geoBounds(f)) };
+      const [topo, lite] = await Promise.all(['vendor/countries-50m.json', 'vendor/countries-110m.json'].map((u) => fetch(u).then((r) => r.json())));
+      const features = topojson.feature(topo, topo.objects.countries).features.filter((f) => f.id !== '010'); // 南極洲
+      world = {
+        features,
+        byId: new Map(features.map((f) => [f.id, f])),
+        bounds: features.map((f) => d3.geoBounds(f)),
+        lite: topojson.feature(lite, lite.objects.countries).features.filter((f) => f.id !== '010'),
+        borders: topojson.mesh(topo, topo.objects.countries, (a, b) => a !== b),
+        bordersLite: topojson.mesh(lite, lite.objects.countries, (a, b) => a !== b),
+      };
       $('#map-loading').hidden = true;
       drawMap();
       if (user) { renderCover(); if (currentTab === 'plan') renderPlanner(); }
@@ -666,59 +789,71 @@
     });
     return m;
   }
-  const landClass = (n, v) => {
-    if (!v) return n === home().n ? 'land home' : 'land';
-    if (v.years.size > 1) return 'land vboth';
-    if (v.years.has(2025)) return 'land v25';
-    if (v.years.has(2026)) return 'land v26';
-    return v.soon ? 'land vsoon' : 'land';
+  const visitClass = (v) => {
+    if (!v) return '';
+    if (v.years.size > 1) return 'vboth';
+    if (v.years.has(2025)) return 'v25';
+    if (v.years.has(2026)) return 'v26';
+    return v.soon ? 'vsoon' : '';
   };
   const tripClass = (t) => (isUpcoming(t) ? 'soon' : `y${tripYear(t)}`);
-  function drawMap() {
-    if (!world || currentTab !== 'map') return;
-    const wrap = $('#map');
-    const w = wrap.clientWidth || 800;
-    const h = Math.round(Math.max(260, Math.min(560, w * 0.56)));
-    mapSize = [w, h];
-    const visits = visitMap(settings.year);
+  const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  function mapData() {
+    const h = home();
     const list = tripsIn(settings.year);
-    projection = d3.geoNaturalEarth1().fitExtent([[6, 6], [w - 6, h - 6]], { type: 'Sphere' });
-    const path = d3.geoPath(projection);
-    wrap.innerHTML = '';
-    svg = d3.select(wrap).append('svg').attr('viewBox', `0 0 ${w} ${h}`).attr('role', 'img').attr('aria-label', '世界旅遊足跡地圖');
-    const g = svg.append('g');
-    g.append('path').datum({ type: 'Sphere' }).attr('class', 'ocean').attr('d', path);
-    g.append('path').datum(d3.geoGraticule10()).attr('class', 'grat').attr('d', path);
-    g.append('g').selectAll('path').data(world.features).join('path')
-      .attr('class', (f) => landClass(f.id, visits.get(f.id)))
-      .attr('d', path)
-      .on('click', (e, f) => openCountry(f.id))
-      .append('title').text((f) => country(f.id).name);
-    const arcs = g.append('g');
+    const visits = new Map();
+    visitMap(settings.year).forEach((v, n) => { const c = visitClass(v); if (c) visits.set(n, c); });
+    const arcs = [];
     journeys(list).forEach((j) => {
-      const pts = [[home().lng, home().lat], ...j.map((t) => [t.lng, t.lat]), [home().lng, home().lat]];
-      for (let i = 0; i < pts.length - 1; i += 1) {
-        const t = j[Math.min(i, j.length - 1)];
-        arcs.append('path').attr('class', `arc ${tripClass(t)}`).attr('d', path({ type: 'LineString', coordinates: [pts[i], pts[i + 1]] }));
-      }
+      const pts = [[h.lng, h.lat], ...j.map((t) => [t.lng, t.lat]), [h.lng, h.lat]];
+      for (let i = 0; i < pts.length - 1; i += 1) arcs.push([pts[i], pts[i + 1], tripClass(j[Math.min(i, j.length - 1)])]);
     });
-    const pins = g.append('g');
-    const hp = projection([home().lng, home().lat]);
-    pins.append('circle').attr('class', 'pin home').attr('cx', hp[0]).attr('cy', hp[1]).attr('r', 3.5).append('title').text(`出發：${home().name}`);
-    list.forEach((t) => {
-      const p = projection([t.lng, t.lat]);
-      pins.append('circle').attr('class', `pin ${tripClass(t)}`).attr('cx', p[0]).attr('cy', p[1]).attr('r', 4)
-        .on('click', () => openTrip(t.id))
-        .append('title').text(`${t.city} ${md(t.start)}–${md(t.end)}`);
-    });
-    g.append('g').attr('class', 'focus-layer');
-    zoom = d3.zoom().scaleExtent([1, 12]).translateExtent([[0, 0], [w, h]]).on('zoom', (e) => {
-      g.attr('transform', e.transform);
-      g.selectAll('.pin').attr('r', (d, i, nodes) => (nodes[i].classList.contains('focus') ? 6 : 4) / Math.sqrt(e.transform.k));
-    });
-    svg.call(zoom).on('dblclick.zoom', null);
-    renderLegend(visits);
+    const been = new Set(trips.map((t) => t.dest));
+    return {
+      features: world.features,
+      lite: world.lite,
+      borders: world.borders,
+      bordersLite: world.bordersLite,
+      visits,
+      home: h,
+      arcs,
+      trips: sortTrips(list).reverse().map((t) => ({
+        id: t.id, lng: t.lng, lat: t.lat, city: t.city, cls: tripClass(t), code: country(t.n).code, photo: destPhoto(t.dest)?.src || null, date: `${md(t.start)}–${md(t.end)}`,
+      })),
+      recs: DESTS.filter((d) => !been.has(d.id)).map((d) => ({
+        id: d.id, lng: d.lng, lat: d.lat, name: d.name, photo: destPhoto(d.id)?.src || null,
+      })),
+    };
   }
+  function renderMapMode() {
+    $$('#map-modes button').forEach((b) => b.classList.toggle('on', b.dataset.mapMode === (settings.mapMode || 'globe')));
+  }
+  function drawMap() {
+    if (!world || currentTab !== 'map' || !window.TravelMap) return;
+    if (!worldMap) {
+      worldMap = window.TravelMap.create($('#map'), {
+        name: countryName,
+        colors: () => ({
+          v25: cssVar('--y25'), v26: cssVar('--y26'), vboth: cssVar('--both'), vsoon: cssVar('--soon'), y2025: cssVar('--y25'), y2026: cssVar('--y26'), soon: cssVar('--soon'),
+        }),
+        onCountry: (n) => openCountry(n),
+        onTrip: (id) => openTrip(id),
+        onDest: (id) => openDest(id),
+      });
+      worldMap.setMode(settings.mapMode || 'globe');
+    }
+    worldMap.setData(mapData());
+    renderLegend(visitMap(settings.year));
+    renderMapMode();
+  }
+  $('#map-modes').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-map-mode]');
+    if (!b || !worldMap) return;
+    settings.mapMode = b.dataset.mapMode;
+    save();
+    worldMap.setMode(settings.mapMode);
+    renderMapMode();
+  });
   function renderLegend(visits) {
     let c25 = 0; let c26 = 0; let both = 0; let soon = 0;
     visits.forEach((v) => {
@@ -729,26 +864,17 @@
     if (settings.year !== '2025') items.push(`<span><i style="background:var(--y26)"></i>2026 去過 ${c26}</span>`);
     if (settings.year === 'all') items.push(`<span><i style="background:var(--both)"></i>兩年都去 ${both}</span>`);
     items.push(`<span><i style="background:var(--soon-fill);outline:1.5px dashed var(--soon)"></i>即將出發 ${soon}</span>`);
-    items.push('<span class="spacer"></span><span>點國家看詳情・雙指或滾輪縮放</span>');
+    items.push('<span class="spacer"></span><span>拖曳旋轉・雙指或滾輪縮放・點國家看文化與飛行時間</span>');
     $('#legend').innerHTML = items.join('');
   }
-  function focusPoint(lng, lat, k = 5) {
-    if (!svg || !projection) return;
-    const [x, y] = projection([lng, lat]);
-    const layer = svg.select('.focus-layer');
-    layer.selectAll('*').remove();
-    layer.append('circle').attr('class', 'pin focus').attr('cx', x).attr('cy', y).attr('r', 6 / Math.sqrt(k));
-    const t = d3.zoomIdentity.translate(mapSize[0] / 2, mapSize[1] / 2).scale(k).translate(-x, -y);
-    svg.transition().duration(REDUCED ? 0 : 900).ease(d3.easeCubicInOut).call(zoom.transform, t);
-  }
-  $('#zoom-in').addEventListener('click', () => svg && svg.transition().duration(300).call(zoom.scaleBy, 1.6));
-  $('#zoom-out').addEventListener('click', () => svg && svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.6));
-  $('#zoom-reset').addEventListener('click', () => svg && svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity));
+  $('#zoom-in').addEventListener('click', () => worldMap?.zoomBy(1.6));
+  $('#zoom-out').addEventListener('click', () => worldMap?.zoomBy(1 / 1.6));
+  $('#zoom-reset').addEventListener('click', () => worldMap?.reset());
   let resizeTimer;
-  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawMap, 200); });
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => worldMap?.resize(), 200); });
   function showOnMap(lng, lat) {
     go('map');
-    setTimeout(() => focusPoint(lng, lat), REDUCED ? 50 : 350);
+    setTimeout(() => worldMap?.focus(lng, lat, 5, true), REDUCED ? 80 : 400);
   }
 
   // ---------- modal
@@ -791,6 +917,22 @@
     $('#confirm-yes').addEventListener('click', () => { modal.close(); onYes(); });
   }
 
+  // 吃了什麼・做了什麼: the country's classics as photo tiles to tick, plus anything typed in.
+  function logHtml(t, kind) {
+    const { code } = country(t.n);
+    const cul = CULTURE[code];
+    const done = kind === 'food' ? ateOf(t) : didOf(t);
+    const base = cul ? (kind === 'food' ? cul.food : cul.culture).map(([zh]) => zh) : [];
+    const extra = done.filter((x) => !base.includes(x));
+    const word = kind === 'food' ? '吃過' : '做過';
+    return `<div class="log" data-log-box="${t.id}:${kind}"><div class="log-grid">${base.map((zh) => {
+      const on = done.includes(zh);
+      const ph = culturePhoto(code, zh);
+      return `<button class="log-item ${on ? 'on' : ''}" data-log="${t.id}" data-kind="${kind}" data-name="${esc(zh)}" aria-pressed="${on}"><span class="ph ${ph ? '' : 'ph-missing'}">${imgHtml(ph, zh)}<i class="log-check">${icon('check')}</i></span><b>${esc(zh)}</b><small>${on ? `${word}了` : `標記${word}`}</small></button>`;
+    }).join('')}</div>
+      ${extra.length ? `<div class="row" style="margin-top:8px">${extra.map((x) => `<button class="chip lg on" data-log="${t.id}" data-kind="${kind}" data-name="${esc(x)}" aria-pressed="true">${icon('check')}${esc(x)} ✕</button>`).join('')}</div>` : ''}
+      <form class="row log-add" data-log-add="${t.id}" data-kind="${kind}" style="margin-top:8px"><input class="input" name="entry" maxlength="30" placeholder="${kind === 'food' ? '還吃了什麼？例如：一蘭拉麵' : '還做了什麼？例如：搭熱氣球'}" aria-label="${kind === 'food' ? '加一道吃過的' : '加一件做過的事'}"><button class="btn sm">加入</button></form></div>`;
+  }
   function openTrip(id) {
     const t = trips.find((x) => x.id === id);
     if (!t) return;
@@ -798,9 +940,10 @@
     const d = t.dest && DEST[t.dest];
     openModal(`${flag(c.code)} ${esc(t.city)}`, `
       <div class="muted">${t.start} – ${t.end}（${daysBetween(t.start, t.end)} 天）・${esc(c.name)}</div>
-      <div class="row">${t.tags.map((k) => `${tagChip(k)}`).join('')}</div>
+      <div class="row">${tripFlightChip(t)}${t.tags.map((k) => `${tagChip(k)}`).join('')}</div>
       ${Number(t.gb) ? `<div class="small">eSIM 用了 ${t.gb} GB</div>` : ''}
       ${t.note ? `<p>${esc(t.note)}</p>` : ''}
+      ${CULTURE[c.code] ? `<section><h3>我吃了什麼</h3>${logHtml(t, 'food')}</section><section><h3>我做了什麼</h3>${logHtml(t, 'culture')}</section>` : ''}
       ${d ? spotsHtml(d) : ''}
       <div class="actions">
         <button class="btn primary" data-near="${t.id}">附近還能去哪</button>
@@ -1148,14 +1291,14 @@
     const q = $('#esim-search').value.trim();
     let items;
     if (esimRegion === 'packs' && !q) {
-      items = Object.keys(PACKS).map((k) => ({ key: k, icon: PACKS[k].icon, name: PACKS[k].name, sub: `${PACKS[k].countries.length} 國` }));
+      items = Object.keys(PACKS).map((k) => ({ key: k, icon: packIcon(k), name: PACKS[k].name, sub: `${PACKS[k].countries.length} 國` }));
     } else {
       const codes = q ? ALL_CODES.filter((code) => countryName(code).includes(q) || code.toLowerCase() === q.toLowerCase()) : regionCodes(esimRegion);
       items = codes.map((code) => ({ key: packFor(code), code, icon: flag(code), name: countryName(code) }));
-      if (q) items.push(...Object.keys(PACKS).filter((k) => PACKS[k].name.includes(q)).map((k) => ({ key: k, icon: PACKS[k].icon, name: PACKS[k].name })));
+      if (q) items.push(...Object.keys(PACKS).filter((k) => PACKS[k].name.includes(q)).map((k) => ({ key: k, icon: packIcon(k), name: PACKS[k].name })));
     }
     $('#esim-count').textContent = items.length ? `${items.length} 個國家・地區` : '';
-    $('#esim-grid').innerHTML = items.length ? items.map((it) => `<button class="flag-btn" data-plan="${it.key}" ${it.code && it.code !== it.key ? `data-for="${it.code}"` : ''}><span class="flag-tile lg">${it.icon}</span><b>${esc(it.name)}</b><small>${it.code && it.code !== it.key ? `${esc(PACKS[it.key].name)}・` : ''}NT$${fmt(fromPrice(it.key))} 起</small></button>`).join('')
+    $('#esim-grid').innerHTML = items.length ? items.map((it) => `<button class="flag-btn" data-plan="${it.key}" ${it.code && it.code !== it.key ? `data-for="${it.code}"` : ''}><span class="flag-tile lg">${it.icon}</span><b>${esc(it.name)}</b>${it.code ? flightChip(it.code) : ''}<small>${it.code && it.code !== it.key ? `${esc(PACKS[it.key].name)}・` : ''}NT$${fmt(fromPrice(it.key))} 起</small></button>`).join('')
       : '<p class="muted">找不到這個國家，試試「多國方案」或「全球通用」。</p>';
     renderCartFab();
   }
@@ -1628,7 +1771,7 @@
     else if (shareHotspot && quiz.people > 1) qtyNote = '・一張分享熱點給大家';
     const options = [...Object.keys(COUNTRIES).filter((k) => COUNTRIES[k].base), ...Object.keys(PACKS)];
     $('#quiz').innerHTML = `
-      <div class="field"><label for="qz-key">1. 去哪裡？</label><select class="input" id="qz-key">${options.map((k) => `<option value="${k}" ${quiz.key === k ? 'selected' : ''}>${target(k).icon} ${target(k).name}</option>`).join('')}</select></div>
+      <div class="field"><label for="qz-key">1. 去哪裡？</label><select class="input" id="qz-key">${options.map((k) => `<option value="${k}" ${quiz.key === k ? 'selected' : ''}>${flagText(PACKS[k] ? '' : k)} ${target(k).name}</option>`).join('')}</select></div>
       <div class="field"><label>2. 玩幾天？</label><span class="stepper"><button data-qz-days="-1" aria-label="少一天">－</button><b>${quiz.days} 天</b><button data-qz-days="1" aria-label="多一天">＋</button></span></div>
       <div class="field"><label>3. 主要會用來做什麼？（可複選）</label><div class="use-grid">${Object.entries(USES).map(([k, u]) => `<button class="use ${quiz.uses.includes(k) ? 'on' : ''}" data-qz-use="${k}" aria-pressed="${quiz.uses.includes(k)}">${u.label}</button>`).join('')}</div></div>
       <div class="field"><label>幾個人一起旅行？</label><span class="stepper"><button data-qz-people="-1" aria-label="少一人">－</button><b>${quiz.people} 人</b><button data-qz-people="1" aria-label="多一人">＋</button></span></div>
@@ -1756,6 +1899,7 @@
       <div class="grid">${byYear[y].map((t) => `<div class="trip"><div class="flag">${flag(country(t.n).code)}</div><div class="grow">
         <div class="row"><b>${esc(t.city)}</b><span class="muted small">${esc(country(t.n).name)}</span>${isUpcoming(t) ? '<span class="status pending">即將出發</span>' : ''}${isOngoing(t) ? '<span class="status active">旅行中</span>' : ''}</div>
         <div class="small muted">${t.start} – ${t.end}・${daysBetween(t.start, t.end)} 天${Number(t.gb) ? `・上網 ${t.gb} GB` : ''}${t.src === 'import' ? '・來自時間軸' : ''}</div>
+        <div class="row" style="margin-top:4px">${tripFlightChip(t)}${ateOf(t).length ? `<span class="flight-chip">吃了 ${ateOf(t).length} 道</span>` : ''}</div>
         <div class="tags">${t.tags.map((k) => `${el(k).label}`).join('　')}</div></div>
         <button class="btn sm primary" data-open-plan="${t.id}">行程表</button><button class="btn sm" data-edit="${t.id}">編輯</button></div>`).join('')}</div>`).join('')
       : '<div class="card muted">還沒有行程。按「新增行程」或匯入 Google 地圖時間軸開始。</div>';
@@ -1772,13 +1916,13 @@
     };
     const destOptions = Object.entries(COUNTRIES).filter(([, c]) => c.base).map(([code, c]) => {
       const ds = DESTS.filter((d) => d.c === code);
-      return ds.length ? `<optgroup label="${flag(code)} ${c.name}">${ds.map((d) => `<option value="${d.id}" ${t.dest === d.id ? 'selected' : ''}>${d.name}</option>`).join('')}</optgroup>` : '';
+      return ds.length ? `<optgroup label="${flagText(code)} ${c.name}">${ds.map((d) => `<option value="${d.id}" ${t.dest === d.id ? 'selected' : ''}>${d.name}</option>`).join('')}</optgroup>` : '';
     }).join('');
     const custom = !t.dest && (t.city || presetN);
     openModal(id ? '編輯行程' : '新增行程', `
       <div class="field"><label for="f-dest">目的地</label><select class="input" id="f-dest"><option value="">— 選擇城市 —</option>${destOptions}<option value="custom" ${custom ? 'selected' : ''}>其他城市（自行輸入）</option></select></div>
       <div class="row" id="f-custom" ${custom ? '' : 'hidden'}>
-        <div class="field" style="flex:1"><label for="f-country">國家</label><select class="input" id="f-country">${Object.entries(COUNTRIES).filter(([c]) => c !== 'TW').map(([code, c]) => `<option value="${c.n}" ${t.n === c.n ? 'selected' : ''}>${flag(code)} ${c.name}</option>`).join('')}${t.n && !NUM[t.n] ? `<option value="${t.n}" selected>${esc(country(t.n).name)}</option>` : ''}</select></div>
+        <div class="field" style="flex:1"><label for="f-country">國家</label><select class="input" id="f-country">${Object.entries(COUNTRIES).filter(([c]) => c !== 'TW').map(([code, c]) => `<option value="${c.n}" ${t.n === c.n ? 'selected' : ''}>${flagText(code)} ${c.name}</option>`).join('')}${t.n && !NUM[t.n] ? `<option value="${t.n}" selected>${esc(country(t.n).name)}</option>` : ''}</select></div>
         <div class="field" style="flex:1"><label for="f-city">城市</label><input class="input" id="f-city" maxlength="30" value="${esc(t.dest ? '' : t.city)}"></div>
       </div>
       <div class="row"><div class="field" style="flex:1"><label for="f-start">出發</label><input type="date" class="input" id="f-start" value="${t.start}"></div>
@@ -1942,21 +2086,21 @@
       const max = Math.max(1, ...s.topElements.map(([, v]) => v));
       const color = y === 2025 ? 'var(--y25)' : 'var(--y26)';
       return `<div class="card" style="display:grid;gap:14px;border-top:4px solid ${color}">
-        <div class="row"><h2>${y}</h2><span class="muted small">${travelerType(s)}</span><span class="spacer"></span><button class="btn sm" data-album="${y}">紀念冊</button><button class="btn sm" data-share="${y}">旅遊卡</button></div>
+        <div class="row"><h2>${y}</h2><span class="muted small">${travelerType(s)}</span><span class="spacer"></span><button class="btn sm" data-album="${y}">紀念冊</button><button class="btn sm" data-year-card="${y}">年度分享圖</button></div>
         <div class="grid stats" style="grid-template-columns:repeat(4,1fr)">
           <div class="stat">${count(s.countries.size)}<span>國家</span></div><div class="stat">${count(s.cities.size)}<span>城市</span></div>
           <div class="stat">${count(s.days)}<span>天</span></div><div class="stat">${count(s.km)}<span>公里</span></div></div>
         <div><b class="small">旅行月份</b><div class="months" style="margin-top:6px">${Array.from({ length: 12 }, (_, i) => `<span class="${s.months.has(i + 1) ? 'on' : ''}" style="${s.months.has(i + 1) ? `background:${color}` : ''}">${i + 1}</span>`).join('')}</div></div>
         <div><b class="small">旅行元素</b><div class="grid" style="gap:6px;margin-top:6px">${s.topElements.length ? s.topElements.slice(0, 6).map(([k, v]) => `<div class="bar"><span>${el(k).label}</span><div class="track"><div class="fill" style="width:${(v / max) * 100}%;background:${color}"></div></div><span>${v}</span></div>`).join('') : '<span class="muted small">還沒有資料</span>'}</div></div>
-        <div><b class="small">徽章</b><div class="badges" style="margin-top:6px">${BADGES.map((b) => { const [v, goal] = b.progress(s); const ok = v >= goal; return `<div class="badge ${ok ? '' : 'locked'}" title="${b.desc}"><b class="medal ${/^[A-Za-z]/.test(b.name) ? 'latin' : ''}">${monogram(b.name)}</b>${b.name}<div class="muted" style="font-size:11px">${ok ? '已解鎖' : `${fmt(Math.min(v, goal))}/${fmt(goal)}`}</div></div>`; }).join('')}</div></div>
-        <div><b class="small">足跡</b><ul class="timeline" style="margin-top:6px">${s.list.length ? s.list.map((t) => `<li data-trip="${t.id}"><span class="flag">${flag(country(t.n).code)}</span><div style="flex:1"><b>${esc(t.city)}</b> <span class="small muted">${md(t.start)}–${md(t.end)}</span><div class="small">${t.tags.map((k) => el(k).label).join('・')}${Number(t.gb) ? `・上網 ${t.gb}GB` : ''}${isUpcoming(t) ? '・即將出發' : ''}</div></div></li>`).join('') : '<li class="muted small">還沒有紀錄</li>'}</ul></div>
+        <div><div class="row"><b class="small">徽章 ${BADGES.filter((b) => badgeState(b, s).ok).length}/${BADGES.length}</b><span class="spacer"></span><button class="btn sm ghost" data-badge-wall="${y}">全部徽章 →</button></div><div class="badges" style="margin-top:6px">${[...BADGES].sort((p, q) => badgeState(q, s).pct - badgeState(p, s).pct).slice(0, 8).map((b) => badgeTile(b, s, y)).join('')}</div></div>
+        <div><b class="small">足跡</b><ul class="timeline" style="margin-top:6px">${s.list.length ? s.list.map((t) => `<li data-trip="${t.id}"><span class="flag">${flag(country(t.n).code)}</span><div style="flex:1"><b>${esc(t.city)}</b> <span class="small muted">${md(t.start)}–${md(t.end)}・${esc(country(t.n).name)}</span><div class="small">${t.tags.map((k) => el(k).label).join('・')}${Number(t.gb) ? `・上網 ${t.gb}GB` : ''}${isUpcoming(t) ? '・即將出發' : ''}</div></div></li>`).join('') : '<li class="muted small">還沒有紀錄</li>'}</ul></div>
       </div>`;
     });
     const a = stats('2025'); const b = stats('2026');
     const diff = b.countries.size - a.countries.size;
     $('#review').innerHTML = cards.join('') + (a.past.length && b.past.length ? `<div class="card" style="grid-column:1/-1"><b>2026 vs 2025：</b>${diff >= 0 ? `多去了 ${diff}` : `少去了 ${-diff}`} 個國家，旅行天數 ${b.days - a.days >= 0 ? '+' : ''}${b.days - a.days} 天，飛行里程 ${b.km - a.km >= 0 ? '+' : ''}${fmt(b.km - a.km)} 公里。</div>` : '');
   }
-  function shareCanvas(year) {
+  async function shareCanvas(year) {
     const s = stats(year);
     const W = 1080; const H = 1350;
     const cv = document.createElement('canvas');
@@ -1969,7 +2113,7 @@
     for (let i = 0; i < 9; i += 1) { x.beginPath(); x.arc(W - 120, 160, 120 + i * 70, 0, Math.PI * 2); x.lineWidth = 2; x.strokeStyle = 'rgba(255,255,255,.12)'; x.stroke(); }
     const font = '"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
     x.fillStyle = '#fff';
-    x.font = `600 40px ${font}`; x.fillText(`${CONFIG.brand}・旅遊卡`, 80, 120);
+    x.font = `600 40px ${font}`; x.fillText(`${CONFIG.brand}・年度旅行`, 80, 120);
     x.font = `800 150px ${font}`; x.fillText(String(year), 80, 300);
     x.font = `700 54px ${font}`; x.fillText(`${user?.name || '旅人'} 的旅行足跡`, 80, 390);
     x.font = `500 38px ${font}`; x.fillText(travelerType(s), 80, 450);
@@ -1977,13 +2121,21 @@
     nums.forEach(([v, l], i) => {
       const cx = 80 + i * 240;
       x.fillStyle = 'rgba(255,255,255,.16)'; roundRect(x, cx, 510, 210, 190, 28); x.fill();
-      x.fillStyle = '#fff'; x.font = `800 72px ${font}`; x.fillText(String(v), cx + 28, 610);
+      x.fillStyle = '#fff'; x.font = `800 ${String(v).length > 4 ? 54 : 72}px ${font}`; x.fillText(String(v), cx + 28, 610);
       x.font = `500 32px ${font}`; x.fillText(l, cx + 28, 665);
     });
     x.font = `700 40px ${font}`; x.fillText('去過的地方', 80, 790);
-    x.font = `400 64px ${font}`;
-    const flags = [...new Set(s.past.map((t) => flag(country(t.n).code)))].join(' ');
-    x.fillText(flags || '—', 80, 880);
+    // Real flag images: emoji flags draw as letters on Windows.
+    const codes = [...new Set(s.past.map((t) => country(t.n).code).filter(Boolean))];
+    const ims = await Promise.all(codes.slice(0, 9).map((c) => loadImage(flagSrc(c)))); // eslint-disable-line no-use-before-define
+    ims.forEach((im, i) => {
+      if (!im) return;
+      const fx = 80 + i * 100;
+      x.save(); roundRect(x, fx, 826, 84, 56, 8); x.clip(); x.drawImage(im, fx, 826, 84, 56); x.restore();
+    });
+    x.font = `500 40px ${font}`;
+    if (!codes.length) x.fillText('—', 80, 880);
+    if (codes.length > 9) x.fillText(`+${codes.length - 9}`, 80 + 9 * 100, 868);
     x.font = `500 34px ${font}`;
     const cities = s.past.map((t) => t.city).join('・');
     wrapText(x, cities || '還沒有紀錄', 80, 950, W - 160, 48);
@@ -2002,20 +2154,20 @@
     });
     x.fillText(lines >= 2 && x.measureText(line).width > maxW ? `${line.slice(0, -2)}…` : line, l, y);
   }
-  function openShare(year = new Date().getFullYear() >= 2026 ? 2026 : 2025) {
-    const cv = shareCanvas(Number(year));
-    openModal(`${year} 旅遊卡`, `<div class="seg" id="share-seg">${CONFIG.years.map((y) => `<button data-sy="${y}" class="${Number(year) === y ? 'on' : ''}">${y}</button>`).join('')}</div><div id="share-holder"></div>
+  async function openShare(year = new Date().getFullYear() >= 2026 ? 2026 : 2025) {
+    const cv = await shareCanvas(Number(year));
+    openModal(`${year} 年度分享圖`, `<div class="seg" id="share-seg">${CONFIG.years.map((y) => `<button data-sy="${y}" class="${Number(year) === y ? 'on' : ''}">${y}</button>`).join('')}</div><div id="share-holder"></div>
       <div class="actions"><button class="btn primary" id="share-dl">下載圖片</button>${navigator.share ? '<button class="btn" id="share-native">分享</button>' : ''}</div>
       <p class="small muted">尺寸 1080×1350，適合 IG／Threads 貼文。</p>`);
     $('#share-holder').appendChild(cv);
     $$('#share-seg button').forEach((b) => b.addEventListener('click', () => openShare(b.dataset.sy)));
     $('#share-dl').addEventListener('click', () => {
-      const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = `travel-card-${year}.png`; a.click();
+      const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = `travel-${year}.png`; a.click();
     });
     $('#share-native')?.addEventListener('click', () => cv.toBlob(async (blob) => {
       try {
-        const file = new File([blob], `travel-card-${year}.png`, { type: 'image/png' });
-        await navigator.share({ files: [file], title: `${year} 旅遊卡` });
+        const file = new File([blob], `travel-${year}.png`, { type: 'image/png' });
+        await navigator.share({ files: [file], title: `${year} 旅行回顧` });
       } catch { /* cancelled */ }
     }));
   }
@@ -2450,8 +2602,10 @@
     const hero = dests[0] ? destPhoto(dests[0].id) : null;
     const { name } = c;
     const plan = code ? packFor(code) : 'GLOBAL';
+    const fly = flightInfo(code);
     openModal(`${flag(code)} ${esc(name)}`, `
-      <div class="country-hero ${hero ? '' : 'ph-missing'}">${imgHtml(hero, name)}<div class="country-hero-text"><span class="kicker">${esc(REGIONS[c.region] || '世界')}</span><h2 class="serif">${esc(name)}</h2>${c.cur ? `<span class="small">貨幣 ${esc(c.cur)}・插座 ${esc(c.plug)}</span>` : ''}</div>${creditHtml(hero)}</div>
+      <div class="country-hero ${hero ? '' : 'ph-missing'}">${imgHtml(hero, name)}<div class="country-hero-text"><span class="kicker">${flag(code)} ${esc(REGIONS[c.region] || '世界')}</span><h2 class="serif">${esc(name)}</h2>${c.cur ? `<span class="small">貨幣 ${esc(c.cur)}・插座 ${esc(c.plug)}</span>` : ''}</div>${creditHtml(hero)}</div>
+      ${fly ? `<div class="fly-row">${icon('flight')}<div class="grow"><b>從${esc(home().name)}${fly.text}</b><small class="muted">${fly.direct ? '直飛' : '需要轉機，含約 2.5 小時轉機時間'}・距離約 ${fmt(fly.km)} 公里・概估</small></div></div>` : ''}
       ${cul ? `<section><h3>必吃美食</h3><div class="gallery">${cul.food.map(([zh]) => photoCard(culturePhoto(code, zh), zh, `<a class="small" href="${gmaps(`${zh} ${name}`)}" target="_blank" rel="noopener">找附近的店 ↗</a>`)).join('')}</div></section>
       <section><h3>必體驗文化</h3><div class="gallery">${cul.culture.map(([zh]) => photoCard(culturePhoto(code, zh), zh, `<a class="small" href="${gsearch(`${zh} ${name} 體驗`)}" target="_blank" rel="noopener">怎麼體驗 ↗</a>`)).join('')}</div></section>
       <section><h3>伴手禮</h3><div class="row">${cul.buy.map((b) => `<span class="chip lg">${esc(b)}</span>`).join('')}</div></section>
@@ -2464,6 +2618,25 @@
         ${c.site ? `<a class="btn" href="${c.site}" target="_blank" rel="noopener">官方觀光網 ↗</a>` : `<a class="btn" href="${gmaps(`${name} 景點`)}" target="_blank" rel="noopener">Google 地圖 ↗</a>`}
         <button class="btn" data-trip-new="${n}">＋ 記錄一趟</button>
         ${dests[0] ? `<button class="btn" data-dest="${dests[0].id}">附近推薦</button>` : `<a class="btn" href="${gmaps(`${name} 景點`)}" target="_blank" rel="noopener">景點地圖 ↗</a>`}
+      </div>`, { sheet: 'tall' });
+  }
+
+  function openDest(id) {
+    const d = DEST[id];
+    if (!d) return;
+    const ph = destPhoto(d.id);
+    const c = COUNTRIES[d.c];
+    const f = flightInfo(d.c);
+    const fly = f && f.direct && settings.home === 'TPE' ? `台北直飛約 ${d.hours} 小時` : f?.text || '';
+    openModal(`${flag(d.c)} ${esc(d.name)}`, `
+      <div class="country-hero ${ph ? '' : 'ph-missing'}">${imgHtml(ph, d.name)}<div class="country-hero-text"><span class="kicker">${flag(d.c)} ${esc(c.name)}${fly ? `・${fly}` : ''}</span><h2 class="serif">${esc(d.name)}</h2><span class="small">${esc(d.blurb)}</span></div>${creditHtml(ph)}</div>
+      <div class="row">${d.tags.map((k) => tagChip(k)).join('')}</div>
+      ${spotsHtml(d)}
+      <div class="actions two">
+        <button class="btn primary" data-ai="${d.id}">幫我排行程</button>
+        <button class="btn" data-country-n="${c.n}">${esc(c.name)}美食與文化</button>
+        <button class="btn" data-trip-dest="${d.id}">＋ 記錄一趟</button>
+        <button class="btn" data-plan="${packFor(d.c)}" ${packFor(d.c) !== d.c ? `data-for="${d.c}"` : ''}>${esc(c.name)} eSIM</button>
       </div>`, { sheet: 'tall' });
   }
 
@@ -2699,8 +2872,8 @@
     }),
     `<section class="album-page album-end"><span class="kicker plain muted">年度總結</span><h2 class="serif">${a.year}</h2>
       <div class="grid stats" style="grid-template-columns:repeat(2,1fr)"><div class="stat"><b>${a.countries}</b><span>國家</span></div><div class="stat"><b>${a.days}</b><span>天</span></div><div class="stat"><b>${fmt(a.km)}</b><span>公里</span></div><div class="stat"><b>${a.cities}</b><span>城市</span></div></div>
-      ${a.type ? `<p>${esc(a.type)}</p>` : ''}<div class="badges">${a.badges.map((n) => `<div class="badge"><b class="medal ${/^[A-Za-z]/.test(n) ? 'latin' : ''}">${esc(monogram(n))}</b>${esc(n)}</div>`).join('') || '<span class="muted small">明年一起解鎖徽章！</span>'}</div>
-      ${a.own ? `<button class="btn block" data-share="${a.year}">產生分享用旅遊卡</button>` : `<a class="btn primary block" href="${window.location.pathname}">做一本自己的紀念冊</a>`}</section>`];
+      ${a.type ? `<p>${esc(a.type)}</p>` : ''}<div class="badges">${a.badges.map((n) => `<div class="badge">${medalByName(n)}<span>${esc(n)}</span></div>`).join('') || '<span class="muted small">明年一起解鎖徽章！</span>'}</div>
+      ${a.own ? `<button class="btn block" data-year-card="${a.year}">產生年度分享圖</button>` : `<a class="btn primary block" href="${window.location.pathname}">做一本自己的紀念冊</a>`}</section>`];
   }
 
   let currentAlbum = null;
@@ -2912,6 +3085,265 @@
     window.print();
     setTimeout(() => { if (document.body.classList.contains('printing') && !window.matchMedia('print').matches) cleanup(); }, 60000);
   }
+  // ---------- badge sheets: what you did and ate for each badge, and how to get the ones still locked
+  function tripStory(t, focus, extra = '') {
+    const c = country(t.n);
+    const ph = destPhoto(t.dest);
+    let body = '';
+    if (focus === 'food' || focus === 'culture') {
+      body = logHtml(t, focus);
+    } else {
+      const planned = t.plan ? t.plan.days.flat().filter((i) => i.kind === 'spot').map((i) => i.name) : [];
+      const names = planned.length ? planned : (DEST[t.dest]?.spots || []).map((x) => x.name);
+      if (names.length) body = `<div class="small muted" style="margin:8px 0 4px">${planned.length ? '行程裡去了' : '這座城市的必去'}</div><div class="row">${names.slice(0, 6).map((n) => `<span class="chip">${icon('pin')}${esc(n)}</span>`).join('')}</div>`;
+      const logged = [...ateOf(t).map((x) => `吃了 ${x}`), ...didOf(t).map((x) => `做了 ${x}`)];
+      if (logged.length) body += `<div class="row" style="margin-top:6px">${logged.map((x) => `<span class="chip on">${icon('check')}${esc(x)}</span>`).join('')}</div>`;
+    }
+    return `<article class="story"><button class="story-head" data-trip="${t.id}"><span class="story-ph ph ${ph ? '' : 'ph-missing'}">${imgHtml(ph, t.city)}</span><span class="grow"><span class="small muted">${flag(c.code)} ${esc(c.name)}・${t.start.replace(/-/g, '.')} – ${t.end.slice(5).replace('-', '.')}${extra}</span><b>${esc(t.city)}</b></span><span class="muted" aria-hidden="true">›</span></button>${body}</article>`;
+  }
+  const flagPill = (n, s, small) => `<button class="flag-pill ${small ? 'sm' : ''}" data-country-n="${n}">${flag(country(n).code)}<b>${esc(country(n).name)}</b>${s ? `<small>${s.past.filter((t) => t.n === n).length} 趟</small>` : ''}</button>`;
+  function badgeEvidence(b, s) {
+    if (b.kind === 'country') {
+      const ns = [...s.countries].filter((n) => !b.region || country(n).region === b.region);
+      return `<section><h3>收集到的${b.region ? REGIONS[b.region] : ''}國旗 ${ns.length} 面</h3><div class="flag-list">${ns.map((n) => flagPill(n, s)).join('') || '<span class="muted small">還沒有</span>'}</div></section>`;
+    }
+    if (b.kind === 'region') {
+      return `<section><h3>你的足跡跨了 ${s.regions.size} 個洲</h3>${[...s.regions].map((r) => `<div class="region-row"><b>${REGIONS[r]}</b><div class="flag-list">${[...s.countries].filter((n) => country(n).region === r).map((n) => flagPill(n, null, true)).join('')}</div></div>`).join('') || '<span class="muted small">還沒有</span>'}</section>`;
+    }
+    if (b.kind === 'km') {
+      return `<section><h3>飛了 ${fmt(s.km)} 公里</h3><ul class="route-list">${journeys(s.past).map((j) => `<li><span>${esc([home().name, ...j.map((t) => t.city), home().name].join(' → '))}</span><b>${fmt(journeyKm(j))} 公里</b></li>`).join('')}</ul>${b.key === 'earth' && s.km < 40075 ? `<p class="small muted">繞地球一圈還差 ${fmt(40075 - s.km)} 公里</p>` : ''}</section>`;
+    }
+    if (b.kind === 'days') {
+      const max = Math.max(1, ...s.past.map(tripDays));
+      return `<section><h3>在路上 ${s.days} 天</h3><div class="grid" style="gap:6px">${s.past.map((t) => `<div class="bar"><span>${flag(country(t.n).code)} ${esc(t.city)}</span><div class="track"><div class="fill" style="width:${(tripDays(t) / max) * 100}%;background:var(--brand)"></div></div><span>${tripDays(t)} 天</span></div>`).join('')}</div></section>`;
+    }
+    if (b.kind === 'season') {
+      return `<section><h3>四季的足跡</h3><div class="season-grid">${['春', '夏', '秋', '冬'].map((se) => {
+        const ts = s.past.filter((t) => tripSeasons(t).has(se));
+        return `<div class="season ${ts.length ? 'on' : ''}"><b>${se}</b>${ts.map((t) => `<button class="chip" data-trip="${t.id}">${flag(country(t.n).code)}${esc(t.city)}</button>`).join('') || '<small class="muted">還沒去</small>'}</div>`;
+      }).join('')}</div></section>`;
+    }
+    if (b.kind === 'eat') {
+      const ts = s.past.filter((t) => CULTURE[country(t.n).code] || ateOf(t).length);
+      return `<section><h3>打卡了 ${sum(s.past, (t) => ateOf(t).length)} 道在地美食</h3><p class="small muted">點美食標記吃過，沒列出來的可以自己加。</p>${ts.map((t) => tripStory(t, 'food')).join('') || '<p class="muted small">還沒有可以打卡的旅行</p>'}</section>`;
+    }
+    const list = b.trips ? b.trips(s) : [];
+    const focus = b.tag === 'food' || b.tag === 'culture' ? b.tag : null;
+    const extra = (t) => {
+      if (b.key === 'esim') return `・上網 ${t.gb} GB`;
+      if (b.key === 'long') return `・${tripFlight(t)?.text || ''}`;
+      if (b.key === 'weekend' || b.key === 'slow') return `・${daysBetween(t.start, t.end)} 天`;
+      return '';
+    };
+    const hint = { food: '點美食標記吃過，沒列出來的可以自己加。', culture: '點體驗標記做過，也可以自己加。' }[focus];
+    return list.length ? `<section><h3>${b.tag ? `你的 ${list.length} 趟${el(b.tag).label}之旅` : `相關的旅行 ${list.length} 趟`}</h3>${hint ? `<p class="small muted">${hint}</p>` : ''}${list.map((t) => tripStory(t, focus, extra(t))).join('')}</section>` : '';
+  }
+  function badgeNext(b, s) {
+    const seen = new Set(trips.map((t) => t.dest));
+    const destCards = (list) => (list.length ? `<div class="gallery">${list.slice(0, 6).map((d) => `<button class="ph-card city" data-dest="${d.id}"><div class="ph ${destPhoto(d.id) ? '' : 'ph-missing'}">${imgHtml(destPhoto(d.id), d.name)}</div><figcaption><b>${flag(d.c)} ${esc(d.name)}</b><small class="muted">${flightInfo(d.c)?.text || ''}</small></figcaption></button>`).join('')}</div>` : '');
+    const inRegion = (d) => COUNTRIES[d.c]?.region;
+    if (b.tag) return `<p class="small muted">去這些有${el(b.tag).label}的地方：</p>${destCards(DESTS.filter((d) => d.tags.includes(b.tag) && !seen.has(d.id)))}`;
+    if (b.kind === 'country') return `<p class="small muted">還沒去過的國家：</p>${destCards(DESTS.filter((d) => !s.countries.has(COUNTRIES[d.c].n) && (!b.region || inRegion(d) === b.region)))}`;
+    if (b.kind === 'region') return `<p class="small muted">換個洲走走：</p>${destCards(DESTS.filter((d) => !s.regions.has(inRegion(d))))}`;
+    if (b.key === 'long') return `<p class="small muted">10 小時以上的航線：</p>${destCards(DESTS.filter((d) => d.hours >= 10 && !seen.has(d.id)))}`;
+    if (b.key === 'esim') return '<p class="small muted">下次出國用 eSIM 上網，在行程裡填上用量就會累積。</p><button class="btn primary" data-goto="esim">挑一張 eSIM</button>';
+    if (b.key === 'eat10') return '<p class="small muted">打開任一趟旅行，在「我吃了什麼」點一下吃過的美食。</p>';
+    if (b.key === 'memory') return `<p class="small muted">在紀念冊幫旅行寫一段回憶或放照片。</p><button class="btn primary" data-album="${CONFIG.years[CONFIG.years.length - 1]}">打開紀念冊</button>`;
+    if (b.kind === 'season') return `<p class="small muted">還沒去的季節：${['春', '夏', '秋', '冬'].filter((se) => !s.past.some((t) => tripSeasons(t).has(se))).join('、')}</p><button class="btn primary" data-random>隨機出國</button>`;
+    return '<button class="btn primary" data-random>隨機出國找靈感</button>';
+  }
+  function badgeUnlocked(b, list) {
+    const past = list.filter((t) => !isUpcoming(t)).sort((p, q) => p.end.localeCompare(q.end));
+    for (let i = 1; i <= past.length; i += 1) {
+      if (badgeState(b, statsOf(past.slice(0, i))).ok) return past[i - 1].end;
+    }
+    return null;
+  }
+  function openBadge(key, year = 'all') {
+    const b = BADGES.find((x) => x.key === key);
+    if (!b) return;
+    const list = tripsIn(year);
+    const s = statsOf(list);
+    const st = badgeState(b, s);
+    const when = st.ok ? badgeUnlocked(b, list) : null;
+    openModal(esc(b.name), `
+      <div class="badge-hero">${medal(b, st.ok, 'xl')}<div class="grow"><span class="kicker plain muted">${BADGE_GROUPS[b.group]}</span><h2 class="serif">${esc(b.name)}</h2><p class="muted" style="margin:2px 0 8px">${esc(b.desc)}</p>
+        ${st.ok ? `<span class="status active">已解鎖${when ? `・${when.replace(/-/g, '.')} 達成` : ''}</span>` : `<div class="progress"><i style="width:${st.pct}%;background:linear-gradient(90deg,${b.color[0]},${b.color[1]})"></i></div><small class="muted">${fmt(st.v)} / ${fmt(st.goal)}</small>`}</div></div>
+      <div class="seg">${['all', ...CONFIG.years].map((y) => `<button data-badge="${key}" data-by="${y}" class="${String(year) === String(y) ? 'on' : ''}">${y === 'all' ? '2025–2026' : y}</button>`).join('')}</div>
+      ${badgeEvidence(b, s)}
+      ${st.ok ? '' : `<section><h3>怎麼解鎖</h3>${badgeNext(b, s)}</section>`}`, { sheet: 'tall' });
+  }
+  let wallYear = 'all';
+  const badgeWallHtml = (year) => {
+    const s = stats(year);
+    return Object.entries(BADGE_GROUPS).map(([g, label]) => `<div class="wall-group"><h4>${label}</h4><div class="badges">${BADGES.filter((b) => b.group === g).map((b) => badgeTile(b, s, year)).join('')}</div></div>`).join('');
+  };
+  function renderBadgeWall() {
+    const s = stats(wallYear);
+    $('#badge-count').textContent = `已解鎖 ${BADGES.filter((b) => badgeState(b, s).ok).length} / ${BADGES.length}`;
+    $('#badge-seg').innerHTML = ['all', ...CONFIG.years].map((y) => `<button data-wall="${y}" class="${String(wallYear) === String(y) ? 'on' : ''}">${y === 'all' ? '全部' : y}</button>`).join('');
+    $('#badge-wall').innerHTML = badgeWallHtml(wallYear);
+  }
+  $('#badge-seg').addEventListener('click', (e) => { const b = e.target.closest('[data-wall]'); if (b) { wallYear = b.dataset.wall; renderBadgeWall(); } });
+  function openBadgeWall(year) {
+    openModal(`${year === 'all' ? '2025–2026' : year} 全部徽章`, `<p class="muted small" style="margin:0">點徽章看你做了什麼、吃了什麼；還沒解鎖的會告訴你怎麼拿到。</p>${badgeWallHtml(year)}`, { sheet: 'tall' });
+  }
+
+  // Ticking a dish or an experience: saved on the trip (so it syncs), and may unlock a badge.
+  const unlockedKeys = () => { const s = stats('all'); return BADGES.filter((b) => badgeState(b, s).ok).map((b) => b.key); };
+  function toggleLog(id, kind, name) {
+    const t = trips.find((x) => x.id === id);
+    if (!t || !name) return;
+    const key = kind === 'food' ? 'ate' : 'did';
+    const list = Array.isArray(t[key]) ? t[key] : [];
+    const on = !list.includes(name);
+    const before = unlockedKeys();
+    t[key] = on ? [...list, name].slice(-60) : list.filter((x) => x !== name);
+    save();
+    $$('[data-log-box]').forEach((box) => { if (box.dataset.logBox === `${t.id}:${kind}`) box.outerHTML = logHtml(t, kind); });
+    renderReview(); renderBadgeWall(); renderCards(); renderTrips();
+    const fresh = BADGES.filter((b) => unlockedKeys().includes(b.key) && !before.includes(b.key));
+    if (fresh.length) toast(`解鎖徽章：${fresh.map((b) => b.name).join('、')}！`);
+    else if (on) toast(kind === 'food' ? `記下了：吃了${name}` : `記下了：做了${name}`);
+  }
+  document.addEventListener('submit', (e) => {
+    const form = e.target.closest('[data-log-add]');
+    if (!form) return;
+    e.preventDefault();
+    const name = form.elements.namedItem('entry').value.trim().slice(0, 30);
+    const t = trips.find((x) => x.id === form.dataset.logAdd);
+    const key = form.dataset.kind === 'food' ? 'ate' : 'did';
+    if (name && t && !(t[key] || []).includes(name)) toggleLog(t.id, form.dataset.kind, name);
+  });
+
+  // ---------- 旅遊卡: one collectible card per trip; tap to flip, save as an image to share
+  let cardYear = 'all';
+  const tripNo = (t) => sortTrips(trips).findIndex((x) => x.id === t.id) + 1;
+  const seasonName = (t) => `${SEASONS[Number(t.start.slice(5, 7)) - 1]}季`;
+  function travelCardHtml(t, i) {
+    const c = country(t.n);
+    const ph = destPhoto(t.dest);
+    const f = tripFlight(t);
+    const days = daysBetween(t.start, t.end);
+    const ate = ateOf(t);
+    const did = didOf(t);
+    return `<article class="pcard ${tripClass(t)}" data-pcard="${t.id}" tabindex="0" aria-label="${esc(t.city)} 旅遊卡，按一下翻面" style="--i:${i}">
+      <div class="pcard-inner">
+        <div class="pcard-face pcard-front">
+          <div class="ph ${ph ? '' : 'ph-missing'}">${imgHtml(ph, t.city)}</div>
+          <div class="pcard-top">${flag(c.code)}<span>${esc(c.name)}</span><span class="spacer"></span><span class="pcard-no">No.${pad(tripNo(t))}</span></div>
+          <span class="pcard-stamp"><b>${tripYear(t)}</b><small>TRAVEL</small></span>
+          <div class="pcard-bottom">
+            <span class="pcard-kicker">${seasonName(t)}・${isUpcoming(t) ? '即將出發' : `${md(t.start)} – ${md(t.end)}`}</span>
+            <h3 class="serif">${esc(t.city)}</h3>
+            <div class="pcard-meta"><span>${days} 天</span>${f ? `<span>${icon('flight')}${f.hours} 小時</span>` : ''}${ate.length ? `<span>吃了 ${ate.length} 道</span>` : ''}</div>
+            <div class="pcard-tags">${t.tags.slice(0, 3).map((k) => `<span>${dot(k)}${el(k).label}</span>`).join('')}</div>
+          </div>
+        </div>
+        <div class="pcard-face pcard-back">
+          <div class="pcard-route"><div><small>FROM</small><b>${esc(home().name)}</b></div>${icon('flight')}<div><small>TO</small><b>${esc(t.city)}</b></div></div>
+          <dl class="pcard-kv">
+            <dt>日期</dt><dd>${t.start.replace(/-/g, '.')} – ${t.end.slice(5).replace('-', '.')}</dd>
+            <dt>天數</dt><dd>${days} 天</dd>
+            ${f ? `<dt>飛行</dt><dd>${f.text}</dd>` : ''}
+            <dt>距離</dt><dd>${fmt(haversine(home(), t))} 公里</dd>
+            ${Number(t.gb) ? `<dt>eSIM</dt><dd>${t.gb} GB</dd>` : ''}
+            <dt>吃了</dt><dd>${ate.length ? esc(ate.slice(0, 4).join('、')) : '—'}</dd>
+            <dt>做了</dt><dd>${did.length ? esc(did.slice(0, 3).join('、')) : '—'}</dd>
+          </dl>
+          ${t.memo ? `<p class="pcard-memo serif">「${esc(t.memo.slice(0, 50))}${t.memo.length > 50 ? '…' : ''}」</p>` : ''}
+          <div class="pcard-actions"><button class="btn sm primary" data-card-dl="${t.id}">下載卡片</button>${navigator.share ? `<button class="btn sm" data-card-dl="${t.id}" data-mode="share">分享</button>` : ''}<button class="btn sm" data-trip="${t.id}">記錄吃喝玩</button></div>
+        </div>
+      </div>
+    </article>`;
+  }
+  function renderCards() {
+    const list = sortTrips(trips).reverse().filter((t) => cardYear === 'all' || tripYear(t) === Number(cardYear));
+    $('#pcard-seg').innerHTML = ['all', ...CONFIG.years].map((y) => `<button data-cy="${y}" class="${String(cardYear) === String(y) ? 'on' : ''}">${y === 'all' ? '全部' : y}</button>`).join('');
+    $('#pcard-count').textContent = list.length ? `${list.length} 張・點卡片翻面` : '';
+    $('#pcards').innerHTML = list.length ? list.map(travelCardHtml).join('') : '<div class="card muted">新增一趟旅行，就會得到第一張旅遊卡。</div>';
+  }
+  $('#pcard-seg').addEventListener('click', (e) => { const b = e.target.closest('[data-cy]'); if (b) { cardYear = b.dataset.cy; renderCards(); } });
+  const flipCard = (card) => card.classList.toggle('flipped');
+  document.addEventListener('click', (e) => {
+    const card = e.target.closest('.pcard');
+    if (card && !e.target.closest('button, a')) flipCard(card);
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList?.contains('pcard')) { e.preventDefault(); flipCard(e.target); }
+  });
+  async function drawTravelCard(t) {
+    try { await document.fonts.load(`900 40px ${SERIF}`); } catch { /* fallback font */ }
+    const c = country(t.n);
+    const f = tripFlight(t);
+    const [hero, fl] = await Promise.all([loadImage(destPhoto(t.dest)?.src), c.code ? loadImage(flagSrc(c.code)) : null]);
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const x = cv.getContext('2d');
+    x.fillStyle = '#0d1424'; x.fillRect(0, 0, W, H);
+    cover(x, hero, 0, 0, W, H);
+    let g = x.createLinearGradient(0, H * 0.36, 0, H);
+    g.addColorStop(0, 'rgba(5,10,25,0)'); g.addColorStop(1, 'rgba(5,10,25,.94)');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    g = x.createLinearGradient(0, 0, 0, 300);
+    g.addColorStop(0, 'rgba(5,10,25,.6)'); g.addColorStop(1, 'rgba(5,10,25,0)');
+    x.fillStyle = g; x.fillRect(0, 0, W, 300);
+    x.strokeStyle = 'rgba(255,255,255,.7)'; x.lineWidth = 3; roundRect(x, 40, 40, W - 80, H - 80, 34); x.stroke();
+    let tx = 84;
+    if (fl) {
+      x.save(); roundRect(x, 84, 88, 108, 72, 10); x.clip(); x.drawImage(fl, 84, 88, 108, 72); x.restore();
+      x.strokeStyle = 'rgba(255,255,255,.9)'; x.lineWidth = 3; roundRect(x, 84, 88, 108, 72, 10); x.stroke();
+      tx = 214;
+    }
+    x.fillStyle = '#fff'; x.font = `700 40px ${SANS}`; x.fillText(c.name, tx, 138);
+    x.textAlign = 'right'; x.font = `900 40px ${SERIF}`; x.fillText(`No. ${pad(tripNo(t))}`, W - 84, 138);
+    x.save(); x.translate(W - 190, 300); x.rotate(-0.18);
+    x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = 4; x.beginPath(); x.arc(0, 0, 92, 0, Math.PI * 2); x.stroke();
+    x.lineWidth = 2; x.beginPath(); x.arc(0, 0, 78, 0, Math.PI * 2); x.stroke();
+    x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = `900 48px ${SERIF}`; x.fillText(String(tripYear(t)), 0, 12);
+    x.font = `700 20px ${SANS}`; x.fillText('TRAVEL CARD', 0, 46);
+    x.restore();
+    x.textAlign = 'left';
+    x.fillStyle = 'rgba(255,255,255,.85)'; x.font = `500 34px ${SANS}`;
+    x.fillText(`${seasonName(t)}・${t.start.replace(/-/g, '.')} – ${t.end.slice(5).replace('-', '.')}`, 84, H - 440);
+    let size = 150;
+    x.fillStyle = '#fff'; x.font = `900 ${size}px ${SERIF}`;
+    while (x.measureText(t.city).width > W - 168 && size > 70) { size -= 10; x.font = `900 ${size}px ${SERIF}`; }
+    x.fillText(t.city, 78, H - 262);
+    x.fillStyle = 'rgba(255,255,255,.9)'; x.font = `500 34px ${SANS}`;
+    x.fillText([`${daysBetween(t.start, t.end)} 天`, f ? f.text : '', `${fmt(haversine(home(), t))} 公里`].filter(Boolean).join('・'), 84, H - 192);
+    let cx = 84;
+    x.font = `500 28px ${SANS}`;
+    t.tags.slice(0, 4).forEach((k) => {
+      const { label } = el(k);
+      const w = x.measureText(label).width + 58;
+      x.fillStyle = 'rgba(255,255,255,.16)'; roundRect(x, cx, H - 152, w, 52, 26); x.fill();
+      [x.fillStyle] = TAG_COLORS[k] || ['#1463ff']; x.beginPath(); x.arc(cx + 25, H - 126, 8, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#fff'; x.fillText(label, cx + 42, H - 116);
+      cx += w + 12;
+    });
+    x.fillStyle = 'rgba(255,255,255,.6)'; x.font = `500 24px ${SANS}`; x.fillText(`${CONFIG.brand}・旅遊卡`, 84, H - 66);
+    return cv;
+  }
+  async function saveTravelCard(id, button) {
+    const t = trips.find((x) => x.id === id);
+    if (!t) return;
+    const label = button.textContent;
+    button.disabled = true; button.textContent = '製作中…';
+    try {
+      const file = new File([await canvasBlob(await drawTravelCard(t))], `travel-card-${t.start}-${t.city}.png`, { type: 'image/png' });
+      if (button.dataset.mode === 'share' && navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: `${t.city} 旅遊卡` }); } catch { /* cancelled */ }
+      } else {
+        saveFile(file);
+        toast('旅遊卡已存成圖片');
+      }
+    } catch {
+      toast('圖片製作失敗，請再試一次');
+    }
+    button.disabled = false; button.textContent = label;
+  }
+
   function compressImage(file) {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
@@ -2945,6 +3377,13 @@
     if (!t) return;
     const ds = t.dataset;
     if ('flip' in ds) { t.closest('.tcard').classList.toggle('flipped'); return; }
+    if (ds.badge) { openBadge(ds.badge, ds.by || 'all'); return; }
+    if (ds.badgeWall) { openBadgeWall(ds.badgeWall); return; }
+    if (ds.log) { toggleLog(ds.log, ds.kind, ds.name); return; }
+    if (ds.yearCard) { openShare(ds.yearCard); return; }
+    if (ds.cardDl) { saveTravelCard(ds.cardDl, t); return; }
+    if (ds.countryN) { openCountry(ds.countryN); return; }
+    if ('cards' in ds) { go('trips'); setTimeout(() => $('#cards-title')?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }), 380); return; }
     if (ds.plan !== undefined) { openPlan(ds.plan, ds.for ? { forCountry: ds.for } : {}); return; }
     if ('random' in ds) { openRandom(); return; }
     if ('syncNow' in ds) { pushNow(); return; }
@@ -2984,7 +3423,6 @@
     if (ds.tripDest) { openTripForm(null, null, ds.tripDest); return; }
     if (ds.edit) { if (modal.open) modal.close(); openTripForm(ds.edit); return; }
     if (ds.tripNew) { openTripForm(null, ds.tripNew); return; }
-    if (ds.share) { openShare(ds.share); return; }
     if (ds.trip) openTrip(ds.trip);
   });
 
@@ -2994,7 +3432,7 @@
     document.title = CONFIG.brand;
     $$('[data-brand]').forEach((n) => { n.textContent = CONFIG.brand; });
     $$('#year-seg button').forEach((b) => b.classList.toggle('on', b.dataset.year === settings.year));
-    renderCover(); renderHero(); renderStats(); renderMapRecs(); renderReview(); renderRecs(); renderEsim(); renderTrips();
+    renderCover(); renderHero(); renderStats(); renderMapRecs(); renderReview(); renderRecs(); renderEsim(); renderTrips(); renderCards(); renderBadgeWall();
     if (currentTab === 'plan') renderPlanner();
     drawMap();
     animateIn($(`[data-view="${currentTab}"]`));

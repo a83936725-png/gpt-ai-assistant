@@ -30,13 +30,14 @@
    "file": "Tajimagyu2.jpg"
   },
   "culture:JP:溫泉": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/4/41/Onsen_in_Nachikatsuura%2C_Japan.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/5d7ab8ab9b2c.webp",
    "width": 1280,
    "height": 911,
    "page": "https://commons.wikimedia.org/wiki/File:Onsen_in_Nachikatsuura,_Japan.jpg",
    "author": "Chris 73",
    "license": "CC BY-SA 3.0",
-   "file": "Onsen_in_Nachikatsuura,_Japan.jpg"
+   "file": "Onsen_in_Nachikatsuura,_Japan.jpg",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/4/41/Onsen_in_Nachikatsuura%2C_Japan.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:JP:和服體驗": {
    "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/Two_young_maiko_in_Seirai-in_Temple_02.jpg/1280px-Two_young_maiko_in_Seirai-in_Temple_02.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
@@ -75,13 +76,14 @@
    "file": "Budae_jjigae_(28587380901).jpg"
   },
   "culture:KR:炸雞配啤酒": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Iksan_City_48_Korean_Style_Fried_chicken.jpg/1280px-Iksan_City_48_Korean_Style_Fried_chicken.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/2ca381d27c02.webp",
    "width": 1280,
    "height": 689,
    "page": "https://commons.wikimedia.org/wiki/File:Iksan_City_48_Korean_Style_Fried_chicken.jpg",
    "author": "KOREA.NET",
    "license": "CC BY-SA 2.0",
-   "file": "Iksan_City_48_Korean_Style_Fried_chicken.jpg"
+   "file": "Iksan_City_48_Korean_Style_Fried_chicken.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Iksan_City_48_Korean_Style_Fried_chicken.jpg/1280px-Iksan_City_48_Korean_Style_Fried_chicken.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:KR:韓服體驗": {
    "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Hanbok_Day_2016_29_%2830467033136%29.jpg/1280px-Hanbok_Day_2016_29_%2830467033136%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
@@ -93,13 +95,14 @@
    "file": "Hanbok_Day_2016_29_(30467033136).jpg"
   },
   "culture:KR:汗蒸幕": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/1/1f/Jjimjilbang.JPG?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/ec7db226736c.webp",
    "width": 1280,
    "height": 1707,
    "page": "https://commons.wikimedia.org/wiki/File:Jjimjilbang.JPG",
    "author": "",
    "license": "CC BY-SA 3.0",
-   "file": "Jjimjilbang.JPG"
+   "file": "Jjimjilbang.JPG",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/1/1f/Jjimjilbang.JPG?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:KR:K-POP": {
    "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/23/Yoon_Mi_Rae_and_Tiger_JK.jpg/1280px-Yoon_Mi_Rae_and_Tiger_JK.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
@@ -111,22 +114,24 @@
    "file": "Yoon_Mi_Rae_and_Tiger_JK.jpg"
   },
   "culture:TH:泰式酸辣蝦湯": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/Tom_yam_kung_maenam.jpg/1280px-Tom_yam_kung_maenam.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/b89ddf5c5d27.webp",
    "width": 1280,
    "height": 848,
    "page": "https://commons.wikimedia.org/wiki/File:Tom_yam_kung_maenam.jpg",
    "author": "Takeaway",
    "license": "CC BY-SA 3.0",
-   "file": "Tom_yam_kung_maenam.jpg"
+   "file": "Tom_yam_kung_maenam.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/Tom_yam_kung_maenam.jpg/1280px-Tom_yam_kung_maenam.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:TH:泰式炒河粉": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Phat_Thai_kung_Chang_Khien_street_stall.jpg/1280px-Phat_Thai_kung_Chang_Khien_street_stall.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/93a3da54e68e.webp",
    "width": 1280,
    "height": 1280,
    "page": "https://commons.wikimedia.org/wiki/File:Phat_Thai_kung_Chang_Khien_street_stall.jpg",
    "author": "Takeaway",
    "license": "CC BY-SA 3.0",
-   "file": "Phat_Thai_kung_Chang_Khien_street_stall.jpg"
+   "file": "Phat_Thai_kung_Chang_Khien_street_stall.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Phat_Thai_kung_Chang_Khien_street_stall.jpg/1280px-Phat_Thai_kung_Chang_Khien_street_stall.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:TH:芒果糯米飯": {
    "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Mango_sticy_rice_%283859549574%29.jpg/1280px-Mango_sticy_rice_%283859549574%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
@@ -138,13 +143,14 @@
    "file": "Mango_sticy_rice_(3859549574).jpg"
   },
   "culture:TH:泰式按摩": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Thaimassage.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/2f6d0c212cc3.webp",
    "width": 1280,
    "height": 960,
    "page": "https://commons.wikimedia.org/wiki/File:Thaimassage.jpg",
    "author": "Bhattharasinthorn Kosawan &amp; Chot-Anan Kittiraweechot",
    "license": "CC BY 3.0",
-   "file": "Thaimassage.jpg"
+   "file": "Thaimassage.jpg",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Thaimassage.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:TH:水上市場": {
    "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Jukung_Pasar_Terapung.jpg/1280px-Jukung_Pasar_Terapung.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
@@ -174,22 +180,24 @@
    "file": "Bowl_of_Meatball_pho.jpg"
   },
   "culture:VN:越式法國麵包": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/0/0c/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng.png?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/d90968cb1cf8.webp",
    "width": 1280,
    "height": 1209,
    "page": "https://commons.wikimedia.org/wiki/File:B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng.png",
    "author": "nsaum75¡שיחת!‎",
    "license": "CC BY-SA 3.0",
-   "file": "Bánh_mì_thịt_nướng.png"
+   "file": "Bánh_mì_thịt_nướng.png",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/0/0c/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng.png?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:VN:越南咖啡": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/b/b7/Viet-coffee.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/7cd4eb509d0f.webp",
    "width": 1280,
    "height": 1245,
    "page": "https://commons.wikimedia.org/wiki/File:Viet-coffee.jpg",
    "author": "Mike Verdone",
    "license": "Public domain",
-   "file": "Viet-coffee.jpg"
+   "file": "Viet-coffee.jpg",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/b/b7/Viet-coffee.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:VN:奧黛": {
    "src": "https://upload.wikimedia.org/wikipedia/commons/1/1a/%C3%81o_d%C3%A0i_hoa_ph%C6%B0%E1%BB%A3ng_-_Ph%C3%A1t_Tr%C6%B0%C6%A1ng_-_51231007393_%28cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",

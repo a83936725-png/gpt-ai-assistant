@@ -32,14 +32,31 @@ const rendition = (url, width) => url
 
 class RateLimited extends Error {}
 
-// Wikimedia answers 429 with Retry-After when a client asks too fast; wait as long as it says.
+const HAS_CURL = spawnSync('curl', ['--version']).status === 0;
+
+// One request: curl when installed (it honors HTTPS_PROXY and Wikimedia treats it better than Node's
+// fetch from the same machine), otherwise fetch. Returns { status, body, retryAfter }.
+const request = async (url) => {
+  if (HAS_CURL) {
+    const tmp = path.join(DIR, `download-${process.pid}.part`);
+    const out = spawnSync('curl', ['-s', '-m', '60', '-H', `User-Agent: ${HEADERS['User-Agent']}`, '-o', tmp, '-w', '%{http_code}', url], { encoding: 'utf8' });
+    const status = Number(out.stdout) || 0;
+    const body = status === 200 && existsSync(tmp) ? readFileSync(tmp) : null;
+    if (existsSync(tmp)) unlinkSync(tmp);
+    return { status, body, retryAfter: 60 };
+  }
+  const res = await fetch(url, { headers: HEADERS });
+  return { status: res.status, body: res.ok ? Buffer.from(await res.arrayBuffer()) : null, retryAfter: Number(res.headers.get('retry-after')) || 30 };
+};
+
+// Wikimedia answers 429 when a client asks too fast; wait, then try again.
 const fetchImage = async (url) => {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const res = await fetch(url, { headers: HEADERS });
-    if (res.ok) return Buffer.from(await res.arrayBuffer());
-    if (res.status !== 429 && res.status < 500) throw new Error(`${res.status} for ${url}`);
-    const wait = Math.min(180, Number(res.headers.get('retry-after')) || 30);
-    console.log(`  Wikimedia asked to wait ${wait}s`);
+    const { status, body, retryAfter } = await request(url);
+    if (body) return body;
+    if (status !== 429 && status < 500 && status !== 0) throw new Error(`${status} for ${url}`);
+    const wait = Math.min(180, retryAfter);
+    console.log(`  Wikimedia asked to wait ${wait}s (status ${status})`);
     await sleep(wait * 1000);
   }
   throw new RateLimited(`Still refused after waiting: ${url}`);
@@ -71,7 +88,7 @@ const main = async () => {
           if (out.status !== 0) throw new Error(`ffmpeg: ${out.stderr}`);
         } else writeFileSync(target, buf);
         saved += 1;
-        await sleep(250);
+        await sleep(1000);
         refusedInARow = 0;
       } catch (err) {
         console.log(`  skipped ${key}: ${err.message}`);

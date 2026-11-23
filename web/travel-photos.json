@@ -3,31 +3,34 @@
  "generated": "2026-11-22",
  "photos": {
   "culture:JP:壽司": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Sushi_platter.jpg/1280px-Sushi_platter.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/a219635866c0.webp",
    "width": 1280,
    "height": 1280,
    "page": "https://commons.wikimedia.org/wiki/File:Sushi_platter.jpg",
    "author": "chidorian from Japan",
    "license": "CC BY-SA 2.0",
-   "file": "Sushi_platter.jpg"
+   "file": "Sushi_platter.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Sushi_platter.jpg/1280px-Sushi_platter.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:JP:拉麵": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c3/Shoyu_Ramen%EF%BC%88Tokyo_Ramen%EF%BC%89_-_01.jpg/1280px-Shoyu_Ramen%EF%BC%88Tokyo_Ramen%EF%BC%89_-_01.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/b6645e3b13b3.webp",
    "width": 1280,
    "height": 960,
    "page": "https://commons.wikimedia.org/wiki/File:Shoyu_Ramen%EF%BC%88Tokyo_Ramen%EF%BC%89_-_01.jpg",
    "author": "Quercus acuta",
    "license": "CC BY-SA 4.0",
-   "file": "Shoyu_Ramen（Tokyo_Ramen）_-_01.jpg"
+   "file": "Shoyu_Ramen（Tokyo_Ramen）_-_01.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c3/Shoyu_Ramen%EF%BC%88Tokyo_Ramen%EF%BC%89_-_01.jpg/1280px-Shoyu_Ramen%EF%BC%88Tokyo_Ramen%EF%BC%89_-_01.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:JP:和牛燒肉": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Tajimagyu2.jpg/1280px-Tajimagyu2.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/3bed36c282ba.webp",
    "width": 1280,
    "height": 853,
    "page": "https://commons.wikimedia.org/wiki/File:Tajimagyu2.jpg",
    "author": "Japanexperterna.se",
    "license": "CC BY-SA 3.0",
-   "file": "Tajimagyu2.jpg"
+   "file": "Tajimagyu2.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Tajimagyu2.jpg/1280px-Tajimagyu2.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:JP:溫泉": {
    "src": "travel-photos/5d7ab8ab9b2c.webp",
@@ -40,40 +43,44 @@
    "remote": "https://upload.wikimedia.org/wikipedia/commons/4/41/Onsen_in_Nachikatsuura%2C_Japan.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:JP:和服體驗": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/Two_young_maiko_in_Seirai-in_Temple_02.jpg/1280px-Two_young_maiko_in_Seirai-in_Temple_02.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/b16ba91dcac0.webp",
    "width": 1280,
    "height": 852,
    "page": "https://commons.wikimedia.org/wiki/File:Two_young_maiko_in_Seirai-in_Temple_02.jpg",
    "author": "Takaaki Kawai",
    "license": "CC BY-SA 2.0",
-   "file": "Two_young_maiko_in_Seirai-in_Temple_02.jpg"
+   "file": "Two_young_maiko_in_Seirai-in_Temple_02.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/Two_young_maiko_in_Seirai-in_Temple_02.jpg/1280px-Two_young_maiko_in_Seirai-in_Temple_02.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:JP:茶道": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Sen_no_Rikyu_JPN.jpg/1280px-Sen_no_Rikyu_JPN.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/c5ee9bde2588.webp",
    "width": 1280,
    "height": 2881,
    "page": "https://commons.wikimedia.org/wiki/File:Sen_no_Rikyu_JPN.jpg",
    "author": "painted by 長谷川等伯, calligraphy by 春屋宗園",
    "license": "Public domain",
-   "file": "Sen_no_Rikyu_JPN.jpg"
+   "file": "Sen_no_Rikyu_JPN.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Sen_no_Rikyu_JPN.jpg/1280px-Sen_no_Rikyu_JPN.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:KR:韓式烤肉": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Korean_BBQ_Seoul.jpg/1280px-Korean_BBQ_Seoul.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/d883e472e62e.webp",
    "width": 1280,
    "height": 853,
    "page": "https://commons.wikimedia.org/wiki/File:Korean_BBQ_Seoul.jpg",
    "author": "kallerna",
    "license": "CC BY-SA 4.0",
-   "file": "Korean_BBQ_Seoul.jpg"
+   "file": "Korean_BBQ_Seoul.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Korean_BBQ_Seoul.jpg/1280px-Korean_BBQ_Seoul.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:KR:部隊鍋": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Budae_jjigae_%2828587380901%29.jpg/1280px-Budae_jjigae_%2828587380901%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/599e7aab993c.webp",
    "width": 1280,
    "height": 960,
    "page": "https://commons.wikimedia.org/wiki/File:Budae_jjigae_(28587380901).jpg",
    "author": "T.Tseng",
    "license": "CC BY 2.0",
-   "file": "Budae_jjigae_(28587380901).jpg"
+   "file": "Budae_jjigae_(28587380901).jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Budae_jjigae_%2828587380901%29.jpg/1280px-Budae_jjigae_%2828587380901%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:KR:炸雞配啤酒": {
    "src": "travel-photos/2ca381d27c02.webp",
@@ -86,13 +93,14 @@
    "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Iksan_City_48_Korean_Style_Fried_chicken.jpg/1280px-Iksan_City_48_Korean_Style_Fried_chicken.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:KR:韓服體驗": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Hanbok_Day_2016_29_%2830467033136%29.jpg/1280px-Hanbok_Day_2016_29_%2830467033136%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/27a7976dae6e.webp",
    "width": 1280,
    "height": 1981,
    "page": "https://commons.wikimedia.org/wiki/File:Hanbok_Day_2016_29_(30467033136).jpg",
    "author": "Republic of Korea from Seoul, Republic of Korea",
    "license": "CC BY-SA 2.0",
-   "file": "Hanbok_Day_2016_29_(30467033136).jpg"
+   "file": "Hanbok_Day_2016_29_(30467033136).jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Hanbok_Day_2016_29_%2830467033136%29.jpg/1280px-Hanbok_Day_2016_29_%2830467033136%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:KR:汗蒸幕": {
    "src": "travel-photos/ec7db226736c.webp",
@@ -105,13 +113,14 @@
    "remote": "https://upload.wikimedia.org/wikipedia/commons/1/1f/Jjimjilbang.JPG?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:KR:K-POP": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/23/Yoon_Mi_Rae_and_Tiger_JK.jpg/1280px-Yoon_Mi_Rae_and_Tiger_JK.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/8e6a832143be.webp",
    "width": 1280,
    "height": 853,
    "page": "https://commons.wikimedia.org/wiki/File:Yoon_Mi_Rae_and_Tiger_JK.jpg",
    "author": "LG전자",
    "license": "CC BY 2.0",
-   "file": "Yoon_Mi_Rae_and_Tiger_JK.jpg"
+   "file": "Yoon_Mi_Rae_and_Tiger_JK.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/23/Yoon_Mi_Rae_and_Tiger_JK.jpg/1280px-Yoon_Mi_Rae_and_Tiger_JK.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:TH:泰式酸辣蝦湯": {
    "src": "travel-photos/b89ddf5c5d27.webp",
@@ -134,13 +143,14 @@
    "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Phat_Thai_kung_Chang_Khien_street_stall.jpg/1280px-Phat_Thai_kung_Chang_Khien_street_stall.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:TH:芒果糯米飯": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Mango_sticy_rice_%283859549574%29.jpg/1280px-Mango_sticy_rice_%283859549574%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/4652a8d38baa.webp",
    "width": 1280,
    "height": 853,
    "page": "https://commons.wikimedia.org/wiki/File:Mango_sticy_rice_(3859549574).jpg",
    "author": "Dennis Wong from Hong Kong, Hong Kong",
    "license": "CC BY 2.0",
-   "file": "Mango_sticy_rice_(3859549574).jpg"
+   "file": "Mango_sticy_rice_(3859549574).jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Mango_sticy_rice_%283859549574%29.jpg/1280px-Mango_sticy_rice_%283859549574%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:TH:泰式按摩": {
    "src": "travel-photos/2f6d0c212cc3.webp",
@@ -153,31 +163,34 @@
    "remote": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Thaimassage.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:TH:水上市場": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Jukung_Pasar_Terapung.jpg/1280px-Jukung_Pasar_Terapung.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/541957afe4cd.webp",
    "width": 1280,
    "height": 853,
    "page": "https://commons.wikimedia.org/wiki/File:Jukung_Pasar_Terapung.jpg",
    "author": "Muhammad Haris",
    "license": "CC BY-SA 4.0",
-   "file": "Jukung_Pasar_Terapung.jpg"
+   "file": "Jukung_Pasar_Terapung.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Jukung_Pasar_Terapung.jpg/1280px-Jukung_Pasar_Terapung.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:TH:潑水節": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/Songkran_Day_%40_Chiangmai_Wall.jpg/1280px-Songkran_Day_%40_Chiangmai_Wall.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/73d1fb24bc28.webp",
    "width": 1280,
    "height": 1650,
    "page": "https://commons.wikimedia.org/wiki/File:Songkran_Day_@_Chiangmai_Wall.jpg",
    "author": "Khunmoohan",
    "license": "CC BY-SA 4.0",
-   "file": "Songkran_Day_@_Chiangmai_Wall.jpg"
+   "file": "Songkran_Day_@_Chiangmai_Wall.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/Songkran_Day_%40_Chiangmai_Wall.jpg/1280px-Songkran_Day_%40_Chiangmai_Wall.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:VN:越南河粉": {
-   "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Bowl_of_Meatball_pho.jpg/1280px-Bowl_of_Meatball_pho.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "src": "travel-photos/8178081819fb.webp",
    "width": 1280,
    "height": 960,
    "page": "https://commons.wikimedia.org/wiki/File:Bowl_of_Meatball_pho.jpg",
    "author": "SerraKnightz",
    "license": "CC BY 4.0",
-   "file": "Bowl_of_Meatball_pho.jpg"
+   "file": "Bowl_of_Meatball_pho.jpg",
+   "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Bowl_of_Meatball_pho.jpg/1280px-Bowl_of_Meatball_pho.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:VN:越式法國麵包": {
    "src": "travel-photos/d90968cb1cf8.webp",

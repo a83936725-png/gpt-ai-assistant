@@ -322,7 +322,7 @@ void main() {
           node.dataset.pin = c.trips.map((t) => t.id).join(',');
           node.setAttribute('aria-label', c.trips.length > 1 ? `${c.trips.length} 趟：${c.trips.map((t) => t.city).join('、')}` : `${lead.city} ${lead.date}`);
           node.innerHTML = `<span class="tm-ph">${lead.photo ? `<img src="${esc(lead.photo)}" alt="" decoding="async" referrerpolicy="no-referrer">` : `<b>${esc(lead.city.slice(0, 1))}</b>`}</span>
-            ${lead.code ? `<img class="tm-flag" src="flags/${lead.code.toLowerCase()}.svg" alt="">` : ''}${c.trips.length > 1 ? `<b class="tm-n">${c.trips.length}</b>` : ''}`;
+            ${lead.code ? `<img class="tm-flag" src="${esc(hooks.flagSrc(lead.code))}" alt="">` : ''}${c.trips.length > 1 ? `<b class="tm-n">${c.trips.length}</b>` : ''}`;
           pinLayer.appendChild(node);
         }
         taken.push([c.p[0] - 23, c.p[1] - 56, c.p[0] + 23, c.p[1] - 6]);
@@ -352,7 +352,7 @@ void main() {
         taken.push(rect);
         labels.push({ ...it, name, size });
       });
-      labelLayer.innerHTML = labels.map((l) => `<span class="tm-label ${l.visited ? `on ${l.visited}` : ''}" style="font-size:${l.size}px">${l.visited ? `<img src="flags/${l.code.toLowerCase()}.svg" alt="">` : ''}${esc(l.name)}</span>`).join('')
+      labelLayer.innerHTML = labels.map((l) => `<span class="tm-label ${l.visited ? `on ${l.visited}` : ''}" style="font-size:${l.size}px">${l.visited ? `<img src="${esc(hooks.flagSrc(l.code))}" alt="">` : ''}${esc(l.name)}</span>`).join('')
         + OCEANS.filter((o) => o[3] === 'both' || o[3] === st.mode).map((o) => `<span class="tm-label sea">${o[0]}</span>`).join('');
       const nodes = [...labelLayer.children];
       st.labels = labels.map((l, i) => ({ ...l, node: nodes[i] }));

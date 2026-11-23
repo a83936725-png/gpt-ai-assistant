@@ -833,6 +833,7 @@
     if (!worldMap) {
       worldMap = window.TravelMap.create($('#map'), {
         name: countryName,
+        flagSrc,
         colors: () => ({
           v25: cssVar('--y25'), v26: cssVar('--y26'), vboth: cssVar('--both'), vsoon: cssVar('--soon'), y2025: cssVar('--y25'), y2026: cssVar('--y26'), soon: cssVar('--soon'),
         }),

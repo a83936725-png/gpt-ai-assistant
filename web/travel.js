@@ -17,6 +17,9 @@ const FILES = {
   'travel-app.js': { file: 'travel-app.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
   'travel-data.js': { file: 'travel-data.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
   'travel-photos.json': { file: 'travel-photos.json', type: 'application/json; charset=utf-8', maxAge: 3600 },
+  'manifest.webmanifest': { file: 'travel-manifest.webmanifest', type: 'application/manifest+json; charset=utf-8', maxAge: 3600 },
+  // The service worker must not be cached, so a new version reaches installed apps at once.
+  'sw.js': { file: 'travel-sw.js', type: 'application/javascript; charset=utf-8', maxAge: 0 },
   'vendor/d3.min.js': { file: 'vendor/d3.min.js', type: 'application/javascript; charset=utf-8', maxAge: 86400 },
   'vendor/topojson-client.min.js': { file: 'vendor/topojson-client.min.js', type: 'application/javascript; charset=utf-8', maxAge: 86400 },
   'vendor/Sortable.min.js': { file: 'vendor/Sortable.min.js', type: 'application/javascript; charset=utf-8', maxAge: 86400 },
@@ -84,6 +87,18 @@ router.get('/', (req, res, next) => {
 }, sendFile(''));
 
 Object.keys(FILES).filter(Boolean).forEach((key) => router.get(`/${key}`, sendFile(key)));
+
+// App icons (home screen, manifest).
+router.get('/travel-icons/:name', (req, res) => {
+  const { name } = req.params;
+  if (!/^(icon-192|icon-512|maskable-512|apple-touch-icon)\.png$/.test(name)) {
+    res.sendStatus(404);
+    return;
+  }
+  res.set('Content-Type', 'image/png');
+  res.set('Cache-Control', 'public, max-age=604800');
+  res.send(readFileSync(path.join(WEB_DIR, 'travel-icons', name)));
+});
 
 // Local copies of the attraction photos (scripts/travel-photos-download.js). Names are hashes, so the
 // pattern below is the whole allowlist.

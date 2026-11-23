@@ -6,6 +6,12 @@
 <title>旅圖 eSIM</title>
 <meta name="description" content="世界地圖點亮你 2025、2026 年的旅行足跡，依旅行元素推薦附近景點與門票，整合官網、Google 地圖與 eSIM 出國上網。">
 <meta name="theme-color" content="#1463ff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="travel-icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="旅圖">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
@@ -113,6 +119,8 @@ button.chip { cursor: pointer; }
 .tabs svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 main { padding: 16px 0 40px; }
 @media (max-width: 860px) {
+  /* backdrop-filter would make the fixed tab bar stick to the header instead of the screen bottom */
+  .top { backdrop-filter: none; background: var(--bg); }
   .top .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; justify-content: space-around; background: var(--surface); border-top: 1px solid var(--border); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
   .tabs button { flex-direction: column; gap: 2px; font-size: 11px; padding: 4px 6px; }
   main { padding-bottom: 96px; }
@@ -564,6 +572,10 @@ section h3 { margin-top: 2px; }
   @page { margin: 0; }
 }
 .sync-status { margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); justify-content: space-between; }
+.install-card { display: flex; gap: 10px; align-items: center; padding: 12px 14px; margin-bottom: 12px; border-radius: 18px; background: color-mix(in srgb, var(--brand) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--brand) 25%, var(--border)); }
+.install-card .grow { flex: 1; min-width: 0; }
+.offline-bar { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 45; padding: 8px 14px; border-radius: 12px; background: #2b2f3a; color: #fff; font-size: 13px; text-align: center; pointer-events: none; box-shadow: var(--shadow); }
+@media (max-width: 860px) { .offline-bar { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); } }
 @media (prefers-reduced-motion: reduce) { .tcard-inner, #toast, .land, .mag-cover::before, dialog#modal { transition: none; animation: none; } .check path { animation: none; stroke-dashoffset: 0; } .gift-icon { animation: none; } .tap { animation: none; } }
 </style>
 </head>
@@ -611,6 +623,7 @@ section h3 { margin-top: 2px; }
 
   <main class="wrap">
     <section data-view="map">
+      <div class="install-card" id="install-card" hidden></div>
       <div id="cover"></div>
       <div class="quick" style="margin-top:14px">
         <button data-random><span class="icon-tile"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2"/><circle cx="15" cy="15" r="1.2"/><circle cx="15" cy="9" r="1.2"/><circle cx="9" cy="15" r="1.2"/></svg></span>隨機出國</button>
@@ -716,6 +729,7 @@ section h3 { margin-top: 2px; }
 </dialog>
 <button id="cart-fab" class="fab" aria-label="購物車" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.6l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.7a1.5 1.5 0 0 0 1.5-1.1L21 7.5H6"/></svg><span class="badge-count" id="cart-count" hidden></span></button>
 <div id="toast" role="status" aria-live="polite"></div>
+<div class="offline-bar" id="offline-bar" hidden>目前離線：可以看行程、紀念冊與安裝教學；購買和同步要等有網路</div>
 
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/topojson-client.min.js"></script>

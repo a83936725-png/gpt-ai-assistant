@@ -470,6 +470,46 @@
     showApp();
     renderSync();
   }
+
+  // ---------- installable app (PWA): home-screen install, offline use
+  let installPrompt = null;
+  const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent || '');
+  function renderInstall() {
+    const box = $('#install-card');
+    if (!box) return;
+    const dismissed = store.get('installDismissed', false);
+    box.hidden = isStandalone() || dismissed || !(installPrompt || isIos);
+    box.innerHTML = `<div class="grow"><b>把旅圖加到主畫面</b><div class="small muted">像 App 一樣全螢幕打開，沒有網路也看得到行程與安裝教學。</div></div>
+      <button class="btn primary sm" data-install-app>${installPrompt ? '安裝' : '怎麼加'}</button><button class="icon-btn" data-install-dismiss aria-label="不要再顯示">✕</button>`;
+  }
+  async function installApp() {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice.catch(() => ({}));
+      installPrompt = null;
+      if (outcome === 'accepted') toast('已加到主畫面');
+      renderInstall();
+      return;
+    }
+    openModal('加到主畫面', `<ol class="steps">
+        <li>用 <b>Safari</b> 打開這個網頁（LINE 裡請先點右上角「⋯」→「用預設瀏覽器開啟」）</li>
+        <li>點下方中間的<b>分享</b>按鈕（方框加向上箭頭）</li>
+        <li>往下滑，選<b>「加入主畫面」</b></li>
+        <li>按右上角<b>「新增」</b>，主畫面就會出現旅圖的圖示</li></ol>
+      <p class="small muted" style="margin:0">之後從主畫面打開，會全螢幕顯示；出國還沒裝好 eSIM 時，也能看行程與安裝教學。</p>`, { sheet: true });
+  }
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installPrompt = e; renderInstall(); });
+  window.addEventListener('appinstalled', () => { installPrompt = null; renderInstall(); });
+  function renderOnline() {
+    const bar = $('#offline-bar');
+    if (bar) bar.hidden = navigator.onLine;
+  }
+  window.addEventListener('online', renderOnline);
+  window.addEventListener('offline', renderOnline);
+  if ('serviceWorker' in navigator && /^(https:|http:\/\/(localhost|127\.0\.0\.1))/.test(window.location.href) && window.top === window.self) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
   // ---------- login
   function showApp() {
     $('#login').hidden = true;
@@ -2908,6 +2948,8 @@
     if (ds.plan !== undefined) { openPlan(ds.plan, ds.for ? { forCountry: ds.for } : {}); return; }
     if ('random' in ds) { openRandom(); return; }
     if ('syncNow' in ds) { pushNow(); return; }
+    if ('installApp' in ds) { installApp(); return; }
+    if ('installDismiss' in ds) { store.set('installDismissed', true); renderInstall(); return; }
     if ('lineLogin' in ds) { lineLogin(); return; }
     if (ds.album) { openAlbum(Number(ds.album)); return; }
     if (ds.countryCode) { openCountry(COUNTRIES[ds.countryCode].n); return; }
@@ -2948,6 +2990,7 @@
 
   // ---------- render all
   function renderAll() {
+    renderInstall(); renderOnline();
     document.title = CONFIG.brand;
     $$('[data-brand]').forEach((n) => { n.textContent = CONFIG.brand; });
     $$('#year-seg button').forEach((b) => b.classList.toggle('on', b.dataset.year === settings.year));

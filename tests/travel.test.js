@@ -184,3 +184,17 @@ test('GET /travel/api/status reports the LIFF ID (null when LINE login is not se
   const data = await fetch(`${base}/travel/api/status`).then((r) => r.json());
   expect(data.liff).toBe(config.TRAVEL_LIFF_ID);
 });
+
+test('the travel page can be installed: manifest, service worker and icons', async () => {
+  const manifest = await fetch(`${base}/travel/manifest.webmanifest`);
+  expect(manifest.headers.get('content-type')).toContain('application/manifest+json');
+  const data = await manifest.json();
+  expect(data.display).toBe('standalone');
+  expect(data.icons.map((i) => i.sizes)).toContain('512x512');
+  const sw = await fetch(`${base}/travel/sw.js`);
+  expect(sw.headers.get('content-type')).toContain('javascript');
+  expect(sw.headers.get('cache-control')).toContain('max-age=0');
+  const icon = await fetch(`${base}/travel/travel-icons/icon-192.png`);
+  expect(icon.headers.get('content-type')).toBe('image/png');
+  expect((await fetch(`${base}/travel/travel-icons/other.png`)).status).toBe(404);
+});

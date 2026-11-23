@@ -7,6 +7,12 @@ module.exports = {
   extends: 'airbnb',
   overrides: [
     {
+      // Service worker of the travel page.
+      files: ['web/travel-sw.js'],
+      env: { serviceworker: true, browser: true, node: false },
+      rules: { 'no-restricted-globals': 'off' },
+    },
+    {
       // Browser scripts for the travel page (web/travel.html): d3 and topojson come from web/vendor/.
       files: [
         'web/travel-app.js',

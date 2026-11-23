@@ -1,0 +1,17 @@
+{
+  "name": "旅圖 eSIM",
+  "short_name": "旅圖",
+  "description": "旅行足跡地圖、行程表、景點推薦與出國上網 eSIM",
+  "lang": "zh-Hant-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6fb",
+  "theme_color": "#1463ff",
+  "icons": [
+    { "src": "travel-icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "travel-icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "travel-icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

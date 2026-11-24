@@ -1032,6 +1032,27 @@ dialog .burst { position: absolute; }
 .plan-card .icon-tile.size { background: none; width: auto; height: auto; min-width: 42px; }
 .plan-card .chip { background: none; border: 0; padding: 0 8px 0 0; min-height: 0; color: var(--muted); font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { .login-planet, .login-wrap, .login-points li, .slot-deck span { animation: none; } }
+/* any text that leads somewhere looks and feels tappable */
+.tap-text { border: 0; background: none; padding: 0; margin: 0; font: inherit; color: inherit; text-align: inherit; cursor: pointer; text-decoration: none; transition: color .15s, opacity .15s; }
+.tap-text:hover { color: var(--brand); }
+.mag-cover .tap-text:hover, .tcard .cover .tap-text:hover { color: #fff; opacity: .8; }
+.tap-text:active { opacity: .6; }
+.mag-cover .kicker.tap-text { display: block; width: auto; }
+.cover-meta button { font: inherit; font-size: 13px; color: #fff; background: rgba(255, 255, 255, .16); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; padding: 4px 12px; cursor: pointer; transition: background .15s, scale .15s; }
+.cover-meta button:hover { background: rgba(255, 255, 255, .3); }
+.cover-meta button:active { scale: .95; }
+#stats button.stat, .stats button.stat { border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.stats button.stat { border-radius: 12px; }
+button.stat:hover b { color: var(--brand); }
+button.bar { border: 0; background: none; padding: 2px 0; width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+button.bar:hover span:first-child { color: var(--brand); }
+.legend .tap-text { display: inline-flex; align-items: center; }
+.ticket-sum.tap-text { width: 100%; }
+.ticket-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.ticket-list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.ticket-list li b { display: block; }
+.ticket-price { font-weight: 800; white-space: nowrap; }
+a.chip { text-decoration: none; }
 </style>
 </head>
 <body>

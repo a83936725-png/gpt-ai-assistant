@@ -787,7 +787,7 @@
     if (!s.list.length) return `<div><b>${y}</b>：還沒有紀錄</div>`;
     const top = s.topElements[0];
     const soon = s.upcoming.length ? `，另有 ${s.upcoming.length} 趟即將出發` : '';
-    return `<div><b>${y}</b>：去了 ${s.countries.size} 個國家、${s.cities.size} 座城市、${s.days} 天${soon}${top ? `｜最常玩${el(top[0]).label}` : ''}</div>`;
+    return `<div><button class="tap-text" data-review="${y}"><b>${y}</b>：去了 ${s.countries.size} 個國家、${s.cities.size} 座城市、${s.days} 天${soon}${top ? `｜最常玩${el(top[0]).label}` : ''} ›</button></div>`;
   }
   function renderHero() {
     const name = esc(user?.name || '旅人');
@@ -800,13 +800,13 @@
       const order = orders.find((o) => o.tripIds?.includes(next.id));
       const esimState = order ? orderStatus(order)[1] : '還沒買 eSIM';
       nextHtml = `<div class="next-trip"><div style="font-size:30px">${flag(country(next.n).code)}</div>
-        <div style="flex:1;min-width:180px"><b>下一站：${esc(next.city)}</b><div class="small">${md(next.start)}–${md(next.end)}・${isOngoing(next) ? '旅行中' : `還有 ${d} 天`}・eSIM：${esimState}</div></div>
+        <div style="flex:1;min-width:180px"><button class="tap-text" data-trip="${next.id}"><b>下一站：${esc(next.city)} ›</b></button><div class="small">${md(next.start)}–${md(next.end)}・${isOngoing(next) ? '旅行中' : `還有 ${d} 天`}・eSIM：${esimState}</div></div>
         ${order ? '<button class="btn sm" data-goto="esim">查看 eSIM</button>' : `<button class="btn sm" data-plan="${pick?.key || ''}">買 eSIM</button>`}
         <button class="btn sm" data-near="${next.id}">附近還能去哪</button></div>`;
     }
     $('#hero').innerHTML = trips.length ? `
       <h2 class="serif">${name}的 2025–2026</h2>
-      <p style="margin:4px 0 0" class="muted">去過 ${all.countries.size} 個國家・${travelerType(all)}</p>
+      <p style="margin:4px 0 0" class="muted"><button class="tap-text" data-badge="c10" data-by="all">去過 ${all.countries.size} 個國家</button>・${travelerType(all)}</p>
       <div class="yr">${CONFIG.years.map(yearLine).join('')}</div>${nextHtml}` : `
       <h2 class="serif">${name}，從第一趟開始</h2>
       <p style="margin:6px 0 12px;opacity:.92">新增去過的旅行，或匯入 Google 地圖時間軸，自動找出 2025、2026 去過的國家。</p>
@@ -820,7 +820,8 @@
       [count(s.countries.size), '國家・地區'], [count(s.cities.size), '城市'], [count(s.days), '旅行天數'],
       [count(s.km), '飛行公里'], [count(s.gb, 1), 'eSIM 用量 GB'],
     ];
-    $('#stats').innerHTML = items.map(([v, l]) => `<div class="stat">${v}<span>${l}</span></div>`).join('');
+    const opens = ['data-badge="c10"', 'data-goto="trips"', 'data-badge="month"', 'data-badge="km"', 'data-goto="esim"'];
+    $('#stats').innerHTML = items.map(([v, l], i) => `<button class="stat" ${opens[i]} data-by="${settings.year}">${v}<span>${l} ›</span></button>`).join('');
     animateIn($('#stats'));
   }
 
@@ -936,9 +937,9 @@
       if (v.years.size > 1) both += 1; else if (v.years.has(2025)) c25 += 1; else if (v.years.has(2026)) c26 += 1; else if (v.soon) soon += 1;
     });
     const items = [];
-    if (settings.year !== '2026') items.push(`<span><i style="background:var(--y25)"></i>2025 去過 ${c25}</span>`);
-    if (settings.year !== '2025') items.push(`<span><i style="background:var(--y26)"></i>2026 去過 ${c26}</span>`);
-    if (settings.year === 'all') items.push(`<span><i style="background:var(--both)"></i>兩年都去 ${both}</span>`);
+    if (settings.year !== '2026') items.push(`<button class="tap-text" data-year-pick="${settings.year === '2025' ? 'all' : '2025'}"><i style="background:var(--y25)"></i>2025 去過 ${c25}</button>`);
+    if (settings.year !== '2025') items.push(`<button class="tap-text" data-year-pick="${settings.year === '2026' ? 'all' : '2026'}"><i style="background:var(--y26)"></i>2026 去過 ${c26}</button>`);
+    if (settings.year === 'all') items.push(`<button class="tap-text" data-badge="again" data-by="all"><i style="background:var(--both)"></i>兩年都去 ${both}</button>`);
     items.push(`<span><i style="background:var(--soon-fill);outline:1.5px dashed var(--soon)"></i>即將出發 ${soon}</span>`);
     const touch = window.matchMedia('(pointer: coarse)').matches;
     items.push(`<span class="spacer"></span><span>${touch ? '兩指轉動與縮放・⤢ 全螢幕單指操作' : '拖曳旋轉・Ctrl＋滾輪縮放'}・點國家看文化與飛行時間</span>`);
@@ -1139,14 +1140,14 @@
           <div class="cover ${destPhoto(d.id) ? 'has-photo' : ''}" style="background:linear-gradient(135deg,${c1},${c2})">
             ${imgHtml(destPhoto(d.id), d.name)}
             ${d.months.includes(Number(recState.month)) ? `<span class="score">${recState.month} 月當季</span>` : '<span></span>'}
-            <div><div class="small" style="opacity:.9">${flag(d.c)} ${c.name}・${r.dist ? fmtKm(r.dist) : ''}</div><h3>${esc(d.name)}</h3></div>
+            <div><button class="small tap-text" style="opacity:.9;color:#fff" data-country-n="${c.n}">${flag(d.c)} ${c.name}・${r.dist ? fmtKm(r.dist) : ''}</button><h3>${esc(d.name)}</h3></div>
           </div>
           <div class="body">
             <div class="small">${esc(d.blurb)}</div>
-            <div class="row">${d.tags.slice(0, 4).map((k) => `${tagChip(k)}`).join('')}</div>
+            <div class="row">${d.tags.slice(0, 4).map((k) => `<button class="chip tag" data-rec-tag="${k}">${dot(k)}${el(k).label}</button>`).join('')}</div>
             <p class="why-line">${esc(r.why.join('・'))}</p>
-            <div class="ticket-sum"><span>${d.spots.length} 個景點・${freeCount(d)} 個免費</span><b>≈ NT$${fmt(ticketTotal(d))}</b></div>
-            <div class="small muted">台北直飛約 ${d.hours} 小時・最佳 ${d.months.length === 12 ? '全年' : `${d.months.slice(0, 4).join('、')} 月`}</div>
+            <button class="ticket-sum tap-text" data-flip><span>${d.spots.length} 個景點・${freeCount(d)} 個免費</span><b>≈ NT$${fmt(ticketTotal(d))} ›</b></button>
+            <button class="small muted tap-text" data-country-n="${c.n}">台北直飛約 ${d.hours} 小時・最佳 ${d.months.length === 12 ? '全年' : `${d.months.slice(0, 4).join('、')} 月`}</button>
             <div class="actions">
               <button class="btn sm primary" data-flip>景點與門票 ↻</button>
               <button class="link-btn" data-ai="${d.id}">排行程 →</button>
@@ -1359,7 +1360,7 @@
         <span class="flag-tile">${t.icon}</span>
         <div class="grow">
           <div class="row" style="gap:6px"><b class="esim-name">${esc(t.name)}</b><span class="status ${S.cls}">${S.label}</span>${o.qty > 1 ? `<span class="chip sm">第 ${c.n} 張（共 ${o.qty} 張）</span>` : ''}${c.gift ? `<span class="chip sm">${esc(c.from || '親友')}送的</span>` : ''}</div>
-          <div class="small muted">${esc(planSpec(o.plan))}${ts.length ? `・${ts.map(tripLabel).join(' → ')}` : ''}</div>
+          <div class="small muted">${esc(planSpec(o.plan))}${ts.length ? `・${ts.map((x) => `<button class="tap-text" data-trip="${x.id}">${tripLabel(x)}</button>`).join(' → ')}` : ''}</div>
           <div class="small muted">${c.installed ? `手機上的名稱：<b>${esc(labelOf(o, c))}</b>` : `購買日期 ${o.at}`}</div>
         </div>
         <button class="icon-btn" data-card-open="${o.id}:${c.id}" aria-label="詳細資訊">⋯</button>
@@ -2007,8 +2008,8 @@
     sortTrips(trips).reverse().forEach((t) => { (byYear[tripYear(t)] ||= []).push(t); });
     const years = Object.keys(byYear).sort().reverse();
     $('#trip-list').innerHTML = years.length ? years.map((y) => `<div class="section-title"><h3>${y}</h3><span class="muted small">${byYear[y].length} 趟</span></div>
-      <div class="grid">${byYear[y].map((t) => `<div class="trip"><div class="flag">${flag(country(t.n).code)}</div><div class="grow">
-        <div class="row"><b>${esc(t.city)}</b><span class="muted small">${esc(country(t.n).name)}</span>${isUpcoming(t) ? '<span class="status pending">即將出發</span>' : ''}${isOngoing(t) ? '<span class="status active">旅行中</span>' : ''}</div>
+      <div class="grid">${byYear[y].map((t) => `<div class="trip"><button class="flag tap-text" data-country-n="${t.n}" aria-label="${esc(country(t.n).name)}">${flag(country(t.n).code)}</button><div class="grow">
+        <div class="row"><button class="tap-text" data-trip="${t.id}"><b>${esc(t.city)} ›</b></button><span class="muted small">${esc(country(t.n).name)}</span>${isUpcoming(t) ? '<span class="status pending">即將出發</span>' : ''}${isOngoing(t) ? '<span class="status active">旅行中</span>' : ''}</div>
         <div class="small muted">${t.start} – ${t.end}・${daysBetween(t.start, t.end)} 天${Number(t.gb) ? `・上網 ${t.gb} GB` : ''}${t.src === 'import' ? '・來自時間軸' : ''}</div>
         <div class="row" style="margin-top:4px">${tripFlightChip(t)}${ateOf(t).length ? `<span class="flight-chip">吃了 ${ateOf(t).length} 道</span>` : ''}</div>
         <div class="tags">${t.tags.map((k) => `${el(k).label}`).join('　')}</div></div>
@@ -2199,10 +2200,10 @@
       return `<div class="card" style="display:grid;gap:14px;border-top:4px solid ${color}">
         <div class="row"><h2>${y}</h2><span class="muted small">${travelerType(s)}</span><span class="spacer"></span><button class="btn sm" data-album="${y}">紀念冊</button><button class="btn sm" data-year-card="${y}">年度分享圖</button></div>
         <div class="grid stats" style="grid-template-columns:repeat(4,1fr)">
-          <div class="stat">${count(s.countries.size)}<span>國家</span></div><div class="stat">${count(s.cities.size)}<span>城市</span></div>
-          <div class="stat">${count(s.days)}<span>天</span></div><div class="stat">${count(s.km)}<span>公里</span></div></div>
+          <button class="stat" data-badge="c10" data-by="${y}">${count(s.countries.size)}<span>國家</span></button><button class="stat" data-album="${y}">${count(s.cities.size)}<span>城市</span></button>
+          <button class="stat" data-badge="month" data-by="${y}">${count(s.days)}<span>天</span></button><button class="stat" data-badge="km" data-by="${y}">${count(s.km)}<span>公里</span></button></div>
         <div><b class="small">旅行月份</b><div class="months" style="margin-top:6px">${Array.from({ length: 12 }, (_, i) => `<span class="${s.months.has(i + 1) ? 'on' : ''}" style="${s.months.has(i + 1) ? `background:${color}` : ''}">${i + 1}</span>`).join('')}</div></div>
-        <div><b class="small">旅行元素</b><div class="grid" style="gap:6px;margin-top:6px">${s.topElements.length ? s.topElements.slice(0, 6).map(([k, v]) => `<div class="bar"><span>${el(k).label}</span><div class="track"><div class="fill" style="width:${(v / max) * 100}%;background:${color}"></div></div><span>${v}</span></div>`).join('') : '<span class="muted small">還沒有資料</span>'}</div></div>
+        <div><b class="small">旅行元素</b><div class="grid" style="gap:6px;margin-top:6px">${s.topElements.length ? s.topElements.slice(0, 6).map(([k, v]) => `<button class="bar" data-badge="${k}" data-by="${y}"><span>${el(k).label}</span><div class="track"><div class="fill" style="width:${(v / max) * 100}%;background:${color}"></div></div><span>${v} ›</span></button>`).join('') : '<span class="muted small">還沒有資料</span>'}</div></div>
         <div><div class="row"><b class="small">徽章 ${BADGES.filter((b) => badgeState(b, s).ok).length}/${BADGES.length}</b><span class="spacer"></span><button class="btn sm ghost" data-badge-wall="${y}">全部徽章 →</button></div><div class="badges" style="margin-top:6px">${[...BADGES].sort((p, q) => badgeState(q, s).pct - badgeState(p, s).pct).slice(0, 8).map((b) => badgeTile(b, s, y)).join('')}</div></div>
         <div><b class="small">足跡</b><ul class="timeline" style="margin-top:6px">${s.list.length ? s.list.map((t) => `<li data-trip="${t.id}"><span class="flag">${flag(country(t.n).code)}</span><div style="flex:1"><b>${esc(t.city)}</b> <span class="small muted">${md(t.start)}–${md(t.end)}・${esc(country(t.n).name)}</span><div class="small">${t.tags.map((k) => el(k).label).join('・')}${Number(t.gb) ? `・上網 ${t.gb}GB` : ''}${isUpcoming(t) ? '・即將出發' : ''}</div></div></li>`).join('') : '<li class="muted small">還沒有紀錄</li>'}</ul></div>
       </div>`;
@@ -2508,10 +2509,10 @@
       ${coverArt(t.lng, t.lat)}
       <div class="masthead"><span>${esc(CONFIG.brand)}</span><span>${vol.getFullYear()} 年 ${vol.getMonth() + 1} 月號</span></div>
       <div class="content">
-        <span class="kicker">${flag(c.code)} ${esc(c.name)}・${season(t.start)}季・${tripStatus(t)}</span>
+        <button class="kicker tap-text" data-country-n="${t.n}">${flag(c.code)} ${esc(c.name)}・${season(t.start)}季・${tripStatus(t)} ›</button>
         <h1 class="cover-title serif">${esc(t.city)}</h1>
         <p class="cover-lede">${esc(d?.blurb || t.note || `${n} 天的${c.name}之旅`)}</p>
-        <div class="cover-meta"><span>${md(t.start)} – ${md(t.end)}・${n} 天</span>${items.length ? `<span>${items.length} 個行程</span>` : ''}${tickets ? `<span>${tickets} 張門票</span>` : ''}<span>${order ? orderStatus(order)[1] : '尚未購買 eSIM'}</span></div>
+        <div class="cover-meta"><button data-edit="${t.id}" aria-label="修改日期">${md(t.start)} – ${md(t.end)}・${n} 天</button>${items.length ? `<button data-open-plan="${t.id}">${items.length} 個行程</button>` : ''}${tickets ? `<button data-tickets="${t.id}">${tickets} 張門票</button>` : ''}${order ? '<button data-goto="esim">eSIM ' : `<button data-plan="${packFor(c.code)}" ${packFor(c.code) !== c.code ? `data-for="${c.code}"` : ''}>`}${order ? orderStatus(order)[1] : '尚未購買 eSIM'}</button></div>
         ${planner ? '' : `<div class="row" style="margin-top:6px"><button class="btn" data-open-plan="${t.id}">打開行程表 →</button><button class="btn glass" data-near="${t.id}">附近還能去哪</button></div>`}
       </div>
       <a class="credit" target="_blank" rel="noopener" hidden>照片：Wikipedia</a>
@@ -2670,7 +2671,7 @@
     const empty = poolFor(t).length ? t.plan.days.filter((d) => !d.length).length : 0;
     $('#plan-days').innerHTML = `<div class="row" style="margin-bottom:12px"><span class="small muted">拖曳 ⋮⋮ 調整順序或移到別天；點名稱看照片、影片、地圖與訂票。</span><span class="spacer"></span>${empty ? `<button class="btn sm" data-fill="1">用景點庫補 ${empty} 個空白天</button>` : ''}</div>
       ${t.plan.days.map((items, i) => `<section class="day" id="day-${i}">
-        <div class="day-head"><span class="dn serif">Day ${i + 1}</span><span class="date">${dayLabel(t, i)}</span><span class="spacer"></span><span class="small muted">${items.length} 項${sum(items, toTwd) ? `・門票 ≈ NT$${fmt(sum(items, toTwd))}` : ''}</span></div>
+        <div class="day-head"><span class="dn serif">Day ${i + 1}</span><span class="date">${dayLabel(t, i)}</span><span class="spacer"></span><span class="small muted">${items.length} 項${sum(items, toTwd) ? `・<button class="tap-text" data-tickets="${t.id}">門票 ≈ NT$${fmt(sum(items, toTwd))} ›</button>` : ''}</span></div>
         <ul class="items" data-day="${i}">${items.map((it) => itemHtml(t, it, i)).join('')}</ul>
         <form class="add-item" data-add="${i}"><input class="input" maxlength="40" placeholder="新增行程，例如：午餐 一蘭拉麵" aria-label="Day ${i + 1} 新增行程"><button class="btn sm">新增</button></form>
       </section>`).join('')}`;
@@ -3008,6 +3009,25 @@
     await selectCountry(n, true);
     worldMap?.setActiveSight(i);
     if (x?.lat != null) worldMap?.focus(x.lng, x.lat, 7);
+  }
+
+  // Tickets for a trip: every paid sight in the itinerary with its price and where to book, then the free ones.
+  function openTickets(id) {
+    const t = trips.find((x) => x.id === id);
+    if (!t) return;
+    const plan = ensurePlan(t);
+    const rows = plan.days.flatMap((list, day) => list.filter((it) => it.fee != null).map((it) => ({ it, day })));
+    const paid = rows.filter(({ it }) => it.fee > 0);
+    const free = rows.filter(({ it }) => it.fee === 0);
+    const twd = (it) => Math.round(it.fee * (RATES[it.cur] || 0));
+    const people = plan.budget?.people || 1;
+    openModal(`${flag(country(t.n).code)} ${esc(t.city)} 門票`, `
+      <p class="muted" style="margin:0">${paid.length} 個要買票・${free.length} 個免費・每人約 <b>NT$${fmt(sum(paid, ({ it }) => twd(it)))}</b>${people > 1 ? `，${people} 人約 NT$${fmt(sum(paid, ({ it }) => twd(it)) * people)}` : ''}</p>
+      ${paid.length ? `<ul class="ticket-list">${paid.map(({ it, day }) => `<li><div class="grow"><b>${esc(it.name)}</b><small class="muted">Day ${day + 1}・${ticketText({ fee: it.fee, cur: it.cur, note: it.note })}${it.note ? `・${esc(it.note)}` : ''}</small></div>
+        <span class="ticket-price">≈ NT$${fmt(twd(it))}</span><a class="link-btn" href="${gsearch(`${it.name} 門票 預約`)}" target="_blank" rel="noopener">訂票 ↗</a></li>`).join('')}</ul>` : '<p class="muted">這趟的行程裡還沒有要買票的景點。</p>'}
+      ${free.length ? `<section><h3>免費景點</h3><div class="row">${free.map(({ it }) => `<a class="chip free" href="${gmaps(`${it.name} ${t.city}`)}" target="_blank" rel="noopener">${esc(it.name)} ↗</a>`).join('')}</div></section>` : ''}
+      <p class="small muted" style="margin:0">價格是成人票概估，依官網與日期為準。</p>
+      <div class="actions two"><button class="btn primary" data-open-plan="${t.id}">在行程表調整</button><button class="btn" data-edit="${t.id}">修改日期</button></div>`);
   }
 
   function openDest(id) {
@@ -3772,6 +3792,10 @@
     const ds = t.dataset;
     if ('flip' in ds) { t.closest('.tcard').classList.toggle('flipped'); return; }
     if (ds.badge) { openBadge(ds.badge, ds.by || 'all'); return; }
+    if (ds.tickets) { openTickets(ds.tickets); return; }
+    if (ds.review) { go('trips'); setTimeout(() => $('#review')?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }), 380); return; }
+    if (ds.yearPick) { $(`#year-seg [data-year="${ds.yearPick}"]`)?.click(); return; }
+    if (ds.recTag) { recState.tags = [ds.recTag]; go('recs'); renderRecs(); return; }
     if (ds.sightMap) { const [code, i] = ds.sightMap.split(':'); showSightOnMap(code, Number(i)); return; }
     if (ds.sight) { const [code, i] = ds.sight.split(':'); openSight(code, Number(i)); return; }
     if ('mcClose' in ds) { closeMapCountry(); return; }

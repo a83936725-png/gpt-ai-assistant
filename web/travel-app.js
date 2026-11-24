@@ -61,6 +61,10 @@
 
   const NUM = {};
   Object.entries(COUNTRIES).forEach(([code, c]) => { NUM[c.n] = { ...c, code }; });
+  // Every other country on the map, by its map id (web/travel-geo.js), with its name in Traditional Chinese.
+  const ZH_REGION = (() => { try { return new Intl.DisplayNames(['zh-TW'], { type: 'region' }); } catch { return null; } })();
+  const N2CODE = {};
+  Object.entries(window.TRAVEL_GEO || {}).forEach(([n, g]) => { if (!/^x/.test(n)) [N2CODE[n]] = g; });
   const DEST = Object.fromEntries(DESTS.map((d) => [d.id, d]));
   const el = (key) => ELEMENTS[key] || { label: key, icon: '•' };
   const TAG_COLORS = {
@@ -88,7 +92,9 @@
 
   let world = null;
   let planTripId = null;
-  const country = (n) => NUM[n] || { name: world?.byId.get(n)?.properties?.name || '未知地區', code: '', region: '', base: 0 };
+  const country = (n) => NUM[n] || (N2CODE[n] ? {
+    name: ZH_REGION?.of(N2CODE[n]) || N2CODE[n], code: N2CODE[n], region: '', base: 0,
+  } : { name: world?.byId.get(n)?.properties?.name || '未知地區', code: '', region: '', base: 0 });
 
   // ---------- state
   let user = store.get('user', null);
@@ -432,8 +438,55 @@
     if (box) { box.classList.add('ph-missing'); e.target.remove(); }
   }, true);
 
+  // ---------- famous sights of every country (web/travel-sights.json, built by scripts/travel-sights.js)
+  let SIGHTS = null;
+  function loadSights() {
+    if (!loadSights.p) {
+      loadSights.p = fetch('travel-sights.json').then((r) => r.json()).then((d) => { SIGHTS = d.sights || {}; }).catch(() => { SIGHTS = {}; });
+    }
+    return loadSights.p;
+  }
+  const sightsOf = (code) => (SIGHTS && SIGHTS[code]) || [];
+  // Sights the build script could not look up get their photo and position from Wikipedia in the browser.
+  const sightPending = {};
+  const sightCache = store.get('sights', {});
+  function fillSight(x) {
+    if (x.img && x.lat != null) return Promise.resolve(x);
+    const key = `sight:${x.t}`;
+    if (sightCache[key]) return Promise.resolve(Object.assign(x, { ...sightCache[key], ...x }));
+    if (!sightPending[x.t]) {
+      sightPending[x.t] = fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(x.t.replace(/ /g, '_'))}`, { headers: { Accept: 'application/json' } })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          const add = {};
+          const original = d?.originalimage;
+          const thumb = d?.thumbnail?.source;
+          if (original?.source) add.img = { src: original.width > 1280 && thumb ? thumb.replace(/\/\d+px-/, '/1280px-') : original.source, page: d.content_urls?.desktop?.page || '' };
+          if (d?.coordinates) { add.lat = d.coordinates.lat; add.lng = d.coordinates.lon; }
+          if (d) { sightCache[key] = add; store.set('sights', sightCache); }
+          return add;
+        })
+        .catch(() => ({}));
+    }
+    return sightPending[x.t].then((add) => Object.assign(x, { ...add, ...x }));
+  }
+  const sightImg = (x) => (x.img ? `<img src="${esc(x.img.src)}" alt="${esc(x.n)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '');
+  const sightCredit = (x) => (x.img ? `<a class="credit-mini" href="${esc(x.img.page)}" target="_blank" rel="noopener">${esc(x.img.author || 'Wikimedia Commons')}${x.img.license ? `・${esc(x.img.license)}` : ''}</a>` : '');
+  // Puts photos into sight tiles already on screen as they arrive.
+  function hydrateSights(code) {
+    return Promise.all(sightsOf(code).map((x, i) => fillSight(x).then(() => {
+      if (!x.img) return;
+      $$('[data-sight]').filter((b) => b.dataset.sight === `${code}:${i}` && !b.querySelector('img')).forEach((b) => {
+        const holder = b.querySelector('.ph') || b;
+        holder.classList.remove('ph-missing');
+        holder.insertAdjacentHTML('afterbegin', sightImg(x));
+      });
+    })));
+  }
+  const sightCards = (code, skip = -1) => sightsOf(code).map((x, i) => (i === skip ? '' : `<button class="ph-card city pop" data-sight="${code}:${i}" style="--d:${i * 60}ms"><div class="ph ${x.img ? '' : 'ph-missing'}">${sightImg(x)}</div><figcaption><b>${esc(x.n)}</b><small class="muted">${esc(x.b)}</small></figcaption></button>`)).join('');
+
   // ---------- every country (探索世界), names in Traditional Chinese
-  const REGION_NAMES = (() => { try { return new Intl.DisplayNames(['zh-TW'], { type: 'region' }); } catch { return null; } })();
+  const REGION_NAMES = ZH_REGION;
   const countryName = (code) => COUNTRIES[code]?.name || REGION_NAMES?.of(code) || code;
   const WORLD_CODES = Object.fromEntries(Object.entries(WORLD).map(([k, v]) => [k, v.split(' ')]));
   const ALL_CODES = [...new Set(Object.values(WORLD_CODES).flat())].filter((c) => c !== 'TW');
@@ -838,11 +891,14 @@
         colors: () => ({
           v25: cssVar('--y25'), v26: cssVar('--y26'), vboth: cssVar('--both'), vsoon: cssVar('--soon'), y2025: cssVar('--y25'), y2026: cssVar('--y26'), soon: cssVar('--soon'),
         }),
-        onCountry: (n) => openCountry(n),
+        onCountry: (n) => selectCountry(n),
         onTrip: (id) => openTrip(id),
         onDest: (id) => openDest(id),
+        onSight: (code, i) => openSight(code, i),
       });
       worldMap.setMode(settings.mapMode || 'globe');
+      $('#map').append($('#map-country'), $('#map-tip'));
+      if (!store.get('tipSeen', false)) setTimeout(() => $('#map-tip').classList.add('show'), REDUCED ? 0 : 2200);
     }
     worldMap.setData(mapData());
     renderLegend(visitMap(settings.year));
@@ -873,6 +929,7 @@
   // Full screen: the map fills the phone and takes one-finger gestures; Esc or ✕ closes it.
   function setMapFull(on) {
     $('.map-card').classList.toggle('full', on);
+    if ($('#map-country').classList.contains('show')) setTimeout(renderMapCountry, 50); // floats in full screen, sits under the map on phones
     document.documentElement.classList.toggle('map-open', on);
     const b = $('#map-full');
     b.textContent = on ? '✕' : '⤢';
@@ -2624,9 +2681,21 @@
     const { name } = c;
     const plan = code ? packFor(code) : 'GLOBAL';
     const fly = flightInfo(code);
+    if (!SIGHTS) {
+      loadSights().then(() => {
+        const sec = $('#country-sights');
+        if (!sec) return;
+        sec.hidden = !sightsOf(code).length;
+        sec.querySelector('.gallery').innerHTML = sightCards(code);
+        hydrateSights(code);
+      });
+    } else {
+      setTimeout(() => hydrateSights(code), 0);
+    }
     openModal(`${flag(code)} ${esc(name)}`, `
       <div class="country-hero ${hero ? '' : 'ph-missing'}">${imgHtml(hero, name)}<div class="country-hero-text"><span class="kicker">${flag(code)} ${esc(REGIONS[c.region] || '世界')}</span><h2 class="serif">${esc(name)}</h2>${c.cur ? `<span class="small">貨幣 ${esc(c.cur)}・插座 ${esc(c.plug)}</span>` : ''}</div>${creditHtml(hero)}</div>
       ${fly ? `<div class="fly-row">${icon('flight')}<div class="grow"><b>從${esc(home().name)}${fly.text}</b><small class="muted">${fly.direct ? '直飛' : '需要轉機，含約 2.5 小時轉機時間'}・距離約 ${fmt(fly.km)} 公里・概估</small></div></div>` : ''}
+      <section id="country-sights" ${SIGHTS && !sightsOf(code).length ? 'hidden' : ''}><h3>必去景點</h3><div class="gallery">${sightCards(code)}</div></section>
       ${cul ? `<section><h3>必吃美食</h3><div class="gallery">${cul.food.map(([zh]) => photoCard(culturePhoto(code, zh), zh, `<a class="small" href="${gmaps(`${zh} ${name}`)}" target="_blank" rel="noopener">找附近的店 ↗</a>`)).join('')}</div></section>
       <section><h3>必體驗文化</h3><div class="gallery">${cul.culture.map(([zh]) => photoCard(culturePhoto(code, zh), zh, `<a class="small" href="${gsearch(`${zh} ${name} 體驗`)}" target="_blank" rel="noopener">怎麼體驗 ↗</a>`)).join('')}</div></section>
       <section><h3>伴手禮</h3><div class="row">${cul.buy.map((b) => `<span class="chip lg">${esc(b)}</span>`).join('')}</div></section>
@@ -2640,6 +2709,89 @@
         <button class="btn" data-trip-new="${n}">＋ 記錄一趟</button>
         ${dests[0] ? `<button class="btn" data-dest="${dests[0].id}">附近推薦</button>` : `<a class="btn" href="${gmaps(`${name} 景點`)}" target="_blank" rel="noopener">景點地圖 ↗</a>`}
       </div>`, { sheet: 'tall' });
+  }
+
+  // ---------- tap a country on the map: fly there, pop its famous sights out as photo pins, and a card
+  let picked = null;
+  function renderMapCountry() {
+    const box = $('#map-country');
+    if (!picked) { box.classList.remove('show'); worldMap?.setInset(0); return; }
+    const c = country(picked);
+    const f = flightInfo(c.code);
+    const list = sightsOf(c.code);
+    const plan = packFor(c.code);
+    box.innerHTML = `<div class="mc-head">${flag(c.code)}<div class="grow"><b>${esc(c.name)}</b><small>${f ? f.text : esc(REGIONS[c.region] || '')}${list.length ? `・${list.length} 個必去景點` : ''}</small></div><button class="mc-close" data-mc-close aria-label="關閉">✕</button></div>
+      ${list.length ? `<div class="mc-strip">${list.map((x, i) => `<button class="mc-sight" data-sight="${c.code}:${i}" style="--d:${i * 70}ms">${sightImg(x)}<span>${esc(x.n)}</span></button>`).join('')}</div>`
+    : `<p class="mc-empty">這裡的景點還在整理，<a href="${gmaps(`${c.name} 景點`)}" target="_blank" rel="noopener">在 Google 地圖找 ↗</a></p>`}
+      <div class="mc-actions"><button class="btn sm primary" data-country-n="${picked}">美食・文化・城市</button><button class="btn sm" data-plan="${plan}" ${plan !== c.code ? `data-for="${c.code}"` : ''}>${esc(c.name)} eSIM</button></div>`;
+    box.classList.remove('show');
+    box.getBoundingClientRect(); // restart the entrance animation
+    box.classList.add('show');
+    // Floating over the map (computers, full screen): lift the globe above it. Under the map (phones): bring it into view.
+    const floating = getComputedStyle(box).position === 'absolute';
+    worldMap?.setInset(floating ? box.offsetHeight + 16 : 0);
+    if (!floating) setTimeout(() => box.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'nearest' }), 250);
+  }
+  async function selectCountry(n, keepView) {
+    const c = country(n);
+    if (!c.code) { openCountry(n); return; }
+    picked = n;
+    store.set('tipSeen', true);
+    $('#map-tip').classList.remove('show');
+    await loadSights();
+    if (picked !== n) return;
+    const pins = () => sightsOf(c.code).map((x, i) => ({
+      i, name: x.n, lng: x.lng, lat: x.lat, photo: x.img?.src || null,
+    })).filter((x) => x.lat != null);
+    renderMapCountry();
+    worldMap?.showSights({ id: n, code: c.code, list: pins() });
+    const g = GEO[c.code];
+    if (g && worldMap && !keepView) worldMap.focusArea(g.lng, g.lat, g.area);
+    // Once every position is known, fit them all in view (unless the visitor asked for one sight).
+    const fit = () => { const ps = pins(); if (!keepView && ps.length > 1) worldMap?.fitPoints(ps.map((x) => [x.lng, x.lat])); };
+    if (pins().length === sightsOf(c.code).length) setTimeout(fit, REDUCED ? 0 : 1100);
+    hydrateSights(c.code).then(() => {
+      if (picked !== n) return;
+      const before = pins().length;
+      worldMap?.showSights({ id: n, code: c.code, list: pins() });
+      if (before && !keepView) fit();
+    });
+  }
+  function closeMapCountry() {
+    picked = null;
+    worldMap?.showSights(null);
+    renderMapCountry();
+  }
+  async function openSight(code, i) {
+    const x = sightsOf(code)[i];
+    if (!x) return;
+    await Promise.race([fillSight(x), new Promise((resolve) => { setTimeout(resolve, 1500); })]);
+    const n = COUNTRIES[code]?.n || GEO[code]?.n;
+    const f = flightInfo(code);
+    worldMap?.setActiveSight(i);
+    const more = sightCards(code, i);
+    setTimeout(() => hydrateSights(code), 0);
+    openModal(`${flag(code)} ${esc(x.n)}`, `
+      <div class="sight-hero ph ${x.img ? '' : 'ph-missing'}">${sightImg(x)}</div>
+      <div class="sight-text"><span class="kicker plain muted">${flag(code)} ${esc(countryName(code))}${f ? `・${f.text}` : ''}</span><h2 class="serif">${esc(x.n)}</h2><p>${esc(x.b)}</p>${sightCredit(x)}</div>
+      <div class="actions two">
+        ${x.lat != null ? `<button class="btn primary" data-sight-map="${code}:${i}">在 3D 地圖上看</button>` : ''}
+        <a class="btn" href="${gmaps(x.t)}" target="_blank" rel="noopener">Google 地圖 ↗</a>
+        <a class="btn" href="https://en.wikipedia.org/wiki/${encodeURIComponent(x.t.replace(/ /g, '_'))}" target="_blank" rel="noopener">維基百科 ↗</a>
+        ${n && !String(n).startsWith('x') ? `<button class="btn" data-trip-new="${n}">＋ 記錄一趟</button>` : ''}
+      </div>
+      ${more ? `<section><h3>${esc(countryName(code))}也推薦</h3><div class="gallery">${more}</div></section>` : ''}`);
+  }
+  async function showSightOnMap(code, i) {
+    const n = COUNTRIES[code]?.n || GEO[code]?.n;
+    const x = sightsOf(code)[i];
+    if ($('#modal').open) $('#modal').close();
+    go('map');
+    await new Promise((resolve) => { setTimeout(resolve, REDUCED ? 80 : 420); });
+    $('.map-card').scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'center' });
+    await selectCountry(n, true);
+    worldMap?.setActiveSight(i);
+    if (x?.lat != null) worldMap?.focus(x.lng, x.lat, 7);
   }
 
   function openDest(id) {
@@ -3399,6 +3551,9 @@
     const ds = t.dataset;
     if ('flip' in ds) { t.closest('.tcard').classList.toggle('flipped'); return; }
     if (ds.badge) { openBadge(ds.badge, ds.by || 'all'); return; }
+    if (ds.sightMap) { const [code, i] = ds.sightMap.split(':'); showSightOnMap(code, Number(i)); return; }
+    if (ds.sight) { const [code, i] = ds.sight.split(':'); openSight(code, Number(i)); return; }
+    if ('mcClose' in ds) { closeMapCountry(); return; }
     if (ds.badgeWall) { openBadgeWall(ds.badgeWall); return; }
     if (ds.log) { toggleLog(ds.log, ds.kind, ds.name); return; }
     if (ds.yearCard) { openShare(ds.yearCard); return; }

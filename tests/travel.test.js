@@ -233,3 +233,20 @@ test('every country on the page has a flag, and every listed country has a place
   // every country in 探索世界 has a point, so it gets a flight time
   expect(codes.filter((c) => !onMap.has(c))).toEqual([]);
 });
+
+test('every country in 探索世界 has famous sights, served as travel-sights.json', async () => {
+  const { readFileSync } = await import('fs');
+  const vm = await import('vm');
+  const sandbox = {};
+  vm.runInNewContext(readFileSync('web/travel-data.js', 'utf8'), sandbox);
+  const codes = [...new Set(Object.values(sandbox.TRAVEL_DATA.WORLD).flatMap((v) => v.split(' ')))];
+  const res = await fetch(`${base}/travel/travel-sights.json`);
+  expect(res.headers.get('content-type')).toContain('application/json');
+  const { sights } = await res.json();
+  expect(codes.filter((c) => !sights[c]?.length)).toEqual([]);
+  Object.values(sights).flat().forEach((s) => {
+    expect(typeof s.n).toBe('string');
+    expect(typeof s.t).toBe('string');
+    if (s.img) expect(s.img.src).toMatch(/^https:\/\/[a-z.]*wikimedia\.org\//);
+  });
+});

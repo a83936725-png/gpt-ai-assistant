@@ -19,6 +19,7 @@ const FILES = {
   'travel-geo.js': { file: 'travel-geo.js', type: 'application/javascript; charset=utf-8', maxAge: 3600 },
   'travel-map.js': { file: 'travel-map.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
   'travel-photos.json': { file: 'travel-photos.json', type: 'application/json; charset=utf-8', maxAge: 3600 },
+  'travel-sights.json': { file: 'travel-sights.json', type: 'application/json; charset=utf-8', maxAge: 3600 },
   'manifest.webmanifest': { file: 'travel-manifest.webmanifest', type: 'application/manifest+json; charset=utf-8', maxAge: 3600 },
   // The service worker must not be cached, so a new version reaches installed apps at once.
   'sw.js': { file: 'travel-sw.js', type: 'application/javascript; charset=utf-8', maxAge: 0 },

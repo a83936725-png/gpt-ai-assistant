@@ -55,7 +55,7 @@ void main() {
     const glow = box.querySelector('.tm-glow');
     const hintBox = box.querySelector('.tm-hint');
     const st = {
-      mode: 'globe', data: null, w: 0, h: 0, settleTimer: 0, frame: 0, labels: [], clusters: [], recs: [], focus: null, expanded: false,
+      mode: 'globe', data: null, w: 0, h: 0, settleTimer: 0, frame: 0, labels: [], clusters: [], recs: [], sights: [], sel: null, focus: null, expanded: false, inset: 0,
       // flat
       svg: null, g: null, proj: null, zoom: null, t: d3.zoomIdentity, W0: 0, H0: 0, img: null, hiRes: false,
       // globe
@@ -94,6 +94,8 @@ void main() {
 
     // ---------- shared projection helpers
     const baseR = () => Math.min(st.w, st.h) * 0.43;
+    // Vertical middle of the visible map: a card over its bottom (st.inset px) pushes the globe up.
+    const midY = () => (st.h - st.inset) / 2;
     function screen(lng, lat) {
       if (st.mode === 'flat') {
         const p = st.proj([lng, lat]);
@@ -127,7 +129,7 @@ void main() {
       st.hiRes = w * dpr() > 1400;
       st.img = g.append('image').attr('href', `travel-earth/merc-${st.hiRes ? 4096 : 2048}.webp`).attr('width', st.W0).attr('height', st.H0).attr('preserveAspectRatio', 'none');
       g.append('g').selectAll('path').data(data.features).join('path')
-        .attr('class', (f) => `tm-land ${data.visits.get(f.id) || ''} ${f.id === data.home.n ? 'home' : ''}`)
+        .attr('class', (f) => `tm-land ${data.visits.get(f.id) || ''} ${f.id === data.home.n ? 'home' : ''} ${st.sel && st.sel.id === f.id ? 'sel' : ''}`)
         .attr('d', path)
         .on('click', (e, f) => hooks.onCountry(f.id));
       g.append('path').attr('class', 'tm-border').attr('d', path(data.borders));
@@ -251,24 +253,25 @@ void main() {
       d3.select(st.ov).on('click', null).on('click', (e) => {
         const [x, y] = d3.pointer(e, st.ov);
         const ll = st.gproj.invert([x, y]);
-        if (!ll || Math.hypot(x - st.w / 2, y - st.h / 2) > baseR() * st.k) return;
+        if (!ll || Math.hypot(x - st.w / 2, y - midY()) > baseR() * st.k) return;
         const f = st.data.features.find((ft) => d3.geoContains(ft, ll));
         if (f) hooks.onCountry(f.id);
       });
     }
-    const syncGlobe = () => st.gproj.scale(baseR() * st.k).translate([st.w / 2, st.h / 2]).rotate(st.rot);
+    const syncGlobe = () => st.gproj.scale(baseR() * st.k).translate([st.w / 2, midY()]).rotate(st.rot);
     function drawGlobe() {
       const { w, h } = st;
       const ratio = dpr();
       const r = baseR() * st.k;
       syncGlobe();
-      glow.style.cssText = `width:${r * 2.36}px;height:${r * 2.36}px;left:${w / 2 - r * 1.18}px;top:${h / 2 - r * 1.18}px`;
+      const cy = midY();
+      glow.style.cssText = `width:${r * 2.36}px;height:${r * 2.36}px;left:${w / 2 - r * 1.18}px;top:${cy - r * 1.18}px`;
       if (st.gl && st.texReady) {
         const { gl, u } = st.gl;
         gl.viewport(0, 0, st.glCanvas.width, st.glCanvas.height);
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.uniform2f(u.center, (w / 2) * ratio, st.glCanvas.height - (h / 2) * ratio);
+        gl.uniform2f(u.center, (w / 2) * ratio, st.glCanvas.height - cy * ratio);
         gl.uniform1f(u.radius, r * ratio);
         gl.uniform2f(u.rot, (-st.rot[0] * Math.PI) / 180, (-st.rot[1] * Math.PI) / 180);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -283,7 +286,7 @@ void main() {
       if (!st.gl || !st.texReady) {
         // No WebGL (or the photo is still loading): a drawn globe instead of the satellite one.
         ctx.beginPath(); path({ type: 'Sphere' });
-        const sea = ctx.createRadialGradient(w / 2 - r * 0.3, h / 2 - r * 0.35, r * 0.1, w / 2, h / 2, r);
+        const sea = ctx.createRadialGradient(w / 2 - r * 0.3, cy - r * 0.35, r * 0.1, w / 2, cy, r);
         sea.addColorStop(0, '#2d6fb7'); sea.addColorStop(1, '#0b2a55');
         ctx.fillStyle = sea; ctx.fill();
         ctx.beginPath(); path({ type: 'FeatureCollection', features: st.k > 2.2 ? data.features : data.lite }); ctx.fillStyle = '#5f7f4f'; ctx.fill();
@@ -300,6 +303,13 @@ void main() {
       ctx.setLineDash([]);
       ctx.beginPath(); path(st.k > 2.2 ? data.borders : data.bordersLite);
       ctx.lineWidth = 0.6; ctx.strokeStyle = 'rgba(255,255,255,.38)'; ctx.stroke();
+      const picked = st.sel && (features.find((f) => f.id === st.sel.id) || data.features.find((f) => f.id === st.sel.id));
+      if (picked) {
+        ctx.beginPath(); path(picked);
+        ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fill();
+        ctx.shadowColor = 'rgba(255,255,255,.9)'; ctx.shadowBlur = 10; ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
       data.arcs.forEach(([a, b, cls]) => {
         ctx.beginPath(); path({ type: 'LineString', coordinates: [a, b] });
         ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 3.2; ctx.setLineDash([]); ctx.stroke();
@@ -320,6 +330,7 @@ void main() {
       st.labels.forEach((l) => placeEl(l.node, l.lng, l.lat));
       st.clusters.forEach((c) => placeEl(c.node, c.lng, c.lat));
       st.recs.forEach((r) => placeEl(r.node, r.lng, r.lat));
+      st.sights.forEach((x) => placeEl(x.node, x.lng, x.lat));
       if (st.homeNode) placeEl(st.homeNode, st.data.home.lng, st.data.home.lat);
       if (st.focus) placeEl(st.focus.node, st.focus.lng, st.focus.lat);
     }
@@ -343,7 +354,35 @@ void main() {
       if (!data) return;
       if (st.mode === 'globe') syncGlobe();
       const taken = [];
-      // Photo pins first: one per place, merged when they would overlap.
+      // The tapped country's famous sights come first; new ones pop in one after another.
+      const oldSights = new Map(st.sights.map((x) => [x.key, x]));
+      st.sights = [];
+      // The highlighted sight goes first so it is never hidden behind its neighbours.
+      const order0 = st.sel ? [...st.sel.list].sort((a, b) => (b.i === st.sel.active) - (a.i === st.sel.active)) : [];
+      order0.forEach((x, order) => {
+        const p = screen(x.lng, x.lat);
+        if (!inView(p, 0)) return;
+        const rect = [p[0] - 23, p[1] - 52, p[0] + 23, p[1] + 18];
+        if (overlaps(rect, taken)) return;
+        taken.push(rect);
+        const key = `${st.sel.code}:${x.i}:${x.photo ? 1 : 0}`; // a pin pops in again once its photo arrives
+        let node = oldSights.get(key)?.node;
+        oldSights.delete(key);
+        if (!node) {
+          node = document.createElement('button');
+          node.type = 'button';
+          node.className = 'tm-sight';
+          node.dataset.pinSight = `${st.sel.code}:${x.i}`;
+          node.style.setProperty('--d', `${order * 80}ms`);
+          node.setAttribute('aria-label', x.name);
+          node.innerHTML = `<span class="tm-ph">${x.photo ? `<img src="${esc(x.photo)}" alt="" decoding="async" referrerpolicy="no-referrer">` : ''}</span><small>${esc(x.name)}</small>`;
+          pinLayer.appendChild(node);
+        }
+        node.classList.toggle('on', st.sel.active === x.i);
+        st.sights.push({ ...x, key, node });
+      });
+      oldSights.forEach((x) => x.node.remove());
+      // Photo pins: one per place, merged when they would overlap.
       const clusters = [];
       data.trips.forEach((t) => {
         const p = screen(t.lng, t.lat);
@@ -404,7 +443,7 @@ void main() {
       const close = st.mode === 'flat' ? st.t.k >= 2.4 : st.k >= 2.1;
       pinLayer.querySelectorAll('.tm-rec').forEach((n) => n.remove());
       st.recs = [];
-      if (close) {
+      if (close && !st.sel) {
         data.recs.forEach((r) => {
           if (st.recs.length >= 24) return;
           const p = screen(r.lng, r.lat);
@@ -415,7 +454,7 @@ void main() {
           const node = document.createElement('button');
           node.type = 'button';
           node.className = 'tm-rec';
-          node.dataset.dest = r.id;
+          node.dataset.pinDest = r.id;
           node.innerHTML = `<span class="tm-ph">${r.photo ? `<img src="${esc(r.photo)}" alt="" decoding="async" referrerpolicy="no-referrer">` : ''}</span><small>${esc(r.name)}</small>`;
           pinLayer.appendChild(node);
           st.recs.push({ ...r, node });
@@ -433,8 +472,14 @@ void main() {
         hooks.onTrip(ids[0]);
         return;
       }
+      const sight = e.target.closest('.tm-sight');
+      if (sight) {
+        const [code, i] = sight.dataset.pinSight.split(':');
+        hooks.onSight(code, Number(i));
+        return;
+      }
       const rec = e.target.closest('.tm-rec');
-      if (rec) hooks.onDest(rec.dataset.dest);
+      if (rec) hooks.onDest(rec.dataset.pinDest);
     });
 
     const sizeKey = () => `${st.mode}:${root.clientWidth || 800}:${st.expanded ? root.clientHeight : ''}`;
@@ -485,6 +530,57 @@ void main() {
         if (st.data) build(true);
       },
       get expanded() { return st.expanded; },
+      // A tapped country: outline it and show its famous sights as photo pins ({ id, code, list, active }).
+      showSights(sel) {
+        if (sel && st.sel && st.sel.id === sel.id && sel.active == null) sel.active = st.sel.active;
+        st.sel = sel;
+        if (st.g) st.g.selectAll('.tm-land').classed('sel', (f) => Boolean(sel) && f.id === sel.id);
+        draw();
+        settle();
+      },
+      setActiveSight(i) {
+        if (!st.sel) return;
+        st.sel.active = i;
+        settle();
+      },
+      // Fly so that all the given places are in view (points: [[lng, lat], ...]).
+      fitPoints(points) {
+        if (points.length < 2) return;
+        const visible = Math.min(st.w, st.h - st.inset);
+        if (st.mode === 'globe') {
+          const center = d3.geoCentroid({ type: 'MultiPoint', coordinates: points });
+          const spread = Math.max(0.004, ...points.map((p) => d3.geoDistance(center, p)));
+          const k = (visible * 0.36) / (baseR() * Math.sin(Math.min(Math.PI / 2, spread)));
+          api.rotateTo([-center[0], -center[1]], Math.max(1.1, Math.min(8, k)), 1000);
+          return;
+        }
+        const xy = points.map((p) => st.proj(p));
+        const [x0, x1] = d3.extent(xy, (p) => p[0]);
+        const [y0, y1] = d3.extent(xy, (p) => p[1]);
+        const k = Math.max(1.5, Math.min(14, Math.min((st.w * 0.7) / Math.max(1, x1 - x0), ((st.h - st.inset) * 0.6) / Math.max(1, y1 - y0))));
+        const t = d3.zoomIdentity.translate(st.w / 2, midY()).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
+        d3.select(box).transition().duration(REDUCED ? 0 : 900).ease(d3.easeCubicInOut).call(st.zoom.transform, clamp(t));
+      },
+      // Fly to a country, closer for small ones (area in km²).
+      // Space taken by a card over the bottom of the map; the globe glides up to stay in view.
+      setInset(px) {
+        const from = st.inset;
+        const to = Math.max(0, Math.min(st.h * 0.55, px || 0));
+        if (from === to) return;
+        const start = performance.now();
+        const step = (now) => {
+          const p = REDUCED ? 1 : Math.min(1, (now - start) / 420);
+          st.inset = from + (to - from) * d3.easeCubicOut(p);
+          if (st.mode === 'globe') { drawGlobe(); place(); }
+          if (p < 1) requestAnimationFrame(step); else settleSoon();
+        };
+        requestAnimationFrame(step);
+      },
+      focusArea(lng, lat, area) {
+        const size = Math.sqrt(Math.max(1, area || 1));
+        if (st.mode === 'globe') { api.rotateTo([-lng, -lat], Math.max(1.1, Math.min(6, 1800 / size)), 1100); return; }
+        api.focus(lng, lat, Math.max(1.5, Math.min(12, 3600 / size)));
+      },
       rotateTo(rot, k, ms = 1000) {
         cancelAnimationFrame(st.anim);
         const from = [...st.rot];
@@ -515,7 +611,7 @@ void main() {
         }
         if (st.mode === 'globe') { api.rotateTo([-lng, -lat], Math.min(8, Math.max(1.6, k / 2)), 1100); return; }
         const p = st.proj([lng, lat]);
-        const t = d3.zoomIdentity.translate(st.w / 2, st.h / 2).scale(k).translate(-p[0], -p[1]);
+        const t = d3.zoomIdentity.translate(st.w / 2, midY()).scale(k).translate(-p[0], -p[1]);
         d3.select(box).transition().duration(REDUCED ? 0 : 900).ease(d3.easeCubicInOut).call(st.zoom.transform, clamp(t));
       },
       zoomBy(f) {

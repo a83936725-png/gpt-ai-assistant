@@ -613,13 +613,14 @@
    "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Fish_Amok_with_Rice.jpg/1280px-Fish_Amok_with_Rice.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:KH:柬式粿條湯": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/7/7b/Katieu.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/f9876e508d67.webp",
    "width": 1280,
    "height": 960,
    "page": "https://commons.wikimedia.org/wiki/File:Katieu.jpg",
    "author": "Pwordissony",
    "license": "Public domain",
-   "file": "Katieu.jpg"
+   "file": "Katieu.jpg",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/7/7b/Katieu.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:KH:棕櫚糖": {
    "src": "travel-photos/ceb7c4f0ba4c.webp",
@@ -652,22 +653,24 @@
    "remote": "https://upload.wikimedia.org/wikipedia/commons/4/49/Bajaj_auto-rickshaw_in_Sri_Lanka.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:KH:仙女舞": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/e/e8/Apsara_Cambodia12.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/846b6b026f50.webp",
    "width": 1280,
    "height": 1626,
    "page": "https://commons.wikimedia.org/wiki/File:Apsara_Cambodia12.jpg",
    "author": "Apsara dancer",
    "license": "CC0",
-   "file": "Apsara_Cambodia12.jpg"
+   "file": "Apsara_Cambodia12.jpg",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/e/e8/Apsara_Cambodia12.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:MV:鮪魚椰子沙拉": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/d/de/Mas_huni-roshi087.JPG?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/6e3002d0379f.webp",
    "width": 1280,
    "height": 984,
    "page": "https://commons.wikimedia.org/wiki/File:Mas_huni-roshi087.JPG",
    "author": "Xavier Romero-Frias",
    "license": "CC BY-SA 3.0",
-   "file": "Mas_huni-roshi087.JPG"
+   "file": "Mas_huni-roshi087.JPG",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/d/de/Mas_huni-roshi087.JPG?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:MV:魚湯": {
    "src": "travel-photos/71a22de129a7.webp",
@@ -990,13 +993,14 @@
    "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/de/Afternoon_meal_in_Tiffin.jpg/1280px-Afternoon_meal_in_Tiffin.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "culture:GB:英式酒吧": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/8/81/Pub.williams.arp.750pix.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/ffe655d44b1e.webp",
    "width": 1280,
    "height": 915,
    "page": "https://commons.wikimedia.org/wiki/File:Pub.williams.arp.750pix.jpg",
    "author": "The original uploader was Arpingstone at English Wikipedia.",
    "license": "Public domain",
-   "file": "Pub.williams.arp.750pix.jpg"
+   "file": "Pub.williams.arp.750pix.jpg",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/8/81/Pub.williams.arp.750pix.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:GB:英超足球": {
    "src": "travel-photos/51562e433a05.webp",
@@ -1189,13 +1193,14 @@
    "remote": "https://upload.wikimedia.org/wikipedia/commons/5/54/00ane_Haxen.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:DE:德國香腸": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/b/b0/German_Bratw%C3%BCrste.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/168f9dd3a97f.webp",
    "width": 1280,
    "height": 1387,
    "page": "https://commons.wikimedia.org/wiki/File:German_Bratw%C3%BCrste.jpg",
    "author": "Gerbis",
    "license": "CC BY-SA 3.0",
-   "file": "German_Bratwürste.jpg"
+   "file": "German_Bratwürste.jpg",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/b/b0/German_Bratw%C3%BCrste.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:DE:椒鹽卷餅": {
    "src": "travel-photos/1fb93dbeabfe.webp",
@@ -1688,13 +1693,14 @@
    "remote": "https://upload.wikimedia.org/wikipedia/commons/7/74/Fresh_camel_milk_%28Dubai%29_%28cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:AE:沙漠野營": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/3/39/Landy4no.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/cdb3bfa1495c.webp",
    "width": 1280,
    "height": 927,
    "page": "https://commons.wikimedia.org/wiki/File:Landy4no.jpg",
    "author": "Dazzuko at English Wikipedia",
    "license": "Public domain",
-   "file": "Landy4no.jpg"
+   "file": "Landy4no.jpg",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/3/39/Landy4no.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "culture:AE:謝赫扎耶德清真寺": {
    "src": "travel-photos/bdfa3bbf93aa.webp",
@@ -2946,13 +2952,14 @@
    "remote": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/%E5%A4%A7%E4%B8%89%E5%B7%B4%E7%89%8C%E5%9D%8A.jpg/1280px-%E5%A4%A7%E4%B8%89%E5%B7%B4%E7%89%8C%E5%9D%8A.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
   },
   "spot:macau:議事亭前地": {
-   "src": "https://upload.wikimedia.org/wikipedia/commons/f/f7/Centre_of_Makau.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "src": "travel-photos/9a884ee5110b.webp",
    "width": 1280,
    "height": 960,
    "page": "https://commons.wikimedia.org/wiki/File:Centre_of_Makau.jpg",
    "author": "Андрей Суриков / Andrey Surikov. Original uploader was Сура at ru.wikipedia",
    "license": "CC BY 2.5",
-   "file": "Centre_of_Makau.jpg"
+   "file": "Centre_of_Makau.jpg",
+   "remote": "https://upload.wikimedia.org/wikipedia/commons/f/f7/Centre_of_Makau.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
   },
   "spot:macau:澳門塔觀光層": {
    "src": "travel-photos/69d40abbe594.webp",

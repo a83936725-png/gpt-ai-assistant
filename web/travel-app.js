@@ -2310,6 +2310,42 @@
     setTimeout(() => wrap.remove(), 1100);
   }
   const buzz = () => { try { if (!REDUCED) navigator.vibrate?.(10); } catch { /* not supported */ } };
+  // ---------- home quick actions: small real objects (a die, an album, a SIM card, a hand of cards, a phone)
+  // The album cover and the cards show photos from your own latest trips.
+  function renderQuickArt() {
+    const pool = [...sortTrips(trips).reverse().map((t) => destPhoto(t.dest)), ...DESTS.map((d) => destPhoto(d.id))].filter(Boolean);
+    const photos = [...new Map(pool.map((p) => [p.src, p])).values()];
+    if (!photos.length) return;
+    $$('img[data-art-photo]').forEach((img) => {
+      const p = photos[Number(img.dataset.artPhoto) % photos.length];
+      if (img.getAttribute('src') === p.src) return;
+      img.referrerPolicy = 'no-referrer';
+      img.src = p.src;
+    });
+  }
+  const quickArts = $$('.quick-art .art');
+  const playArt = (art) => {
+    art.classList.remove('play');
+    art.getBoundingClientRect();
+    art.classList.add('play');
+  };
+  quickArts.forEach((art) => {
+    const btn = art.closest('button');
+    btn.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') playArt(art); });
+    btn.addEventListener('pointerdown', () => playArt(art));
+  });
+  // While the home screen is in view, the five take turns moving, one every couple of seconds.
+  let artTurn = 0;
+  if (!REDUCED && quickArts.length) {
+    setInterval(() => {
+      if (document.hidden || currentTab !== 'map' || modal.open) return;
+      const r = quickArts[0].closest('.quick').getBoundingClientRect();
+      if (!r.width || r.bottom < 0 || r.top > window.innerHeight) return;
+      playArt(quickArts[artTurn % quickArts.length]);
+      artTurn += 1;
+    }, 2400);
+  }
+
   // Tapping the big medal in a badge sheet spins it again.
   document.addEventListener('click', (e) => {
     const m = e.target.closest('.badge-hero .medal');
@@ -3855,7 +3891,7 @@
     document.title = CONFIG.brand;
     $$('[data-brand]').forEach((n) => { n.textContent = CONFIG.brand; });
     $$('#year-seg button').forEach((b) => b.classList.toggle('on', b.dataset.year === settings.year));
-    renderCover(); renderHero(); renderStats(); renderMapRecs(); renderReview(); renderRecs(); renderEsim(); renderTrips(); renderCards(); renderBadgeWall();
+    renderCover(); renderHero(); renderStats(); renderMapRecs(); renderReview(); renderRecs(); renderEsim(); renderTrips(); renderCards(); renderBadgeWall(); renderQuickArt();
     if (currentTab === 'plan') renderPlanner();
     drawMap();
     animateIn($(`[data-view="${currentTab}"]`));

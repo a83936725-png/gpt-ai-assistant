@@ -9,6 +9,9 @@ import {
 import {
   countPhotos, isJpeg, loadPhoto, PHOTO_ID, PHOTO_KINDS, PHOTO_MAX_COUNT, removePhoto, savePhoto,
 } from '../utils/travel-photos.js';
+import {
+  closeGroup, createGroup, GroupError, GROUP_ID, GROUP_MAX_BYTES, joinGroup, leaveGroup, readGroup,
+} from '../utils/travel-groups.js';
 
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
 const WEB_DIR = path.join(process.cwd(), 'web');
@@ -152,7 +155,7 @@ router.get('/travel-earth/:name', (req, res) => {
 
 router.get('/api/status', (req, res) => {
   res.json({
-    ai: aiAvailable(), brand: config.TRAVEL_BRAND, esimUrl: config.TRAVEL_ESIM_URL, guideVideo: config.TRAVEL_GUIDE_VIDEO_URL, liff: config.TRAVEL_LIFF_ID,
+    ai: aiAvailable(), brand: config.TRAVEL_BRAND, esimUrl: config.TRAVEL_ESIM_URL, guideVideo: config.TRAVEL_GUIDE_VIDEO_URL, liff: config.TRAVEL_LIFF_ID, groups: true,
   });
 });
 
@@ -283,6 +286,36 @@ router.delete('/api/photos/:id', async (req, res) => {
     photoFailed(res, err);
   }
 });
+
+// 揪團: invitations friends open from a link, and the nicknames that signed up.
+const groupRoute = (handler) => async (req, res) => {
+  if (isSyncLimited(getClientIp(req))) {
+    res.status(429).json({ code: 'too_many_requests', error: '操作太頻繁，請稍後再試' });
+    return;
+  }
+  try {
+    res.json(await handler(req));
+  } catch (err) {
+    if (err instanceof GroupError) {
+      res.status(err.status).json({ code: 'group_error', error: err.message });
+      return;
+    }
+    console.error(JSON.stringify({ type: 'travel_group_error', message: err.message }));
+    res.status(502).json({ code: 'group_failed', error: '揪團暫時無法使用，請稍後再試' });
+  }
+};
+const groupId = (req) => {
+  if (!GROUP_ID.test(req.params.id)) throw new GroupError('找不到這個揪團', 404);
+  return req.params.id;
+};
+router.post('/api/groups', groupRoute((req) => {
+  if (Buffer.byteLength(JSON.stringify(req.body?.invite ?? {})) > GROUP_MAX_BYTES) throw new GroupError('揪團內容太長，請精簡行程', 413);
+  return createGroup(req.body?.invite);
+}));
+router.get('/api/groups/:id', groupRoute((req) => readGroup(groupId(req))));
+router.post('/api/groups/:id/join', groupRoute((req) => joinGroup(groupId(req), req.body || {})));
+router.post('/api/groups/:id/leave', groupRoute((req) => leaveGroup(groupId(req), req.body?.who)));
+router.post('/api/groups/:id/close', groupRoute((req) => closeGroup(groupId(req), req.body?.key, req.body?.closed)));
 
 export { isRateLimited, resetRateLimit };
 

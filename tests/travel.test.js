@@ -12,6 +12,7 @@ import {
   resetTravelData, sanitizeTravelData, TravelSyncError, verifyIdToken,
 } from '../utils/travel-sync.js';
 import { isJpeg, resetPhotos } from '../utils/travel-photos.js';
+import { cleanInvite, GroupError, resetGroups } from '../utils/travel-groups.js';
 
 let server;
 let base;
@@ -306,4 +307,56 @@ test('sanitizeTravelData keeps the list of backed-up photos', () => {
   expect(data.photos).toEqual([{
     id: 'p-1234567', tripId: 't1', taken: '2025-01-12', caption: '紅葉',
   }]);
+});
+
+const group = (path, body, method = 'POST') => fetch(`${base}/travel/api/groups${path}`, {
+  method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined,
+});
+const INVITE = {
+  d: 'sapporo', c: '北海道・札幌', n: '392', o: [['2026-12-18', '2026-12-24'], ['2027-01-29', '2027-02-04']], days: 7, p: 32000, t: 4, dl: '2026-12-01', m: '一起去泡溫泉看雪', h: '小明', tags: ['snow', 'onsen'], pl: [['13:00 抵達'], ['10:00 二條市場']],
+};
+
+test('cleanInvite keeps the invitation fields and rejects ones without a place or date', () => {
+  const clean = cleanInvite({
+    ...INVITE, extra: 'x', t: 99, o: [...INVITE.o, ['bad', 'date']],
+  });
+  expect(clean.extra).toBeUndefined();
+  expect(clean.t).toBe(30);
+  expect(clean.o).toHaveLength(2);
+  expect(() => cleanInvite({ ...INVITE, c: '' })).toThrow(GroupError);
+  expect(() => cleanInvite({ ...INVITE, o: [] })).toThrow(GroupError);
+});
+
+test('揪團: create, friends join and vote, the organiser closes sign-ups', async () => {
+  resetGroups();
+  const status = await (await fetch(`${base}/travel/api/status`)).json();
+  expect(status.groups).toBe(true);
+  const created = await (await group('', { invite: INVITE })).json();
+  expect(created.id).toMatch(/^[a-z0-9]{10}$/);
+  expect(created.group.invite.g).toBe(created.id);
+  const joined = await (await group(`/${created.id}/join`, {
+    who: 'w-friend-001', name: '小美', opts: [1, 5], msg: '我要去',
+  })).json();
+  expect(joined.members).toEqual([expect.objectContaining({ name: '小美', opts: [1], msg: '我要去' })]);
+  expect(JSON.stringify(joined)).not.toContain('w-friend-001');
+  // Joining again updates the same entry.
+  await group(`/${created.id}/join`, { who: 'w-friend-001', name: '小美美', opts: [0] });
+  await group(`/${created.id}/join`, { who: 'w-friend-002', name: '阿傑', opts: [0] });
+  const read = await (await group(`/${created.id}`, null, 'GET')).json();
+  expect(read.members.map((m) => m.name)).toEqual(['小美美', '阿傑']);
+  expect((await group(`/${created.id}/close`, { key: 'wrong', closed: true })).status).toBe(403);
+  expect((await group(`/${created.id}/close`, { key: created.key, closed: true })).status).toBe(200);
+  expect((await group(`/${created.id}/join`, { who: 'w-friend-003', name: '晚到的人' })).status).toBe(409);
+  await group(`/${created.id}/leave`, { who: 'w-friend-002' });
+  expect((await (await group(`/${created.id}`, null, 'GET')).json()).members).toHaveLength(1);
+});
+
+test('揪團 refuses unknown groups, missing nicknames and bad invitations', async () => {
+  resetGroups();
+  expect((await group('/nope', null, 'GET')).status).toBe(404);
+  expect((await group('/abcdefghij', null, 'GET')).status).toBe(404);
+  expect((await group('', { invite: { ...INVITE, o: [] } })).status).toBe(400);
+  const { id } = await (await group('', { invite: INVITE })).json();
+  expect((await group(`/${id}/join`, { who: 'w-friend-001', name: ' ' })).status).toBe(400);
+  expect((await group(`/${id}/join`, { who: 'x', name: '小美' })).status).toBe(400);
 });

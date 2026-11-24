@@ -13,6 +13,7 @@ import {
 } from '../utils/travel-sync.js';
 import { isJpeg, resetPhotos } from '../utils/travel-photos.js';
 import { cleanInvite, GroupError, resetGroups } from '../utils/travel-groups.js';
+import { issueCoupon, readCoupon, resetCoupons } from '../utils/travel-coupons.js';
 
 let server;
 let base;
@@ -376,4 +377,37 @@ test('揪團 check-ins: members and the organiser stamp places together, strange
   expect(JSON.stringify(one)).not.toContain('w-friend-001');
   const two = await (await group(`/${id}/checkin`, { key, cid: 'ci-2', place: '小樽運河' })).json();
   expect(two.checkins.map((c) => c.name)).toEqual(['小美', '小明']);
+});
+
+const coupon = (path, body) => fetch(`${base}/travel/api/coupons/${path}`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}),
+});
+
+test('分享回饋券 codes are signed: a real one reads back, a changed or made-up one does not', () => {
+  const now = Date.UTC(2026, 10, 24);
+  const c = issueCoupon(now);
+  expect(c.code).toMatch(/^SHARE-[0-9A-Z]{6}-[0-9A-Z]{6}-[0-9A-Z]{6}$/);
+  expect(c).toMatchObject({ pct: 10, max: 300, until: '2027-01-23' });
+  expect(readCoupon(c.code.toLowerCase(), now)).toMatchObject({ code: c.code, pct: 10, expired: false });
+  const last = c.code.slice(-1) === 'A' ? 'B' : 'A';
+  expect(readCoupon(`${c.code.slice(0, -1)}${last}`, now)).toBeNull();
+  expect(readCoupon('SHARE-AAAAAA-AAAAAA-AAAAAA', now)).toBeNull();
+  expect(readCoupon(c.code, Date.UTC(2027, 1, 1)).expired).toBe(true);
+});
+
+test('分享回饋券: issued, checked at checkout, used once, a few per IP a day', async () => {
+  resetCoupons();
+  const status = await (await fetch(`${base}/travel/api/status`)).json();
+  expect(status.coupons).toBe(true);
+  const issued = await (await coupon('issue')).json();
+  const checked = await coupon('verify', { code: issued.code });
+  expect(checked.status).toBe(200);
+  expect((await checked.json()).pct).toBe(10);
+  expect((await coupon('redeem', { code: issued.code, orderNo: 'TM1' })).status).toBe(200);
+  expect((await coupon('verify', { code: issued.code })).status).toBe(409);
+  expect((await coupon('redeem', { code: issued.code, orderNo: 'TM2' })).status).toBe(409);
+  expect((await coupon('verify', { code: 'SHARE-NOTREAL-000' })).status).toBe(400);
+  await coupon('issue');
+  await coupon('issue');
+  expect((await coupon('issue')).status).toBe(429);
 });

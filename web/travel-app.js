@@ -287,7 +287,7 @@
   const stampHtml = (c, i = 0) => {
     const t = c.trip;
     const label = c.place && [...c.place].length <= 6 ? c.place : t.city;
-    return `<button class="stamp-chip" data-ci-open="${t.id}:${c.id}" style="--ink:${inkOf(c.id)};--rot:${((i * 37) % 17) - 8}deg"><small>${esc(country(t.n).name)}</small><b>${esc(label.slice(0, 6))}</b><small>${esc((c.date || t.start).slice(2).replace(/-/g, '.'))}</small></button>`;
+    return `<button class="stamp-chip" data-ci-open="${t.id}:${c.id}" style="--ink:${inkOf(c.id)};--rot:${((i * 37) % 17) - 8}deg"><small>${esc(country(t.n).name)}</small><b class="${[...label].length > 4 ? 'long' : ''}">${esc([...label].slice(0, 6).join(''))}</b><small>${esc((c.date || t.start).slice(2).replace(/-/g, '.'))}</small></button>`;
   };
   const shareCount = () => Number(settings.shares) || 0;
   let ci = null;
@@ -1741,6 +1741,7 @@
       <label class="row small"><input type="checkbox" id="co-agree" checked> 我已確認手機支援 eSIM，並同意使用條款</label>
       <p class="notice">示範結帳：不會真的扣款。正式購買請到 <a href="${CONFIG.esimUrl}" target="_blank" rel="noopener">官網</a>。</p>
       <div class="sheet-bar"><div><small class="muted">應付金額</small><div class="price" id="co-total" data-total="${total}" data-off="${cd ? cd.off : 0}">NT$${fmt(total - (cd ? cd.off : 0))}</div></div><span class="spacer"></span><button class="btn primary" data-pay>確認付款（示範）</button></div>`, { sheet: true });
+    checkCheckoutCoupon(cd);
   }
   function pay() {
     const email = $('#co-email').value.trim();
@@ -1749,13 +1750,15 @@
     user.email = email;
     const btn = $('[data-pay]');
     btn.disabled = true; btn.textContent = '付款處理中…';
-    const cd = $('#co-coupon')?.checked ? couponDiscount(sum(cart, (k) => planPrice(k.key, k.plan, k.qty))) : null;
+    const cd = $('#co-coupon')?.checked && $('.coupon-row') ? couponDiscount(sum(cart, (k) => planPrice(k.key, k.plan, k.qty))) : null;
     setTimeout(() => {
       const made = cart.map((k) => makeOrder({ key: k.key, plan: k.plan, qty: k.qty, tripIds: k.tripIds }));
       if (cd && made[0]) {
         made[0].discount = cd.off;
         made[0].price = Math.max(0, made[0].price - cd.off);
         cd.k.used = made[0].orderNo;
+        // In this demo shop the page marks the code used; with real payments the payment backend does it.
+        if (cd.k.server && CONFIG.coupons) couponApi('redeem', { code: cd.k.code, orderNo: made[0].orderNo }).catch(() => {});
       }
       orders.push(...made);
       cart = [];
@@ -4656,8 +4659,9 @@
     if (fresh.length) setTimeout(() => toast(`解鎖新徽章「${BADGES.find((b) => b.key === fresh[0]).name}」`), 900);
     // Sharing earns a 9 折 eSIM coupon, once every 30 days.
     if (['checkin', 'photo', 'group', 'badge', 'year'].includes(studio.ctx?.kind)) {
-      const k = grantCoupon();
-      if (k) setTimeout(() => toast(`謝謝分享！送你 eSIM 9 折券 ${k.code}（${md(k.until)} 前有效），結帳自動折抵`), fresh.length ? 3200 : 900);
+      grantCoupon().then((k) => {
+        if (k) setTimeout(() => toast(`謝謝分享！送你 eSIM 9 折券 ${k.code}（${md(k.until)} 前有效），結帳自動折抵`), fresh.length ? 3200 : 900);
+      });
     }
   }
   const tag = (s) => `#${String(s || '').replace(/[\s・·,，、()（）.。!！?？/]/g, '')}`;
@@ -5275,7 +5279,7 @@
     if (!box) return;
     if (!groups.length) {
       const picks = (recState.origin?.lat != null ? recommend(recState.origin) : []).slice(0, 3).map((r) => r.d);
-      box.innerHTML = `<div class="group-empty"><p class="muted small">挑一個想去的地方，系統幫你把日期、每人費用、景點與行程做成一張邀請，傳到 LINE 群組，朋友點連結就能喊 +1。</p>
+      box.innerHTML = `<div class="group-empty">
         <div class="group-ideas">${picks.map((d) => `<button class="group-idea" data-group-dest="${d.id}"><span class="ph">${imgHtml(destPhoto(d.id), d.name)}</span><b>揪團去${esc(d.name)}</b><small>每人約 NT$${fmt(Math.round(tripCost(d, d.hours > 8 ? 7 : 5).total / 1000) * 1000)}</small></button>`).join('')}</div></div>`;
       return;
     }
@@ -5436,22 +5440,58 @@
   }
 
   // ---------- 分享回饋: sharing a check-in, an invitation, a badge or your footprints earns a 9 折 eSIM coupon,
-  // at most one every 30 days. This is the demo shop: before taking real payments, issue and check codes on the server.
+  // at most one every 30 days. The server issues signed codes and checks them at checkout (utils/travel-coupons.js);
+  // without it (the static preview) a demo code is made on the device.
+  async function couponApi(path, body) {
+    const res = await fetch(`api/coupons/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || `HTTP ${res.status}`), { status: res.status });
+    return data;
+  }
+  let couponBusy = false;
   function couponNow() { return (settings.coupons || []).find((k) => !k.used && k.until >= TODAY); }
   function couponEligible() { return !(settings.coupons || []).some((k) => k.at > addDays(TODAY, -30)); }
   function couponDiscount(total) {
     const k = couponNow();
-    return k && total > 0 ? { k, off: Math.min(300, Math.round((total * k.pct) / 100)) } : null;
+    return k && total > 0 ? { k, off: Math.min(k.max || 300, Math.round((total * k.pct) / 100)) } : null;
   }
-  function grantCoupon() {
-    if (!couponEligible()) return null;
-    const k = {
-      code: `SHARE${Math.random().toString(36).slice(2, 6).toUpperCase()}`, pct: 10, at: TODAY, until: addDays(TODAY, 60), used: '',
-    };
-    settings.coupons = [...(settings.coupons || []), k];
-    save();
-    renderCoupon();
+  async function grantCoupon() {
+    if (couponBusy || !couponEligible()) return null;
+    couponBusy = true;
+    let k = null;
+    try {
+      if (CONFIG.coupons) {
+        const r = await couponApi('issue');
+        k = {
+          code: r.code, pct: r.pct, max: r.max, at: TODAY, until: r.until, used: '', server: true,
+        };
+      } else {
+        k = {
+          code: `DEMO-${Math.random().toString(36).slice(2, 8).toUpperCase()}`, pct: 10, max: 300, at: TODAY, until: addDays(TODAY, 60), used: '', demo: true,
+        };
+      }
+      settings.coupons = [...(settings.coupons || []), k];
+      save();
+      renderCoupon();
+    } catch (err) {
+      if (err.status === 429) toast(err.message);
+      k = null;
+    }
+    couponBusy = false;
     return k;
+  }
+  // At checkout a server coupon is checked again; one that was used or expired drops off.
+  function checkCheckoutCoupon(cd) {
+    if (!cd?.k.server || !CONFIG.coupons) return;
+    couponApi('verify', { code: cd.k.code }).catch((err) => {
+      if (!err.status || err.status >= 500) return;
+      cd.k.used = cd.k.used || 'invalid';
+      save(); renderCoupon();
+      $('.coupon-row')?.remove();
+      const box = $('#co-total');
+      if (box) { box.dataset.off = '0'; box.textContent = `NT$${fmt(Number(box.dataset.total))}`; }
+      toast(`折扣券不能用：${err.message}`);
+    });
   }
   function renderCoupon() {
     const box = $('#coupon-box');
@@ -5789,7 +5829,7 @@
       if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) return;
       const data = await res.json();
       Object.assign(CONFIG, {
-        ai: Boolean(data.ai), brand: data.brand || CONFIG.brand, esimUrl: data.esimUrl || CONFIG.esimUrl, guideVideo: data.guideVideo || '', liff: data.liff || '', groups: Boolean(data.groups),
+        ai: Boolean(data.ai), brand: data.brand || CONFIG.brand, esimUrl: data.esimUrl || CONFIG.esimUrl, guideVideo: data.guideVideo || '', liff: data.liff || '', groups: Boolean(data.groups), coupons: Boolean(data.coupons),
       });
     } catch { /* static preview without the API */ }
   }

@@ -12,6 +12,9 @@ import {
 import {
   closeGroup, createGroup, groupCheckin, GroupError, GROUP_ID, GROUP_MAX_BYTES, joinGroup, leaveGroup, readGroup,
 } from '../utils/travel-groups.js';
+import {
+  CouponError, couponsEnabled, issueCoupon, redeemCoupon, verifyCoupon,
+} from '../utils/travel-coupons.js';
 
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
 const WEB_DIR = path.join(process.cwd(), 'web');
@@ -66,7 +69,16 @@ const isSyncLimited = (ip, now = Date.now()) => {
   if (syncs.size > 5000) syncs.delete(syncs.keys().next().value);
   return recent.length > 600;
 };
-const resetRateLimit = () => { hits.clear(); syncs.clear(); };
+// 分享回饋券: a few per IP a day, so a script cannot collect a pile of them.
+const couponIssues = new Map();
+const isCouponLimited = (ip, now = Date.now()) => {
+  const recent = (couponIssues.get(ip) || []).filter((time) => now - time < 24 * WINDOW_MS);
+  recent.push(now);
+  couponIssues.set(ip, recent);
+  if (couponIssues.size > 5000) couponIssues.delete(couponIssues.keys().next().value);
+  return recent.length > 3;
+};
+const resetRateLimit = () => { hits.clear(); syncs.clear(); couponIssues.clear(); };
 
 const getClientIp = (req) => (req.get('x-forwarded-for') || req.ip || '').split(',')[0].trim();
 const aiAvailable = () => config.TRAVEL_AI_ENABLED && Boolean(config.OPENAI_COMPLETION_API_KEY || config.APP_ENV !== 'production');
@@ -155,7 +167,7 @@ router.get('/travel-earth/:name', (req, res) => {
 
 router.get('/api/status', (req, res) => {
   res.json({
-    ai: aiAvailable(), brand: config.TRAVEL_BRAND, esimUrl: config.TRAVEL_ESIM_URL, guideVideo: config.TRAVEL_GUIDE_VIDEO_URL, liff: config.TRAVEL_LIFF_ID, groups: true,
+    ai: aiAvailable(), brand: config.TRAVEL_BRAND, esimUrl: config.TRAVEL_ESIM_URL, guideVideo: config.TRAVEL_GUIDE_VIDEO_URL, liff: config.TRAVEL_LIFF_ID, groups: true, coupons: couponsEnabled(),
   });
 });
 
@@ -317,6 +329,26 @@ router.post('/api/groups/:id/join', groupRoute((req) => joinGroup(groupId(req), 
 router.post('/api/groups/:id/leave', groupRoute((req) => leaveGroup(groupId(req), req.body?.who)));
 router.post('/api/groups/:id/checkin', groupRoute((req) => groupCheckin(groupId(req), req.body || {})));
 router.post('/api/groups/:id/close', groupRoute((req) => closeGroup(groupId(req), req.body?.key, req.body?.closed)));
+
+// 分享回饋券: issued after a share, checked at checkout, and marked used with the order.
+const couponRoute = (handler) => async (req, res) => {
+  try {
+    res.json(await handler(req));
+  } catch (err) {
+    if (err instanceof CouponError) {
+      res.status(err.status).json({ code: 'coupon_error', error: err.message });
+      return;
+    }
+    console.error(JSON.stringify({ type: 'travel_coupon_error', message: err.message }));
+    res.status(502).json({ code: 'coupon_failed', error: '折扣券暫時無法使用，請稍後再試' });
+  }
+};
+router.post('/api/coupons/issue', couponRoute((req) => {
+  if (isCouponLimited(getClientIp(req))) throw new CouponError('今天領太多張了，明天再分享吧', 429);
+  return issueCoupon();
+}));
+router.post('/api/coupons/verify', couponRoute((req) => verifyCoupon(req.body?.code)));
+router.post('/api/coupons/redeem', couponRoute((req) => redeemCoupon(req.body?.code, req.body?.orderNo)));
 
 export { isRateLimited, resetRateLimit };
 

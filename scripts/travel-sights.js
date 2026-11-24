@@ -49,7 +49,7 @@ async function main() {
   const pages = {};
   for (const part of chunks(titles, 40)) {
     const data = await api({
-      action: 'query', redirects: '1', prop: 'coordinates|pageimages', piprop: 'name', titles: part.join('|'),
+      action: 'query', redirects: '1', prop: 'coordinates|pageimages', colimit: 'max', piprop: 'name', titles: part.join('|'),
     });
     const alias = {};
     [...(data.query.normalized || []), ...(data.query.redirects || [])].forEach((r) => { alias[r.from] = r.to; });

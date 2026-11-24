@@ -474,9 +474,14 @@
   const thumbAt = (src, w) => (/\/thumb\/.+\/\d+px-[^/]+$/.test(src || '') ? src.replace(/\/\d+px-([^/]+)$/, `/${w}px-$1`) : src);
   const sightImg = (x, w = 500) => (x.img ? `<img src="${esc(thumbAt(x.img.src, w))}" alt="${esc(x.n)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '');
   // Every sight with a photo and a position, for the globe's photo layer: the best-known of each country first.
-  const worldSights = () => Object.entries(SIGHTS || {}).flatMap(([code, list]) => list.map((x, i) => (x.img && x.lat != null ? {
-    code, i, name: x.n, lng: x.lng, lat: x.lat, photo: thumbAt(x.img.src, 250), rank: i, home: COUNTRIES[code] ? 0 : 1,
-  } : null)).filter(Boolean)).sort((a, b) => a.rank - b.rank || a.home - b.home);
+  // A country's best-known sight without a recorded position stands at the country's centre, so every
+  // country still shows a photo.
+  const worldSights = () => Object.entries(SIGHTS || {}).flatMap(([code, list]) => list.map((x, i) => {
+    const at = x.lat != null ? { lng: x.lng, lat: x.lat } : (i === 0 && GEO[code]) || null;
+    return x.img && at ? {
+      code, i, name: x.n, lng: at.lng, lat: at.lat, photo: thumbAt(x.img.src, 250), rank: i, home: COUNTRIES[code] ? 0 : 1,
+    } : null;
+  }).filter(Boolean)).sort((a, b) => a.rank - b.rank || a.home - b.home);
   const sightCredit = (x) => (x.img ? `<a class="credit-mini" href="${esc(x.img.page)}" target="_blank" rel="noopener">${esc(x.img.author || 'Wikimedia Commons')}${x.img.license ? `・${esc(x.img.license)}` : ''}</a>` : '');
   // Puts photos into sight tiles already on screen as they arrive.
   function hydrateSights(code) {

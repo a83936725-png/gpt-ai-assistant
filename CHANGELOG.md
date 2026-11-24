@@ -36,6 +36,7 @@
 - Travel: 30 badges in three groups (milestones, travel elements, travel style), shown on a badge wall. Tapping a badge opens what earned it: the trips with their photos, the dishes you ate and things you did (美食獵人 lists each trip's famous foods as photo tiles to tick, and you can add your own), the flags collected, routes flown, seasons, and the date it was unlocked; locked badges show progress and places that would unlock them. Ticking a dish can unlock 吃貨認證
 - Travel: tapping a recommended place on the map opens its photo, sights with ticket prices, flight time and buttons to plan it or buy its eSIM
 - Travel: country sheets no longer spread wider than the phone screen
+- Travel: the map no longer traps the page. On phones one finger scrolls the page and two fingers turn and zoom the map (a sideways swipe shows how); on computers the wheel scrolls the page and Ctrl/⌘ + wheel or a trackpad pinch zooms. A ⤢ button opens the map full screen, where one finger turns the globe or pans the map; ✕ or Esc closes it
 
 ## 4.21.0 (2026-11-22)
 

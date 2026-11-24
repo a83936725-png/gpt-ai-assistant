@@ -137,7 +137,7 @@ main { padding: 16px 0 40px; }
 
 /* map */
 .map-card { padding: 0; overflow: hidden; position: relative; }
-#map { width: 100%; touch-action: none; }
+#map { width: 100%; }
 .ocean { fill: var(--ocean); }
 .grat { fill: none; stroke: var(--grat); stroke-width: .6; vector-effect: non-scaling-stroke; }
 .land { fill: var(--land); stroke: var(--surface); stroke-width: .5; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill .2s; }
@@ -608,6 +608,15 @@ section h3 { margin-top: 2px; }
 .tm-map { position: relative; width: 100%; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
   background: radial-gradient(ellipse at 50% 42%, #10234a 0%, #060c1c 62%, #02040a 100%); }
 .tm-map:active { cursor: grabbing; }
+.tm-map:not(.expanded) { touch-action: pan-y; }
+.tm-hint { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 4; max-width: calc(100% - 48px); padding: 10px 16px; border-radius: 14px; background: rgba(8,14,30,.82); color: #fff; font-size: 14px; font-weight: 600; text-align: center; pointer-events: none; opacity: 0; transition: opacity .25s; }
+.tm-hint.show { opacity: 1; }
+/* full-screen map: every gesture goes to the map */
+html.map-open { overflow: hidden; }
+.map-card.full { position: fixed; inset: 0; z-index: 90; margin: 0 !important; border: 0; border-radius: 0; display: flex; flex-direction: column; }
+.map-card.full #map { flex: 1; min-height: 0; }
+.map-card.full .map-tools, .map-card.full .map-modes { top: calc(10px + env(safe-area-inset-top)); }
+.map-card.full .legend { display: none; }
 .tm-map[data-mode="globe"]::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .7;
   background-image: radial-gradient(1px 1px at 8% 14%, #fff, transparent), radial-gradient(1px 1px at 22% 72%, #cfe0ff, transparent), radial-gradient(1.5px 1.5px at 38% 8%, #fff, transparent),
     radial-gradient(1px 1px at 61% 88%, #fff, transparent), radial-gradient(1px 1px at 79% 18%, #dfe9ff, transparent), radial-gradient(1.5px 1.5px at 92% 64%, #fff, transparent),
@@ -805,6 +814,7 @@ section h3 { margin-top: 2px; }
         <div id="map" aria-label="世界旅遊足跡地圖"></div>
         <div class="map-empty" id="map-loading">地圖載入中…</div>
         <div class="map-tools">
+          <button id="map-full" aria-label="全螢幕地圖" aria-pressed="false">⤢</button>
           <button id="zoom-in" aria-label="放大">＋</button>
           <button id="zoom-out" aria-label="縮小">－</button>
           <button id="zoom-reset" aria-label="回到全圖">⟲</button>

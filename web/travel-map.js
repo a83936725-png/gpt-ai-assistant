@@ -47,20 +47,50 @@ void main() {
   function createMap(root, hooks) {
     root.innerHTML = `<div class="tm-map">
       <div class="tm-glow"></div><div class="tm-base"></div><div class="tm-labels" aria-hidden="true"></div><div class="tm-pins"></div>
-      <span class="tm-credit">衛星影像 NASA Blue Marble</span></div>`;
+      <span class="tm-credit">衛星影像 NASA Blue Marble</span><div class="tm-hint" aria-live="polite"></div></div>`;
     const box = root.querySelector('.tm-map');
     const base = box.querySelector('.tm-base');
     const labelLayer = box.querySelector('.tm-labels');
     const pinLayer = box.querySelector('.tm-pins');
     const glow = box.querySelector('.tm-glow');
+    const hintBox = box.querySelector('.tm-hint');
     const st = {
-      mode: 'globe', data: null, w: 0, h: 0, settleTimer: 0, frame: 0, labels: [], clusters: [], recs: [], focus: null,
+      mode: 'globe', data: null, w: 0, h: 0, settleTimer: 0, frame: 0, labels: [], clusters: [], recs: [], focus: null, expanded: false,
       // flat
       svg: null, g: null, proj: null, zoom: null, t: d3.zoomIdentity, W0: 0, H0: 0, img: null, hiRes: false,
       // globe
       rot: [-121, -18], k: 1, gproj: d3.geoOrthographic().clipAngle(90).precision(0.6), gl: null, glCanvas: null, ov: null, ctx: null, tex: null, texSize: 0, anim: 0, vel: null,
     };
     const colors = () => hooks.colors();
+
+    // ---------- gestures. In the page, one finger and the mouse wheel scroll the page (a map this tall would
+    // otherwise trap it); the map takes two fingers, a mouse drag, or Ctrl/⌘ + wheel (also a trackpad pinch).
+    // Full screen takes every gesture.
+    let hintTimer = 0;
+    function hint(text) {
+      hintBox.textContent = text;
+      hintBox.classList.add('show');
+      clearTimeout(hintTimer);
+      hintTimer = setTimeout(() => hintBox.classList.remove('show'), 1600);
+    }
+    const gestures = (e) => {
+      if (st.expanded) return !e.button;
+      if (e.type === 'wheel') {
+        if (e.ctrlKey || e.metaKey) return true;
+        hint('按住 Ctrl（Mac 用 ⌘）再滾動可縮放地圖');
+        return false;
+      }
+      if (e.type === 'touchstart') return e.touches.length > 1;
+      return !e.button && !e.ctrlKey;
+    };
+    let touchFrom = null;
+    box.addEventListener('touchstart', (e) => { touchFrom = e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, { passive: true });
+    box.addEventListener('touchmove', (e) => {
+      if (st.expanded || !touchFrom || e.touches.length !== 1) return;
+      const dx = Math.abs(e.touches[0].clientX - touchFrom[0]);
+      const dy = Math.abs(e.touches[0].clientY - touchFrom[1]);
+      if (dx > 24 && dx > dy * 1.2) { touchFrom = null; hint('用兩指轉動地圖，或按右上角 ⤢ 全螢幕'); }
+    }, { passive: true });
 
     // ---------- shared projection helpers
     const baseR = () => Math.min(st.w, st.h) * 0.43;
@@ -83,7 +113,7 @@ void main() {
     // ---------- flat map (SVG)
     // zoom.transform does not keep the view inside the map by itself, so every programmatic move goes through this.
     const clamp = (t) => st.zoom.constrain()(t, [[0, 0], [st.w, st.h]], [[0, 0], [st.W0, st.H0]]);
-    function buildFlat(keep) {
+    function buildFlat(view) {
       const { w, h } = st;
       const s = Math.max(w / (2 * Math.PI), h / SPAN);
       st.W0 = 2 * Math.PI * s;
@@ -104,7 +134,7 @@ void main() {
       const arcs = g.append('g');
       data.arcs.forEach(([a, b, cls]) => arcs.append('path').attr('class', `tm-arc ${cls}`).attr('d', path({ type: 'LineString', coordinates: [a, b] })));
       st.svg = svg; st.g = g;
-      st.zoom = d3.zoom().scaleExtent([1, 14]).extent([[0, 0], [w, h]]).translateExtent([[0, 0], [st.W0, st.H0]])
+      st.zoom = d3.zoom().filter(gestures).scaleExtent([1, 14]).extent([[0, 0], [w, h]]).translateExtent([[0, 0], [st.W0, st.H0]])
         .on('zoom', (e) => {
           st.t = e.transform;
           g.attr('transform', st.t);
@@ -113,8 +143,9 @@ void main() {
           settleSoon();
         });
       d3.select(box).on('.zoom', null).call(st.zoom).on('dblclick.zoom', null);
-      const c = st.proj([data.home.lng + 12, 28]);
-      d3.select(box).call(st.zoom.transform, clamp(keep ? st.t : d3.zoomIdentity.translate(w / 2 - c[0], h / 2 - c[1])));
+      // Keep looking at the same place when the map is rebuilt (new data, full screen); otherwise start near home.
+      const c = st.proj(view ? view.center : [data.home.lng + 12, 28]);
+      d3.select(box).call(st.zoom.transform, clamp(d3.zoomIdentity.translate(w / 2, h / 2).scale(view ? view.k : 1).translate(-c[0], -c[1])));
     }
 
     // ---------- globe (WebGL texture + canvas overlay)
@@ -172,15 +203,26 @@ void main() {
       [st.glCanvas, st.ov].forEach((cv) => { cv.width = Math.round(w * ratio); cv.height = Math.round(h * ratio); });
       base.replaceChildren(st.glCanvas, st.ov);
       let last = null;
+      let lastMid = null;
       let moved = [];
-      st.zoom = d3.zoom().scaleExtent([0.85, 9])
-        .on('start', (e) => { last = e.transform; moved = []; cancelAnimationFrame(st.anim); })
+      const spin = (dx, dy) => {
+        const f = R2D / (baseR() * st.k);
+        st.rot = [st.rot[0] + dx * f, Math.max(-85, Math.min(85, st.rot[1] - dy * f))];
+        moved.push([performance.now(), dx, dy]);
+      };
+      st.zoom = d3.zoom().filter(gestures).scaleExtent([0.85, 9])
+        .on('start', (e) => { last = e.transform; lastMid = null; moved = []; cancelAnimationFrame(st.anim); })
         .on('zoom', (e) => {
           const t = e.transform;
-          if (last && t.k === last.k) {
-            const f = R2D / (baseR() * st.k);
-            st.rot = [st.rot[0] + (t.x - last.x) * f, Math.max(-85, Math.min(85, st.rot[1] - (t.y - last.y) * f))];
-            moved.push([performance.now(), t.x - last.x, t.y - last.y]);
+          const touches = e.sourceEvent?.touches;
+          if (touches && touches.length > 1) {
+            // Two fingers: their midpoint turns the globe while their spread zooms it.
+            const mid = [(touches[0].clientX + touches[1].clientX) / 2, (touches[0].clientY + touches[1].clientY) / 2];
+            if (lastMid) spin(mid[0] - lastMid[0], mid[1] - lastMid[1]);
+            lastMid = mid;
+          } else {
+            lastMid = null;
+            if (last && t.k === last.k) spin(t.x - last.x, t.y - last.y);
           }
           st.k = t.k;
           last = t;
@@ -395,10 +437,12 @@ void main() {
       if (rec) hooks.onDest(rec.dataset.dest);
     });
 
+    const sizeKey = () => `${st.mode}:${root.clientWidth || 800}:${st.expanded ? root.clientHeight : ''}`;
     function build(keep) {
+      const view = keep && st.mode === 'flat' && st.proj && st.w ? { center: st.proj.invert(st.t.invert([st.w / 2, st.h / 2])), k: st.t.k } : null;
       st.w = root.clientWidth || 800;
       const tall = st.w < 600 ? Math.min(460, Math.max(330, st.w * 1.02)) : Math.min(580, Math.max(380, st.w * 0.56));
-      st.h = Math.round(tall);
+      st.h = Math.round(st.expanded ? root.clientHeight || window.innerHeight : tall);
       box.style.height = `${st.h}px`;
       box.dataset.mode = st.mode;
       cancelAnimationFrame(st.anim);
@@ -406,8 +450,8 @@ void main() {
       st.homeNode = pinLayer.firstElementChild;
       st.clusters = []; st.recs = [];
       if (st.focus) { pinLayer.appendChild(st.focus.node); }
-      if (st.mode === 'flat') buildFlat(keep); else buildGlobe();
-      st.built = `${st.mode}:${st.w}`;
+      if (st.mode === 'flat') buildFlat(view); else buildGlobe();
+      st.built = sizeKey();
       draw();
       settle();
     }
@@ -417,7 +461,7 @@ void main() {
         const first = !st.data;
         const homeName = st.data?.home.name;
         st.data = data;
-        const same = st.built === `${st.mode}:${root.clientWidth || 800}` && homeName === data.home.name;
+        const same = st.built === sizeKey() && homeName === data.home.name;
         if (same && st.mode === 'globe') { draw(); settle(); return; }
         build(same);
         if (first && st.mode === 'globe' && !REDUCED) {
@@ -433,7 +477,14 @@ void main() {
         if (st.data) build();
       },
       get mode() { return st.mode; },
-      resize() { if (st.data && st.built !== `${st.mode}:${root.clientWidth || 800}`) build(); },
+      resize() { if (st.data && st.built !== sizeKey()) build(true); },
+      setExpanded(on) {
+        st.expanded = Boolean(on);
+        box.classList.toggle('expanded', st.expanded);
+        hintBox.classList.remove('show');
+        if (st.data) build(true);
+      },
+      get expanded() { return st.expanded; },
       rotateTo(rot, k, ms = 1000) {
         cancelAnimationFrame(st.anim);
         const from = [...st.rot];

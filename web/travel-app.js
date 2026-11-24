@@ -666,6 +666,7 @@
   // ---------- tabs (with smooth view transitions)
   let currentTab = 'map';
   function go(tab) {
+    if (document.documentElement.classList.contains('map-open')) setMapFull(false);
     if (tab === currentTab) return;
     const swap = () => {
       currentTab = tab;
@@ -865,9 +866,22 @@
     if (settings.year !== '2025') items.push(`<span><i style="background:var(--y26)"></i>2026 去過 ${c26}</span>`);
     if (settings.year === 'all') items.push(`<span><i style="background:var(--both)"></i>兩年都去 ${both}</span>`);
     items.push(`<span><i style="background:var(--soon-fill);outline:1.5px dashed var(--soon)"></i>即將出發 ${soon}</span>`);
-    items.push('<span class="spacer"></span><span>拖曳旋轉・雙指或滾輪縮放・點國家看文化與飛行時間</span>');
+    const touch = window.matchMedia('(pointer: coarse)').matches;
+    items.push(`<span class="spacer"></span><span>${touch ? '兩指轉動與縮放・⤢ 全螢幕單指操作' : '拖曳旋轉・Ctrl＋滾輪縮放'}・點國家看文化與飛行時間</span>`);
     $('#legend').innerHTML = items.join('');
   }
+  // Full screen: the map fills the phone and takes one-finger gestures; Esc or ✕ closes it.
+  function setMapFull(on) {
+    $('.map-card').classList.toggle('full', on);
+    document.documentElement.classList.toggle('map-open', on);
+    const b = $('#map-full');
+    b.textContent = on ? '✕' : '⤢';
+    b.setAttribute('aria-label', on ? '關閉全螢幕地圖' : '全螢幕地圖');
+    b.setAttribute('aria-pressed', String(on));
+    worldMap?.setExpanded(on);
+  }
+  $('#map-full').addEventListener('click', () => setMapFull(!worldMap?.expanded));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && worldMap?.expanded && !$('#modal').open) setMapFull(false); });
   $('#zoom-in').addEventListener('click', () => worldMap?.zoomBy(1.6));
   $('#zoom-out').addEventListener('click', () => worldMap?.zoomBy(1 / 1.6));
   $('#zoom-reset').addEventListener('click', () => worldMap?.reset());

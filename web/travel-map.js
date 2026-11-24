@@ -553,9 +553,10 @@ void main() {
       st.worldNodes.forEach((n) => n.node.classList.toggle('spot', n.key === x.key));
     }
     function idleSpin(now) {
-      spinFrame = requestAnimationFrame(idleSpin);
       const idle = now - lastTouch > 6000 && st.mode === 'globe' && !st.sel && !st.expanded && onScreen && !document.hidden && st.data;
-      if (!idle) { spinLast = now; return; }
+      // Only animate while actually turning; otherwise look again in a moment (saves battery).
+      if (!idle) { spinLast = now; spinFrame = setTimeout(() => requestAnimationFrame(idleSpin), 400); return; }
+      spinFrame = requestAnimationFrame(idleSpin);
       const dt = Math.min(64, now - spinLast);
       spinLast = now;
       st.rot = [st.rot[0] + dt * 0.004, st.rot[1]];

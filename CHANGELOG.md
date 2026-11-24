@@ -4,9 +4,11 @@
 
 ### New Features
 
-- Instagram comment-to-DM auto reply, a free replacement for ManyChat: a keyword comment on a Reel or post gets a public reply and a DM with a button; tapping it sends the link, or first asks the person to follow when the rule requires it. Rules live in `instagram/rules.js`, with a test list and an on/off switch
-- `/instagram/status` setup checklist, plus the privacy policy and data deletion pages Meta needs before the app can go live
-- A daily Vercel Cron checks the Instagram token, extends it every 7 days (kept in private Blob storage) and sends a LINE alert when something breaks; `INSTAGRAM_DAILY_REPORT=true` sends a nightly report too. See the [guide (中文)](docs/INSTAGRAM-AUTOREPLY.zh-TW.md)
+- Instagram comment-to-DM auto reply, a free replacement for ManyChat: a keyword comment on a Reel or post gets a public reply and a DM with a button; tapping it sends the link, or first asks the person to follow when the rule requires it
+- Several Instagram accounts at once: each webhook is answered with the token of the account it is for, rules can target one account or all of them, and any account can be paused on its own
+- An admin page at `/instagram/admin`: connect accounts with "log in with Instagram" (or a pasted token), which also subscribes them to webhooks; edit rules, the test list and the main switch; changes apply without a redeploy
+- `/instagram/status` checklist, plus the privacy policy and data deletion pages Meta needs before the app can go live
+- A daily Vercel Cron checks every account's token and webhook subscription, extends tokens every 7 days and sends a LINE alert when something breaks; `INSTAGRAM_DAILY_REPORT=true` sends a nightly report too. See the [guide (中文)](docs/INSTAGRAM-AUTOREPLY.zh-TW.md)
 
 ## 4.21.0 (2026-11-22)
 

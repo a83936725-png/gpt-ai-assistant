@@ -5,23 +5,36 @@ import {
 import { createHmac } from 'crypto';
 
 const mock = globalThis.instagramMock;
-const OWN_ID = '17841400000000001';
 const FAN_ID = '9000000000000001';
+const ACCOUNTS = {
+  'token-a': { user_id: '1784000000000000A', id: 'app-scoped-a', username: 'brand_a' },
+  'token-b': { user_id: '1784000000000000B', id: 'app-scoped-b', username: 'brand_b' },
+  'token-c': { user_id: '1784000000000000C', id: 'app-scoped-c', username: 'brand_c' },
+};
+const A = ACCOUNTS['token-a'].user_id;
+const B = ACCOUNTS['token-b'].user_id;
+const C = ACCOUNTS['token-c'].user_id;
 
 let server;
 let base;
 let autoreply;
-let resetNotify;
-let resetTokenCache;
+let reset;
 let follows;
 let failProfile;
-let tokenBroken;
+let brokenTokens;
 
 beforeAll(async () => {
   const { default: app } = await import('../api/index.js');
   autoreply = await import('../instagram/autoreply.js');
-  ({ resetNotify } = await import('../instagram/notify.js'));
-  ({ resetTokenCache } = await import('../instagram/token.js'));
+  const { resetNotify } = await import('../instagram/notify.js');
+  const { resetAccounts } = await import('../instagram/accounts.js');
+  const { resetStore } = await import('../instagram/store.js');
+  reset = () => {
+    resetNotify();
+    resetAccounts();
+    resetStore();
+    autoreply.resetAutoreply();
+  };
   server = app.listen(0);
   await new Promise((resolve) => { server.once('listening', resolve); });
   base = `http://127.0.0.1:${server.address().port}`;
@@ -32,6 +45,7 @@ afterAll(() => new Promise((resolve) => { server.close(resolve); }));
 const RULES = [
   {
     id: 'reel1',
+    account: '',
     keywords: ['課程'],
     posts: ['https://www.instagram.com/reel/ReelAAA111/'],
     commentReplies: ['私訊你囉'],
@@ -44,7 +58,20 @@ const RULES = [
     link: 'https://shop.test/course',
   },
   {
+    id: 'onlyb',
+    account: '@brand_b',
+    keywords: ['優惠'],
+    posts: [],
+    commentReplies: [],
+    dmText: 'B 的優惠',
+    buttonTitle: '給我',
+    requireFollow: false,
+    linkText: 'B 的優惠連結',
+    link: 'https://shop.test/b',
+  },
+  {
     id: 'all',
+    account: '',
     keywords: ['連結', 'LINK'],
     posts: [],
     commentReplies: [],
@@ -57,22 +84,31 @@ const RULES = [
 ];
 
 beforeEach(() => {
+  reset();
   mock.requests = [];
   follows = true;
   failProfile = false;
-  tokenBroken = false;
-  autoreply.resetAutoreply();
+  brokenTokens = new Set();
   autoreply.setRules({ settings: { enabled: true, testUsernames: [] }, rules: RULES });
-  resetNotify();
-  resetTokenCache();
   mock.respond = (req) => {
-    const tokenError = { status: 400, data: { error: { message: 'Error validating access token', type: 'OAuthException', code: 190 } } };
     if (req.url.startsWith('https://api.line.me')) return { data: {} };
-    if (tokenBroken) return tokenError;
-    if (req.path === '/me') return { data: { user_id: OWN_ID, id: 'app-scoped-1', username: 'mybrand' } };
+    if (req.url === 'https://api.instagram.com/oauth/access_token') {
+      return req.data.code === 'good-code' && req.data.client_id === 'test-app-id' && req.data.client_secret === 'test-app-secret'
+        ? { data: { access_token: 'short-c', user_id: C, permissions: 'instagram_business_basic' } }
+        : { status: 400, data: { error_type: 'OAuthException', code: 400, error_message: 'Invalid code' } };
+    }
+    if (req.url.startsWith('https://graph.instagram.com/access_token')) {
+      return { data: { access_token: 'token-c', token_type: 'bearer', expires_in: 5184000 } };
+    }
+    if (req.url.includes('refresh_access_token')) return { data: { access_token: req.params.access_token, token_type: 'bearer', expires_in: 5184000 } };
+    const me = ACCOUNTS[req.token];
+    if (!me || brokenTokens.has(req.token)) {
+      return { status: 400, data: { error: { message: 'Error validating access token', type: 'OAuthException', code: 190 } } };
+    }
+    if (req.path === '/me') return { data: me };
+    if (req.path === '/me/subscribed_apps') return req.method === 'GET' ? { data: { data: [{ subscribed_fields: ['comments', 'messages', 'messaging_postbacks'] }] } } : { data: { success: true } };
     if (req.path === '/me/messages') return { data: { recipient_id: FAN_ID, message_id: 'm1' } };
     if (req.path.endsWith('/replies')) return { data: { id: 'reply-1' } };
-    if (req.url.includes('refresh_access_token')) return { data: { access_token: 'test-token', token_type: 'bearer', expires_in: 5184000 } };
     if (req.path === '/media-reel') return { data: { shortcode: 'ReelAAA111' } };
     if (req.path === '/media-other') return { data: { shortcode: 'OtherBBB22' } };
     if (req.path === `/${FAN_ID}`) {
@@ -84,11 +120,11 @@ beforeEach(() => {
 });
 
 const commentEvent = ({
-  id = 'c1', text = '我要連結', mediaId = 'media-other', from = { id: FAN_ID, username: 'fan' },
+  account = A, id = 'c1', text = '我要連結', mediaId = 'media-other', from = { id: FAN_ID, username: 'fan' },
 } = {}) => ({
   object: 'instagram',
   entry: [{
-    id: OWN_ID,
+    id: account,
     time: 1,
     changes: [{
       field: 'comments',
@@ -99,13 +135,13 @@ const commentEvent = ({
   }],
 });
 
-const tapEvent = (payload, mid = 'tap-1') => ({
+const tapEvent = (payload, { account = A, mid = 'tap-1' } = {}) => ({
   object: 'instagram',
   entry: [{
-    id: OWN_ID,
+    id: account,
     time: 1,
     messaging: [{
-      sender: { id: FAN_ID }, recipient: { id: OWN_ID }, timestamp: 1, postback: { mid, title: '給我', payload },
+      sender: { id: FAN_ID }, recipient: { id: account }, timestamp: 1, postback: { mid, title: '給我', payload },
     }],
   }],
 });
@@ -117,8 +153,16 @@ const post = (body, { sign = true, secret = 'test-app-secret' } = {}) => {
   return fetch(`${base}/instagram/webhook`, { method: 'POST', headers, body: raw });
 };
 
-const sent = () => mock.requests.filter((r) => r.method === 'POST' && !r.url.startsWith('https://api.line.me'));
+const admin = (path, { method = 'GET', body, password = 'test-admin' } = {}) => fetch(`${base}/instagram/admin/api/${path}`, {
+  method,
+  headers: { 'x-admin-password': password, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+  body: body ? JSON.stringify(body) : undefined,
+});
+
+const sent = () => mock.requests.filter((r) => r.method === 'POST' && (r.path === '/me/messages' || r.path.endsWith('/replies')));
 const linePushes = () => mock.requests.filter((r) => r.url.startsWith('https://api.line.me'));
+
+// --- Webhook ---------------------------------------------------------------------------------
 
 test('answers Meta\'s webhook verification only with the right verify token', async () => {
   const ok = await fetch(`${base}/instagram/webhook?hub.mode=subscribe&hub.verify_token=test-doorbell&hub.challenge=12345`);
@@ -139,7 +183,7 @@ test('a keyword comment gets a DM with a button and a public reply', async () =>
   expect(res.status).toBe(200);
   const [dm, reply] = sent();
   expect(dm.path).toBe('/me/messages');
-  expect(dm.authorization).toBe('Bearer test-token');
+  expect(dm.token).toBe('token-a');
   expect(dm.data.recipient).toEqual({ comment_id: 'c-reel' });
   expect(dm.data.message.attachment.payload).toEqual({
     template_type: 'button',
@@ -150,10 +194,36 @@ test('a keyword comment gets a DM with a button and a public reply', async () =>
   expect(reply.data).toEqual({ message: '私訊你囉' });
 });
 
+test('each account answers with its own token', async () => {
+  await post(commentEvent({ account: A, id: 'c-a' }));
+  await post(commentEvent({ account: B, id: 'c-b' }));
+  expect(sent().map((r) => [r.data.recipient.comment_id, r.token])).toEqual([['c-a', 'token-a'], ['c-b', 'token-b']]);
+});
+
+test('a rule for one account does not fire on another', async () => {
+  await post(commentEvent({ account: A, id: 'c-a-deal', text: '優惠' }));
+  expect(sent()).toEqual([]);
+  await post(commentEvent({ account: B, id: 'c-b-deal', text: '有優惠嗎' }));
+  expect(sent()[0].data.message.attachment.payload.buttons[0].payload).toBe('IGAR:onlyb');
+  mock.requests = [];
+  await post(tapEvent('IGAR:onlyb', { account: A, mid: 'tap-cross' }));
+  expect(sent()[0].data.message).toEqual({ text: '這個活動已經結束囉，謝謝你的支持 🙏' });
+});
+
+test('comments for an account that is not connected are ignored', async () => {
+  await post(commentEvent({ account: '17840000NOTOURS', id: 'c-stranger' }));
+  expect(sent()).toEqual([]);
+});
+
 test('keywords ignore case, spaces and full-width letters', async () => {
   await post(commentEvent({ id: 'c-wide', text: 'ｌｉｎｋ please' }));
   expect(sent()).toHaveLength(1);
   expect(sent()[0].data.message.attachment.payload.buttons[0].payload).toBe('IGAR:all');
+});
+
+test('a rule limited to one Reel does not fire on other posts', async () => {
+  await post(commentEvent({ id: 'c-other', text: '課程', mediaId: 'media-other' }));
+  expect(sent()).toEqual([]);
 });
 
 test('the sample rule from rules.js never fires until its link is replaced', async () => {
@@ -164,15 +234,10 @@ test('the sample rule from rules.js never fires until its link is replaced', asy
   expect(autoreply.checkRules({ rules }).join('\n')).toContain('範例網址');
 });
 
-test('a rule limited to one Reel does not fire on other posts', async () => {
-  await post(commentEvent({ id: 'c-other', text: '課程', mediaId: 'media-other' }));
-  expect(sent()).toEqual([]);
-});
-
 test('comments without a keyword, from the account itself, or resent by Meta are ignored', async () => {
   await post(commentEvent({ id: 'c-none', text: '好可愛' }));
-  await post(commentEvent({ id: 'c-own', text: '連結在私訊', from: { id: OWN_ID, username: 'mybrand' } }));
-  await post(commentEvent({ id: 'c-own2', text: '連結在私訊', from: { id: '555', username: 'MyBrand' } }));
+  await post(commentEvent({ id: 'c-own', text: '連結在私訊', from: { id: A, username: 'brand_a' } }));
+  await post(commentEvent({ id: 'c-own2', text: '連結在私訊', from: { id: '555', username: 'Brand_A' } }));
   expect(sent()).toEqual([]);
   await post(commentEvent({ id: 'c-twice' }));
   await post(commentEvent({ id: 'c-twice' }));
@@ -193,15 +258,16 @@ test('the test list limits who can trigger it, and the switch turns it off', asy
 
 test('tapping the button without following asks them to follow first', async () => {
   follows = false;
-  await post(tapEvent('IGAR:reel1'));
+  await post(tapEvent('IGAR:reel1', { account: B }));
   const [message] = sent();
+  expect(message.token).toBe('token-b');
   expect(message.data.recipient).toEqual({ id: FAN_ID });
   expect(message.data.message.attachment.payload.text).toBe('先追蹤再按一次');
   expect(message.data.message.attachment.payload.buttons[0].payload).toBe('IGAR:reel1');
 });
 
 test('tapping again after following sends the link', async () => {
-  await post(tapEvent('IGAR:reel1', 'tap-2'));
+  await post(tapEvent('IGAR:reel1', { mid: 'tap-2' }));
   const [message] = sent();
   expect(message.data.message.attachment.payload).toEqual({
     template_type: 'button',
@@ -211,31 +277,33 @@ test('tapping again after following sends the link', async () => {
 });
 
 test('a rule without the follow requirement skips the check, and an unknown follow status still gets the link', async () => {
-  await post(tapEvent('IGAR:all', 'tap-3'));
+  await post(tapEvent('IGAR:all', { mid: 'tap-3' }));
   expect(mock.requests.some((r) => r.path === `/${FAN_ID}`)).toBe(false);
   expect(sent()[0].data.message.attachment.payload.buttons[0].url).toBe('https://shop.test/all');
   mock.requests = [];
   failProfile = true;
-  await post(tapEvent('IGAR:reel1', 'tap-4'));
+  await post(tapEvent('IGAR:reel1', { mid: 'tap-4' }));
   expect(sent()[0].data.message.attachment.payload.buttons[0].url).toBe('https://shop.test/course');
 });
 
-test('a button from a removed rule says the event has ended', async () => {
-  await post(tapEvent('IGAR:gone', 'tap-5'));
-  expect(sent()[0].data.message).toEqual({ text: '這個活動已經結束囉，謝謝你的支持 🙏' });
-  mock.requests = [];
-  await post(tapEvent('SOMETHING_ELSE', 'tap-6'));
+test('buttons that are not ours are ignored', async () => {
+  await post(tapEvent('SOMETHING_ELSE', { mid: 'tap-6' }));
   expect(sent()).toEqual([]);
 });
 
-test('an expired token is reported on LINE once, and Meta still gets 200', async () => {
-  tokenBroken = true;
-  expect((await post(commentEvent({ id: 'c-broken-1' }))).status).toBe(200);
-  expect((await post(commentEvent({ id: 'c-broken-2' }))).status).toBe(200);
+test('an expired token is reported on LINE once per account, and Meta still gets 200', async () => {
+  await post(commentEvent({ account: B, id: 'c-warm' }));
+  brokenTokens.add('token-b');
+  mock.requests = [];
+  expect((await post(commentEvent({ account: B, id: 'c-broken-1' }))).status).toBe(200);
+  expect((await post(commentEvent({ account: B, id: 'c-broken-2' }))).status).toBe(200);
   const pushes = linePushes();
   expect(pushes).toHaveLength(1);
   expect(pushes[0].data.to).toBe('U-owner');
-  expect(pushes[0].data.messages[0].text).toContain('權杖');
+  expect(pushes[0].data.messages[0].text).toContain('@brand_b');
+  mock.requests = [];
+  await post(commentEvent({ account: A, id: 'c-a-still-fine' }));
+  expect(sent()[0].token).toBe('token-a');
 });
 
 test('checkRules points out what would stop a rule from working', () => {
@@ -262,6 +330,8 @@ test('toShortcode understands Reel and post URLs', () => {
   expect(autoreply.toShortcode(' 17900000000000000 ')).toBe('17900000000000000');
 });
 
+// --- Pages, status and cron ------------------------------------------------------------------
+
 test('serves the privacy policy and data deletion pages Meta asks for', async () => {
   const privacy = await fetch(`${base}/instagram/privacy`);
   expect(privacy.status).toBe(200);
@@ -271,33 +341,154 @@ test('serves the privacy policy and data deletion pages Meta asks for', async ()
   expect(await deletion.text()).toContain('資料刪除');
 });
 
-test('the status page needs the verify token and shows the webhook URL', async () => {
+test('the status page needs the verify token and lists every account', async () => {
   expect((await fetch(`${base}/instagram/status`)).status).toBe(403);
   const res = await fetch(`${base}/instagram/status?key=test-doorbell`);
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain('/instagram/webhook');
-  expect(html).toContain('@mybrand');
-  expect(html).not.toContain('test-token');
+  expect(html).toContain('@brand_a');
+  expect(html).toContain('@brand_b');
+  expect(html).not.toContain('token-a');
   expect(html).not.toContain('test-app-secret');
 });
 
-test('the daily cron needs the cron secret, refreshes the token and stays quiet when all is well', async () => {
+test('the daily cron needs the cron secret, refreshes every token and stays quiet when all is well', async () => {
   expect((await fetch(`${base}/instagram/cron`)).status).toBe(401);
   const res = await fetch(`${base}/instagram/cron`, { headers: { Authorization: 'Bearer test-cron' } });
   expect(res.status).toBe(200);
   const body = await res.json();
   expect(body.urgent).toBe(false);
   expect(body.notified).toBe(false);
-  expect(body.report).toContain('@mybrand');
-  expect(mock.requests.some((r) => r.url.includes('refresh_access_token') && r.params.access_token === 'test-token')).toBe(true);
+  expect(body.report).toContain('@brand_a');
+  expect(body.report).toContain('@brand_b');
+  const refreshed = mock.requests.filter((r) => r.url.includes('refresh_access_token')).map((r) => r.params.access_token).sort();
+  expect(refreshed).toEqual(['token-a', 'token-b']);
 });
 
-test('the daily cron tells the owner on LINE when the token is broken', async () => {
-  tokenBroken = true;
+test('refreshing several accounts at once keeps every refreshed token', async () => {
+  const { addAccount, loadAccounts, refreshAccount } = await import('../instagram/accounts.js');
+  await addAccount({ token: 'token-c', source: 'login', expiresIn: 100 });
+  const accounts = await loadAccounts({ fresh: true });
+  await Promise.all(accounts.map((account) => refreshAccount(account, { force: true })));
+  const after = await loadAccounts({ fresh: true });
+  expect(after.map((a) => [a.username, a.source, a.expiresAt > Date.now() + 50 * 86400000])).toEqual([
+    ['brand_a', 'env', true], ['brand_b', 'env', true], ['brand_c', 'login', true],
+  ]);
+});
+
+test('the daily cron tells the owner on LINE when one account\'s token is broken', async () => {
+  brokenTokens.add('token-b');
   const res = await fetch(`${base}/instagram/cron`, { headers: { Authorization: 'Bearer test-cron' } });
   const body = await res.json();
   expect(body.urgent).toBe(true);
   expect(body.notified).toBe(true);
-  expect(linePushes()[0].data.messages[0].text).toContain('權杖');
+  expect(body.report).toContain('✅ @brand_a');
+  expect(linePushes()[0].data.messages[0].text).toContain('權杖失效');
+});
+
+// --- Admin page ------------------------------------------------------------------------------
+
+test('the admin page loads, and its API needs the password', async () => {
+  const page = await fetch(`${base}/instagram/admin`);
+  expect(page.status).toBe(200);
+  expect(await page.text()).toContain('IG 自動回覆後台');
+  expect((await admin('state', { password: 'wrong' })).status).toBe(401);
+  expect((await admin('state', { password: '' })).status).toBe(401);
+});
+
+test('the admin state lists accounts and URLs without ever sending a token', async () => {
+  const res = await admin('state');
+  expect(res.status).toBe(200);
+  const raw = await res.text();
+  expect(raw).not.toContain('token-a');
+  expect(raw).not.toContain('token-b');
+  const state = JSON.parse(raw);
+  expect(state.accounts.map((a) => [a.username, a.source, a.ok, a.missing])).toEqual([['brand_a', 'env', true, []], ['brand_b', 'env', true, []]]);
+  expect(state.urls.webhook).toMatch(/\/instagram\/webhook$/);
+  expect(state.urls.redirect).toMatch(/\/instagram\/oauth\/callback$/);
+  expect(state.loginReady).toBe(true);
+});
+
+test('rules saved on the admin page take effect at once', async () => {
+  autoreply.setRules(null);
+  const saved = await admin('rules', {
+    method: 'PUT',
+    body: {
+      settings: { enabled: true, testUsernames: '' },
+      rules: [{
+        id: 'saved', account: 'brand_b', keywords: '團購\n+1', link: 'https://shop.test/group', buttonTitle: '給我', dmText: '團購連結 👇', requireFollow: false, extra: 'dropped',
+      }],
+    },
+  });
+  expect(saved.status).toBe(200);
+  expect((await saved.json()).problems).toEqual([]);
+  await post(commentEvent({ account: B, id: 'c-group', text: '+1' }));
+  expect(sent()[0].data.message.attachment.payload.buttons[0].payload).toBe('IGAR:saved');
+  mock.requests = [];
+  await post(commentEvent({ account: A, id: 'c-group-a', text: '團購' }));
+  expect(sent()).toEqual([]);
+  const state = await (await admin('state')).json();
+  expect(state.rulesSource).toBe('admin');
+  expect(state.rules[0]).not.toHaveProperty('extra');
+});
+
+test('an account can be paused and resumed from the admin page', async () => {
+  expect((await admin(`accounts/${B}/pause`, { method: 'POST', body: { paused: true } })).status).toBe(200);
+  await post(commentEvent({ account: B, id: 'c-paused' }));
+  await post(commentEvent({ account: A, id: 'c-not-paused' }));
+  expect(sent().map((r) => r.token)).toEqual(['token-a']);
+  await admin(`accounts/${B}/pause`, { method: 'POST', body: { paused: false } });
+  mock.requests = [];
+  await post(commentEvent({ account: B, id: 'c-resumed' }));
+  expect(sent().map((r) => r.token)).toEqual(['token-b']);
+});
+
+test('a pasted token adds an account, subscribes it to webhooks and it can be removed', async () => {
+  const bad = await admin('accounts', { method: 'POST', body: { token: 'not-a-token' } });
+  expect(bad.status).toBe(400);
+  const res = await admin('accounts', { method: 'POST', body: { token: 'token-c' } });
+  expect(res.status).toBe(200);
+  expect(await res.json()).toMatchObject({ ok: true, username: 'brand_c', subscribed: true });
+  const subscribe = mock.requests.find((r) => r.method === 'POST' && r.path === '/me/subscribed_apps');
+  expect(subscribe.token).toBe('token-c');
+  expect(subscribe.params.subscribed_fields).toBe('comments,messages,messaging_postbacks');
+  await post(commentEvent({ account: C, id: 'c-c' }));
+  expect(sent()[0].token).toBe('token-c');
+  expect((await admin(`accounts/${A}`, { method: 'DELETE' })).status).toBe(400);
+  expect((await admin(`accounts/${C}`, { method: 'DELETE' })).status).toBe(200);
+  const state = await (await admin('state')).json();
+  expect(state.accounts.map((a) => a.username)).toEqual(['brand_a', 'brand_b']);
+});
+
+test('log in with Instagram connects an account', async () => {
+  const { url } = await (await admin('connect', { method: 'POST' })).json();
+  const login = new URL(url);
+  expect(login.origin + login.pathname).toBe('https://www.instagram.com/oauth/authorize');
+  expect(login.searchParams.get('client_id')).toBe('test-app-id');
+  expect(login.searchParams.get('scope')).toBe('instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments');
+  const redirectUri = login.searchParams.get('redirect_uri');
+  expect(redirectUri).toMatch(/\/instagram\/oauth\/callback$/);
+  const state = login.searchParams.get('state');
+
+  const forged = await fetch(`${base}/instagram/oauth/callback?code=good-code&state=${encodeURIComponent(`${Date.now()}.x.forged`)}`, { redirect: 'manual' });
+  expect(decodeURIComponent(forged.headers.get('location'))).toContain('error=');
+
+  const back = await fetch(`${base}/instagram/oauth/callback?code=good-code%23_&state=${encodeURIComponent(state)}`, { redirect: 'manual' });
+  expect(back.status).toBe(302);
+  expect(back.headers.get('location')).toBe('/instagram/admin?connected=brand_c');
+  const exchange = mock.requests.find((r) => r.url === 'https://api.instagram.com/oauth/access_token');
+  expect(exchange.data).toMatchObject({ grant_type: 'authorization_code', redirect_uri: redirectUri, code: 'good-code' });
+  const { accounts } = await (await admin('state')).json();
+  expect(accounts.find((a) => a.username === 'brand_c')).toMatchObject({ source: 'login', ok: true });
+  expect(accounts.find((a) => a.username === 'brand_c').expiresAt).toBeGreaterThan(Date.now());
+});
+
+test('login state expires and cannot be forged', async () => {
+  const { makeState, checkState } = await import('../instagram/index.js');
+  const state = makeState(1000);
+  expect(checkState(state, 2000)).toBe(true);
+  expect(checkState(state, 1000 + 16 * 60 * 1000)).toBe(false);
+  expect(checkState(`${state}x`, 2000)).toBe(false);
+  expect(checkState('', 2000)).toBe(false);
 });

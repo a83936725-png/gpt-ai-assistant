@@ -55,7 +55,7 @@ void main() {
     const glow = box.querySelector('.tm-glow');
     const hintBox = box.querySelector('.tm-hint');
     const st = {
-      mode: 'globe', data: null, w: 0, h: 0, settleTimer: 0, frame: 0, labels: [], clusters: [], recs: [], sights: [], sel: null, focus: null, expanded: false, inset: 0,
+      mode: 'globe', data: null, w: 0, h: 0, settleTimer: 0, frame: 0, labels: [], clusters: [], recs: [], sights: [], sel: null, world: [], worldOn: true, worldNodes: [], focus: null, expanded: false, inset: 0,
       // flat
       svg: null, g: null, proj: null, zoom: null, t: d3.zoomIdentity, W0: 0, H0: 0, img: null, hiRes: false,
       // globe
@@ -331,6 +331,7 @@ void main() {
       st.clusters.forEach((c) => placeEl(c.node, c.lng, c.lat));
       st.recs.forEach((r) => placeEl(r.node, r.lng, r.lat));
       st.sights.forEach((x) => placeEl(x.node, x.lng, x.lat));
+      st.worldNodes.forEach((x) => placeEl(x.node, x.lng, x.lat));
       if (st.homeNode) placeEl(st.homeNode, st.data.home.lng, st.data.home.lat);
       if (st.focus) placeEl(st.focus.node, st.focus.lng, st.focus.lat);
     }
@@ -411,6 +412,42 @@ void main() {
       });
       keep.forEach((c) => c.node.remove());
 
+      // Every country's famous sights as photo pins: each country's best-known one first, more as you zoom in,
+      // never overlapping. Turning the globe brings other countries' photos into view.
+      const zoomNow = st.mode === 'flat' ? st.t.k : st.k;
+      box.classList.toggle('near', zoomNow >= (st.mode === 'flat' ? 3 : 2));
+      const oldWorld = new Map(st.worldNodes.map((x) => [x.key, x]));
+      st.worldNodes = [];
+      if (st.worldOn && st.world.length) {
+        const flatK = st.mode === 'flat' ? zoomNow / 1.6 : zoomNow;
+        let maxRank = 9;
+        if (flatK < 1.6) maxRank = 0; else if (flatK < 3) maxRank = 1; else if (flatK < 5) maxRank = 3;
+        const limit = st.w < 600 ? 26 : 54;
+        st.world.forEach((x) => {
+          if (st.worldNodes.length >= limit || x.rank > maxRank || (st.sel && x.code === st.sel.code)) return;
+          const p = screen(x.lng, x.lat);
+          if (!inView(p, 0)) return;
+          const rect = [p[0] - 19, p[1] - 44, p[0] + 19, p[1] + 4];
+          if (overlaps(rect, taken)) return;
+          taken.push(rect);
+          const key = `${x.code}:${x.i}`;
+          let node = oldWorld.get(key)?.node;
+          oldWorld.delete(key);
+          if (!node) {
+            node = document.createElement('button');
+            node.type = 'button';
+            node.className = 'tm-sight mini';
+            node.dataset.pinSight = key;
+            node.style.setProperty('--d', `${Math.min(st.worldNodes.length, 20) * 35}ms`);
+            node.setAttribute('aria-label', `${x.name}（${hooks.name(x.code)}）`);
+            node.innerHTML = `<span class="tm-ph"><img src="${esc(x.photo)}" alt="" referrerpolicy="no-referrer" loading="lazy"></span><small>${esc(x.name)}</small>`;
+            pinLayer.appendChild(node);
+          }
+          st.worldNodes.push({ ...x, key, node });
+        });
+      }
+      oldWorld.forEach((x) => x.node.remove());
+
       // Country names: biggest first, visited ones always tried, nothing overlapping.
       const items = data.features.map((f) => {
         const g = GEO[f.id];
@@ -443,7 +480,7 @@ void main() {
       const close = st.mode === 'flat' ? st.t.k >= 2.4 : st.k >= 2.1;
       pinLayer.querySelectorAll('.tm-rec').forEach((n) => n.remove());
       st.recs = [];
-      if (close && !st.sel) {
+      if (close && !st.sel && !st.worldOn) {
         data.recs.forEach((r) => {
           if (st.recs.length >= 24) return;
           const p = screen(r.lng, r.lat);
@@ -530,6 +567,15 @@ void main() {
         if (st.data) build(true);
       },
       get expanded() { return st.expanded; },
+      // All countries' sights for the photo layer: [{ code, i, name, lng, lat, photo, rank }], best first.
+      setWorldSights(list) {
+        st.world = list || [];
+        settle();
+      },
+      setWorldPhotos(on) {
+        st.worldOn = Boolean(on);
+        settle();
+      },
       // A tapped country: outline it and show its famous sights as photo pins ({ id, code, list, active }).
       showSights(sel) {
         if (sel && st.sel && st.sel.id === sel.id && sel.active == null) sel.active = st.sel.active;

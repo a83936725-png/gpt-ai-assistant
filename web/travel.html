@@ -875,6 +875,46 @@ dialog#modal .btn:not(.primary):not(.line):not(.ghost), .card .btn:not(.primary)
 .face.back { border-color: transparent; }
 .map-card { background: var(--surface); }
 .map-empty { color: var(--muted); }
+/* the globe's photo layer: every country's famous sights as small photo pins */
+.tm-sight.mini { width: 38px; height: 38px; margin: -44px 0 0 -19px; border-radius: 11px; box-shadow: 0 6px 14px rgba(0,0,0,.45); }
+.tm-sight.mini .tm-ph { inset: 2px; border-radius: 9px; }
+.tm-sight.mini::after { border-width: 5px; bottom: -5px; }
+.tm-sight.mini small { font-size: 10px; translate: -50% 7px; }
+.tm-map:not(.near) .tm-sight.mini small { display: none; }
+.tm-sight.mini:hover small, .tm-sight.mini:focus-visible small { display: block; }
+.map-tools button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
+#map-photos.on { background: #fff; color: #0b1222; }
+/* second pass, the other tabs: flags, badges and lists without tiles; notes without coloured blocks */
+.flag-grid { gap: 18px 8px; }
+.flag-btn, .flag-btn:hover { background: none; box-shadow: none; padding: 6px 2px; border-radius: 0; transform: none; }
+.flag-grid .flag-tile { background: none; width: auto; height: auto; border-radius: 0; }
+.flag-grid .flag-tile .fl { font-size: 50px; border-radius: 7px; box-shadow: 0 3px 10px rgba(16,24,40,.14); transition: translate .2s, box-shadow .2s; }
+.flag-grid .flag-tile .fl-stack .fl { font-size: 34px; }
+.flag-btn:hover .fl { translate: 0 -3px; box-shadow: 0 8px 18px rgba(16,24,40,.18); }
+.flag-btn b { font-size: 15px; }
+.badge, button.badge:hover { background: none; padding: 6px 2px; transform: none; }
+button.badge:hover .medal { translate: 0 -3px; }
+.medal { transition: translate .2s; }
+.badges { gap: 14px 6px; }
+.timeline { gap: 0; }
+.timeline li { background: none; border-radius: 0; padding: 11px 2px; border-bottom: 1px solid var(--border); }
+.timeline li:last-child { border-bottom: 0; }
+.timeline li:hover b { color: var(--brand); }
+.banner, .banner.good, .banner.warn, .banner.info { background: none; border: 0; border-left: 3px solid currentColor; border-radius: 0; padding: 2px 0 2px 12px; }
+.banner.info { border-left-color: var(--border); }
+.item { background: none; box-shadow: none; border-radius: 0; border-bottom: 1px solid var(--border); }
+.item:hover { background: color-mix(in srgb, var(--surface) 70%, transparent); }
+.items { gap: 0; }
+.item::before { top: 20px; }
+.item-row input.time { background: none; padding: 4px 0; text-align: left; color: var(--muted); }
+.items:empty::after { border: 0; background: none; justify-items: start; padding-left: 4px; }
+.add-item .input { border: 0; border-bottom: 1px dashed var(--border); border-radius: 0; background: none; padding-left: 2px; min-height: 36px; }
+.add-item .input:focus { border-bottom: 1.5px solid var(--brand); outline: none; }
+.add-item .btn:not(.primary):not(.line):not(.ghost) { background: none; box-shadow: none; color: var(--brand); padding-inline: 8px; }
+.flag-tile { background: none; }
+.flag-tile .fl { box-shadow: 0 2px 8px rgba(16,24,40,.14); border-radius: 6px; }
+.budget-row input, .budget-row input.input { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: none; }
+.budget-row input:focus { border-bottom-color: var(--brand); outline: none; }
 </style>
 </head>
 <body>
@@ -942,6 +982,7 @@ dialog#modal .btn:not(.primary):not(.line):not(.ghost), .card .btn:not(.primary)
         <div class="map-empty" id="map-loading">地圖載入中…</div>
         <div class="map-tools">
           <button id="map-full" aria-label="全螢幕地圖" aria-pressed="false">⤢</button>
+          <button id="map-photos" aria-label="顯示各國景點照片" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5L20 17"/></svg></button>
           <button id="zoom-in" aria-label="放大">＋</button>
           <button id="zoom-out" aria-label="縮小">－</button>
           <button id="zoom-reset" aria-label="回到全圖">⟲</button>

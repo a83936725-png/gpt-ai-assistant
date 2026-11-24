@@ -470,7 +470,13 @@
     }
     return sightPending[x.t].then((add) => Object.assign(x, { ...add, ...x }));
   }
-  const sightImg = (x) => (x.img ? `<img src="${esc(x.img.src)}" alt="${esc(x.n)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '');
+  // Wikimedia renders thumbnails in standard widths; small tiles ask for a small one.
+  const thumbAt = (src, w) => (/\/thumb\/.+\/\d+px-[^/]+$/.test(src || '') ? src.replace(/\/\d+px-([^/]+)$/, `/${w}px-$1`) : src);
+  const sightImg = (x, w = 500) => (x.img ? `<img src="${esc(thumbAt(x.img.src, w))}" alt="${esc(x.n)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '');
+  // Every sight with a photo and a position, for the globe's photo layer: the best-known of each country first.
+  const worldSights = () => Object.entries(SIGHTS || {}).flatMap(([code, list]) => list.map((x, i) => (x.img && x.lat != null ? {
+    code, i, name: x.n, lng: x.lng, lat: x.lat, photo: thumbAt(x.img.src, 250), rank: i, home: COUNTRIES[code] ? 0 : 1,
+  } : null)).filter(Boolean)).sort((a, b) => a.rank - b.rank || a.home - b.home);
   const sightCredit = (x) => (x.img ? `<a class="credit-mini" href="${esc(x.img.page)}" target="_blank" rel="noopener">${esc(x.img.author || 'Wikimedia Commons')}${x.img.license ? `・${esc(x.img.license)}` : ''}</a>` : '');
   // Puts photos into sight tiles already on screen as they arrive.
   function hydrateSights(code) {
@@ -898,6 +904,8 @@
       });
       worldMap.setMode(settings.mapMode || 'globe');
       $('#map').append($('#map-country'), $('#map-tip'));
+      worldMap.setWorldPhotos(settings.mapPhotos !== false);
+      loadSights().then(() => worldMap.setWorldSights(worldSights()));
       if (!store.get('tipSeen', false)) setTimeout(() => $('#map-tip').classList.add('show'), REDUCED ? 0 : 2200);
     }
     worldMap.setData(mapData());
@@ -938,6 +946,20 @@
     worldMap?.setExpanded(on);
   }
   $('#map-full').addEventListener('click', () => setMapFull(!worldMap?.expanded));
+  // Sight photos on the globe, on unless turned off.
+  function renderPhotoToggle() {
+    const on = settings.mapPhotos !== false;
+    $('#map-photos').setAttribute('aria-pressed', String(on));
+    $('#map-photos').classList.toggle('on', on);
+  }
+  $('#map-photos').addEventListener('click', () => {
+    settings.mapPhotos = settings.mapPhotos === false;
+    save();
+    worldMap?.setWorldPhotos(settings.mapPhotos);
+    renderPhotoToggle();
+    toast(settings.mapPhotos ? '地球上顯示各國景點照片' : '已隱藏景點照片');
+  });
+  renderPhotoToggle();
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && worldMap?.expanded && !$('#modal').open) setMapFull(false); });
   $('#zoom-in').addEventListener('click', () => worldMap?.zoomBy(1.6));
   $('#zoom-out').addEventListener('click', () => worldMap?.zoomBy(1 / 1.6));
@@ -2724,7 +2746,7 @@
     const list = sightsOf(c.code);
     const plan = packFor(c.code);
     box.innerHTML = `<div class="mc-head">${flag(c.code)}<div class="grow"><b>${esc(c.name)}</b><small>${f ? f.text : esc(REGIONS[c.region] || '')}${list.length ? `・${list.length} 個必去景點` : ''}</small></div><button class="mc-close" data-mc-close aria-label="關閉">✕</button></div>
-      ${list.length ? `<div class="mc-strip">${list.map((x, i) => `<button class="mc-sight" data-sight="${c.code}:${i}" style="--d:${i * 70}ms">${sightImg(x)}<span>${esc(x.n)}</span></button>`).join('')}</div>`
+      ${list.length ? `<div class="mc-strip">${list.map((x, i) => `<button class="mc-sight" data-sight="${c.code}:${i}" style="--d:${i * 70}ms">${sightImg(x, 330)}<span>${esc(x.n)}</span></button>`).join('')}</div>`
     : `<p class="mc-empty">這裡的景點還在整理，<a href="${gmaps(`${c.name} 景點`)}" target="_blank" rel="noopener">在 Google 地圖找 ↗</a></p>`}
       <div class="mc-actions"><button class="btn sm primary" data-country-n="${picked}">美食・文化・城市</button><button class="btn sm" data-plan="${plan}" ${plan !== c.code ? `data-for="${c.code}"` : ''}>${esc(c.name)} eSIM</button></div>`;
     box.classList.remove('show');
@@ -2744,7 +2766,7 @@
     await loadSights();
     if (picked !== n) return;
     const pins = () => sightsOf(c.code).map((x, i) => ({
-      i, name: x.n, lng: x.lng, lat: x.lat, photo: x.img?.src || null,
+      i, name: x.n, lng: x.lng, lat: x.lat, photo: x.img ? thumbAt(x.img.src, 250) : null,
     })).filter((x) => x.lat != null);
     renderMapCountry();
     worldMap?.showSights({ id: n, code: c.code, list: pins() });
@@ -2775,7 +2797,7 @@
     const more = sightCards(code, i);
     setTimeout(() => hydrateSights(code), 0);
     openModal(`${flag(code)} ${esc(x.n)}`, `
-      <div class="sight-hero ph ${x.img ? '' : 'ph-missing'}">${sightImg(x)}</div>
+      <div class="sight-hero ph ${x.img ? '' : 'ph-missing'}">${sightImg(x, 960)}</div>
       <div class="sight-text"><span class="kicker plain muted">${flag(code)} ${esc(countryName(code))}${f ? `・${f.text}` : ''}</span><h2 class="serif">${esc(x.n)}</h2><p>${esc(x.b)}</p>${sightCredit(x)}</div>
       <div class="actions two">
         ${x.lat != null ? `<button class="btn primary" data-sight-map="${code}:${i}">在 3D 地圖上看</button>` : ''}

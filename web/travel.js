@@ -6,6 +6,9 @@ import adviseTrip, { describeTravelError, normalizeAdviceInput, TravelInputError
 import {
   loadTravelData, saveTravelData, sanitizeTravelData, TravelSyncError, verifyIdToken,
 } from '../utils/travel-sync.js';
+import {
+  countPhotos, isJpeg, loadPhoto, PHOTO_ID, PHOTO_KINDS, PHOTO_MAX_COUNT, removePhoto, savePhoto,
+} from '../utils/travel-photos.js';
 
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
 const WEB_DIR = path.join(process.cwd(), 'web');
@@ -18,6 +21,8 @@ const FILES = {
   'travel-data.js': { file: 'travel-data.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
   'travel-geo.js': { file: 'travel-geo.js', type: 'application/javascript; charset=utf-8', maxAge: 3600 },
   'travel-map.js': { file: 'travel-map.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
+  'travel-photo-db.js': { file: 'travel-photo-db.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
+  'travel-studio.js': { file: 'travel-studio.js', type: 'application/javascript; charset=utf-8', maxAge: 300 },
   'travel-photos.json': { file: 'travel-photos.json', type: 'application/json; charset=utf-8', maxAge: 3600 },
   'travel-sights.json': { file: 'travel-sights.json', type: 'application/json; charset=utf-8', maxAge: 3600 },
   'manifest.webmanifest': { file: 'travel-manifest.webmanifest', type: 'application/manifest+json; charset=utf-8', maxAge: 3600 },
@@ -200,6 +205,84 @@ router.post('/api/sync/push', syncRoute(async (account, body) => {
   const saved = await saveTravelData(account.sub, sanitizeTravelData(body.data));
   return { ok: true, savedAt: saved.savedAt };
 }));
+
+// Photo backup: the page sends each photo as JPEG bytes, with its LINE ID token in a header.
+const photoAccount = async (req, res) => {
+  if (isSyncLimited(getClientIp(req))) {
+    res.status(429).json({ code: 'too_many_requests', error: '上傳次數太多，請稍後再試' });
+    return null;
+  }
+  try {
+    return await verifyIdToken(req.get('x-line-token'));
+  } catch (err) {
+    if (err instanceof TravelSyncError) res.status(err.status).json({ code: 'unauthorized', error: err.message });
+    else res.status(502).json({ code: 'photo_failed', error: '照片備份暫時失敗，稍後會再試' });
+    return null;
+  }
+};
+const photoParams = (req, res) => {
+  const { id, kind = 'full' } = req.params;
+  if (PHOTO_ID.test(id) && PHOTO_KINDS[kind]) return { id, kind };
+  res.status(400).json({ code: 'invalid_photo', error: '照片編號不正確' });
+  return null;
+};
+const photoFailed = (res, err) => {
+  console.error(JSON.stringify({ type: 'travel_photo_error', message: err.message }));
+  res.status(502).json({ code: 'photo_failed', error: '照片備份暫時失敗，稍後會再試' });
+};
+
+router.put('/api/photos/:id/:kind', express.raw({ type: 'image/jpeg', limit: '2mb' }), async (req, res) => {
+  const p = photoParams(req, res);
+  if (!p) return;
+  const account = await photoAccount(req, res);
+  if (!account) return;
+  if (!isJpeg(req.body) || req.body.length > PHOTO_KINDS[p.kind]) {
+    res.status(413).json({ code: 'invalid_photo', error: '只接受 JPEG 照片，而且不能太大' });
+    return;
+  }
+  try {
+    if (p.kind === 'full' && await countPhotos(account.sub) >= PHOTO_MAX_COUNT) {
+      res.status(413).json({ code: 'too_many_photos', error: `雲端最多備份 ${PHOTO_MAX_COUNT} 張照片` });
+      return;
+    }
+    await savePhoto(account.sub, p.id, p.kind, req.body);
+    res.json({ ok: true });
+  } catch (err) {
+    photoFailed(res, err);
+  }
+});
+
+router.get('/api/photos/:id/:kind', async (req, res) => {
+  const p = photoParams(req, res);
+  if (!p) return;
+  const account = await photoAccount(req, res);
+  if (!account) return;
+  try {
+    const buf = await loadPhoto(account.sub, p.id, p.kind);
+    if (!buf) {
+      res.status(404).json({ code: 'not_found', error: '雲端沒有這張照片' });
+      return;
+    }
+    res.set('Content-Type', 'image/jpeg');
+    res.set('Cache-Control', 'private, max-age=86400');
+    res.send(buf);
+  } catch (err) {
+    photoFailed(res, err);
+  }
+});
+
+router.delete('/api/photos/:id', async (req, res) => {
+  const p = photoParams(req, res);
+  if (!p) return;
+  const account = await photoAccount(req, res);
+  if (!account) return;
+  try {
+    await removePhoto(account.sub, p.id);
+    res.json({ ok: true });
+  } catch (err) {
+    photoFailed(res, err);
+  }
+});
 
 export { isRateLimited, resetRateLimit };
 

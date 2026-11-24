@@ -63,7 +63,8 @@ const clean = (value, depth = 0) => {
 };
 
 /**
- * @param {Object} body The page's data: { user, trips, orders, cart, wish, settings, updatedAt }.
+ * @param {Object} body The page's data: { user, trips, orders, cart, wish, photos, settings, updatedAt }.
+ * photos holds only the details of each backed-up photo (trip, date, caption); the images are stored separately.
  */
 export const sanitizeTravelData = (body) => {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw dataError('資料格式不正確');
@@ -74,6 +75,7 @@ export const sanitizeTravelData = (body) => {
     orders: list(body.orders).slice(0, 200),
     cart: list(body.cart).slice(0, 30),
     wish: list(body.wish).filter((x) => typeof x === 'string').slice(0, 200),
+    photos: list(body.photos).slice(0, 800),
     settings: clean(body.settings && typeof body.settings === 'object' ? body.settings : {}),
     updatedAt: Number.isFinite(Number(body.updatedAt)) ? Number(body.updatedAt) : Date.now(),
   };

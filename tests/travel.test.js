@@ -11,6 +11,7 @@ import { isRateLimited, resetRateLimit } from '../web/travel.js';
 import {
   resetTravelData, sanitizeTravelData, TravelSyncError, verifyIdToken,
 } from '../utils/travel-sync.js';
+import { isJpeg, resetPhotos } from '../utils/travel-photos.js';
 
 let server;
 let base;
@@ -249,4 +250,60 @@ test('every country in 探索世界 has famous sights, served as travel-sights.j
     expect(typeof s.t).toBe('string');
     if (s.img) expect(s.img.src).toMatch(/^https:\/\/[a-z.]*wikimedia\.org\//);
   });
+});
+
+const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(2000, 7), Buffer.from([0xff, 0xd9])]);
+const photo = (method, path, token, body, type = 'image/jpeg') => fetch(`${base}/travel/api/photos/${path}`, {
+  method, headers: { ...(token ? { 'X-Line-Token': token } : {}), ...(body ? { 'Content-Type': type } : {}) }, body,
+});
+
+test('the photo library and share studio scripts are served', async () => {
+  const page = await (await fetch(`${base}/travel/`)).text();
+  expect(page).toContain('travel-photo-db.js');
+  expect(page).toContain('travel-studio.js');
+  expect((await fetch(`${base}/travel/travel-photo-db.js`)).headers.get('content-type')).toContain('javascript');
+  expect(await (await fetch(`${base}/travel/travel-studio.js`)).text()).toContain('TravelStudio');
+});
+
+test('isJpeg only accepts JPEG bytes', () => {
+  expect(isJpeg(JPEG)).toBe(true);
+  expect(isJpeg(Buffer.from('<svg></svg>'))).toBe(false);
+  expect(isJpeg('nope')).toBe(false);
+});
+
+test('photo backup: a LINE account stores, reads back and deletes its own photos only', async () => {
+  resetPhotos();
+  expect((await photo('PUT', 'p-abc12345/full', null, JPEG)).status).toBe(401);
+  expect((await photo('PUT', 'p-abc12345/full', 'test:U1', JPEG)).status).toBe(200);
+  expect((await photo('PUT', 'p-abc12345/thumb', 'test:U1', JPEG)).status).toBe(200);
+  const back = await photo('GET', 'p-abc12345/full', 'test:U1');
+  expect(back.status).toBe(200);
+  expect(back.headers.get('content-type')).toBe('image/jpeg');
+  expect(Buffer.from(await back.arrayBuffer()).equals(JPEG)).toBe(true);
+  // Another account cannot see it.
+  expect((await photo('GET', 'p-abc12345/full', 'test:U2')).status).toBe(404);
+  expect((await photo('DELETE', 'p-abc12345', 'test:U1')).status).toBe(200);
+  expect((await photo('GET', 'p-abc12345/thumb', 'test:U1')).status).toBe(404);
+});
+
+test('photo backup refuses bad ids, other file types and oversized thumbnails', async () => {
+  resetPhotos();
+  expect((await photo('PUT', 'a/full', 'test:U1', JPEG)).status).toBe(400);
+  expect((await photo('PUT', 'bad!id99/full', 'test:U1', JPEG)).status).toBe(400);
+  expect((await photo('PUT', 'p-abc12345/huge', 'test:U1', JPEG)).status).toBe(400);
+  expect((await photo('PUT', 'p-abc12345/full', 'test:U1', Buffer.from('<svg></svg>'))).status).toBe(413);
+  const big = Buffer.concat([JPEG, Buffer.alloc(300 * 1024)]);
+  expect((await photo('PUT', 'p-abc12345/thumb', 'test:U1', big)).status).toBe(413);
+});
+
+test('sanitizeTravelData keeps the list of backed-up photos', () => {
+  const data = sanitizeTravelData({
+    trips: [],
+    photos: [{
+      id: 'p-1234567', tripId: 't1', taken: '2025-01-12', caption: '紅葉',
+    }],
+  });
+  expect(data.photos).toEqual([{
+    id: 'p-1234567', tripId: 't1', taken: '2025-01-12', caption: '紅葉',
+  }]);
 });

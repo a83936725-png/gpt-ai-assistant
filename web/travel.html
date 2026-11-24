@@ -1295,10 +1295,102 @@ a.chip { text-decoration: none; }
 body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background-image: var(--grain), var(--fibre), radial-gradient(120% 70% at 50% -10%, var(--paper-light), transparent 60%), radial-gradient(150% 110% at 50% 40%, transparent 55%, var(--paper-edge)); }
 @media print { body::before { display: none; } }
+/* ---------- 打卡與照片 */
+.stamp-row { display: flex; gap: 14px; overflow-x: auto; padding: 10px 4px 14px; margin: 0 -4px; scrollbar-width: none; }
+.stamp-row::-webkit-scrollbar { display: none; }
+.stamp-chip { --ink: #c8102e; flex: none; width: 92px; height: 92px; border-radius: 50%; border: 3px solid var(--ink); box-shadow: inset 0 0 0 4px var(--bg), inset 0 0 0 5px var(--ink); color: var(--ink); background: transparent; display: grid; place-content: center; text-align: center; gap: 1px; rotate: var(--rot, -6deg); cursor: pointer; font-family: inherit; opacity: .9; transition: rotate .25s, scale .2s; position: relative; }
+.stamp-chip::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 30% 70%, var(--bg) 0 1.5px, transparent 2px) 0 0 / 11px 13px, radial-gradient(circle at 70% 20%, var(--bg) 0 1px, transparent 1.6px) 0 0 / 9px 7px; opacity: .55; }
+.stamp-chip b { font: 900 16px/1.15 "Noto Serif TC", serif; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stamp-chip small { font-size: 10px; font-weight: 800; letter-spacing: .02em; }
+.stamp-chip:hover { rotate: 0deg; scale: 1.06; }
+.stamp-chip.add { --ink: var(--muted); border-style: dashed; box-shadow: none; opacity: .8; rotate: 0deg; }
+.stamp-chip.add b { font-size: 26px; }
+.stamp-chip.ghost { --ink: var(--muted); border-style: dashed; box-shadow: none; opacity: .7; }
+.stamp-invite { display: flex; gap: 16px; align-items: center; width: 100%; padding: 8px 0 14px; background: none; border: 0; text-align: left; cursor: pointer; font-family: inherit; color: var(--text); }
+.stamp-invite > span:last-child { display: grid; gap: 3px; }
+.stamp-invite small { color: var(--muted); }
+.lib-filter { gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 6px; }
+.lib-filter::-webkit-scrollbar { display: none; }
+.lib-filter .chip { flex: none; }
+.lib-filter .chip .fl { width: 16px; height: 11px; }
+.lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 4px; margin-top: 4px; }
+@media (max-width: 520px) { .lib-grid { grid-template-columns: repeat(3, 1fr); } }
+.lib-ph { position: relative; aspect-ratio: 1; padding: 0; border: 0; border-radius: 6px; overflow: hidden; background: var(--surface-2); cursor: pointer; }
+.lib-ph img { width: 100%; height: 100%; object-fit: cover; display: block; transition: scale .3s; }
+.lib-ph:hover img { scale: 1.05; }
+.lib-tag { position: absolute; left: 6px; bottom: 6px; font: 800 10px/1 system-ui, sans-serif; font-style: normal; color: #fff; background: rgba(200,16,46,.9); padding: 3px 6px; border-radius: 99px; }
+.lib-grid.selecting .lib-ph::after { content: ""; position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.25); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.lib-grid.selecting .lib-ph.sel::after { background: var(--brand) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4l2.6 2.6L12 5.6' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 14px no-repeat; }
+.lib-grid.selecting .lib-ph.sel img { scale: .9; border-radius: 6px; }
+.lib-more { grid-column: 1 / -1; padding: 12px; border: 0; background: none; color: var(--brand); font-weight: 700; cursor: pointer; }
+.lib-drop { grid-column: 1 / -1; display: grid; justify-items: center; gap: 6px; text-align: center; padding: 30px 16px; border: 1.5px dashed color-mix(in srgb, var(--text) 22%, transparent); border-radius: 18px; cursor: pointer; color: var(--text); }
+.lib-drop .ea { width: 56px; height: 56px; }
+.lib-drop small { color: var(--muted); max-width: 320px; }
+.lib-grid.drag { outline: 2px dashed var(--brand); outline-offset: 4px; border-radius: 12px; }
+.lib-bar { position: sticky; bottom: 76px; z-index: 5; display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 10px 12px; border-radius: 16px; background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: var(--shadow); backdrop-filter: blur(8px); }
+.lib-status { margin: 8px 0 0; }
+.danger-text { color: var(--danger) !important; }
+/* the floating 打卡 button */
+.ci-fab { position: fixed; right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 39; display: flex; align-items: center; gap: 6px; height: 52px; padding: 0 18px 0 10px; border: 0; border-radius: 99px; background: #1d1b17; color: #fffaf0; font: 800 15px/1 inherit; font-family: inherit; cursor: pointer; box-shadow: 0 10px 24px rgba(30,20,5,.3), inset 0 0 0 1px rgba(255,255,255,.08); transition: translate .2s, scale .16s; }
+.ci-fab .ea { width: 34px; height: 34px; }
+.ci-fab:hover { translate: 0 -2px; }
+.ci-fab:active { scale: .94; }
+#cart-fab:not([hidden]) ~ .ci-fab, .ci-fab.up { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 860px) { .ci-fab { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); } #cart-fab:not([hidden]) ~ .ci-fab { bottom: calc(156px + env(safe-area-inset-bottom, 0px)); } }
+:root[data-theme="dark"] .ci-fab { background: #f3eee4; color: #1d1b17; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ci-fab { background: #f3eee4; color: #1d1b17; } }
+/* the check-in sheet */
+.ci-photo { position: relative; border-radius: 18px; overflow: hidden; background: var(--surface-2); min-height: 200px; display: grid; }
+.ci-photo img { width: 100%; max-height: 52vh; object-fit: cover; display: block; grid-area: 1 / 1; }
+.ci-empty { grid-area: 1 / 1; display: grid; justify-items: center; align-content: center; gap: 4px; padding: 26px 16px 76px; text-align: center; }
+.ci-empty .ea { width: 64px; height: 64px; }
+.ci-empty small { color: var(--muted); }
+.ci-photo-btns { grid-area: 1 / 1; align-self: end; display: flex; gap: 8px; justify-content: center; padding: 14px; }
+.btn.glass { background: rgba(20,16,10,.45); color: #fff; border-color: rgba(255,255,255,.3); backdrop-filter: blur(8px); }
+.ci-places { gap: 6px; }
+.btn .ea { width: 20px; height: 20px; margin: -4px 2px -4px -4px; display: inline-block; vertical-align: middle; }
+/* stamped! */
+.ci-done { display: grid; gap: 10px; justify-items: center; text-align: center; }
+.ci-done h2 { margin: 6px 0 0; }
+.ci-done p { margin: 0; }
+.ci-shot { position: relative; margin: 0; width: 100%; border-radius: 6px; padding: 12px 12px 44px; background: #fffdf8; box-shadow: 0 14px 30px rgba(60,40,10,.2); rotate: -1.5deg; animation: ci-shake .35s .55s; }
+.ci-shot img { display: block; width: 100%; aspect-ratio: 4 / 3.4; object-fit: cover; border-radius: 2px; }
+.ci-stamp { --ink: #c8102e; position: absolute; right: 18px; bottom: 6px; width: 118px; height: 118px; border-radius: 50%; border: 4px solid var(--ink); box-shadow: inset 0 0 0 5px rgba(255,253,248,.55), inset 0 0 0 6.5px var(--ink); color: var(--ink); display: grid; place-content: center; gap: 2px; background: rgba(255,253,248,.55); rotate: -14deg; mix-blend-mode: multiply; animation: ci-stamp .5s cubic-bezier(.3,1.6,.5,1) .25s backwards; }
+.ci-stamp b { font: 900 22px/1.1 "Noto Serif TC", serif; }
+.ci-stamp small { font-size: 11px; font-weight: 800; }
+@keyframes ci-stamp { 0% { scale: 2.6; opacity: 0; } 60% { opacity: 1; } 100% { scale: 1; opacity: 1; } }
+@keyframes ci-shake { 30% { translate: 0 3px; } 60% { translate: 0 -1px; } }
+.ci-next { display: flex; gap: 12px; align-items: center; width: 100%; padding: 10px 12px; border: 0; border-radius: 16px; background: var(--surface-2); text-align: left; cursor: pointer; font-family: inherit; color: var(--text); }
+.ci-next .medal { --d: 40px; margin: 0; }
+.ci-next span { display: grid; gap: 2px; }
+.ci-next small { color: var(--muted); font-size: 12px; }
+.ci-next em { font-style: normal; color: var(--muted); font-size: 13px; }
+.ci-next.got { background: color-mix(in srgb, #f2c14e 22%, var(--surface)); }
+.ci-done .actions { width: 100%; }
+.ci-done.shared .ci-shot { rotate: 1deg; }
+.shared-medal { padding: 8px 0 0; }
+/* the photo viewer */
+.lb { position: relative; margin: 0 -4px; border-radius: 14px; overflow: hidden; background: #0d0c0a; display: grid; place-items: center; }
+.lb img { max-width: 100%; max-height: 62vh; display: block; }
+.lb-nav { position: absolute; top: 50%; translate: 0 -50%; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0,0,0,.4); color: #fff; font-size: 24px; cursor: pointer; backdrop-filter: blur(6px); }
+.lb-nav.prev { left: 8px; } .lb-nav.next { right: 8px; }
+.lb-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+/* the share studio */
+.studio { display: grid; gap: 14px; }
+.studio-preview { position: relative; display: grid; place-items: center; min-height: 260px; border-radius: 16px; background: var(--surface-2); overflow: hidden; padding: 14px; }
+.studio-preview img { max-width: 100%; max-height: 52vh; border-radius: 6px; box-shadow: 0 12px 28px rgba(40,30,10,.25); animation: rise .45s cubic-bezier(.2,1.1,.3,1); }
+.studio-preview.busy img { opacity: .5; filter: blur(2px); transition: opacity .2s, filter .2s; }
+.studio-wait { color: var(--muted); font-weight: 700; }
+.share-targets { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 12px 6px; }
+.share-targets button { display: grid; justify-items: center; gap: 6px; padding: 4px 0; border: 0; background: none; font: 600 12px/1.2 inherit; font-family: inherit; color: var(--text); cursor: pointer; animation: rise .4s cubic-bezier(.2,1.2,.3,1) backwards; animation-delay: var(--d, 0ms); }
+.st-mark { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; color: #fff; font: 900 15px/1 system-ui, sans-serif; box-shadow: 0 6px 14px rgba(0,0,0,.16); transition: translate .2s; }
+.st-mark svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.share-targets button:hover .st-mark { translate: 0 -3px; }
+@media (prefers-reduced-motion: reduce) { .ci-stamp, .ci-shot, .studio-preview img, .share-targets button { animation: none; } }
 </style>
 </head>
 <body>
-<svg class="art-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><radialGradient id="g-globe-shade" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="rgba(255,255,255,.45)"/><stop offset=".55" stop-color="rgba(255,255,255,0)"/><stop offset="1" stop-color="rgba(0,25,70,.45)"/></radialGradient><clipPath id="g-globe-clip"><circle cx="12" cy="12" r="9"/></clipPath><linearGradient id="g-stonew" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f4e6ca"/><stop offset="1" stop-color="#c9b088"/></linearGradient><linearGradient id="g-bamboo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ecc97f"/><stop offset="1" stop-color="#b5842d"/></linearGradient><linearGradient id="g-dumpling" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf7"/><stop offset="1" stop-color="#e6d9bf"/></linearGradient><linearGradient id="g-simb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a94ff"/><stop offset="1" stop-color="#2a3fb8"/></linearGradient><linearGradient id="g-cal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6d5f"/><stop offset="1" stop-color="#d33a2e"/></linearGradient><linearGradient id="g-pack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9364"/><stop offset="1" stop-color="#d9480f"/></linearGradient><linearGradient id="g-cup" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ddd6ca"/></linearGradient><linearGradient id="g-bowl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ec5a4c"/><stop offset="1" stop-color="#a51f1a"/></linearGradient><linearGradient id="g-broth" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9cf7a"/><stop offset="1" stop-color="#d9822b"/></linearGradient><linearGradient id="g-torii" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6603f"/><stop offset="1" stop-color="#bf2a18"/></linearGradient><linearGradient id="g-torii-h" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff7a55"/><stop offset=".45" stop-color="#e0432a"/><stop offset="1" stop-color="#9d1f10"/></linearGradient><linearGradient id="g-mtn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fb2d0"/><stop offset="1" stop-color="#4d6187"/></linearGradient><linearGradient id="g-snowcap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dbe5f3"/></linearGradient><linearGradient id="g-grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#86d462"/><stop offset="1" stop-color="#3b9637"/></linearGradient><radialGradient id="g-sun" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#fff6c4"/><stop offset=".5" stop-color="#ffc53d"/><stop offset="1" stop-color="#ff9a1a"/></radialGradient><linearGradient id="g-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6ad8f2"/><stop offset="1" stop-color="#1474c4"/></linearGradient><linearGradient id="g-sand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde7b0"/><stop offset="1" stop-color="#e2b763"/></linearGradient><linearGradient id="g-leaf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#74d86c"/><stop offset="1" stop-color="#24823a"/></linearGradient><linearGradient id="g-trunk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b98450"/><stop offset="1" stop-color="#76461f"/></linearGradient><linearGradient id="g-bldg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7f97c2"/><stop offset="1" stop-color="#33456d"/></linearGradient><linearGradient id="g-bldg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b0c1de"/><stop offset="1" stop-color="#5f7298"/></linearGradient><linearGradient id="g-bag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff94b4"/><stop offset="1" stop-color="#dc316b"/></linearGradient><linearGradient id="g-water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8be0f3"/><stop offset="1" stop-color="#2a9fd0"/></linearGradient><linearGradient id="g-wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8bd84"/><stop offset="1" stop-color="#a96f36"/></linearGradient><linearGradient id="g-snowhill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cddbf0"/></linearGradient><linearGradient id="g-pine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#47a865"/><stop offset="1" stop-color="#1b5a35"/></linearGradient><linearGradient id="g-moon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff5bf"/><stop offset="1" stop-color="#f3bd3a"/></linearGradient><radialGradient id="g-moonglow"><stop offset="0" stop-color="rgba(255,214,110,.5)"/><stop offset="1" stop-color="rgba(255,214,110,0)"/></radialGradient><linearGradient id="g-night" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33417c"/><stop offset="1" stop-color="#121a3a"/></linearGradient><linearGradient id="g-tent" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffad55"/><stop offset="1" stop-color="#e8590c"/></linearGradient><linearGradient id="g-fire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff07a"/><stop offset="1" stop-color="#ff5a14"/></linearGradient><linearGradient id="g-pin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7070"/><stop offset="1" stop-color="#c22626"/></linearGradient><linearGradient id="g-roof" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0603f"/><stop offset="1" stop-color="#963019"/></linearGradient><linearGradient id="g-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffbf2"/><stop offset="1" stop-color="#e4d8c4"/></linearGradient><linearGradient id="g-plane" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d3e2"/></linearGradient><linearGradient id="g-ticket" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffbd55"/><stop offset="1" stop-color="#f2761a"/></linearGradient><linearGradient id="g-ticket2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffa63d"/><stop offset="1" stop-color="#e0600f"/></linearGradient><linearGradient id="g-coin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0a6"/><stop offset="1" stop-color="#e0a91e"/></linearGradient><linearGradient id="g-coin-edge" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c48c12"/><stop offset="1" stop-color="#8a5f05"/></linearGradient><linearGradient id="g-passport" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33539a"/><stop offset="1" stop-color="#16275a"/></linearGradient></defs></svg>
+<svg class="art-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><linearGradient id="g-cam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6374"/><stop offset="1" stop-color="#1d222b"/></linearGradient><radialGradient id="g-lens" cx=".35" cy=".35" r=".8"><stop offset="0" stop-color="#8fbcff"/><stop offset=".5" stop-color="#3b3f9e"/><stop offset="1" stop-color="#0b0d24"/></radialGradient><radialGradient id="g-globe-shade" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="rgba(255,255,255,.45)"/><stop offset=".55" stop-color="rgba(255,255,255,0)"/><stop offset="1" stop-color="rgba(0,25,70,.45)"/></radialGradient><clipPath id="g-globe-clip"><circle cx="12" cy="12" r="9"/></clipPath><linearGradient id="g-stonew" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f4e6ca"/><stop offset="1" stop-color="#c9b088"/></linearGradient><linearGradient id="g-bamboo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ecc97f"/><stop offset="1" stop-color="#b5842d"/></linearGradient><linearGradient id="g-dumpling" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf7"/><stop offset="1" stop-color="#e6d9bf"/></linearGradient><linearGradient id="g-simb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a94ff"/><stop offset="1" stop-color="#2a3fb8"/></linearGradient><linearGradient id="g-cal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6d5f"/><stop offset="1" stop-color="#d33a2e"/></linearGradient><linearGradient id="g-pack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9364"/><stop offset="1" stop-color="#d9480f"/></linearGradient><linearGradient id="g-cup" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ddd6ca"/></linearGradient><linearGradient id="g-bowl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ec5a4c"/><stop offset="1" stop-color="#a51f1a"/></linearGradient><linearGradient id="g-broth" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9cf7a"/><stop offset="1" stop-color="#d9822b"/></linearGradient><linearGradient id="g-torii" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6603f"/><stop offset="1" stop-color="#bf2a18"/></linearGradient><linearGradient id="g-torii-h" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff7a55"/><stop offset=".45" stop-color="#e0432a"/><stop offset="1" stop-color="#9d1f10"/></linearGradient><linearGradient id="g-mtn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fb2d0"/><stop offset="1" stop-color="#4d6187"/></linearGradient><linearGradient id="g-snowcap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dbe5f3"/></linearGradient><linearGradient id="g-grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#86d462"/><stop offset="1" stop-color="#3b9637"/></linearGradient><radialGradient id="g-sun" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#fff6c4"/><stop offset=".5" stop-color="#ffc53d"/><stop offset="1" stop-color="#ff9a1a"/></radialGradient><linearGradient id="g-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6ad8f2"/><stop offset="1" stop-color="#1474c4"/></linearGradient><linearGradient id="g-sand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde7b0"/><stop offset="1" stop-color="#e2b763"/></linearGradient><linearGradient id="g-leaf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#74d86c"/><stop offset="1" stop-color="#24823a"/></linearGradient><linearGradient id="g-trunk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b98450"/><stop offset="1" stop-color="#76461f"/></linearGradient><linearGradient id="g-bldg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7f97c2"/><stop offset="1" stop-color="#33456d"/></linearGradient><linearGradient id="g-bldg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b0c1de"/><stop offset="1" stop-color="#5f7298"/></linearGradient><linearGradient id="g-bag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff94b4"/><stop offset="1" stop-color="#dc316b"/></linearGradient><linearGradient id="g-water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8be0f3"/><stop offset="1" stop-color="#2a9fd0"/></linearGradient><linearGradient id="g-wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8bd84"/><stop offset="1" stop-color="#a96f36"/></linearGradient><linearGradient id="g-snowhill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cddbf0"/></linearGradient><linearGradient id="g-pine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#47a865"/><stop offset="1" stop-color="#1b5a35"/></linearGradient><linearGradient id="g-moon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff5bf"/><stop offset="1" stop-color="#f3bd3a"/></linearGradient><radialGradient id="g-moonglow"><stop offset="0" stop-color="rgba(255,214,110,.5)"/><stop offset="1" stop-color="rgba(255,214,110,0)"/></radialGradient><linearGradient id="g-night" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33417c"/><stop offset="1" stop-color="#121a3a"/></linearGradient><linearGradient id="g-tent" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffad55"/><stop offset="1" stop-color="#e8590c"/></linearGradient><linearGradient id="g-fire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff07a"/><stop offset="1" stop-color="#ff5a14"/></linearGradient><linearGradient id="g-pin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7070"/><stop offset="1" stop-color="#c22626"/></linearGradient><linearGradient id="g-roof" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0603f"/><stop offset="1" stop-color="#963019"/></linearGradient><linearGradient id="g-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffbf2"/><stop offset="1" stop-color="#e4d8c4"/></linearGradient><linearGradient id="g-plane" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d3e2"/></linearGradient><linearGradient id="g-ticket" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffbd55"/><stop offset="1" stop-color="#f2761a"/></linearGradient><linearGradient id="g-ticket2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffa63d"/><stop offset="1" stop-color="#e0600f"/></linearGradient><linearGradient id="g-coin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0a6"/><stop offset="1" stop-color="#e0a91e"/></linearGradient><linearGradient id="g-coin-edge" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c48c12"/><stop offset="1" stop-color="#8a5f05"/></linearGradient><linearGradient id="g-passport" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33539a"/><stop offset="1" stop-color="#16275a"/></linearGradient></defs></svg>
 
 <section id="login" hidden>
   <div class="login-wrap">
@@ -1424,7 +1516,13 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-even
     </section>
 
     <section data-view="trips" hidden>
-      <div class="section-title" id="cards-title" style="margin-top:4px"><h2 class="serif">我的旅遊卡</h2><span class="muted small" id="pcard-count"></span><span class="spacer"></span><div class="seg" id="pcard-seg" role="group" aria-label="年份"></div></div>
+      <div class="section-title" id="photos-title" style="margin-top:4px"><h2 class="serif">打卡與照片</h2><span class="muted small" id="lib-count"></span><span class="spacer"></span><button class="btn sm primary" data-checkin>打卡</button><label class="btn sm"><input type="file" accept="image/*" multiple hidden data-lib-add>加入照片</label><button class="btn sm" data-share-year="all">分享足跡</button></div>
+      <div id="stamp-row"></div>
+      <div class="row lib-filter" id="lib-filter"></div>
+      <div class="lib-grid" id="lib-grid"></div>
+      <div class="lib-bar" id="lib-bar" hidden></div>
+      <p class="small muted lib-status" id="lib-status"></p>
+      <div class="section-title" id="cards-title"><h2 class="serif">我的旅遊卡</h2><span class="muted small" id="pcard-count"></span><span class="spacer"></span><div class="seg" id="pcard-seg" role="group" aria-label="年份"></div></div>
       <div class="pcards" id="pcards"></div>
       <div class="section-title"><h2 class="serif">年度旅行回顧</h2><span class="muted small">2025 與 2026 你的足跡、元素與徽章</span></div>
       <div class="grid two" id="review"></div>
@@ -1461,6 +1559,7 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-even
   <div class="modal-head"><h3 id="modal-title"></h3><button class="close" data-close aria-label="關閉">✕</button></div>
   <div class="modal-body" id="modal-body"></div>
 </dialog>
+<button id="ci-fab" class="ci-fab" data-checkin hidden aria-label="打卡"><span class="ci-fab-art"></span><span>打卡</span></button>
 <button id="cart-fab" class="fab" aria-label="購物車" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.6l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.7a1.5 1.5 0 0 0 1.5-1.1L21 7.5H6"/></svg><span class="badge-count" id="cart-count" hidden></span></button>
 <div id="toast" role="status" aria-live="polite"></div>
 <div class="offline-bar" id="offline-bar" hidden>目前離線：可以看行程、紀念冊與安裝教學；購買和同步要等有網路</div>
@@ -1471,6 +1570,8 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-even
 <script src="travel-data.js"></script>
 <script src="travel-geo.js"></script>
 <script src="travel-map.js"></script>
+<script src="travel-photo-db.js"></script>
+<script src="travel-studio.js"></script>
 <script src="travel-app.js"></script>
 </body>
 </html>

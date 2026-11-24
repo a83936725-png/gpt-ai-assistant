@@ -111,6 +111,7 @@
     plane: '<g transform="rotate(-18 12 12)"><g class="jet"><path class="trail" d="M-4 12.7h6" stroke="rgba(140,160,195,.7)" stroke-width=".9" stroke-dasharray="1.2 1" stroke-linecap="round"/><path d="M10.4 12L7.6 5.4h1.8l5.6 6.6z" fill="#c4cfdf" stroke="#8d9bb3" stroke-width=".35"/><path d="M2.8 12.7c0-.7.6-1.3 1.4-1.3h15c1.8 0 3.4.6 3.4 1.3S21 14 19.2 14h-15c-.8 0-1.4-.6-1.4-1.3z" fill="url(#g-plane)" stroke="#8d9bb3" stroke-width=".35"/><path d="M4.4 11.6L2.9 7.6h1.6l2.9 4z" fill="#1463ff"/><path d="M12.2 12.4h6" stroke="#5c6f91" stroke-width=".6" stroke-dasharray=".6 .7"/><path d="M20 12.2h1.5" stroke="#34425e" stroke-width=".7" stroke-linecap="round"/><path d="M10.4 13.3l-2.8 6.6h1.8l5.6-6.6z" fill="url(#g-plane)" stroke="#8d9bb3" stroke-width=".35"/><path d="M4.6 13.8l-1.5 2.3h1.5l2.4-2.3z" fill="#1046c4"/></g></g>',
     ticket: '<g transform="rotate(-12 12 12)"><path d="M2.5 7.5h13v9h-13v-3a1.5 1.5 0 0 0 0-3z" fill="url(#g-ticket)"/><path d="M5 10.6h7.5M5 13.2h5" stroke="rgba(255,255,255,.9)" stroke-width="1.1" stroke-linecap="round"/><g class="stub"><path d="M15.5 7.5h6v3a1.5 1.5 0 0 0 0 3v3h-6z" fill="url(#g-ticket2)"/><path d="M18.5 10.4l.5 1 1.1.15-.8.75.2 1.1-1-.5-1 .5.2-1.1-.8-.75 1.1-.15z" fill="rgba(255,255,255,.9)"/></g><path d="M15.5 7.9v8.2" stroke="rgba(255,255,255,.85)" stroke-width=".7" stroke-dasharray="1 .8"/></g>',
     coins: '<path d="M5 19v1.6a6 2.2 0 0 0 12 0V19" fill="url(#g-coin-edge)"/><ellipse cx="11" cy="19" rx="6" ry="2.2" fill="url(#g-coin)"/><path d="M5 16.6v1.6a6 2.2 0 0 0 12 0v-1.6" fill="url(#g-coin-edge)"/><ellipse cx="11" cy="16.6" rx="6" ry="2.2" fill="url(#g-coin)"/><path d="M5 14.2v1.6a6 2.2 0 0 0 12 0v-1.6" fill="url(#g-coin-edge)"/><ellipse cx="11" cy="14.2" rx="6" ry="2.2" fill="url(#g-coin)"/><path d="M15 20.6v1.2a4.2 1.6 0 0 0 8.4 0v-1.2" fill="url(#g-coin-edge)"/><ellipse cx="19.2" cy="20.6" rx="4.2" ry="1.6" fill="url(#g-coin)"/><g class="drop"><path d="M5 11.8v1.6a6 2.2 0 0 0 12 0v-1.6" fill="url(#g-coin-edge)"/><ellipse cx="11" cy="11.8" rx="6" ry="2.2" fill="url(#g-coin)"/><ellipse cx="11" cy="11.8" rx="4.2" ry="1.4" fill="none" stroke="rgba(150,100,0,.5)" stroke-width=".5"/><path d="M11 10.9v1.8" stroke="rgba(150,100,0,.6)" stroke-width=".7" stroke-linecap="round"/></g>',
+    camera: '<path d="M8 7l1.4-2.4h5.2L16 7z" fill="#2a2f38"/><rect x="2.5" y="6.6" width="19" height="13.4" rx="3" fill="url(#g-cam)"/><path d="M2.5 10.2h19" stroke="rgba(255,255,255,.1)" stroke-width="1.6"/><circle cx="12" cy="13.6" r="4.8" fill="#11151c" stroke="#9aa3b5" stroke-width=".8"/><circle cx="12" cy="13.6" r="3.3" fill="url(#g-lens)"/><circle cx="10.8" cy="12.4" r=".95" fill="rgba(255,255,255,.75)"/><rect x="16.8" y="8.2" width="2.8" height="1.7" rx=".5" fill="#ffe08a"/><circle cx="5.4" cy="8.9" r=".8" fill="#ff4d4d"/>',
     passport: '<path d="M5 2.5h12.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H5z" fill="url(#g-passport)"/><path d="M5 2.5h1.4v19H5z" fill="rgba(0,0,0,.25)"/><circle cx="12.4" cy="10" r="3.2" fill="none" stroke="#e8c56a" stroke-width=".7"/><path d="M9.2 10h6.4M12.4 6.8c-1.6 1.8-1.6 4.6 0 6.4M12.4 6.8c1.6 1.8 1.6 4.6 0 6.4" fill="none" stroke="#e8c56a" stroke-width=".5"/><path d="M9.5 16h5.8M10.3 17.6h4.2" stroke="#e8c56a" stroke-width=".6" stroke-linecap="round"/>',
   };
   const pic = (k) => (PICS[k] ? `<svg class="ea ea-${k}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${PICS[k]}</svg>` : '');
@@ -245,8 +246,55 @@
       regions: new Set(Object.keys(byRegion)),
       byRegion,
       months,
+      checkins: list.flatMap((t) => (t.checkins || []).map((c) => ({ ...c, city: t.city, tripId: t.id }))),
+      photos: LIB.filter((p) => list.some((t) => t.id === p.tripId)).length, // eslint-disable-line no-use-before-define
     };
   }
+
+  // ---------- 我的照片庫: photos kept in IndexedDB (travel-photo-db.js), sorted into trips by the date they were taken
+  const PDB = window.TravelPhotoDB;
+  let LIB = [];
+  const libUrls = new Map();
+  const libSrc = (p, kind = 'thumb') => {
+    const blob = (kind === 'full' && p.full) || p.thumb || p.full;
+    if (!blob) return '';
+    const key = `${p.id}:${blob === p.full ? 'full' : 'thumb'}`;
+    if (!libUrls.has(key)) libUrls.set(key, URL.createObjectURL(blob));
+    return libUrls.get(key);
+  };
+  const dropUrls = (id) => ['full', 'thumb'].forEach((k) => {
+    const u = libUrls.get(`${id}:${k}`);
+    if (u) { URL.revokeObjectURL(u); libUrls.delete(`${id}:${k}`); }
+  });
+  const photoMeta = (p) => ({
+    id: p.id, tripId: p.tripId || '', checkinId: p.checkinId || '', taken: p.taken || '', added: p.added || 0, caption: p.caption || '', lat: p.lat ?? null, lng: p.lng ?? null, w: p.w || 0, h: p.h || 0,
+  });
+  const tripForDate = (date, lat, lng) => {
+    if (!date) return null;
+    const hits = trips.filter((t) => t.start <= date && date <= t.end);
+    if (hits.length < 2 || lat == null) return hits[0] || null;
+    return hits.slice().sort((a, b) => haversine({ lat, lng }, a) - haversine({ lat, lng }, b))[0];
+  };
+  const byTaken = (a, b) => (b.taken || '').localeCompare(a.taken || '') || (b.added || 0) - (a.added || 0);
+  const tripPhotos = (tripId) => LIB.filter((p) => p.tripId === tripId).sort(byTaken).reverse();
+  const allCheckins = (list = trips) => list.flatMap((t) => (t.checkins || []).map((c) => ({ ...c, trip: t })))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const checkinTrip = () => trips.find(isOngoing) || sortTrips(trips.filter((t) => t.start <= TODAY)).reverse()[0] || sortTrips(trips)[0] || null;
+  const INKS = ['#c8102e', '#1d4fd8', '#0b7a5a', '#7b2cbf', '#b85c00', '#0e6ba8'];
+  const inkOf = (id) => INKS[[...String(id)].reduce((s, ch) => s + ch.charCodeAt(0), 0) % INKS.length];
+
+  const stampHtml = (c, i = 0) => {
+    const t = c.trip;
+    const label = c.place && [...c.place].length <= 6 ? c.place : t.city;
+    return `<button class="stamp-chip" data-ci-open="${t.id}:${c.id}" style="--ink:${inkOf(c.id)};--rot:${((i * 37) % 17) - 8}deg"><small>${esc(country(t.n).name)}</small><b>${esc(label.slice(0, 6))}</b><small>${esc((c.date || t.start).slice(2).replace(/-/g, '.'))}</small></button>`;
+  };
+  const shareCount = () => Number(settings.shares) || 0;
+  let ci = null;
+  const updatePhoto = async (p, patch) => {
+    Object.assign(p, patch);
+    await PDB?.put(p).catch(() => {});
+    save();
+  };
 
   // ---------- badges: 30 of them; each opens the trips, food and sights that earned it
   const SEASONS = ['冬', '冬', '春', '春', '春', '夏', '夏', '夏', '秋', '秋', '秋', '冬'];
@@ -299,8 +347,13 @@
       key: 'again', group: 'style', color: ROSE, name: '回訪老朋友', desc: '同一個國家去 2 次', progress: (s) => [Math.max(0, ...Object.values(countBy(s.past))), 2], trips: (s) => { const c = countBy(s.past); return s.past.filter((t) => c[t.n] > 1); },
     },
     { key: 'memory', group: 'style', color: VIOLET, name: '紀念冊作者', desc: '幫一趟旅行寫回憶或放照片', progress: (s) => [s.past.filter(hasMemory).length, 1], trips: pastWhere(hasMemory) },
+    { key: 'checkin1', group: 'social', color: ROSE, name: '打卡新手', desc: '第一次打卡', kind: 'checkin', progress: (s) => [s.checkins.length, 1] },
+    { key: 'checkin10', group: 'social', color: VIOLET, name: '打卡達人', desc: '打卡 10 次', kind: 'checkin', progress: (s) => [s.checkins.length, 10] },
+    { key: 'stamps5', group: 'social', color: BLUE, name: '印章收藏家', desc: '在 5 座城市打卡', kind: 'checkin', progress: (s) => [new Set(s.checkins.map((c) => c.city)).size, 5] },
+    { key: 'photo30', group: 'social', color: TEAL, name: '旅行攝影師', desc: '照片庫收藏 30 張旅行照片', kind: 'photo', progress: (s) => [s.photos, 30] },
+    { key: 'share3', group: 'social', color: GOLD, name: '分享家', desc: '分享 3 次旅行圖卡或打卡', kind: 'share', progress: () => [Number(settings.shares) || 0, 3] },
   ];
-  const BADGE_GROUPS = { milestone: '里程碑', element: '旅行元素', style: '旅行方式' };
+  const BADGE_GROUPS = { milestone: '里程碑', element: '旅行元素', style: '旅行方式', social: '打卡與分享' };
   const badgeState = (b, s) => {
     const [v, goal] = b.progress(s);
     return {
@@ -332,6 +385,11 @@
     seasons: '<circle cx="7.5" cy="7.5" r="5" fill="#ffd9e4"/><g fill="#ff8fb1" transform="translate(7.5 7.5)"><circle cy="-1.7" r="1.3"/><circle cx="1.6" cy="-.5" r="1.3"/><circle cx="1" cy="1.4" r="1.3"/><circle cx="-1" cy="1.4" r="1.3"/><circle cx="-1.6" cy="-.5" r="1.3"/><circle r=".7" fill="#ffd43b"/></g><circle cx="16.5" cy="7.5" r="5" fill="#fff1b8"/><path d="M16.5 3.6v1.1M16.5 10.3v1.1M12.6 7.5h1.1M19.3 7.5h1.1M13.7 4.7l.8.8M18.5 9.5l.8.8M13.7 10.3l.8-.8M18.5 5.5l.8-.8" stroke="#f59f00" stroke-width=".7" stroke-linecap="round"/><circle cx="16.5" cy="7.5" r="2.2" fill="url(#g-sun)"/><circle cx="7.5" cy="16.5" r="5" fill="#ffe2c6"/><path d="M7.5 12.8l.9 1.9 1.6-.6-.5 1.9 1.7.4-1.4 1.2.4.8H8.1v1.4H6.9v-1.4H5l.4-.8-1.4-1.2 1.7-.4-.5-1.9 1.6.6z" fill="#e8590c"/><circle cx="16.5" cy="16.5" r="5" fill="#dbe9ff"/><path d="M16.5 13.3v6.4M13.7 14.9l5.6 3.2M13.7 18.1l5.6-3.2" stroke="#4c8bf5" stroke-width=".8" stroke-linecap="round"/>',
     again: '<path d="M21 14A9.5 9.5 0 0 1 3 14" fill="none" stroke="#1463ff" stroke-width="1.1" stroke-linecap="round"/><path d="M3 11.8l1.7 3-3.3.1z" fill="#1463ff"/><path d="M12 18.5s-7-4.3-7-9.3A3.9 3.9 0 0 1 12 7a3.9 3.9 0 0 1 7 2.2c0 5-7 9.3-7 9.3z" fill="url(#g-pin)"/><path d="M7.4 8.7a2.3 2.3 0 0 1 2.2-1.8" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1" stroke-linecap="round"/>',
     memory: '<g transform="rotate(-8 12 12)"><rect x="4" y="3.5" width="14" height="16.5" rx="1" fill="#fff" stroke="#d9dde5" stroke-width=".5"/><rect x="5.5" y="5" width="11" height="10" fill="url(#g-sea)"/><path d="M5.5 15l3.5-4 2.4 2.4 2-2 3.1 3.6z" fill="url(#g-grass)"/><circle cx="14" cy="7.6" r="1.3" fill="url(#g-sun)"/><path d="M7 17.6h5" stroke="#9aa3b5" stroke-width=".6" stroke-linecap="round"/></g><path d="M18.6 21s-2.8-1.7-2.8-3.6a1.5 1.5 0 0 1 2.8-.8 1.5 1.5 0 0 1 2.8.8c0 1.9-2.8 3.6-2.8 3.6z" fill="#ff5c7a"/><path d="M20.2 3.4l1.4 1.4-7 7-2 .6.6-2z" fill="#3b4a66"/><path d="M20.2 3.4l1.4 1.4.8-.8a1 1 0 0 0-1.4-1.4z" fill="#e8a92a"/>',
+    checkin1: `${PICS.camera}<path d="M19.5 2.2l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5z" fill="#ffcf3a"/>`,
+    checkin10: `<g transform="translate(-2.5 0)">${PICS.passport}</g><g transform="rotate(-12 17 16)"><circle cx="17" cy="16" r="4.6" fill="rgba(255,255,255,.88)" stroke="#c8102e" stroke-width=".9"/><circle cx="17" cy="16" r="3.3" fill="none" stroke="#c8102e" stroke-width=".4"/><path d="M15 16h4" stroke="#c8102e" stroke-width="1"/></g><g transform="rotate(14 17 5.5)"><rect x="13" y="3" width="8" height="5" rx="1" fill="rgba(255,255,255,.88)" stroke="#1d4fd8" stroke-width=".8"/><path d="M15 5.5h4" stroke="#1d4fd8" stroke-width=".9"/></g>`,
+    stamps5: '<g fill="rgba(255,255,255,.75)" stroke-width=".9"><circle cx="6.5" cy="6.5" r="4" stroke="#c8102e"/><circle cx="17.5" cy="6.5" r="4" stroke="#1d4fd8"/><circle cx="12" cy="12.2" r="4" stroke="#0b7a5a"/><circle cx="6.5" cy="17.8" r="4" stroke="#7b2cbf"/><circle cx="17.5" cy="17.8" r="4" stroke="#b85c00"/></g><g stroke-width="1" stroke-linecap="round"><path d="M4.8 6.5h3.4" stroke="#c8102e"/><path d="M15.8 6.5h3.4" stroke="#1d4fd8"/><path d="M10.3 12.2h3.4" stroke="#0b7a5a"/><path d="M4.8 17.8h3.4" stroke="#7b2cbf"/><path d="M15.8 17.8h3.4" stroke="#b85c00"/></g>',
+    photo30: '<g transform="rotate(-14 12 12)"><rect x="5" y="4.5" width="13" height="15.5" rx="1" fill="#fff" stroke="#d9dde5" stroke-width=".4"/><rect x="6.2" y="5.7" width="10.6" height="10" fill="#ffd6a5"/></g><g transform="rotate(9 12 12)"><rect x="5" y="4.5" width="13" height="15.5" rx="1" fill="#fff" stroke="#d9dde5" stroke-width=".4"/><rect x="6.2" y="5.7" width="10.6" height="10" fill="#b9e3c6"/></g><rect x="5.5" y="4" width="13" height="16" rx="1" fill="#fff" stroke="#d9dde5" stroke-width=".4"/><rect x="6.7" y="5.2" width="10.6" height="10.4" fill="url(#g-sea)"/><path d="M6.7 15.6l3.6-4 2.4 2.4 2-2 2.6 3.6z" fill="url(#g-grass)"/><circle cx="14.6" cy="7.9" r="1.2" fill="url(#g-sun)"/><path d="M8.2 17.9h4.4" stroke="#9aa3b5" stroke-width=".6" stroke-linecap="round"/>',
+    share3: '<path d="M2.5 19.8c2.2-.4 3.8-1.6 5.4-3.2" fill="none" stroke="#1463ff" stroke-width=".9" stroke-dasharray="1.2 1" stroke-linecap="round"/><path d="M3 11.2L21.2 3.8l-4.6 16.4-4.3-5.5z" fill="#fff" stroke="#9aa8c0" stroke-width=".5" stroke-linejoin="round"/><path d="M12.3 14.7L21.2 3.8 9.4 13.1z" fill="#dfe6f3"/><path d="M9.4 13.1l.5 5.8 2.4-4.2z" fill="#c4cfe2"/>',
   };
   const BADGE_LINES = {
     first: '那一天，你推開了世界的門。',
@@ -364,6 +422,11 @@
     seasons: '春櫻、夏海、秋楓、冬雪，你都收藏了。',
     again: '有些地方，去一次是不夠的。',
     memory: '把旅行寫下來，它就不會被忘記。',
+    checkin1: '按下打卡的那一刻，這裡就成了你的地方。',
+    checkin10: '十個印章，十個不想忘記的瞬間。',
+    stamps5: '五座城市的印章，蓋滿你的護照。',
+    photo30: '你看見的風景，值得被好好收藏。',
+    share3: '把喜歡的地方分享出去，世界就更近一點。',
   };
   const badgePic = (b) => {
     if (b.tag) return pic(b.tag);
@@ -375,6 +438,14 @@
   const medalByName = (name, size = '') => medal(BADGES.find((b) => b.name === name) || { name, color: GOLD }, true, size);
   // The trip that unlocked a badge: the first one after which it was earned.
   function badgeUnlocked(b, list) {
+    if (b.kind === 'share') return null;
+    // Check-in badges are earned on the day of a check-in, not at the end of the trip.
+    if (b.kind === 'checkin') {
+      const cs = allCheckins(list).slice().reverse();
+      const cities = new Set();
+      const hit = cs.find((c, i) => { cities.add(c.trip.city); return b.key === 'stamps5' ? cities.size >= 5 : i + 1 >= b.progress({ checkins: cs })[1]; });
+      return hit ? { ...hit.trip, end: hit.date || hit.trip.end } : null;
+    }
     const past = list.filter((t) => !isUpcoming(t)).sort((p, q) => p.end.localeCompare(q.end));
     for (let i = 1; i <= past.length; i += 1) {
       if (badgeState(b, statsOf(past.slice(0, i))).ok) return past[i - 1];
@@ -691,6 +762,7 @@
   }
   const snapshot = () => ({
     user: { name: user?.name || '' }, trips, orders, cart, wish, settings, updatedAt: store.get('updatedAt', Date.now()),
+    photos: LIB.filter((p) => p.cloud).map(photoMeta), // eslint-disable-line no-use-before-define
   });
   function renderSync() {
     const box = $('#sync-status');
@@ -742,6 +814,7 @@
       user = { ...(user || {}), name: profile?.displayName || data?.user?.name || user?.name || '旅人', line: true, since: user?.since || TODAY };
       save(true);
       if (!data || (data.updatedAt || 0) < localAt) await pushNow();
+      restoreCloudPhotos(data?.photos).then(queueBackup); // eslint-disable-line no-use-before-define
       sync.state = 'ok'; sync.at = Date.now();
     } catch (err) {
       sync.state = 'error';
@@ -844,7 +917,7 @@
       window.scrollTo({ top: 0 });
       if (tab === 'map') requestAnimationFrame(drawMap);
       if (tab === 'plan') renderPlanner();
-      renderCartFab();
+      renderCartFab(); renderFab();
       animateIn($(`[data-view="${tab}"]`));
     };
     if (document.startViewTransition && !REDUCED) {
@@ -1154,9 +1227,11 @@
       ${Number(t.gb) ? `<div class="small">eSIM 用了 ${t.gb} GB</div>` : ''}
       ${t.note ? `<p>${esc(t.note)}</p>` : ''}
       ${CULTURE[c.code] ? `<section><h3>我吃了什麼</h3>${logHtml(t, 'food')}</section><section><h3>我做了什麼</h3>${logHtml(t, 'culture')}</section>` : ''}
+      <section><h3>打卡印章 ${(t.checkins || []).length} 個</h3>${(t.checkins || []).length ? `<div class="stamp-row">${allCheckins([t]).map(stampHtml).join('')}</div>` : '<p class="small muted">還沒在這趟打卡，現在補打卡也可以。</p>'}
+        <div class="row"><button class="btn primary" data-checkin="${t.id}">在 ${esc(t.city)} 打卡</button><button class="btn" data-share-trip="${t.id}">做成分享圖</button></div></section>
       ${d ? spotsHtml(d) : ''}
       <div class="actions">
-        <button class="btn primary" data-near="${t.id}">附近還能去哪</button>
+        <button class="btn" data-near="${t.id}">附近還能去哪</button>
         <a class="btn" href="${gmaps(`${t.city} ${c.name}`)}" target="_blank" rel="noopener">Google 地圖 ↗</a>
         <button class="btn" data-open-plan="${t.id}">行程表</button>
         <button class="btn" data-edit="${t.id}">編輯</button>
@@ -2098,7 +2173,7 @@
     else if (ds.albumExport) exportAlbum(ds.albumExport, b);
     else if (ds.albumStep) { const album = $('#album'); album.scrollBy({ left: album.clientWidth * Number(ds.albumStep), behavior: REDUCED ? 'auto' : 'smooth' }); } else if (ds.albumDel) {
       const [tripId, id] = ds.albumDel.split(':');
-      store.set(albumKey(tripId), albumPhotos(tripId).filter((x) => x.id !== id));
+      if (LIB.some((p) => p.id === id)) deletePhoto(id); else store.set(albumKey(tripId), store.get(albumKey(tripId), []).filter((x) => x.id !== id));
       const page = Math.round($('#album').scrollLeft / $('#album').clientWidth);
       openAlbum(openAlbum.year);
       $('#album').scrollLeft = page * $('#album').clientWidth;
@@ -2668,7 +2743,7 @@
         <h1 class="cover-title serif">${esc(t.city)}</h1>
         <p class="cover-lede">${esc(d?.blurb || t.note || `${n} 天的${c.name}之旅`)}</p>
         <div class="cover-meta"><button data-edit="${t.id}" aria-label="修改日期">${md(t.start)} – ${md(t.end)}・${n} 天</button>${items.length ? `<button data-open-plan="${t.id}">${items.length} 個行程</button>` : ''}${tickets ? `<button data-tickets="${t.id}">${tickets} 張門票</button>` : ''}${order ? '<button data-goto="esim">eSIM ' : `<button data-plan="${packFor(c.code)}" ${packFor(c.code) !== c.code ? `data-for="${c.code}"` : ''}>`}${order ? orderStatus(order)[1] : '尚未購買 eSIM'}</button></div>
-        ${planner ? '' : `<div class="row" style="margin-top:6px"><button class="btn" data-open-plan="${t.id}">打開行程表 →</button><button class="btn glass" data-near="${t.id}">附近還能去哪</button></div>`}
+        ${planner ? '' : `<div class="row" style="margin-top:6px">${isOngoing(t) ? `<button class="btn primary" data-checkin="${t.id}">在 ${esc(t.city)} 打卡</button>` : ''}<button class="btn" data-open-plan="${t.id}">打開行程表 →</button><button class="btn glass" data-near="${t.id}">附近還能去哪</button></div>`}
       </div>
       <a class="credit" target="_blank" rel="noopener" hidden>照片：Wikipedia</a>
     </header>`;
@@ -3100,6 +3175,7 @@
         <a class="btn" href="${gmaps(x.t)}" target="_blank" rel="noopener">Google 地圖 ↗</a>
         <a class="btn" href="https://en.wikipedia.org/wiki/${encodeURIComponent(x.t.replace(/ /g, '_'))}" target="_blank" rel="noopener">維基百科 ↗</a>
         ${n && !String(n).startsWith('x') ? `<button class="btn" data-trip-new="${n}">＋ 記錄一趟</button>` : ''}
+        ${trips.some((t) => country(t.n).code === code) ? `<button class="btn" data-ci-sight="${code}:${i}">在這裡打卡</button>` : ''}
       </div>
       ${more ? `<section><h3>${esc(countryName(code))}也推薦</h3><div class="gallery">${more}</div></section>` : ''}`);
   }
@@ -3357,7 +3433,10 @@
 
   // ---------- 回憶紀念冊
   function albumKey(tripId) { return `album:${tripId}`; }
-  function albumPhotos(tripId) { return store.get(albumKey(tripId), []); }
+  function albumPhotos(tripId) {
+    const lib = tripPhotos(tripId).filter((p) => p.full || p.thumb).map((p) => ({ id: p.id, src: libSrc(p, 'full'), lib: true })); // eslint-disable-line no-use-before-define
+    return [...store.get(albumKey(tripId), []), ...lib];
+  }
   // An album is built from data, so a shared link can show it on someone else's phone.
   function albumData(year) {
     const s = stats(year);
@@ -3667,6 +3746,15 @@
   }
   const flagPill = (n, s, small) => `<button class="flag-pill ${small ? 'sm' : ''}" data-country-n="${n}">${flag(country(n).code)}<b>${esc(country(n).name)}</b>${s ? `<small>${s.past.filter((t) => t.n === n).length} 趟</small>` : ''}</button>`;
   function badgeEvidence(b, s) {
+    if (b.kind === 'checkin') {
+      const cs = allCheckins(s.list);
+      return `<section><h3>你的印章 ${cs.length} 個</h3>${cs.length ? `<div class="stamp-row">${cs.map(stampHtml).join('')}</div>` : '<p class="small muted">還沒有打卡。</p>'}</section>`;
+    }
+    if (b.kind === 'photo') {
+      const ps = LIB.filter((p) => s.list.some((t) => t.id === p.tripId)).sort(byTaken);
+      return `<section><h3>照片庫裡 ${ps.length} 張旅行照片</h3><div class="lib-grid">${ps.slice(0, 12).map((p) => `<button class="lib-ph" data-lib-photo="${p.id}"><img src="${libSrc(p)}" alt="" loading="lazy"></button>`).join('')}</div></section>`;
+    }
+    if (b.kind === 'share') return `<section><h3>已經分享 ${shareCount()} 次</h3><p class="small muted">分享打卡明信片、限時動態、足跡地圖或徽章卡都算，傳 LINE、發 IG 或存圖片都可以。</p></section>`;
     if (b.kind === 'country') {
       const ns = [...s.countries].filter((n) => !b.region || country(n).region === b.region);
       return `<section><h3>收集到的${b.region ? REGIONS[b.region] : ''}國旗 ${ns.length} 面</h3><div class="flag-list">${ns.map((n) => flagPill(n, s)).join('') || '<span class="muted small">還沒有</span>'}</div></section>`;
@@ -3703,6 +3791,9 @@
     return list.length ? `<section><h3>${b.tag ? `你的 ${list.length} 趟${el(b.tag).label}之旅` : `相關的旅行 ${list.length} 趟`}</h3>${hint ? `<p class="small muted">${hint}</p>` : ''}${list.map((t) => tripStory(t, focus, extra(t))).join('')}</section>` : '';
   }
   function badgeNext(b, s) {
+    if (b.kind === 'checkin') return '<p class="small muted">旅途中拍一張、選地點，就會蓋上一個印章；去過的旅行也可以補打卡。</p><button class="btn primary" data-checkin>現在打卡</button>';
+    if (b.kind === 'photo') return '<p class="small muted">把手機裡的旅行照片加進來，會依拍攝日期自動放進每一趟旅行。</p><label class="btn primary"><input type="file" accept="image/*" multiple hidden data-lib-add>加入照片</label>';
+    if (b.kind === 'share') return '<button class="btn primary" data-share-year="all">分享我的足跡地圖</button>';
     const seen = new Set(trips.map((t) => t.dest));
     const destCards = (list) => (list.length ? `<div class="gallery">${list.slice(0, 6).map((d) => `<button class="ph-card city" data-dest="${d.id}"><div class="ph ${destPhoto(d.id) ? '' : 'ph-missing'}">${imgHtml(destPhoto(d.id), d.name)}</div><figcaption><b>${flag(d.c)} ${esc(d.name)}</b><small class="muted">${flightInfo(d.c)?.text || ''}</small></figcaption></button>`).join('')}</div>` : '');
     const inRegion = (d) => COUNTRIES[d.c]?.region;
@@ -3729,6 +3820,7 @@
       <div class="badge-hero">${medal(b, st.ok, 'xl', { pct: st.pct })}<div class="grow"><span class="kicker plain muted">${BADGE_GROUPS[b.group]}</span><h2 class="serif">${esc(b.name)}</h2><p class="muted" style="margin:2px 0 8px">${esc(b.desc)}</p>
         ${st.ok ? `<span class="status active">已解鎖${when ? `・${when.replace(/-/g, '.')} 達成` : ''}</span>` : `<div class="progress"><i style="width:${st.pct}%;background:linear-gradient(90deg,${b.color[0]},${b.color[1]})"></i></div><small class="muted">${fmt(st.v)} / ${fmt(st.goal)}</small>`}</div></div>
       ${BADGE_LINES[b.key] ? `<p class="badge-line">「${BADGE_LINES[b.key]}」</p>` : ''}
+      ${st.ok ? `<div class="actions"><button class="btn primary" data-share-badge="${b.key}">分享這枚徽章</button></div>` : ''}
       ${at ? `<figure class="unlock-photo">${atPhoto ? imgHtml(atPhoto, at.city) : ''}<figcaption>${flag(country(at.n).code)}在 ${esc(at.city)} 解鎖・${at.end.replace(/-/g, '.')}</figcaption></figure>` : ''}
       <div class="seg">${['all', ...CONFIG.years].map((y) => `<button data-badge="${key}" data-by="${y}" class="${String(year) === String(y) ? 'on' : ''}">${y === 'all' ? '2025–2026' : y}</button>`).join('')}</div>
       ${badgeEvidence(b, s)}
@@ -3927,14 +4019,597 @@
     });
   }
   async function addAlbumPhotos(tripId, files) {
-    const list = albumPhotos(tripId);
-    const datas = await Promise.all([...files].slice(0, 6).map((f) => compressImage(f).catch(() => null)));
-    datas.filter(Boolean).forEach((src) => list.push({ id: uid(), src }));
-    try { localStorage.setItem(`tm:${albumKey(tripId)}`, JSON.stringify(list)); } catch { toast('這台裝置的空間滿了，請刪掉幾張照片再試'); return; }
+    const added = await addPhotos(files, { tripId, quiet: true });
+    if (!added.length) { toast('照片沒辦法存，請換一張試試'); return; }
     const page = albumPageIndex();
     openAlbum(openAlbum.year);
     $('#album').scrollLeft = page * $('#album').clientWidth;
     toast('已加入紀念冊');
+  }
+
+  async function loadLibrary() {
+    if (!PDB) return;
+    try { LIB = await PDB.all(); } catch { LIB = []; return; }
+    // Photos added to the album before the library existed were data URLs in localStorage: move them over.
+    const legacy = trips.filter((t) => store.get(albumKey(t.id), []).length);
+    await Promise.all(legacy.map(async (t) => {
+      const keep = [];
+      await Promise.all(store.get(albumKey(t.id), []).map(async (m) => {
+        try {
+          const { fileDate, ...prep } = await PDB.prepare(await PDB.fromDataUrl(m.src));
+          const rec = {
+            id: /^[\w-]{6,48}$/.test(m.id || '') ? m.id : `p-${uid()}${uid()}`, tripId: t.id, checkinId: '', caption: '', added: Date.now(), cloud: false, ...prep, taken: prep.taken || t.start,
+          };
+          await PDB.put(rec);
+          LIB.push(rec);
+        } catch { keep.push(m); }
+      }));
+      if (keep.length) store.set(albumKey(t.id), keep); else localStorage.removeItem(`tm:${albumKey(t.id)}`);
+    }));
+  }
+
+  /** Files from the camera, the photo picker or a drop → library records, each sorted into its trip. */
+  async function addPhotos(files, opts = {}) {
+    if (!PDB) { toast('這個瀏覽器沒辦法存照片'); return []; }
+    const list = [...files].filter((f) => /^image\//.test(f.type || '') || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name || '')).slice(0, 60);
+    if (!list.length) return [];
+    if (!opts.quiet && list.length > 2) toast(`整理 ${list.length} 張照片中…`);
+    const added = [];
+    let sorted = 0;
+    await list.reduce((chain, f, i) => chain.then(async () => {
+      try {
+        const { fileDate, ...prep } = await PDB.prepare(f);
+        const trip = opts.tripId ? trips.find((t) => t.id === opts.tripId) : tripForDate(prep.taken || fileDate, prep.lat, prep.lng);
+        if (trip && !opts.tripId) sorted += 1;
+        const rec = {
+          id: `p-${uid()}${uid()}`, tripId: trip?.id || '', checkinId: opts.checkinId || '', caption: opts.caption || '', added: Date.now() + i, cloud: false, ...prep, taken: prep.taken || fileDate || '',
+        };
+        await PDB.put(rec);
+        LIB.push(rec);
+        added.push(rec);
+      } catch { /* a file the browser cannot open */ }
+    }), Promise.resolve());
+    PDB.persist();
+    if (added.length) { save(); renderLibrary(); renderBadgeWall(); queueBackup(); }
+    if (!opts.quiet) {
+      toast(added.length ? `加入 ${added.length} 張照片${sorted ? `，${sorted} 張依拍攝日期放進對應的旅行` : ''}` : '這些檔案讀不出來，換 JPEG 或 PNG 試試');
+    }
+    return added;
+  }
+  async function deletePhoto(id) {
+    const p = LIB.find((x) => x.id === id);
+    if (!p) return;
+    LIB = LIB.filter((x) => x.id !== id);
+    dropUrls(id);
+    await PDB?.del(id).catch(() => {});
+    trips.forEach((t) => (t.checkins || []).forEach((c) => { if (c.photo === id) c.photo = ''; }));
+    if (p.cloud && user?.line) photoFetch('DELETE', id).catch(() => {});
+    save();
+  }
+
+  // ---------- cloud backup after LINE login: each photo goes up once; on a new phone the thumbnails come back
+  const backup = { busy: false };
+  async function photoFetch(method, path, body) {
+    const liff = await loadLiff();
+    const idToken = liff?.isLoggedIn() ? liff.getIDToken() : null;
+    if (!idToken) throw Object.assign(new Error('login'), { status: 401 });
+    const res = await fetch(`api/photos/${path}`, { method, headers: { 'X-Line-Token': idToken, ...(body ? { 'Content-Type': 'image/jpeg' } : {}) }, body });
+    if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status });
+    return res;
+  }
+  async function queueBackup() {
+    if (!user?.line || !CONFIG.liff || backup.busy || !PDB) return;
+    backup.busy = true;
+    renderLibraryStatus();
+    await LIB.filter((p) => !p.cloud && p.full && p.thumb).reduce((chain, p) => chain.then(async () => {
+      await photoFetch('PUT', `${p.id}/thumb`, p.thumb);
+      await photoFetch('PUT', `${p.id}/full`, p.full);
+      p.cloud = true;
+      await PDB.put(p);
+      renderLibraryStatus();
+    }), Promise.resolve()).catch(() => {});
+    backup.busy = false;
+    renderLibraryStatus();
+  }
+  async function restoreCloudPhotos(metas) {
+    if (!Array.isArray(metas) || !PDB) return;
+    const have = new Set(LIB.map((p) => p.id));
+    const missing = metas.filter((m) => m && /^[\w-]{6,48}$/.test(m.id || '') && !have.has(m.id)).slice(0, 400);
+    await missing.reduce((chain, m) => chain.then(async () => {
+      try {
+        const thumb = await (await photoFetch('GET', `${m.id}/thumb`)).blob();
+        const rec = { ...photoMeta(m), thumb, full: null, cloud: true };
+        await PDB.put(rec);
+        LIB.push(rec);
+      } catch { /* comes back on the next login */ }
+    }), Promise.resolve());
+    if (missing.length) renderLibrary();
+  }
+  async function fullPhoto(p) {
+    if (!p || p.full || !p.cloud) return p;
+    try { await updatePhoto(p, { full: await (await photoFetch('GET', `${p.id}/full`)).blob() }); } catch { /* the thumbnail will do */ }
+    return p;
+  }
+
+  // ---------- the library on the 足跡 tab: recent check-in stamps, then the photos by trip
+  let libFilter = 'all';
+  let libShown = 60;
+  const libSel = new Set();
+  let libSelecting = false;
+  const libFiltered = () => LIB.filter((p) => libFilter === 'all' || (libFilter === 'none' ? !trips.some((t) => t.id === p.tripId) : p.tripId === libFilter)).sort(byTaken);
+  function renderLibraryStatus() {
+    const box = $('#lib-status');
+    if (!box) return;
+    const cloud = LIB.filter((p) => p.cloud).length;
+    let text = PDB ? `照片存在這支手機${LIB.length ? `，共 ${LIB.length} 張` : ''}` : '這個瀏覽器不能存照片';
+    if (user?.line && LIB.length) text += backup.busy ? `・備份到雲端中 ${cloud}/${LIB.length}` : `・雲端已備份 ${cloud}/${LIB.length}`;
+    else if (CONFIG.liff && LIB.length) text += '・用 LINE 登入就會備份到雲端，換手機也找得回來';
+    box.textContent = text;
+  }
+  function renderLibrary() {
+    const grid = $('#lib-grid');
+    if (!grid) return;
+    const cs = allCheckins();
+    $('#lib-count').textContent = `${cs.length} 個打卡・${LIB.length} 張照片`;
+    $('#stamp-row').innerHTML = cs.length
+      ? `<div class="stamp-row">${cs.slice(0, 24).map(stampHtml).join('')}<button class="stamp-chip add" data-checkin><b>＋</b><small>蓋新的章</small></button></div>`
+      : '<button class="stamp-invite" data-checkin><span class="stamp-chip ghost"><small>CHECK-IN</small><b>第一個章</b><small>等你來蓋</small></span><span><b>在旅途中打卡</b><small>拍一張、選地點，就蓋上一個印章，做成明信片分享出去</small></span></button>';
+    const withPhotos = sortTrips(trips.filter((t) => LIB.some((p) => p.tripId === t.id))).reverse();
+    const loose = LIB.filter((p) => !trips.some((t) => t.id === p.tripId)).length;
+    if (libFilter !== 'all' && libFilter !== 'none' && !withPhotos.some((t) => t.id === libFilter)) libFilter = 'all';
+    $('#lib-filter').innerHTML = LIB.length ? [
+      `<button class="chip ${libFilter === 'all' ? 'on' : ''}" data-lib-filter="all">全部 ${LIB.length}</button>`,
+      ...withPhotos.map((t) => `<button class="chip ${libFilter === t.id ? 'on' : ''}" data-lib-filter="${t.id}">${flag(country(t.n).code)}${esc(t.city)} ${tripPhotos(t.id).length}</button>`),
+      loose ? `<button class="chip ${libFilter === 'none' ? 'on' : ''}" data-lib-filter="none">未分類 ${loose}</button>` : '',
+      `<span class="spacer"></span><button class="link-btn" data-lib-select>${libSelecting ? '完成' : '選取'}</button>`,
+    ].join('') : '';
+    const list = libFiltered();
+    grid.classList.toggle('selecting', libSelecting);
+    grid.innerHTML = list.length
+      ? `${list.slice(0, libShown).map((p) => `<button class="lib-ph ${libSel.has(p.id) ? 'sel' : ''}" data-lib-photo="${p.id}"><img src="${libSrc(p)}" alt="${esc(p.caption || '旅行照片')}" loading="lazy" decoding="async">${p.checkinId ? '<i class="lib-tag">打卡</i>' : ''}</button>`).join('')}${list.length > libShown ? `<button class="lib-more" data-lib-more>再看 ${list.length - libShown} 張</button>` : ''}`
+      : `<label class="lib-drop">${pic('camera')}<b>把旅行照片加進來</b><small>可以一次選很多張，會依拍攝日期自動放進每一趟旅行；電腦上也可以直接拖進來</small><input type="file" accept="image/*" multiple hidden data-lib-add></label>`;
+    $('#lib-bar').hidden = !libSelecting;
+    $('#lib-bar').innerHTML = `<span><b>已選 ${libSel.size} 張</b></span><span class="spacer"></span><button class="btn sm" data-lib-act="share" ${libSel.size ? '' : 'disabled'}>分享</button><button class="btn sm" data-lib-act="save" ${libSel.size ? '' : 'disabled'}>下載</button><button class="btn sm danger-text" data-lib-act="delete" ${libSel.size ? '' : 'disabled'}>刪除</button>`;
+    renderLibraryStatus();
+  }
+  async function libAction(kind) {
+    const list = LIB.filter((p) => libSel.has(p.id));
+    if (!list.length) return;
+    if (kind === 'delete') {
+      askConfirm(`刪除 ${list.length} 張照片？`, '照片會從這支手機和雲端備份一起刪掉，打卡會保留。', '刪除', async () => {
+        await Promise.all(list.map((p) => deletePhoto(p.id)));
+        libSel.clear(); libSelecting = false; renderLibrary(); renderBadgeWall();
+      });
+      return;
+    }
+    await Promise.all(list.map(fullPhoto));
+    const files = list.filter((p) => p.full || p.thumb).map((p, i) => new File([p.full || p.thumb], `travel-${p.taken || 'photo'}-${i + 1}.jpg`, { type: 'image/jpeg' }));
+    if (kind === 'share' && navigator.canShare?.({ files })) {
+      try { await navigator.share({ files }); bumpShare(); } catch { /* cancelled */ }
+      return;
+    }
+    files.forEach((f, i) => setTimeout(() => saveFile(f), i * 250));
+    toast(kind === 'share' ? '這個瀏覽器不能直接分享，照片已存到下載' : `已下載 ${files.length} 張`);
+  }
+
+  async function openPhoto(id) {
+    const p = LIB.find((x) => x.id === id);
+    if (!p) return;
+    await fullPhoto(p);
+    const t = trips.find((x) => x.id === p.tripId);
+    const c = t && (t.checkins || []).find((x) => x.photo === p.id);
+    const list = libFiltered();
+    const i = list.findIndex((x) => x.id === id);
+    const prev = list[(i - 1 + list.length) % list.length];
+    const next = list[(i + 1) % list.length];
+    openModal(t ? `${flag(country(t.n).code)} ${esc(t.city)}` : '照片', `
+      <figure class="lb"><img src="${libSrc(p, 'full')}" alt="${esc(p.caption || '旅行照片')}">${list.length > 1 ? `<button class="lb-nav prev" data-lib-photo="${prev.id}" aria-label="上一張">‹</button><button class="lb-nav next" data-lib-photo="${next.id}" aria-label="下一張">›</button>` : ''}</figure>
+      <div class="lb-meta">${p.taken ? `<span>${p.taken.replace(/-/g, '.')}</span>` : ''}${c ? `<button class="chip" data-ci-open="${t.id}:${c.id}">打卡・${esc(c.place)}</button>` : ''}${p.cloud ? '<span class="chip">已備份到雲端</span>' : ''}<span class="spacer"></span><span class="small muted">${i + 1} / ${list.length}</span></div>
+      <input class="input" maxlength="80" placeholder="幫這張照片寫一句話" value="${esc(p.caption || '')}" data-lb-caption="${p.id}" aria-label="照片說明">
+      <div class="field"><label>放在哪一趟旅行</label><select class="input" data-lb-trip="${p.id}"><option value="">未分類</option>${sortTrips(trips).reverse().map((x) => `<option value="${x.id}" ${x.id === p.tripId ? 'selected' : ''}>${esc(x.city)}・${x.start.slice(0, 7).replace('-', '.')}</option>`).join('')}</select></div>
+      <div class="actions two"><button class="btn primary" data-share-photo="${p.id}">做成分享圖</button>${c ? '' : `<button class="btn" data-ci-photo="${p.id}">用這張打卡</button>`}<button class="btn" data-lib-dl="${p.id}">下載原圖</button><button class="btn danger-text" data-lib-del="${p.id}">刪除</button></div>`, { sheet: 'tall' });
+  }
+
+  // ---------- 打卡: a photo, a place and a word, stamped into the trip
+  const MOODS = ['好美', '好吃', '好好玩', '好感動', '好放鬆', '想再來'];
+  function checkinPlaces(t) {
+    const { code } = country(t.n);
+    const list = sightsOf(code).map((x, i) => ({ name: x.n, key: `${code}:${i}`, lat: x.lat, lng: x.lng }));
+    // Nearest first: to where you are (GPS or the photo's location), otherwise to the trip's city.
+    const from = ci.lat != null ? ci : t;
+    const near = from.lat != null ? [...list.filter((p) => p.lat != null).sort((a, b) => haversine(from, a) - haversine(from, b)), ...list.filter((p) => p.lat == null)] : list;
+    return [{ name: t.city, key: '' }, ...near.slice(0, 9)];
+  }
+  const ciPlacesHtml = (t) => checkinPlaces(t).map((p) => `<button class="chip ${ci.place === p.name ? 'on' : ''}" data-ci-place="${esc(p.name)}" data-ci-key="${esc(p.key)}">${esc(p.name)}</button>`).join('');
+  const ciPhotoHtml = () => {
+    const src = ci.preview || (ci.photoId ? libSrc(LIB.find((p) => p.id === ci.photoId) || {}, 'full') : '');
+    return `${src ? `<img src="${src}" alt="打卡照片">` : `<div class="ci-empty">${pic('camera')}<b>拍一張，或從相簿選</b><small>沒有照片也能打卡，明信片會用這個地方的風景照</small></div>`}
+      <div class="ci-photo-btns"><label class="btn ${src ? 'glass' : 'primary'}"><input type="file" accept="image/*" capture="environment" hidden data-ci-file>拍照</label><label class="btn ${src ? 'glass' : ''}"><input type="file" accept="image/*" hidden data-ci-file>從相簿選</label></div>`;
+  };
+  function openCheckin(opts = {}) {
+    if (!trips.length) { toast('先記錄一趟旅行，就能在旅途中打卡'); openTripForm(); return; }
+    const t = trips.find((x) => x.id === opts.tripId) || checkinTrip();
+    ci = {
+      tripId: t.id, place: opts.place || '', key: opts.key || '', lat: null, lng: null, mood: '', caption: '', file: null, preview: '', photoId: opts.photoId || '',
+    };
+    openModal('打卡', `
+      <div class="ci-photo">${ciPhotoHtml()}</div>
+      <div class="field"><label>在哪裡</label><div class="row ci-places" id="ci-places">${ciPlacesHtml(t)}</div>
+        <div class="row" style="margin-top:8px"><input class="input grow" id="ci-place" maxlength="40" placeholder="或自己輸入，例如：一蘭拉麵 本店" value="${esc(ci.place)}"><button class="btn" data-ci-gps>${pic('gps')}附近</button></div></div>
+      <div class="field"><label>心情</label><div class="row">${MOODS.map((m) => `<button class="chip" data-ci-mood="${m}">${m}</button>`).join('')}</div></div>
+      <div class="field"><label for="ci-caption">說一句話</label><input class="input" id="ci-caption" maxlength="60" placeholder="例如：排了 40 分鐘，值得"></div>
+      <div class="field"><label for="ci-trip">哪一趟旅行</label><select class="input" id="ci-trip">${sortTrips(trips).reverse().map((x) => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.city)}・${x.start.slice(0, 7).replace('-', '.')}${isOngoing(x) ? '（旅行中）' : ''}</option>`).join('')}</select></div>
+      <div class="sheet-bar"><span class="small muted">會蓋一個印章在這趟旅行，並做成明信片</span><button class="btn primary" data-ci-save>蓋章打卡</button></div>`, { sheet: 'tall' });
+  }
+  async function ciPickFile(file) {
+    if (!file || !ci) return;
+    ci.file = file; ci.photoId = '';
+    if (ci.preview) URL.revokeObjectURL(ci.preview);
+    ci.preview = URL.createObjectURL(file);
+    $('#modal .ci-photo').innerHTML = ciPhotoHtml();
+    const head = await file.slice(0, 256 * 1024).arrayBuffer().catch(() => null);
+    const exif = head && PDB ? PDB.readExif(head) : {};
+    ci.taken = exif.taken || '';
+    if (exif.lat != null) {
+      ci.lat = exif.lat; ci.lng = exif.lng;
+      const t = trips.find((x) => x.id === ci.tripId);
+      if (t) $('#ci-places').innerHTML = ciPlacesHtml(t);
+    }
+  }
+  function ciLocate() {
+    if (!navigator.geolocation) { toast('這個瀏覽器不能定位'); return; }
+    toast('找附近的景點中…');
+    navigator.geolocation.getCurrentPosition((pos) => {
+      ci.lat = pos.coords.latitude; ci.lng = pos.coords.longitude;
+      const t = trips.find((x) => x.id === ci.tripId);
+      if (t) $('#ci-places').innerHTML = ciPlacesHtml(t);
+      toast('已依你的位置排出附近景點');
+    }, () => toast('沒辦法定位，請直接選或輸入地點'), { timeout: 10000 });
+  }
+  async function saveCheckin(button) {
+    const t = trips.find((x) => x.id === ($('#ci-trip')?.value || ci.tripId));
+    if (!t) return;
+    button.disabled = true; button.textContent = '蓋章中…';
+    const typed = $('#ci-place')?.value.trim();
+    const place = typed || ci.place || t.city;
+    const ongoing = isOngoing(t);
+    const date = ongoing ? TODAY : ([ci.taken, LIB.find((p) => p.id === ci.photoId)?.taken].find((d) => d && d >= t.start && d <= t.end) || t.start);
+    const c = {
+      id: `ci-${uid()}`, date, place, key: typed && typed !== ci.place ? '' : ci.key, lat: ci.lat, lng: ci.lng, mood: ci.mood, caption: $('#ci-caption')?.value.trim() || '', photo: '',
+    };
+    if (ci.file) {
+      const [rec] = await addPhotos([ci.file], { tripId: t.id, checkinId: c.id, caption: c.caption, quiet: true });
+      if (rec) c.photo = rec.id;
+    } else if (ci.photoId) {
+      const p = LIB.find((x) => x.id === ci.photoId);
+      if (p) { c.photo = p.id; await updatePhoto(p, { tripId: t.id, checkinId: c.id }); }
+    }
+    const before = unlockedKeys();
+    t.checkins = [...(t.checkins || []), c];
+    save();
+    renderLibrary(); renderBadgeWall(); renderReview();
+    const fresh = unlockedKeys().filter((k) => !before.includes(k));
+    showCheckinDone(t, c, fresh);
+  }
+  const ciPhotoSrc = (t, c) => {
+    const p = c?.photo && LIB.find((x) => x.id === c.photo);
+    if (p) return libSrc(p, 'full');
+    const [code, i] = (c?.key || '').split(':');
+    const x = code ? sightsOf(code)[Number(i)] : null;
+    return x?.img ? thumbAt(x.img.src, 960) : destPhoto(t.dest)?.src || '';
+  };
+  const stampBig = (t, c) => `<span class="ci-stamp" style="--ink:${inkOf(c.id)}"><small>${esc(country(t.n).name)}</small><b>${esc((c.place && [...c.place].length <= 5 ? c.place : t.city).slice(0, 5))}</b><small>${esc((c.date || t.start).replace(/-/g, '.'))}</small></span>`;
+  function socialNext() {
+    const s = stats('all');
+    const b = BADGES.filter((x) => x.group === 'social').map((x) => ({ x, st: badgeState(x, s) })).filter((r) => !r.st.ok).sort((a, z) => z.st.pct - a.st.pct)[0];
+    if (!b) return '';
+    const left = b.st.goal - b.st.v;
+    const what = { checkin1: `再打卡 ${left} 次`, checkin10: `再打卡 ${left} 次`, stamps5: `再到 ${left} 座城市打卡`, photo30: `再加 ${left} 張照片`, share3: `再分享 ${left} 次` }[b.x.key] || '';
+    return `<button class="ci-next" data-badge="${b.x.key}">${medal(b.x, false, '', { pct: b.st.pct })}<span><small>下一枚徽章</small><b>${what}，解鎖「${esc(b.x.name)}」</b></span></button>`;
+  }
+  function showCheckinDone(t, c, fresh) {
+    const here = (t.checkins || []).length;
+    const total = allCheckins().length;
+    openModal('打卡完成', `
+      <div class="ci-done">
+        <figure class="ci-shot">${ciPhotoSrc(t, c) ? `<img src="${esc(ciPhotoSrc(t, c))}" alt="" referrerpolicy="no-referrer">` : ''}${stampBig(t, c)}</figure>
+        <h2 class="serif">蓋好章了</h2>
+        <p class="muted">${esc(c.place)}・這是你在 ${esc(t.city)} 的第 ${here} 個印章，護照裡一共 ${total} 個。</p>
+        ${fresh.map((key) => { const b = BADGES.find((x) => x.key === key); return `<button class="ci-next got" data-badge="${key}">${medal(b, true)}<span><small>解鎖新徽章</small><b>${esc(b.name)}</b><em>${esc(BADGE_LINES[key] || '')}</em></span></button>`; }).join('') || socialNext()}
+        <div class="actions two"><button class="btn primary" data-share-ci="${t.id}:${c.id}">分享這張明信片</button><button class="btn" data-checkin="${t.id}">再打一個卡</button></div>
+      </div>`);
+    buzz();
+    setTimeout(() => burst($('#modal .ci-stamp'), fresh.length ? 28 : 16), 420);
+  }
+  function openCheckinView(tripId, id) {
+    const t = trips.find((x) => x.id === tripId);
+    const c = t && (t.checkins || []).find((x) => x.id === id);
+    if (!c) return;
+    openModal(`${flag(country(t.n).code)} ${esc(c.place)}`, `
+      <div class="ci-done">
+        <figure class="ci-shot">${ciPhotoSrc(t, c) ? `<img src="${esc(ciPhotoSrc(t, c))}" alt="" referrerpolicy="no-referrer">` : ''}${stampBig(t, c)}</figure>
+        <p class="muted">${esc(t.city)}・${esc((c.date || '').replace(/-/g, '.'))}${c.mood ? `・${esc(c.mood)}` : ''}</p>
+        ${c.caption ? `<p class="badge-line">「${esc(c.caption)}」</p>` : ''}
+        <div class="actions two"><button class="btn primary" data-share-ci="${t.id}:${c.id}">分享</button>${c.photo ? `<button class="btn" data-lib-photo="${c.photo}">看照片</button>` : ''}<button class="btn" data-trip="${t.id}">這趟旅行</button><button class="btn danger-text" data-ci-del="${t.id}:${c.id}">刪除這個打卡</button></div>
+      </div>`);
+  }
+
+  // ---------- 分享工作室: pick a template, see it, send it anywhere
+  const studio = { ctx: null, tpl: '', blob: null, url: '', run: 0 };
+  function bumpShare() {
+    const before = unlockedKeys();
+    settings.shares = shareCount() + 1;
+    save(); renderBadgeWall();
+    const fresh = unlockedKeys().filter((k) => !before.includes(k));
+    if (fresh.length) setTimeout(() => toast(`解鎖新徽章「${BADGES.find((b) => b.key === fresh[0]).name}」`), 900);
+  }
+  const tag = (s) => `#${String(s || '').replace(/[\s・·,，、()（）.。!！?？/]/g, '')}`;
+  const ctxCheckin = (ctx) => {
+    if (ctx.kind === 'photo') {
+      const photo = LIB.find((x) => x.id === ctx.photoId);
+      const t = trips.find((x) => x.id === photo?.tripId) || checkinTrip();
+      return { t, c: (t?.checkins || []).find((x) => x.photo === photo?.id), photo };
+    }
+    const t = trips.find((x) => x.id === ctx.tripId);
+    const c = (t?.checkins || []).find((x) => x.id === ctx.checkinId);
+    const photo = (c?.photo && LIB.find((x) => x.id === c.photo)) || (!c && t ? tripPhotos(t.id).slice(-1)[0] : null);
+    return { t, c, photo };
+  };
+  function shareTemplates(ctx) {
+    if (ctx.kind === 'checkin' || ctx.kind === 'photo') return [['postcard', '明信片'], ['story', '限時動態'], ['passport', '護照印章'], ['footprint', '足跡地圖']];
+    if (ctx.kind === 'badge') return [['badge', '徽章卡'], ['footprint', '足跡地圖'], ['passport', '護照印章']];
+    return [['footprint', '足跡地圖'], ['passport', '護照印章']];
+  }
+  function shareText(ctx) {
+    const brand = tag(CONFIG.brand);
+    if (ctx.kind === 'badge') {
+      const b = BADGES.find((x) => x.key === ctx.key);
+      return `我解鎖了「${b.name}」徽章！${BADGE_LINES[b.key] || ''}\n#旅行徽章 ${brand}`;
+    }
+    if (ctx.kind === 'checkin' || ctx.kind === 'photo') {
+      const { t, c } = ctxCheckin(ctx);
+      if (!t) return brand;
+      const where = c?.place && c.place !== t.city ? `${c.place}（${t.city}）` : t.city;
+      return `在 ${where} 打卡${c?.mood ? `｜${c.mood}` : ''}${c?.caption ? `\n「${c.caption}」` : ''}\n${tag(t.city)} ${tag(`${country(t.n).name}旅行`)} ${brand}`;
+    }
+    const s = stats(ctx.year || 'all');
+    return `${ctx.year && ctx.year !== 'all' ? `${ctx.year} 年` : '這兩年'}我去了 ${s.countries.size} 個國家、${s.cities.size} 座城市，飛了 ${fmt(s.km)} 公里。\n#旅行足跡 ${brand}`;
+  }
+  function shareLink(ctx) {
+    const base = `${window.location.origin}${window.location.pathname}`;
+    if (ctx.kind === 'badge') {
+      const b = BADGES.find((x) => x.key === ctx.key);
+      const at = badgeUnlocked(b, stats('all').list);
+      return `${base}#badge=${b64url({ f: user?.name || '', k: b.key, d: at?.end || '', c: at?.city || '' })}`;
+    }
+    if (ctx.kind === 'checkin' || ctx.kind === 'photo') {
+      const { t, c } = ctxCheckin(ctx);
+      if (t) {
+        return `${base}#checkin=${b64url({
+          f: user?.name || '', c: t.city, n: t.n, s: t.dest || '', p: c?.place || t.city, k: c?.key || '', d: c?.date || t.start, m: c?.mood || '', t: (c?.caption || '').slice(0, 80),
+        })}`;
+      }
+    }
+    return albumLink(albumData(ctx.year && ctx.year !== 'all' ? Number(ctx.year) : CONFIG.years[CONFIG.years.length - 1]));
+  }
+  function yearColors(list) {
+    const ys = {};
+    list.forEach((t) => { ys[t.n] = ys[t.n] || new Set(); ys[t.n].add(tripYear(t)); });
+    const css = getComputedStyle(document.documentElement);
+    const col = (v, fb) => css.getPropertyValue(v).trim() || fb;
+    const out = {};
+    Object.entries(ys).forEach(([n, set]) => {
+      if (set.size > 1) out[n] = col('--both', '#7c4dff');
+      else out[n] = set.has(2025) ? col('--y25', '#0fa597') : col('--y26', '#f2711c');
+    });
+    return out;
+  }
+  const badgeSvg = (b) => {
+    const body = b.tag ? PICS[b.tag] : (BADGE_PICS[b.key] || '').replace(/JET/g, JET);
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="480" height="480"><defs>${$('.art-defs defs')?.innerHTML || ''}</defs>${body}</svg>`;
+  };
+  async function studioData(ctx, tpl) {
+    const { brand } = CONFIG;
+    const name = user?.name || '';
+    const year = ctx.year || 'all';
+    const range = year === 'all' ? CONFIG.years.join('–') : String(year);
+    if (tpl === 'postcard' || tpl === 'story') {
+      const { t, c, photo } = ctxCheckin(ctx);
+      const p = photo ? await fullPhoto(photo) : null;
+      const [code, i] = (c?.key || '').split(':');
+      const sight = code ? sightsOf(code)[Number(i)] : null;
+      const cs = allCheckins().slice().reverse();
+      return {
+        photo: p ? libSrc(p, 'full') : '', fallbackPhoto: sight?.img ? thumbAt(sight.img.src, 1280) : destPhoto(t.dest)?.src || '', city: t.city, place: c?.place && c.place !== t.city ? c.place : '',
+        country: country(t.n).name, flag: flagSrc(country(t.n).code), date: (c?.date || p?.taken || t.start).replace(/-/g, '.'), caption: c?.caption || p?.caption || '', mood: c?.mood || '',
+        name, brand, count: c ? cs.findIndex((x) => x.id === c.id) + 1 : 0, ink: c ? inkOf(c.id) : '#c8102e',
+      };
+    }
+    if (tpl === 'passport') {
+      const list = tripsIn(year);
+      const cs = allCheckins(list).slice().reverse();
+      // Check-ins first, then an entry stamp for every trip without one, so the page fills up like a real passport.
+      const stamped = new Set(cs.map((c) => c.trip.id));
+      const stamps = [
+        ...cs.map((c) => ({ city: c.place && [...c.place].length <= 5 ? c.place : c.trip.city, country: country(c.trip.n).name, date: (c.date || '').replace(/-/g, '.') })),
+        ...list.filter((t) => !isUpcoming(t) && !stamped.has(t.id)).map((t) => ({ city: t.city, country: country(t.n).name, date: t.start.replace(/-/g, '.') })),
+      ];
+      return {
+        title: '入境紀錄', subtitle: `${name ? `${name}・` : ''}${range}`, stamps, summary: `${cs.length ? `${cs.length} 個打卡・` : ''}${list.filter((t) => !isUpcoming(t)).length} 趟旅行・${new Set(list.filter((t) => !isUpcoming(t)).map((t) => t.n)).size} 個國家`, brand,
+      };
+    }
+    if (tpl === 'footprint') {
+      const s = stats(year);
+      return {
+        title: year === 'all' ? '我的旅行足跡' : `我的 ${year} 足跡`, subtitle: `${name ? `${name}・` : ''}${range}`, visited: yearColors(s.past), home: [home().lng, home().lat],
+        routes: s.past.filter((t) => t.lng != null).map((t) => ({ from: [home().lng, home().lat], to: [t.lng, t.lat] })),
+        stats: [[s.countries.size, '國家・地區'], [s.cities.size, '城市'], [fmt(s.km), '飛行公里'], [s.days, '旅行天數']],
+        legend: year === 'all' ? [['#0fa597', '2025'], ['#f2711c', '2026'], ['#7c4dff', '兩年都去']] : [], brand,
+      };
+    }
+    const b = BADGES.find((x) => x.key === ctx.key);
+    const s = stats('all');
+    const at = badgeUnlocked(b, s.list);
+    return {
+      picSvg: badgeSvg(b), m1: b.color[0], m2: b.color[1], name: b.name, line: BADGE_LINES[b.key] || '', sub: at ? `${at.end.replace(/-/g, '.')}・在 ${at.city} 解鎖` : '',
+      progress: `已收集 ${BADGES.filter((x) => badgeState(x, s).ok).length} / ${BADGES.length} 枚徽章`, brand,
+    };
+  }
+  const TARGETS = [
+    ['native', '分享到…', '#1d1b17'], ['ig', 'IG 限動', 'linear-gradient(45deg,#f9a03f,#d92e7f 55%,#6a36d9)'], ['line', 'LINE', '#06c755'], ['fb', 'Facebook', '#1877f2'],
+    ['threads', 'Threads', '#111'], ['x', 'X', '#111'], ['dl', '存圖片', '#6b655a'], ['copy', '複製文字', '#6b655a'], ['link', '複製連結', '#6b655a'],
+  ];
+  const TARGET_MARK = {
+    native: '<svg viewBox="0 0 24 24"><path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>', ig: 'IG', line: 'LINE', fb: 'f', threads: '@', x: 'X',
+    dl: '<svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>', copy: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
+    link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+  };
+  function openStudio(ctx) {
+    if ((ctx.kind === 'checkin' || ctx.kind === 'photo') && !ctxCheckin(ctx).t) { toast('先記錄一趟旅行，再把照片做成分享圖'); return; }
+    studio.ctx = ctx;
+    [[studio.tpl]] = shareTemplates(ctx);
+    openModal('分享', `
+      <div class="studio">
+        <div class="studio-preview" id="studio-preview"><span class="studio-wait">製作中…</span></div>
+        <div class="seg seg-full" id="studio-tpl" role="tablist" aria-label="圖片樣式">${shareTemplates(ctx).map(([k, l]) => `<button data-tpl="${k}" class="${k === studio.tpl ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div class="share-targets">${TARGETS.filter(([k]) => k !== 'native' || navigator.share).map(([k, l, bg], i) => `<button data-st="${k}" style="--d:${i * 35}ms"><span class="st-mark" style="background:${bg}">${TARGET_MARK[k]}</span>${l}</button>`).join('')}</div>
+        <div class="field"><label for="studio-text">貼文文字（分享時會一起帶上，也可以自己改）</label><textarea class="input" id="studio-text" rows="3">${esc(shareText(ctx))}</textarea></div>
+        <p class="small muted">分享到 IG、LINE 或 Facebook 都算一次分享，分享 3 次會解鎖「分享家」徽章。朋友點連結會看到你的打卡，也能開始記錄自己的旅行。</p>
+      </div>`, { sheet: 'tall' });
+    renderStudio();
+  }
+  async function renderStudio() {
+    const box = $('#studio-preview');
+    if (!box || !window.TravelStudio) return;
+    studio.run += 1;
+    const { run } = studio;
+    box.classList.add('busy');
+    box.dataset.tpl = studio.tpl;
+    try {
+      const cv = await window.TravelStudio[studio.tpl](await studioData(studio.ctx, studio.tpl));
+      const blob = await window.TravelStudio.toBlob(cv);
+      if (run !== studio.run) return;
+      studio.blob = blob;
+      if (studio.url) URL.revokeObjectURL(studio.url);
+      studio.url = URL.createObjectURL(blob);
+      box.innerHTML = `<img src="${studio.url}" alt="分享圖預覽">`;
+    } catch {
+      if (run === studio.run) box.innerHTML = '<span class="studio-wait">圖片做不出來，換一個樣式試試</span>';
+    }
+    box.classList.remove('busy');
+  }
+  async function studioShare(where, button) {
+    if (where === 'ig' && studio.tpl !== 'story' && shareTemplates(studio.ctx).some(([k]) => k === 'story')) {
+      studio.tpl = 'story';
+      $$('#studio-tpl [data-tpl]').forEach((b) => b.classList.toggle('on', b.dataset.tpl === 'story'));
+      await renderStudio();
+    }
+    if (!studio.blob && !['copy', 'link', 'line', 'fb', 'threads', 'x'].includes(where)) { toast('圖片還在製作，請稍等一下'); return; }
+    const text = $('#studio-text')?.value || shareText(studio.ctx);
+    const link = shareLink(studio.ctx);
+    const file = studio.blob ? new File([studio.blob], `${CONFIG.brand}-${studio.tpl}.jpg`, { type: 'image/jpeg' }) : null;
+    const pop = (url) => window.open(url, '_blank', 'noopener');
+    const copy = async (value, done) => {
+      try { await navigator.clipboard.writeText(value); toast(done); } catch { toast('這個瀏覽器不能自動複製，請長按文字框複製'); }
+    };
+    if (button && !REDUCED) button.animate([{ transform: 'scale(1)' }, { transform: 'scale(.9)' }, { transform: 'scale(1)' }], { duration: 260 });
+    if (where === 'native' || where === 'ig') {
+      if (file && navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], text: `${text}\n${link}` }); bumpShare(); } catch { /* cancelled */ }
+        return;
+      }
+      if (file) saveFile(file);
+      if (where === 'ig') { copy(text, '圖片已存好、文字已複製：打開 Instagram →「限時動態」選這張'); bumpShare(); return; }
+      if (navigator.share) { try { await navigator.share({ text, url: link }); bumpShare(); } catch { /* cancelled */ } }
+      return;
+    }
+    const urls = {
+      line: `https://line.me/R/share?text=${encodeURIComponent(`${text}\n${link}`)}`,
+      fb: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`,
+      threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(`${text}\n${link}`)}`,
+      x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`,
+    };
+    if (urls[where]) {
+      if (where === 'fb') copy(text, '貼文文字已複製，在 Facebook 貼上就好');
+      pop(urls[where]);
+      bumpShare();
+      return;
+    }
+    if (where === 'dl') { saveFile(file); toast('圖片已存好，可以發到任何社群'); bumpShare(); return; }
+    if (where === 'copy') { copy(text, '貼文文字已複製'); return; }
+    if (where === 'link') { copy(link, '連結已複製，貼給朋友就能看到'); bumpShare(); }
+  }
+
+  // ---------- links friends open: a check-in postcard or a badge, with a way to start their own
+  function readSharedPost() {
+    const m = window.location.hash.match(/^#(checkin|badge)=([\w-]+)/);
+    if (!m) return null;
+    try {
+      const d = fromB64url(m[2]);
+      return m[1] === 'checkin'
+        ? {
+          kind: 'checkin', f: String(d.f || '').slice(0, 20), c: String(d.c || '').slice(0, 30), n: String(d.n || ''), s: DEST[d.s] ? d.s : '', p: String(d.p || '').slice(0, 40), k: /^[A-Z]{2}:\d+$/.test(d.k || '') ? d.k : '',
+          d: /^\d{4}-\d\d-\d\d$/.test(d.d || '') ? d.d : '', m: String(d.m || '').slice(0, 10), t: String(d.t || '').slice(0, 80),
+        }
+        : { kind: 'badge', f: String(d.f || '').slice(0, 20), k: BADGES.some((b) => b.key === d.k) ? d.k : '', d: /^\d{4}-\d\d-\d\d$/.test(d.d || '') ? d.d : '', c: String(d.c || '').slice(0, 30) };
+    } catch { return null; }
+  }
+  function openSharedPost(d) {
+    if (d.kind === 'badge') {
+      const b = BADGES.find((x) => x.key === d.k);
+      if (!b) return;
+      openModal(`${esc(d.f || '朋友')}解鎖了徽章`, `
+        <div class="ci-done shared">
+          <div class="shared-medal">${medal(b, true, 'xl')}</div>
+          <h2 class="serif">${esc(b.name)}</h2>
+          ${BADGE_LINES[b.key] ? `<p class="badge-line">「${BADGE_LINES[b.key]}」</p>` : ''}
+          <p class="muted">${esc(d.f || '朋友')}${d.c ? ` 在 ${esc(d.c)}` : ''}${d.d ? `・${d.d.replace(/-/g, '.')}` : ''} 解鎖・${esc(b.desc)}</p>
+          <div class="actions"><button class="btn primary" data-shared-start>我也要收集徽章</button></div>
+        </div>`);
+      return;
+    }
+    const { code } = country(d.n);
+    const [sc, si] = d.k.split(':');
+    const sight = sc ? sightsOf(sc)[Number(si)] : null;
+    const photo = sight?.img ? thumbAt(sight.img.src, 960) : (d.s && destPhoto(d.s)?.src) || '';
+    const fake = { id: `${d.c}${d.d}`, place: d.p, date: d.d };
+    openModal(`${esc(d.f || '朋友')}的打卡`, `
+      <div class="ci-done shared">
+        <figure class="ci-shot">${photo ? `<img src="${esc(photo)}" alt="" referrerpolicy="no-referrer">` : ''}${stampBig({ n: d.n, city: d.c, start: d.d }, fake)}</figure>
+        <span class="kicker plain muted">${flag(code)} ${esc(country(d.n).name || '')}・${esc(d.d.replace(/-/g, '.'))}</span>
+        <h2 class="serif">${esc(d.p || d.c)}</h2>
+        ${d.t || d.m ? `<p class="badge-line">「${esc([d.m, d.t].filter(Boolean).join('｜'))}」</p>` : ''}
+        <div class="actions two">${d.s ? `<button class="btn" data-dest="${d.s}">看 ${esc(d.c)} 的景點與門票</button>` : ''}<button class="btn primary" data-shared-start>我也要記錄我的旅行</button></div>
+      </div>`);
+  }
+
+  document.addEventListener('change', (e) => {
+    const node = e.target;
+    if ('libAdd' in node.dataset && node.files?.length) { addPhotos(node.files); node.value = ''; return; }
+    if ('ciFile' in node.dataset && node.files?.length) { ciPickFile(node.files[0]); return; }
+    if (node.id === 'ci-trip') { ci.tripId = node.value; const tr = trips.find((x) => x.id === node.value); if (tr) $('#ci-places').innerHTML = ciPlacesHtml(tr); return; }
+    const p = LIB.find((x) => x.id === (node.dataset.lbCaption || node.dataset.lbTrip));
+    if (p && node.dataset.lbCaption) { updatePhoto(p, { caption: node.value.trim().slice(0, 80) }); return; }
+    if (p && node.dataset.lbTrip !== undefined) { updatePhoto(p, { tripId: node.value }).then(() => { renderLibrary(); toast('已移到這趟旅行'); }); }
+  });
+  // Photos dragged onto the library from a computer.
+  ['dragenter', 'dragover'].forEach((type) => document.addEventListener(type, (e) => {
+    const grid = e.target.closest?.('#lib-grid, #photos-title');
+    if (!grid || !e.dataTransfer?.types?.includes('Files')) return;
+    e.preventDefault();
+    $('#lib-grid').classList.add('drag');
+  }));
+  ['dragleave', 'drop'].forEach((type) => document.addEventListener(type, () => $('#lib-grid')?.classList.remove('drag')));
+  document.addEventListener('drop', (e) => {
+    if (!e.target.closest?.('#lib-grid, #photos-title') || !e.dataTransfer?.files?.length) return;
+    e.preventDefault();
+    addPhotos(e.dataTransfer.files);
+  });
+
+  // ---------- the check-in button that follows you on 首頁 and 足跡
+  function renderFab() {
+    const fab = $('#ci-fab');
+    if (fab) fab.hidden = !user || !['map', 'trips'].includes(currentTab);
   }
 
   // ---------- delegated actions
@@ -3942,6 +4617,65 @@
     const t = e.target.closest('button, li[data-trip], [data-trip]');
     if (!t) return;
     const ds = t.dataset;
+    if (ds.checkin !== undefined) { openCheckin({ tripId: ds.checkin || undefined }); return; }
+    if (ds.ciSight) {
+      const [code, i] = ds.ciSight.split(':');
+      const x = sightsOf(code)[Number(i)];
+      const trip = trips.find((v) => isOngoing(v) && country(v.n).code === code) || sortTrips(trips.filter((v) => country(v.n).code === code)).reverse()[0];
+      openCheckin({ tripId: trip?.id, place: x?.n || '', key: ds.ciSight });
+      return;
+    }
+    if (ds.ciPhoto) { const p = LIB.find((x) => x.id === ds.ciPhoto); openCheckin({ tripId: p?.tripId, photoId: ds.ciPhoto }); return; }
+    if (ds.ciPlace !== undefined) {
+      ci.place = ds.ciPlace; ci.key = ds.ciKey || '';
+      $$('#ci-places [data-ci-place]').forEach((b) => b.classList.toggle('on', b === t));
+      $('#ci-place').value = ds.ciPlace;
+      return;
+    }
+    if (ds.ciMood) { ci.mood = ci.mood === ds.ciMood ? '' : ds.ciMood; $$('[data-ci-mood]').forEach((b) => b.classList.toggle('on', b.dataset.ciMood === ci.mood)); return; }
+    if ('ciGps' in ds) { ciLocate(); return; }
+    if ('ciSave' in ds) { saveCheckin(t); return; }
+    if (ds.ciOpen) { const [tripId, id] = ds.ciOpen.split(':'); openCheckinView(tripId, id); return; }
+    if (ds.ciDel) {
+      const [tripId, id] = ds.ciDel.split(':');
+      askConfirm('刪除這個打卡？', '印章會拿掉，照片會留在照片庫。', '刪除', () => {
+        const trip = trips.find((x) => x.id === tripId);
+        if (trip) trip.checkins = (trip.checkins || []).filter((c) => c.id !== id);
+        LIB.filter((p) => p.checkinId === id).forEach((p) => updatePhoto(p, { checkinId: '' }));
+        save(); renderLibrary(); renderBadgeWall();
+      });
+      return;
+    }
+    if (ds.libPhoto) {
+      if ($('#lib-grid')?.classList.contains('selecting') && t.closest('#lib-grid')) {
+        if (libSel.has(ds.libPhoto)) libSel.delete(ds.libPhoto); else libSel.add(ds.libPhoto);
+        renderLibrary();
+        return;
+      }
+      openPhoto(ds.libPhoto);
+      return;
+    }
+    if (ds.libFilter) { libFilter = ds.libFilter; libShown = 60; renderLibrary(); return; }
+    if ('libMore' in ds) { libShown += 90; renderLibrary(); return; }
+    if ('libSelect' in ds) { libSelecting = !libSelecting; libSel.clear(); renderLibrary(); return; }
+    if (ds.libAct) { libAction(ds.libAct); return; }
+    if (ds.libDl) {
+      const p = LIB.find((x) => x.id === ds.libDl);
+      if (p) fullPhoto(p).then(() => saveFile(new File([p.full || p.thumb], `travel-${p.taken || 'photo'}.jpg`, { type: 'image/jpeg' })));
+      return;
+    }
+    if (ds.libDel) {
+      askConfirm('刪除這張照片？', '會從這支手機和雲端備份一起刪掉。', '刪除', async () => { await deletePhoto(ds.libDel); renderLibrary(); renderBadgeWall(); });
+      return;
+    }
+    if (ds.sharePhoto) { openStudio({ kind: 'photo', photoId: ds.sharePhoto }); return; }
+    if (ds.shareCi) { const [tripId, checkinId] = ds.shareCi.split(':'); openStudio({ kind: 'checkin', tripId, checkinId }); return; }
+    if (ds.shareTrip) { openStudio({ kind: 'checkin', tripId: ds.shareTrip }); return; }
+    if (ds.shareBadge) { openStudio({ kind: 'badge', key: ds.shareBadge }); return; }
+    if (ds.shareYear) { openStudio({ kind: 'year', year: ds.shareYear }); return; }
+    if (ds.tpl) { studio.tpl = ds.tpl; $$('#studio-tpl [data-tpl]').forEach((b) => b.classList.toggle('on', b === t)); renderStudio(); return; }
+    if (ds.st) { studioShare(ds.st, t); return; }
+    if ('sharedStart' in ds) { modal.close(); window.history.replaceState(null, '', window.location.pathname); if (user) openCheckin(); return; }
     if ('flip' in ds) { t.closest('.tcard').classList.toggle('flipped'); return; }
     if (ds.badge) { openBadge(ds.badge, ds.by || 'all'); return; }
     if (ds.tickets) { openTickets(ds.tickets); return; }
@@ -4007,7 +4741,7 @@
     document.title = CONFIG.brand;
     $$('[data-brand]').forEach((n) => { n.textContent = CONFIG.brand; });
     $$('#year-seg button').forEach((b) => b.classList.toggle('on', b.dataset.year === settings.year));
-    renderCover(); renderHero(); renderStats(); renderMapRecs(); renderReview(); renderRecs(); renderEsim(); renderTrips(); renderCards(); renderBadgeWall(); renderQuickArt();
+    renderCover(); renderHero(); renderStats(); renderMapRecs(); renderReview(); renderRecs(); renderEsim(); renderTrips(); renderCards(); renderBadgeWall(); renderQuickArt(); renderLibrary(); renderFab();
     if (currentTab === 'plan') renderPlanner();
     drawMap();
     animateIn($(`[data-view="${currentTab}"]`));
@@ -4028,10 +4762,13 @@
   migrateOrders();
   pendingGift = readGift();
   const sharedAlbum = readSharedAlbum();
+  const sharedPost = readSharedPost();
+  $('#ci-fab .ci-fab-art').innerHTML = pic('camera');
   window.addEventListener('hashchange', () => { const g = readGift(); if (g) { pendingGift = g; if (user) openGift(g); } });
-  Promise.all([loadConfig(), loadPhotos()]).finally(() => {
+  Promise.all([loadConfig(), loadPhotos(), loadLibrary()]).finally(() => {
     if (user) showApp(); else showLogin();
     if (sharedAlbum) openAlbum(sharedAlbum.year, sharedAlbum);
+    if (sharedPost) openSharedPost(sharedPost);
     // Inside the LINE app, coming back from LINE login, or on a later visit: sign in without another tap.
     if (CONFIG.liff && !sharedAlbum) {
       // Every visit with an active LINE login pulls, so changes made on another phone show up here.

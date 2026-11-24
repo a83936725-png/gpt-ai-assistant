@@ -824,6 +824,57 @@ dialog#modal .btn:not(.primary):not(.line):not(.ghost), .card .btn:not(.primary)
 .log-item.on { box-shadow: 0 0 0 2px var(--good); }
 .cost .total { border-top-style: dashed; }
 @media (prefers-reduced-motion: reduce) { .tm-sight, .mc-sight, .pop, .map-tip.show, .map-tip .tip-dot::after { animation: none; } .map-country, .map-tip { transition: none; } }
+/* home without boxes: plain icons for quick actions, a timeline rail for the days */
+.quick button { padding: 8px 2px; gap: 6px; color: var(--text); font-weight: 600; border-radius: 0; }
+.quick button:hover { background: none; color: var(--brand); }
+.quick .icon-tile, .quick .icon-tile.brand { width: auto; height: 30px; background: none; border: 0; box-shadow: none; border-radius: 0; }
+.quick .icon-tile svg { width: 27px; height: 27px; stroke-width: 1.5; transition: translate .2s, stroke .2s; }
+.quick button:hover .icon-tile svg { stroke: var(--brand); translate: 0 -2px; }
+.link-btn { border: 0; background: none; padding: 4px 0; font: inherit; font-size: 14px; font-weight: 700; color: var(--brand); cursor: pointer; }
+.link-btn:hover { text-decoration: underline; text-underline-offset: 4px; }
+.day-strip { grid-auto-columns: minmax(190px, 1fr); gap: 0; padding: 4px 0 8px; scrollbar-width: none; }
+.day-strip::-webkit-scrollbar { display: none; }
+.day-card, .day-card:hover { position: relative; border: 0; border-radius: 0; background: none; box-shadow: none; padding: 26px 22px 4px 0; gap: 4px; color: inherit; font: inherit;
+  animation: rise .5s cubic-bezier(.2,1.2,.3,1) backwards; animation-delay: var(--d, 0ms); }
+.day-card::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 1.5px; background: var(--border); }
+.day-card:last-child::before { right: auto; width: 14px; }
+.day-card::after { content: ""; position: absolute; left: 0; top: 0; width: 13px; height: 13px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 2px var(--brand); transition: scale .2s; }
+.day-card.now::after { background: var(--brand); box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand) 20%, transparent); }
+.day-card.past::after { background: var(--brand); box-shadow: none; }
+.day-card.past .dn, .day-card.past ol { opacity: .55; }
+.day-card:hover::after { scale: 1.25; }
+.day-card .dn { font-size: 28px; transition: color .2s; }
+.day-card:hover .dn { color: var(--brand); }
+.day-card .dd { font-size: 12px; color: var(--muted); }
+.day-card ol { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 5px; font-size: 13px; color: var(--text); }
+.day-card li { display: flex; gap: 8px; line-height: 1.45; }
+.day-card li time { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+.day-card .more { font-size: 12px; color: var(--muted); }
+.gallery, .cards.scroll { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--text) 16%, transparent) transparent; }
+@media (pointer: coarse) { .gallery, .cards.scroll { scrollbar-width: none; } .gallery::-webkit-scrollbar, .cards.scroll::-webkit-scrollbar { display: none; } }
+@media (prefers-reduced-motion: reduce) { .day-card { animation: none; } }
+/* the 2025–2026 summary reads as a page, not a card with a box inside */
+.card.editorial { background: none; box-shadow: none; padding: 4px 0 0; border-radius: 0; }
+.editorial .next-trip { background: none; border-radius: 0; padding: 14px 0 0; margin-top: 6px; border-top: 1px solid var(--border); }
+.card.editorial .next-trip .btn:not(.primary):not(.line):not(.ghost) { background: none; box-shadow: none; padding-inline: 4px; color: var(--brand); }
+#stats { border: 0; padding: 0; margin-top: 4px !important; gap: 6px 0; }
+#stats .stat, #stats .stat:first-child { border-left: 0; padding: 6px 18px 6px 0; flex: 1 1 18%; min-width: 92px; }
+#stats .stat b { font-size: 30px; display: block; line-height: 1.1; }
+#stats .stat span { font-size: 12px; color: var(--muted); }
+/* recommendation cards: a photo and words on the page, no box around them */
+.face.front { background: none; border-color: transparent; box-shadow: none; border-radius: 0; overflow: visible; }
+.face.front .cover { border-radius: 20px; overflow: hidden; }
+.face.front .body { padding: 12px 2px 0; gap: 8px; }
+.tcard .chip.tag { border: 0; background: none; padding: 0; min-height: 0; margin-right: 8px; }
+.tcard .ticket-sum { background: none; padding: 0; justify-content: flex-start; gap: 8px; font-size: 13px; }
+.tcard .actions { align-items: center; }
+.heart-btn { border: 0; background: none; font-size: 22px; line-height: 1; color: var(--accent); cursor: pointer; padding: 4px; transition: scale .2s; }
+.heart-btn:hover { scale: 1.15; }
+.cards:not(.scroll) { row-gap: 40px; }
+.cards.scroll { column-gap: 22px; }
+.face.back { border-color: transparent; }
+.map-card { background: var(--surface); }
+.map-empty { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -881,8 +932,7 @@ dialog#modal .btn:not(.primary):not(.line):not(.ghost), .card .btn:not(.primary)
       </div>
       <div class="section-title" id="strip-title"></div>
       <div class="day-strip" id="day-strip"></div>
-      <div class="section-title"><h2 class="serif">2025–2026 足跡</h2></div>
-      <div class="card editorial" id="hero"></div>
+      <div class="card editorial" id="hero" style="margin-top:28px"></div>
       <div class="grid stats" id="stats" style="margin-top:12px"></div>
       <div class="card map-card" style="margin-top:12px">
         <div class="seg map-modes" id="map-modes" role="group" aria-label="地圖樣式"><button data-map-mode="globe">3D 地球</button><button data-map-mode="flat">平面地圖</button></div>
@@ -898,7 +948,7 @@ dialog#modal .btn:not(.primary):not(.line):not(.ghost), .card .btn:not(.primary)
         </div>
         <div class="legend" id="legend"></div>
       </div>
-      <div class="section-title"><h2>下一站靈感</h2><span class="muted small">依你的旅行元素挑選，點卡片翻面看景點與門票</span><span class="spacer"></span><button class="btn sm" data-goto="recs">看全部推薦 →</button></div>
+      <div class="section-title"><h2>下一站靈感</h2><span class="muted small">依你的旅行元素挑選，點卡片翻面看景點與門票</span><span class="spacer"></span><button class="link-btn" data-goto="recs">看全部推薦 →</button></div>
       <div class="cards scroll" id="map-recs"></div>
     </section>
 

@@ -1117,8 +1117,9 @@
             <div class="small muted">台北直飛約 ${d.hours} 小時・最佳 ${d.months.length === 12 ? '全年' : `${d.months.slice(0, 4).join('、')} 月`}</div>
             <div class="actions">
               <button class="btn sm primary" data-flip>景點與門票 ↻</button>
-              <button class="btn sm" data-ai="${d.id}">排行程</button>
-              <button class="btn sm" data-wish="${d.id}" aria-pressed="${wished}">${wished ? '♥' : '♡'}</button>
+              <button class="link-btn" data-ai="${d.id}">排行程 →</button>
+              <span class="spacer"></span>
+              <button class="heart-btn" data-wish="${d.id}" aria-pressed="${wished}" aria-label="加入願望清單">${wished ? '♥' : '♡'}</button>
             </div>
           </div>
         </div>
@@ -2372,10 +2373,12 @@
     ensurePlan(t);
     $('#cover').innerHTML = coverHtml(t, false);
     applyPhoto($('#cover .mag-cover'), $('#cover .mag-cover').dataset.cover);
-    $('#strip-title').innerHTML = `<h2 class="serif">${esc(t.city)} ${t.plan.days.length} 日行程</h2><span class="spacer"></span><button class="btn sm" data-open-plan="${t.id}">編輯行程表 →</button>`;
-    $('#day-strip').innerHTML = t.plan.days.map((items, i) => `<button class="day-card" data-open-plan="${t.id}" data-day="${i}">
-      <span class="dn">Day ${i + 1}</span><span class="small muted">${dayLabel(t, i)}</span>
-      <ol>${items.slice(0, 3).map((it) => `<li>${esc(it.name)}</li>`).join('') || '<li>尚未安排</li>'}</ol>${items.length > 3 ? `<span class="small muted">還有 ${items.length - 3} 項</span>` : ''}</button>`).join('');
+    $('#strip-title').innerHTML = `<h2 class="serif">${esc(t.city)} ${t.plan.days.length} 日行程</h2><span class="spacer"></span><button class="link-btn" data-open-plan="${t.id}">編輯行程表 →</button>`;
+    // A timeline rail, one stop per day, rather than a box per day.
+    const today = daysBetween(t.start, TODAY) - 1;
+    $('#day-strip').innerHTML = t.plan.days.map((items, i) => `<button class="day-card ${i === today ? 'now' : ''} ${i < today ? 'past' : ''}" data-open-plan="${t.id}" data-day="${i}" style="--d:${i * 50}ms">
+      <span class="dn">Day ${i + 1}</span><span class="dd">${dayLabel(t, i)}</span>
+      <ol>${items.slice(0, 3).map((it) => `<li>${it.time ? `<time>${esc(it.time)}</time>` : ''}<span>${esc(it.name)}</span></li>`).join('') || '<li class="muted">還沒安排，點一下開始排</li>'}</ol>${items.length > 3 ? `<span class="more">還有 ${items.length - 3} 項</span>` : ''}</button>`).join('');
   }
 
   // ---------- planner (行程表)

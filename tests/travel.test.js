@@ -230,4 +230,6 @@ test('every country on the page has a flag, and every listed country has a place
   const codes = [...new Set([...Object.keys(COUNTRIES), ...Object.values(WORLD).flatMap((v) => v.split(' '))])];
   expect(codes.filter((c) => !existsSync(`web/flags/${c.toLowerCase()}.svg`))).toEqual([]);
   expect(Object.keys(COUNTRIES).filter((c) => !onMap.has(c))).toEqual([]);
+  // every country in 探索世界 has a point, so it gets a flight time
+  expect(codes.filter((c) => !onMap.has(c))).toEqual([]);
 });

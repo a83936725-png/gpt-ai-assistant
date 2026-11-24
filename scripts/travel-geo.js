@@ -53,6 +53,13 @@ const main = (countriesFile) => {
     // [ISO code, label lng, label lat, area of the main piece in km², hub lng, hub lat]
     out[f.id] = [c.cca2, round(label[0]), round(label[1]), Math.round(d3.geoArea(biggest) * 6371 * 6371), round(hub[0]), round(hub[1])];
   });
+  // Places drawn as part of another country (Réunion, Kosovo) or too small for the outlines (Tuvalu) still
+  // get a point, so they have a flight time. Their keys are not map ids, so the map never labels them.
+  const done = new Set(Object.values(out).map((g) => g[0]));
+  list.filter((c) => !done.has(c.cca2) && c.latlng?.length === 2).forEach((c) => {
+    const hub = HUBS[c.cca2] ? [HUBS[c.cca2][1], HUBS[c.cca2][0]] : [c.latlng[1], c.latlng[0]];
+    out[`x${c.cca2}`] = [c.cca2, c.latlng[1], c.latlng[0], Math.round(c.area || 0), hub[0], hub[1]];
+  });
   const body = `/* 由 scripts/travel-geo.js 產生：地圖國名位置與航班落地城市。國家代碼與座標取自 world-countries（ODbL）。 */
 (function geo(global) {
   // eslint-disable-next-line

@@ -1219,6 +1219,7 @@
   const IS_IOS = /iPhone|iPad|iPod/.test(UA);
   const IS_ANDROID = /Android/.test(UA);
   let esimRegion = 'hot';
+  let esimNear = false; // 探索世界: closest flights first
   let esimTab = null;
   let planState = null;
   const HOT = ['JP', 'KR', 'TH', 'VN', 'SG', 'HK', 'MO', 'MY', 'US', 'FR', 'GB', 'AU'];
@@ -1302,7 +1303,8 @@
       <span class="small muted">下一趟適合的方案</span><b>${esc(planLabel(pick.key, pick.plan))}</b>
       <div class="small muted">${pick.journey.map(tripLabel).join(' → ')}・${md(pick.journey[0].start)} 出發${pick.journey.length > 1 ? `・跨 ${pick.journey.length} 地一張搞定` : ''}</div></div>
       <button class="btn primary" data-plan="${pick.key}">NT$${fmt(planPrice(pick.key, pick.plan))}</button></div>` : '';
-    $('#esim-regions').innerHTML = REGION_CHIPS.map(([k, v]) => `<button class="chip lg ${esimRegion === k ? 'on' : ''}" data-region="${k}">${v}</button>`).join('');
+    const chips = REGION_CHIPS.map(([k, v]) => `<button class="chip lg ${esimRegion === k ? 'on' : ''}" data-region="${k}">${v}</button>`).join('');
+    $('#esim-regions').innerHTML = `${chips}<button class="chip lg sort-chip ${esimNear ? 'on' : ''}" data-esim-near aria-pressed="${esimNear}">${icon('flight')}由近到遠</button>`;
     const q = $('#esim-search').value.trim();
     let items;
     if (esimRegion === 'packs' && !q) {
@@ -1312,7 +1314,11 @@
       items = codes.map((code) => ({ key: packFor(code), code, icon: flag(code), name: countryName(code) }));
       if (q) items.push(...Object.keys(PACKS).filter((k) => PACKS[k].name.includes(q)).map((k) => ({ key: k, icon: packIcon(k), name: PACKS[k].name })));
     }
-    $('#esim-count').textContent = items.length ? `${items.length} 個國家・地區` : '';
+    if (esimNear) {
+      const hours = (it) => (it.code ? flightInfo(it.code)?.hours ?? 99 : 99);
+      items.sort((a, b) => hours(a) - hours(b));
+    }
+    $('#esim-count').textContent = items.length ? `${items.length} 個國家・地區${esimNear ? `・從${home().name}飛最近的在前面` : ''}` : '';
     $('#esim-grid').innerHTML = items.length ? items.map((it) => `<button class="flag-btn" data-plan="${it.key}" ${it.code && it.code !== it.key ? `data-for="${it.code}"` : ''}><span class="flag-tile lg">${it.icon}</span><b>${esc(it.name)}</b>${it.code ? flightChip(it.code) : ''}<small>${it.code && it.code !== it.key ? `${esc(PACKS[it.key].name)}・` : ''}NT$${fmt(fromPrice(it.key))} 起</small></button>`).join('')
       : '<p class="muted">找不到這個國家，試試「多國方案」或「全球通用」。</p>';
     renderCartFab();
@@ -3434,6 +3440,7 @@
     if (ds.origin) { setOrigin(ds.origin); return; }
     if (ds.tag) { recState.tags = recState.tags.includes(ds.tag) ? recState.tags.filter((x) => x !== ds.tag) : [...recState.tags, ds.tag]; renderRecs(); return; }
     if (ds.region) { esimRegion = ds.region; $('#esim-search').value = ''; renderEsim(); return; }
+    if ('esimNear' in ds) { esimNear = !esimNear; renderEsim(); return; }
     if (ds.openPlan) { if (modal.open) modal.close(); openPlanner(ds.openPlan, ds.day != null ? Number(ds.day) : null); return; }
     if (ds.tripDest) { openTripForm(null, null, ds.tripDest); return; }
     if (ds.edit) { if (modal.open) modal.close(); openTripForm(ds.edit); return; }

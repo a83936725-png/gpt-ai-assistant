@@ -2817,6 +2817,57 @@
       </div>
       ${more ? `<section><h3>${esc(countryName(code))}也推薦</h3><div class="gallery">${more}</div></section>` : ''}`);
   }
+  // ---------- search the map: countries (by Chinese or English name, or code) and sights
+  function mapSearch(q) {
+    const text = q.trim().toLowerCase();
+    if (!text) return [];
+    const has = (v) => String(v || '').toLowerCase().includes(text);
+    const countries = [...ALL_CODES, 'TW'].filter((code) => has(countryName(code)) || code.toLowerCase() === text || has(new Intl.DisplayNames(['en'], { type: 'region' }).of(code)))
+      .slice(0, 6).map((code) => ({ type: 'country', code }));
+    const sights = Object.entries(SIGHTS || {}).flatMap(([code, list]) => list.map((x, i) => ({ type: 'sight', code, i, x })))
+      .filter(({ code, x }) => has(x.n) || has(x.t) || has(x.b) || has(countryName(code))).slice(0, 12);
+    return [...countries, ...sights];
+  }
+  function renderMapSearch() {
+    const results = mapSearch($('#map-q').value);
+    const q = $('#map-q').value.trim();
+    $('#map-q-list').innerHTML = results.map((r, k) => {
+      if (r.type === 'country') {
+        const f = flightInfo(r.code);
+        return `<button class="ms-item" role="option" data-ms-country="${r.code}" style="--d:${k * 30}ms">${flag(r.code)}<span class="grow"><b>${esc(countryName(r.code))}</b><small>${sightsOf(r.code).length} 個必去景點${f ? `・${f.text}` : ''}</small></span></button>`;
+      }
+      return `<button class="ms-item" role="option" data-ms-sight="${r.code}:${r.i}" style="--d:${k * 30}ms"><span class="ms-thumb">${r.x.img ? `<img src="${esc(thumbAt(r.x.img.src, 120))}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</span><span class="grow"><b>${esc(r.x.n)}</b><small>${esc(countryName(r.code))}・${esc(r.x.b)}</small></span></button>`;
+    }).join('') || (q ? `<p class="ms-empty">找不到「${esc(q)}」，試試國家名稱或英文。</p>` : '');
+  }
+  function openMapSearch(on) {
+    $('#map-search').hidden = !on;
+    $('#map-find').setAttribute('aria-expanded', String(on));
+    if (on) {
+      loadSights().then(renderMapSearch);
+      setTimeout(() => $('#map-q').focus(), 30);
+    }
+  }
+  $('#map-find').addEventListener('click', () => openMapSearch($('#map-search').hidden));
+  $('#map-q-close').addEventListener('click', () => openMapSearch(false));
+  $('#map-q').addEventListener('input', renderMapSearch);
+  $('#map-q').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); openMapSearch(false); }
+    if (e.key === 'Enter') { e.preventDefault(); $('#map-q-list .ms-item')?.click(); }
+  });
+  $('#map-q-list').addEventListener('click', (e) => {
+    const b = e.target.closest('.ms-item');
+    if (!b) return;
+    openMapSearch(false);
+    if (b.dataset.msCountry) {
+      const code = b.dataset.msCountry;
+      const n = COUNTRIES[code]?.n || GEO[code]?.n;
+      if (n && !String(n).startsWith('x')) selectCountry(n); else openCountry(n);
+      return;
+    }
+    const [code, i] = b.dataset.msSight.split(':');
+    showSightOnMap(code, Number(i));
+  });
+
   async function showSightOnMap(code, i) {
     const n = COUNTRIES[code]?.n || GEO[code]?.n;
     const x = sightsOf(code)[i];

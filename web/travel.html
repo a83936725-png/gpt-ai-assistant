@@ -766,6 +766,27 @@ html.map-open { overflow: hidden; }
 .tm-sight.on::after { border-top-color: var(--accent); }
 .tm-sight.off { display: none; }
 @keyframes tm-pop { 0% { opacity: 0; scale: .2; } 100% { opacity: 1; scale: 1; } }
+/* map search: countries and sights */
+.map-top { position: absolute; left: 10px; top: 10px; z-index: 3; display: flex; gap: 8px; align-items: center; }
+.map-top .map-modes { position: static; }
+.map-find { width: 38px; height: 38px; border: 0; border-radius: 12px; display: grid; place-items: center; cursor: pointer; color: #fff; background: rgba(8,14,30,.62); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.map-find svg, .ms-bar svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.map-card.full .map-top { top: calc(10px + env(safe-area-inset-top)); }
+.map-search { position: absolute; left: 10px; right: 10px; top: 10px; z-index: 7; max-width: 460px; border-radius: 20px; color: #fff; background: rgba(8,14,30,.86); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0,0,0,.45); animation: rise .35s cubic-bezier(.2,1.2,.3,1); overflow: hidden; }
+.map-card.full .map-search { top: calc(10px + env(safe-area-inset-top)); }
+.ms-bar { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; }
+.ms-bar input { flex: 1; min-width: 0; border: 0; background: none; color: #fff; font: inherit; font-size: 16px; outline: none; padding: 6px 0; }
+.ms-bar input::placeholder { color: rgba(255,255,255,.55); }
+.ms-list { max-height: min(52vh, 330px); overflow-y: auto; }
+.ms-list:empty { display: none; }
+.ms-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 14px; border: 0; background: none; color: #fff; text-align: left; font: inherit; cursor: pointer; animation: rise .35s cubic-bezier(.2,1.2,.3,1) backwards; animation-delay: var(--d, 0ms); }
+.ms-item:hover, .ms-item:focus-visible, .ms-item.on { background: rgba(255,255,255,.1); outline: none; }
+.ms-item .fl { font-size: 22px; box-shadow: none; }
+.ms-thumb { flex: none; width: 40px; height: 40px; border-radius: 10px; overflow: hidden; background: #26324a; }
+.ms-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ms-item b { display: block; font-size: 14px; }
+.ms-item small { color: rgba(255,255,255,.65); font-size: 12px; }
+.ms-empty { padding: 4px 14px 14px; font-size: 13px; color: rgba(255,255,255,.7); }
 .tm-sight.mini.spot { scale: 1.35; z-index: 3; box-shadow: 0 0 0 3px var(--accent), 0 10px 22px rgba(0,0,0,.5); }
 .tm-bubble { position: absolute; left: 0; top: 0; z-index: 6; width: 0; height: 0; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: none; }
 .tm-bubble-in { position: absolute; left: 0; bottom: 58px; display: grid; gap: 1px; width: max-content; max-width: 220px; padding: 8px 12px 9px; border-radius: 14px; transform: translateX(-50%);
@@ -986,7 +1007,12 @@ button.badge:hover .medal { translate: 0 -3px; }
       <div class="card editorial" id="hero" style="margin-top:28px"></div>
       <div class="grid stats" id="stats" style="margin-top:12px"></div>
       <div class="card map-card" style="margin-top:12px">
-        <div class="seg map-modes" id="map-modes" role="group" aria-label="地圖樣式"><button data-map-mode="globe">3D 地球</button><button data-map-mode="flat">平面地圖</button></div>
+        <div class="map-top"><div class="seg map-modes" id="map-modes" role="group" aria-label="地圖樣式"><button data-map-mode="globe">3D 地球</button><button data-map-mode="flat">平面地圖</button></div>
+          <button class="map-find" id="map-find" aria-label="搜尋國家或景點" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button></div>
+        <div class="map-search" id="map-search" hidden>
+          <div class="ms-bar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="map-q" type="search" placeholder="搜尋國家或景點，例如：富士山、秘魯" aria-label="搜尋國家或景點" autocomplete="off"><button class="mc-close" id="map-q-close" aria-label="關閉搜尋">✕</button></div>
+          <div class="ms-list" id="map-q-list" role="listbox" aria-label="搜尋結果"></div>
+        </div>
         <div id="map" aria-label="世界旅遊足跡地圖"></div>
         <div class="map-country" id="map-country" aria-live="polite"></div>
         <div class="map-tip" id="map-tip" aria-hidden="true"><i class="tip-dot"></i>點一個國家，看必去景點</div>

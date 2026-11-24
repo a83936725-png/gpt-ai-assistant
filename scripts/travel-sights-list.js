@@ -114,7 +114,7 @@ const SIGHTS = {
   CR: [['阿雷納火山', 'Arenal Volcano', '火山與溫泉'], ['蒙特維德雲霧森林', 'Monteverde Cloud Forest Reserve', '吊橋與綠咬鵑'], ['曼努埃爾安東尼奧國家公園', 'Manuel Antonio National Park', '海灘與樹懶']],
   PA: [['巴拿馬運河', 'Panama Canal', '看巨輪過閘門'], ['巴拿馬老城', 'Casco Viejo, Panama', '殖民老城區'], ['聖布拉斯群島', 'San Blas Islands', '原住民的加勒比小島']],
   CU: [['哈瓦那老城', 'Old Havana', '老爺車與彩色街道'], ['巴拉德羅', 'Varadero', '白沙灘'], ['千里達', 'Trinidad, Cuba', '彩色殖民小鎮'], ['維尼亞萊斯谷', 'Viñales Valley', '雪茄菸草田']],
-  JM: [['鄧斯河瀑布', "Dunn's River Falls", '可以爬的瀑布'], ['巴布・馬利博物館', 'Bob Marley Museum', '雷鬼之父故居'], ['七哩海灘', 'Seven Mile Beach, Jamaica', '尼格瑞爾長沙灘']],
+  JM: [['鄧斯河瀑布', "Dunn's River Falls", '可以爬的瀑布'], ['巴布・馬利博物館', 'Bob Marley Museum', '雷鬼之父故居'], ['尼格瑞爾七哩海灘', 'Negril', '牙買加最長的白沙灘']],
   HT: [['拉費里埃城堡', 'Citadelle Laferrière', '山頂上的巨大堡壘']],
   DO: [['聖多明哥殖民區', 'Ciudad Colonial (Santo Domingo)', '美洲第一座歐式城市'], ['蓬塔卡納', 'Punta Cana', '加勒比海度假區']],
   BS: [['亞特蘭提斯天堂島', 'Atlantis Paradise Island', '海洋主題度假村'], ['豬島', 'Pig Beach', '和小豬一起游泳']],

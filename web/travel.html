@@ -1502,6 +1502,93 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-even
   html.print-plan .pt-actions, html.print-plan .pt-foot { display: none !important; }
   html.print-plan body::before { display: none; }
 }
+/* ---------- 揪團 */
+.group-strip { margin-bottom: 18px; }
+.group-row { display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
+.group-row::-webkit-scrollbar { display: none; }
+.group-card { flex: none; width: 200px; display: grid; gap: 4px; padding: 0 0 10px; border: 0; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; text-align: left; font-family: inherit; color: var(--text); cursor: pointer; }
+.group-card > b, .group-card > small, .group-card > .usage { margin: 0 12px; }
+.group-card .ph { position: relative; display: block; height: 110px; background: #2b4a7a; }
+.group-card .ph img { width: 100%; height: 100%; object-fit: cover; }
+.group-card .ph .inv-pill { position: absolute; left: 10px; top: 10px; }
+.group-card small { color: var(--muted); font-size: 12px; }
+.group-card .usage { height: 5px; }
+.group-card .usage span { display: block; height: 100%; border-radius: 99px; background: var(--brand-2); }
+.group-empty p { margin: 0 0 10px; }
+.group-ideas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.group-idea { display: grid; gap: 2px; padding: 0; border: 0; background: none; text-align: left; font-family: inherit; color: var(--text); cursor: pointer; }
+.group-idea .ph { display: block; aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; background: #2b4a7a; margin-bottom: 4px; }
+.group-idea .ph img { width: 100%; height: 100%; object-fit: cover; transition: scale .3s; }
+.group-idea:hover .ph img { scale: 1.05; }
+.group-idea small { color: var(--muted); font-size: 12px; }
+.inv-pill { display: inline-block; padding: 4px 10px; border-radius: 99px; background: #c8102e; color: #fff; font: 800 12px/1.2 system-ui, sans-serif; font-style: normal; }
+.inv-pill.closed { background: #6b655a; }
+.gf-hero, .inv-hero { position: relative; margin: 0; border-radius: 20px; overflow: hidden; min-height: 190px; background: #2b4a7a; display: grid; grid-template-columns: minmax(0, 1fr); }
+.gf-hero .fl, .inv-hero .fl { width: 22px; height: 15px; border-radius: 2px; flex: none; }
+.gf-hero img, .inv-hero img { grid-area: 1 / 1; width: 100%; height: 100%; max-height: 300px; object-fit: cover; }
+.gf-hero figcaption, .inv-hero figcaption { grid-area: 1 / 1; align-self: end; display: grid; gap: 4px; justify-items: start; padding: 40px 18px 16px; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.62)); }
+.gf-hero b, .inv-hero b { font-size: clamp(30px, 8vw, 44px); line-height: 1.1; }
+.gf-hero small, .inv-hero small { opacity: .9; font-weight: 700; }
+.inv-hero figcaption > span:last-child { font-size: 13px; opacity: .9; display: flex; gap: 6px; align-items: center; }
+.gf-fixed { margin: 0; font-weight: 700; }
+.gf-dates { gap: 6px; }
+.gf-dates .chip { display: grid; justify-items: start; gap: 1px; padding: 7px 12px; border-radius: 14px; min-height: 0; }
+.gf-dates .chip b { font-size: 11px; color: #c8102e; }
+.gf-dates .chip.on b { color: inherit; }
+.gf-steps { gap: 18px; flex-wrap: wrap; }
+.inv { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.inv-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.inv-facts > div { display: grid; gap: 2px; padding: 10px 8px; border-left: 1px solid var(--border); }
+.inv-facts > div:first-child { border-left: 0; padding-left: 0; }
+.inv-facts small { color: var(--muted); font-size: 12px; font-weight: 700; }
+.inv-facts b { font-size: 15px; }
+.inv-roster { display: grid; gap: 8px; }
+.inv-roster h3 { margin: 0; }
+.inv-people { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 6px; scrollbar-width: none; }
+.inv-person { flex: none; width: 64px; display: grid; justify-items: center; gap: 2px; text-align: center; animation: rise .45s cubic-bezier(.2,1.2,.3,1) backwards; animation-delay: calc(var(--i, 0) * 50ms); }
+.inv-person i { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; color: #fff; font: 900 20px "Noto Serif TC", serif; font-style: normal; box-shadow: 0 4px 10px rgba(0,0,0,.15); }
+.inv-person.host i { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #f2c14e; }
+.inv-person b { font-size: 12px; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv-person small { font-size: 10.5px; color: var(--muted); max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv-person.empty i { background: none; color: var(--muted); border: 2px dashed color-mix(in srgb, var(--text) 25%, transparent); box-shadow: none; }
+.inv-person.empty b { color: var(--muted); font-weight: 600; }
+.inv-opts { display: grid; gap: 8px; }
+.inv-opt { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 14px; background: var(--surface); font-family: inherit; color: var(--text); cursor: pointer; text-align: left; }
+.inv-opt small { color: var(--muted); }
+.inv-opt.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 9%, var(--surface)); }
+.inv-opt.top small { color: var(--good); font-weight: 700; }
+.inv-opt:disabled { cursor: default; }
+.inv-plan { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; }
+.inv-plan li { display: grid; grid-template-columns: 92px 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.inv-plan li b { font-family: "Noto Serif TC", serif; }
+.inv-plan li span { color: var(--muted); }
+.inv-esim { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--brand) 8%, var(--surface)); }
+.inv-esim > div { display: grid; gap: 2px; }
+.inv-join { display: grid; gap: 8px; }
+.inv-bar { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.inv-bar .btn.primary { flex: 1 1 160px; }
+@media (max-width: 520px) { .group-ideas { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .inv-plan li { grid-template-columns: 70px 1fr; } }
+/* ---------- 打卡 live preview */
+.ci-pv-box { margin: 0 auto; width: 100%; max-width: 420px; }
+.ci-pv { position: relative; padding: 12px 12px 16px; background: #fffdf8; border-radius: 6px; box-shadow: 0 14px 30px rgba(60,40,10,.2); rotate: -1deg; color: #1d1b17; }
+.ci-pv-photo { position: relative; border-radius: 3px; overflow: hidden; aspect-ratio: 4 / 3; max-height: 42vh; width: 100%; background: #2b4a7a; }
+.ci-pv-photo img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity .25s; }
+.ci-pv.stand-in .ci-pv-photo img { filter: saturate(.85); }
+.ci-pv-hint { position: absolute; left: 10px; top: 10px; padding: 4px 10px; border-radius: 99px; background: rgba(20,16,10,.55); color: #fff; font-size: 11.5px; font-weight: 700; backdrop-filter: blur(6px); }
+.ci-pv .ci-stamp { right: 16px; bottom: 74px; width: 96px; height: 96px; animation: none; }
+.ci-pv .ci-stamp b { font-size: 18px; }
+.ci-pv-text { display: grid; gap: 1px; padding: 12px 4px 0; }
+.ci-pv-text small { font: 800 10.5px system-ui, sans-serif; letter-spacing: .04em; color: #9a8f7d; }
+.ci-pv-text b { font-size: 28px; line-height: 1.15; }
+.ci-pv-text > span { font-weight: 700; color: #5a5246; }
+.ci-pv-text em { font-style: normal; font-family: "Noto Serif TC", serif; color: #3a342b; }
+.ci-pv-text em.muted { font-family: inherit; color: #a39883; font-size: 13px; }
+.ci-pv-meta { display: flex; gap: 6px; align-items: center; font-size: 12.5px; color: #7a705f !important; font-weight: 700; margin-top: 4px; }
+.ci-pv-meta .fl { width: 18px; height: 12px; }
+.ci-pv-box + .ci-photo-btns { grid-area: auto; align-self: auto; position: static; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 4px 0 0; }
+.studio-sample { display: grid; gap: 10px; justify-items: center; text-align: center; }
+.studio-sample p { margin: 0; }
+@media (prefers-reduced-motion: reduce) { .inv-person { animation: none; } }
 </style>
 </head>
 <body>
@@ -1597,6 +1684,10 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-even
     </section>
 
     <section data-view="recs" hidden>
+      <div class="group-strip">
+        <div class="section-title" style="margin-top:0"><h2 class="serif">揪團出國</h2><span class="muted small">一鍵把行程變成邀請，朋友點連結就能喊 +1</span><span class="spacer"></span><button class="btn primary sm" data-group-new>發起揪團</button></div>
+        <div id="my-groups"></div>
+      </div>
       <div class="card">
         <div class="row" style="justify-content:space-between"><h2>附近的旅行推薦</h2><span class="muted small" id="recs-count"></span><span class="spacer"></span><button class="btn primary" data-random><span class="die-btn" aria-hidden="true"><span class="die sm"><i class="f1"></i><i class="f2"></i><i class="f3"></i><i class="f4"></i><i class="f5"></i><i class="f6"></i></span></span>隨機出國</button></div>
         <p class="muted small" style="margin:6px 0 12px">從你所在的位置、下一站或去過的城市出發，結合你的旅行元素、季節與飛行時間推薦。每張旅遊卡都整合官方觀光網站、Google 地圖、景點門票與當地 eSIM。</p>

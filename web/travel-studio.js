@@ -420,11 +420,89 @@
     return cv;
   }
 
+  // ---------- 6. 揪團 invitation: a ticket with the place, the dates, the cost per person and who is going
+  const pill = (x, X, Y, text, bg, fg, size = 30) => {
+    x.font = `800 ${size}px ${SANS}`;
+    const w = x.measureText(text).width + size * 1.3;
+    x.fillStyle = bg; rr(x, X, Y, w, size * 1.8, size * 0.9); x.fill();
+    x.fillStyle = fg; x.textAlign = 'left'; x.textBaseline = 'middle';
+    x.fillText(text, X + size * 0.65, Y + size * 0.92);
+    x.textBaseline = 'alphabetic';
+    return w;
+  };
+  async function invite(d) {
+    const tall = Boolean(d.story);
+    await fontsReady(`${d.city}${d.host}${d.dateText}${d.sub}${(d.spots || []).map((sp) => sp.name).join('')}揪你一起去每人約出發報名截止還差`);
+    const W = 1080; const H = tall ? 1920 : 1350;
+    const [cv, x] = make(W, H);
+    paper(x, W, H, false, '#e9e1d2');
+    const M = 40;
+    const photoH = tall ? 1000 : 720;
+    x.save(); x.shadowColor = 'rgba(60,40,10,.25)'; x.shadowBlur = 40; x.shadowOffsetY = 14;
+    x.fillStyle = '#fffdf8'; rr(x, M, M, W - M * 2, H - M * 2, 28); x.fill(); x.restore();
+    const im = await firstImg([d.photo]);
+    x.save(); rr(x, M, M, W - M * 2, photoH, 28); x.rect(M, M + 40, W - M * 2, photoH - 40); x.clip();
+    if (im) coverDraw(x, im, M, M, W - M * 2, photoH); else noPhoto(x, M, M, W - M * 2, photoH);
+    const shade = x.createLinearGradient(0, M + photoH * 0.35, 0, M + photoH);
+    shade.addColorStop(0, 'rgba(0,0,0,0)'); shade.addColorStop(1, 'rgba(0,0,0,.66)');
+    x.fillStyle = shade; x.fillRect(M, M, W - M * 2, photoH);
+    x.restore();
+    let px = M + 36;
+    px += pill(x, px, M + 34, d.closed ? '已截止' : '揪團中', d.closed ? '#6b655a' : '#c8102e', '#fff') + 12;
+    if (d.need) pill(x, px, M + 34, d.need, 'rgba(255,253,248,.92)', '#1d1b17');
+    x.textAlign = 'left'; x.fillStyle = 'rgba(255,255,255,.92)'; x.font = `800 ${tall ? 44 : 36}px ${SANS}`;
+    x.fillText(`${d.host ? `${d.host} 揪你` : '揪你'}一起去`, M + 40, M + photoH - (tall ? 235 : 190));
+    x.fillStyle = '#fff'; fit(x, `${d.city}！`, 900, SERIF, tall ? 170 : 140, W - M * 2 - 80);
+    x.fillText(`${d.city}！`, M + 34, M + photoH - (tall ? 50 : 40));
+    const tear = M + photoH;
+    x.fillStyle = '#e9e1d2';
+    [M, W - M].forEach((cx) => { x.beginPath(); x.arc(cx, tear, 30, 0, Math.PI * 2); x.fill(); });
+    x.setLineDash([12, 12]); x.strokeStyle = 'rgba(60,50,35,.3)'; x.lineWidth = 3;
+    x.beginPath(); x.moveTo(M + 50, tear); x.lineTo(W - M - 50, tear); x.stroke(); x.setLineDash([]);
+    const L = M + 44; const R = W - M - 44;
+    let y = tear + (tall ? 90 : 72);
+    x.fillStyle = '#9a8f7d'; x.font = `800 ${tall ? 30 : 26}px ${SANS}`; x.textAlign = 'left';
+    x.fillText(d.voting ? '日期投票中' : '出發日期', L, y);
+    x.textAlign = 'right'; x.fillText('每人約', R, y);
+    y += tall ? 66 : 58;
+    x.textAlign = 'left'; x.fillStyle = '#1d1b17'; fit(x, d.dateText || '', 800, SANS, tall ? 50 : 42, R - L - 400); x.fillText(d.dateText || '', L, y);
+    x.textAlign = 'right'; fit(x, d.price || '', 900, SERIF, tall ? 76 : 64, 360); x.fillText(d.price || '', R, y + 4);
+    y += tall ? 56 : 48;
+    x.textAlign = 'left'; x.fillStyle = '#6b655a'; x.font = `700 ${tall ? 32 : 28}px ${SANS}`; x.fillText(d.sub || '', L, y);
+    const spots = (d.spots || []).slice(0, 3);
+    const imgs = await Promise.all(spots.map((sp) => loadImg(sp.photo)));
+    if (spots.length) {
+      y += tall ? 60 : 44;
+      const gap = 18;
+      const w = (R - L - gap * (spots.length - 1)) / spots.length;
+      const h = tall ? 300 : 190;
+      spots.forEach((sp, i) => {
+        const X = L + i * (w + gap);
+        x.save(); rr(x, X, y, w, h, 16); x.clip();
+        if (imgs[i]) coverDraw(x, imgs[i], X, y, w, h); else noPhoto(x, X, y, w, h, '#c9b99a', '#8d7b5c');
+        x.restore();
+        x.fillStyle = '#3a342b'; x.textAlign = 'left'; fit(x, sp.name, 700, SANS, tall ? 30 : 26, w); x.fillText(sp.name, X, y + h + (tall ? 44 : 38));
+      });
+      y += h + (tall ? 44 : 38);
+    }
+    if (tall && d.message) {
+      y += 90;
+      x.fillStyle = '#3a342b'; x.font = `600 40px ${SERIF}`; x.textAlign = 'left';
+      wrap(x, `「${d.message}」`, R - L, 3).forEach((ln, i) => x.fillText(ln, L - 10, y + i * 58));
+    }
+    x.textAlign = 'left'; x.fillStyle = '#c8102e'; x.font = `800 ${tall ? 34 : 28}px ${SANS}`;
+    x.fillText(d.cta || '點連結喊 +1', L, H - M - (tall ? 70 : 52));
+    x.textAlign = 'right'; x.fillStyle = '#a39883'; x.font = `700 ${tall ? 28 : 24}px ${SANS}`;
+    x.fillText(d.brand || '', R, H - M - (tall ? 70 : 52));
+    return cv;
+  }
+  const inviteStory = (d) => invite({ ...d, story: true });
+
   const toBlob = (cv, type = 'image/jpeg', quality = 0.9) => new Promise((resolve, reject) => {
     try { cv.toBlob((b) => (b ? resolve(b) : reject(new Error('blob'))), type, quality); } catch (err) { reject(err); }
   });
 
   window.TravelStudio = {
-    postcard, story, passport, footprint, badge, toBlob,
+    postcard, story, passport, footprint, badge, invite, inviteStory, toBlob,
   };
 }());

@@ -1231,6 +1231,7 @@
         <div class="row"><button class="btn primary" data-checkin="${t.id}">在 ${esc(t.city)} 打卡</button><button class="btn" data-share-trip="${t.id}">做成分享圖</button></div></section>
       ${d ? spotsHtml(d) : ''}
       <div class="actions">
+        <button class="btn primary" data-group-trip="${t.id}">揪朋友一起去</button>
         <button class="btn" data-near="${t.id}">附近還能去哪</button>
         <a class="btn" href="${gmaps(`${t.city} ${c.name}`)}" target="_blank" rel="noopener">Google 地圖 ↗</a>
         <button class="btn" data-open-plan="${t.id}">行程表</button>
@@ -1332,6 +1333,7 @@
             <button class="small muted tap-text" data-country-n="${c.n}">台北直飛約 ${d.hours} 小時・最佳 ${d.months.length === 12 ? '全年' : `${d.months.slice(0, 4).join('、')} 月`}</button>
             <div class="actions">
               <button class="btn sm primary" data-flip>景點與門票 ↻</button>
+              <button class="btn sm" data-group-dest="${d.id}">揪團</button>
               <button class="link-btn" data-ai="${d.id}">排行程 →</button>
               <span class="spacer"></span>
               <button class="heart-btn" data-wish="${d.id}" aria-pressed="${wished}" aria-label="加入願望清單">${wished ? '♥' : '♡'}</button>
@@ -2948,7 +2950,7 @@
         <div><span class="kicker plain muted">${flag(c.code)} ${esc(c.name)}・${t.plan.days.length} 天${tripFlight(t) ? `・${tripFlight(t).text}` : ''}</span>
           <h2 class="serif">${esc(t.city)} 行程表</h2>
           <p class="muted small">${t.start.replace(/-/g, '.')} – ${t.end.replace(/-/g, '.')}・${people} 人・eSIM ${order ? orderStatus(order)[1] : '尚未購買'}</p></div>
-        <div class="pt-actions"><button class="btn sm primary" data-ics="${t.id}">加入行事曆</button><button class="btn sm" data-pt-copy="${t.id}">複製文字</button><button class="btn sm" data-pt-csv="${t.id}">下載表格</button><button class="btn sm" data-pt-print>列印／存 PDF</button></div>
+        <div class="pt-actions"><button class="btn sm primary" data-group-trip="${t.id}">揪團</button><button class="btn sm" data-ics="${t.id}">加入行事曆</button><button class="btn sm" data-pt-copy="${t.id}">複製文字</button><button class="btn sm" data-pt-csv="${t.id}">下載表格</button><button class="btn sm" data-pt-print>列印／存 PDF</button></div>
       </header>
       <div class="pt-scroll"><table class="plan-table">
         <thead><tr><th class="pt-time">時間</th><th>行程・備註</th><th class="pt-fee">門票</th></tr></thead>
@@ -4408,7 +4410,7 @@
     $('#lib-count').textContent = `${cs.length} 個打卡・${LIB.length} 張照片`;
     $('#stamp-row').innerHTML = cs.length
       ? `<div class="stamp-row">${cs.slice(0, 24).map(stampHtml).join('')}<button class="stamp-chip add" data-checkin><b>＋</b><small>蓋新的章</small></button></div>`
-      : '<button class="stamp-invite" data-checkin><span class="stamp-chip ghost"><small>CHECK-IN</small><b>第一個章</b><small>等你來蓋</small></span><span><b>在旅途中打卡</b><small>拍一張、選地點，就蓋上一個印章，做成明信片分享出去</small></span></button>';
+      : '<button class="stamp-invite" data-checkin><span class="stamp-chip ghost"><small>CHECK-IN</small><b>第一個章</b><small>等你來蓋</small></span><span><b>在旅途中打卡</b><small>拍一張、選地點，就蓋上一個印章，做成明信片分享出去</small></span></button><button class="link-btn" data-ci-sample>先看打卡明信片長什麼樣子 →</button>';
     const withPhotos = sortTrips(trips.filter((t) => LIB.some((p) => p.tripId === t.id))).reverse();
     const loose = LIB.filter((p) => !trips.some((t) => t.id === p.tripId)).length;
     if (libFilter !== 'all' && libFilter !== 'none' && !withPhotos.some((t) => t.id === libFilter)) libFilter = 'all';
@@ -4488,20 +4490,22 @@
       tripId: t.id, place: opts.place || '', key: opts.key || '', lat: null, lng: null, mood: '', caption: '', file: null, preview: '', photoId: opts.photoId || '',
     };
     openModal('打卡', `
-      <div class="ci-photo">${ciPhotoHtml()}</div>
+      <div class="ci-pv-box">${ciPreviewHtml()}</div>
+      <div class="ci-photo-btns"><label class="btn primary"><input type="file" accept="image/*" capture="environment" hidden data-ci-file>拍照</label><label class="btn"><input type="file" accept="image/*" hidden data-ci-file>從相簿選</label></div>
       <div class="field"><label>在哪裡</label><div class="row ci-places" id="ci-places">${ciPlacesHtml(t)}</div>
         <div class="row" style="margin-top:8px"><input class="input grow" id="ci-place" maxlength="40" placeholder="或自己輸入，例如：一蘭拉麵 本店" value="${esc(ci.place)}"><button class="btn" data-ci-gps>${pic('gps')}附近</button></div></div>
       <div class="field"><label>心情</label><div class="row">${MOODS.map((m) => `<button class="chip" data-ci-mood="${m}">${m}</button>`).join('')}</div></div>
       <div class="field"><label for="ci-caption">說一句話</label><input class="input" id="ci-caption" maxlength="60" placeholder="例如：排了 40 分鐘，值得"></div>
       <div class="field"><label for="ci-trip">哪一趟旅行</label><select class="input" id="ci-trip">${sortTrips(trips).reverse().map((x) => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.city)}・${x.start.slice(0, 7).replace('-', '.')}${isOngoing(x) ? '（旅行中）' : ''}</option>`).join('')}</select></div>
-      <div class="sheet-bar"><span class="small muted">會蓋一個印章在這趟旅行，並做成明信片</span><button class="btn primary" data-ci-save>蓋章打卡</button></div>`, { sheet: 'tall' });
+      <div class="sheet-bar"><span class="small muted">上面就是打卡後的樣子，選什麼都會即時更新</span><button class="btn primary" data-ci-save>蓋章打卡</button></div>`, { sheet: 'tall' });
+    ciPreview();
   }
   async function ciPickFile(file) {
     if (!file || !ci) return;
     ci.file = file; ci.photoId = '';
     if (ci.preview) URL.revokeObjectURL(ci.preview);
     ci.preview = URL.createObjectURL(file);
-    $('#modal .ci-photo').innerHTML = ciPhotoHtml();
+    ciPreview();
     const head = await file.slice(0, 256 * 1024).arrayBuffer().catch(() => null);
     const exif = head && PDB ? PDB.readExif(head) : {};
     ci.taken = exif.taken || '';
@@ -4600,6 +4604,15 @@
   }
   const tag = (s) => `#${String(s || '').replace(/[\s・·,，、()（）.。!！?？/]/g, '')}`;
   const ctxCheckin = (ctx) => {
+    if (ctx.kind === 'sample') {
+      const d = DEST.kyoto || DESTS[0];
+      const t = {
+        id: 'sample', dest: d.id, city: d.name, n: COUNTRIES[d.c].n, start: TODAY, end: TODAY, tags: d.tags, checkins: [],
+      };
+      return {
+        t, c: { id: 'sample-c', date: TODAY, place: d.spots[0]?.name || d.name, key: '', mood: '好美', caption: '比照片還美，一定要再來', photo: '' }, photo: null,
+      };
+    }
     if (ctx.kind === 'photo') {
       const photo = LIB.find((x) => x.id === ctx.photoId);
       const t = trips.find((x) => x.id === photo?.tripId) || checkinTrip();
@@ -4611,12 +4624,20 @@
     return { t, c, photo };
   };
   function shareTemplates(ctx) {
+    if (ctx.kind === 'group') return [['invite', '邀請卡'], ['inviteStory', '限時動態']];
+    if (ctx.kind === 'sample') return [['postcard', '明信片'], ['story', '限時動態']];
     if (ctx.kind === 'checkin' || ctx.kind === 'photo') return [['postcard', '明信片'], ['story', '限時動態'], ['passport', '護照印章'], ['footprint', '足跡地圖']];
     if (ctx.kind === 'badge') return [['badge', '徽章卡'], ['footprint', '足跡地圖'], ['passport', '護照印章']];
     return [['footprint', '足跡地圖'], ['passport', '護照印章']];
   }
   function shareText(ctx) {
     const brand = tag(CONFIG.brand);
+    if (ctx.kind === 'group') {
+      const g = groupOf(ctx.gid);
+      const inv = g.invite;
+      const need = Math.max(0, inv.t - 1 - (g.members || []).length);
+      return `${inv.h ? `${inv.h} 揪團` : '揪團'}｜${inv.o.length > 1 ? `${inv.o.length} 個日期投票中` : optText(inv.o[0])}，一起去${inv.c}！\n${inv.days} 天・每人約 NT$${fmt(inv.p)}${need ? `・還差 ${need} 人` : ''}${inv.dl ? `・${md(inv.dl)} 前報名` : ''}\n${inv.m ? `「${inv.m}」\n` : ''}點連結看完整行程、喊 +1：`;
+    }
     if (ctx.kind === 'badge') {
       const b = BADGES.find((x) => x.key === ctx.key);
       return `我解鎖了「${b.name}」徽章！${BADGE_LINES[b.key] || ''}\n#旅行徽章 ${brand}`;
@@ -4624,6 +4645,7 @@
     if (ctx.kind === 'checkin' || ctx.kind === 'photo') {
       const { t, c } = ctxCheckin(ctx);
       if (!t) return brand;
+      if (ctx.kind === 'sample') return brand;
       const where = c?.place && c.place !== t.city ? `${c.place}（${t.city}）` : t.city;
       return `在 ${where} 打卡${c?.mood ? `｜${c.mood}` : ''}${c?.caption ? `\n「${c.caption}」` : ''}\n${tag(t.city)} ${tag(`${country(t.n).name}旅行`)} ${brand}`;
     }
@@ -4632,6 +4654,7 @@
   }
   function shareLink(ctx) {
     const base = `${window.location.origin}${window.location.pathname}`;
+    if (ctx.kind === 'group') return `${base}#join=${b64url(groupOf(ctx.gid).invite)}`;
     if (ctx.kind === 'badge') {
       const b = BADGES.find((x) => x.key === ctx.key);
       const at = badgeUnlocked(b, stats('all').list);
@@ -4664,6 +4687,7 @@
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="480" height="480"><defs>${$('.art-defs defs')?.innerHTML || ''}</defs>${body}</svg>`;
   };
   async function studioData(ctx, tpl) {
+    if (tpl === 'invite' || tpl === 'inviteStory') return groupCardData(groupOf(ctx.gid));
     const { brand } = CONFIG;
     const name = user?.name || '';
     const year = ctx.year || 'all';
@@ -4727,9 +4751,9 @@
       <div class="studio">
         <div class="studio-preview" id="studio-preview"><span class="studio-wait">製作中…</span></div>
         <div class="seg seg-full" id="studio-tpl" role="tablist" aria-label="圖片樣式">${shareTemplates(ctx).map(([k, l]) => `<button data-tpl="${k}" class="${k === studio.tpl ? 'on' : ''}">${l}</button>`).join('')}</div>
-        <div class="share-targets">${TARGETS.filter(([k]) => k !== 'native' || navigator.share).map(([k, l, bg], i) => `<button data-st="${k}" style="--d:${i * 35}ms"><span class="st-mark" style="background:${bg}">${TARGET_MARK[k]}</span>${l}</button>`).join('')}</div>
+        ${ctx.kind === 'sample' ? '<div class="studio-sample"><p class="muted">這是範例。打卡後，你的照片、地點、心情和日期會做成這樣的明信片與限時動態，蓋上那座城市的印章。</p><button class="btn primary" data-checkin>我也來打卡</button></div>' : `<div class="share-targets">${TARGETS.filter(([k]) => k !== 'native' || navigator.share).map(([k, l, bg], i) => `<button data-st="${k}" style="--d:${i * 35}ms"><span class="st-mark" style="background:${bg}">${TARGET_MARK[k]}</span>${l}</button>`).join('')}</div>
         <div class="field"><label for="studio-text">貼文文字（分享時會一起帶上，也可以自己改）</label><textarea class="input" id="studio-text" rows="3">${esc(shareText(ctx))}</textarea></div>
-        <p class="small muted">分享到 IG、LINE 或 Facebook 都算一次分享，分享 3 次會解鎖「分享家」徽章。朋友點連結會看到你的打卡，也能開始記錄自己的旅行。</p>
+        <p class="small muted">${ctx.kind === 'group' ? '傳到 LINE 群組最快：朋友點連結會看到日期、每人費用、景點與每天的行程，按 +1 就報名，名單會即時更新。' : '分享到 IG、LINE 或 Facebook 都算一次分享，分享 3 次會解鎖「分享家」徽章。朋友點連結會看到你的打卡，也能開始記錄自己的旅行。'}</p>`}
       </div>`, { sheet: 'tall' });
     renderStudio();
   }
@@ -4880,6 +4904,388 @@
   });
   window.addEventListener('afterprint', () => document.documentElement.classList.remove('print-plan'));
 
+  // ---------- 揪團: invite friends with one link; they see the plan, the cost and who is going, and tap +1
+  let groups = store.get('groups', []);
+  const saveGroups = () => store.set('groups', groups);
+  const whoAmI = () => {
+    let w = store.get('who', '');
+    if (!w) { w = `w-${uid()}${uid()}`; store.set('who', w); }
+    return w;
+  };
+  const TAG_VERB = {
+    food: '吃美食', culture: '看古蹟', nature: '看風景', island: '玩水', city: '逛城市', shopping: '買買買', onsen: '泡溫泉', snow: '看雪', family: '帶小孩玩', night: '逛夜景', art: '看展', adventure: '戶外冒險',
+  };
+  async function groupApi(method, path, body) {
+    const res = await fetch(`api/groups${path}`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || `HTTP ${res.status}`), { status: res.status });
+    return data;
+  }
+  function optText([a, b]) { return `${md(a)}（${WEEK[parseDate(a).getDay()]}）– ${md(b)}（${WEEK[parseDate(b).getDay()]}）`; }
+  function groupOf(id) { return groups.find((g) => g.id === id); }
+  function invitePhoto(inv) { return destPhoto(inv.d)?.src || ''; }
+  function inviteSpots(inv) {
+    const d = DEST[inv.d];
+    const own = d ? d.spots.map((sp) => ({ name: sp.name, photo: spotPhoto(d.id, sp.name)?.src || '' })) : [];
+    const sights = sightsOf(country(inv.n).code).filter((x) => x.img).map((x) => ({ name: x.n, photo: thumbAt(x.img.src, 640) }));
+    const seen = new Set();
+    return [...own.filter((sp) => sp.photo), ...sights, ...own].filter((sp) => !seen.has(sp.name) && seen.add(sp.name)).slice(0, 6);
+  }
+  const hashText = (text) => [...text].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 2147483647, 7).toString(36);
+  const planLines = (t) => { ensurePlan(t); return t.plan.days.map((list) => list.slice().sort(byTime).slice(0, 8).map((it) => `${it.time ? `${it.time} ` : ''}${it.name}`.slice(0, 40))); };
+  const destPlanLines = (d, days) => seedPlan({
+    dest: d.id, city: d.name, start: TODAY, end: addDays(TODAY, days - 1), tags: d.tags,
+  }).days.map((list) => list.map((it) => `${it.time ? `${it.time} ` : ''}${it.name}`.slice(0, 40)));
+  // Date ideas: Taiwan's next long weekends, stretched to the trip length.
+  function dateIdeas(days) {
+    const ideas = HOLIDAY_RANGES.filter(([from, to]) => from >= addDays(TODAY, 10) && daysBetween(from, to) >= 3).slice(0, 3)
+      .map(([from, to, name]) => ({ range: [from, daysBetween(from, to) >= days ? to : addDays(from, days - 1)], label: `${name}連假` }));
+    const firstFriday = addDays(TODAY, ((5 - parseDate(TODAY).getDay() + 7) % 7));
+    [4, 6, 8, 10].forEach((weeks) => {
+      const start = addDays(firstFriday, weeks * 7);
+      const clash = ideas.some((i) => Math.abs(daysBetween(i.range[0], start)) < 7);
+      if (!clash && ideas.length < 4) ideas.push({ range: [start, addDays(start, days - 1)], label: `${Math.round(weeks / 4.3)} 個多月後` });
+    });
+    return ideas.sort((a, b) => a.range[0].localeCompare(b.range[0]));
+  }
+
+  // ---------- 發起揪團
+  let gf = null;
+  const gfCost = () => {
+    const d = DEST[gf.d];
+    if (d) return Math.round(tripCost(d, gf.days).total / 500) * 500;
+    const trip = trips.find((x) => x.id === gf.tripId);
+    return trip ? Math.round(budgetOf(trip).total / (trip.plan.budget.people || 1) / 500) * 500 : 0;
+  };
+  const gfDeadline = () => {
+    const first = gf.opts.map((o) => o[0]).sort()[0];
+    if (!first) return addDays(TODAY, 14);
+    let dl = addDays(first, -21);
+    if (dl < addDays(TODAY, 3)) dl = addDays(TODAY, 3);
+    if (dl >= first) dl = addDays(first, -1);
+    return dl < TODAY ? TODAY : dl;
+  };
+  const gfMessage = () => {
+    const first = gf.opts.map((o) => o[0]).sort()[0];
+    const verbs = gf.tags.map((k) => TAG_VERB[k]).filter(Boolean).slice(0, 2).join('、');
+    return `${first ? `${parseDate(first).getMonth() + 1} 月` : ''}想去${gf.c}${verbs ? `${verbs}` : ''}，${gf.days} 天，每人預算約 NT$${fmt(gf.price)}。想揪 ${gf.target - 1} 個朋友一起，${md(gf.deadline)} 前喊 +1，湊齊就訂機票！`;
+  };
+  function openGroupForm(opts = {}) {
+    const trip = opts.tripId ? trips.find((x) => x.id === opts.tripId) : null;
+    const d = trip ? DEST[trip.dest] : (DEST[opts.dest] || recommend(recState.origin || defaultOrigin())[0]?.d || DESTS[0]);
+    const longHaul = d.hours > 8 ? 7 : 5;
+    const days = trip ? daysBetween(trip.start, trip.end) : longHaul;
+    gf = {
+      tripId: trip?.id || '', d: trip ? trip.dest || '' : d.id, c: trip ? trip.city : d.name, n: trip ? trip.n : COUNTRIES[d.c].n, la: trip ? trip.lat : d.lat, lo: trip ? trip.lng : d.lng,
+      days, target: 4, tags: (trip ? trip.tags : d.tags).slice(0, 3), opts: trip ? [[trip.start, trip.end]] : dateIdeas(days).slice(0, 2).map((o) => o.range), priceEdited: false, msgEdited: false,
+    };
+    if (trip) ensurePlan(trip);
+    gf.price = gfCost();
+    gf.deadline = gfDeadline();
+    gf.msg = gfMessage();
+    renderGroupForm();
+  }
+  function readGroupForm() {
+    if (!gf) return;
+    const price = Number($('#gf-price')?.value);
+    if (gf.priceEdited && Number.isFinite(price)) gf.price = Math.max(0, Math.round(price));
+    if (gf.dlEdited && $('#gf-deadline')?.value) gf.deadline = $('#gf-deadline').value;
+    if (gf.msgEdited) gf.msg = $('#gf-msg')?.value.trim() || '';
+  }
+  function renderGroupForm() {
+    const trip = trips.find((x) => x.id === gf.tripId);
+    const { code } = country(gf.n);
+    const f = flightInfo(code);
+    const ideas = trip ? [] : dateIdeas(gf.days);
+    const key = (r) => r.join('|');
+    const chosen = new Set(gf.opts.map(key));
+    const extra = gf.opts.filter((o) => !ideas.some((i) => key(i.range) === key(o)));
+    const d = DEST[gf.d];
+    const cost = d ? tripCost(d, gf.days) : null;
+    const destOptions = Object.entries(COUNTRIES).filter(([, c]) => c.base).map(([cc, c]) => {
+      const ds = DESTS.filter((x) => x.c === cc);
+      return ds.length ? `<optgroup label="${c.name}">${ds.map((x) => `<option value="${x.id}" ${gf.d === x.id ? 'selected' : ''}>${x.name}</option>`).join('')}</optgroup>` : '';
+    }).join('');
+    openModal('發起揪團', `
+      <figure class="gf-hero">${invitePhoto(gf) ? `<img src="${esc(invitePhoto(gf))}" alt="" referrerpolicy="no-referrer">` : ''}<figcaption><span class="inv-pill">揪團</span><b class="serif">一起去${esc(gf.c)}！</b><small>${flag(code)} ${esc(country(gf.n).name)}${f ? `・${f.text}` : ''}</small></figcaption></figure>
+      ${trip ? '' : `<div class="field"><label for="gf-dest">去哪裡</label><select class="input" id="gf-dest">${destOptions}</select></div>`}
+      <div class="field"><label>什麼時候去</label>
+        ${trip ? `<p class="gf-fixed">${optText([trip.start, trip.end])}・會附上你排好的行程表</p>` : `
+        <div class="row gf-dates">${ideas.map((i) => `<button class="chip ${chosen.has(key(i.range)) ? 'on' : ''}" data-gf-opt="${key(i.range)}"><b>${i.label}</b>${optText(i.range)}</button>`).join('')}${extra.map((o) => `<button class="chip on" data-gf-opt="${key(o)}">${optText(o)}</button>`).join('')}</div>
+        <div class="row" style="margin-top:8px"><input type="date" class="input grow" id="gf-date" min="${TODAY}" aria-label="自訂出發日"><button class="btn sm" data-gf-add>加這個日期</button></div>
+        <small class="muted">選 1 個就是確定日期；選 2～3 個，朋友報名時可以投票。</small>`}
+      </div>
+      <div class="row gf-steps">
+        ${trip ? '' : `<div class="field"><label>天數</label><span class="stepper"><button data-gf-days="-1" aria-label="少一天">－</button><b>${gf.days} 天</b><button data-gf-days="1" aria-label="多一天">＋</button></span></div>`}
+        <div class="field"><label>總共幾個人（含你）</label><span class="stepper"><button data-gf-target="-1" aria-label="少一人">－</button><b>${gf.target} 人</b><button data-gf-target="1" aria-label="多一人">＋</button></span></div>
+      </div>
+      <div class="field"><label for="gf-price">每人預算（概估，可以自己改）</label><input class="input" id="gf-price" type="number" min="0" step="500" inputmode="numeric" value="${gf.price}">
+        ${cost ? `<small class="muted">機票 ${fmt(cost.flight)}・住宿餐飲交通 ${fmt(cost.stay)}・門票 ${fmt(cost.tickets)}・eSIM ${fmt(cost.esim)}</small>` : ''}</div>
+      <div class="field"><label for="gf-deadline">報名截止</label><input class="input" type="date" id="gf-deadline" min="${TODAY}" value="${gf.deadline}"></div>
+      <div class="field"><label for="gf-msg">想跟朋友說的話</label><textarea class="input" id="gf-msg" rows="3" maxlength="300">${esc(gf.msg)}</textarea></div>
+      <div class="sheet-bar"><span class="small muted">朋友點連結就能看行程、費用、誰要去，按 +1 報名</span><button class="btn primary" data-gf-create>建立揪團並分享</button></div>`, { sheet: 'tall' });
+  }
+  function gfRefresh(scrollKeep = true) {
+    const top = modal.scrollTop;
+    if (!gf.priceEdited) gf.price = gfCost();
+    if (!gf.dlEdited) gf.deadline = gfDeadline();
+    if (!gf.msgEdited) gf.msg = gfMessage();
+    renderGroupForm();
+    if (scrollKeep) modal.scrollTop = top;
+  }
+  async function createGroupTrip(button) {
+    readGroupForm();
+    if (!gf.opts.length) { toast('先選一個出發日期'); return; }
+    button.disabled = true; button.textContent = '建立中…';
+    const trip = trips.find((x) => x.id === gf.tripId);
+    const invite = {
+      v: 1, d: gf.d, c: gf.c, n: gf.n, la: gf.la, lo: gf.lo, o: gf.opts.slice().sort((a, b) => a[0].localeCompare(b[0])).slice(0, 3), days: gf.days, p: gf.price, t: gf.target, dl: gf.deadline, m: gf.msg, h: user?.name || '', tags: gf.tags,
+      pl: trip ? planLines(trip) : destPlanLines(DEST[gf.d], gf.days),
+    };
+    let id = `l-${hashText(JSON.stringify(invite))}${uid()}`;
+    let key = '';
+    if (CONFIG.groups) {
+      try {
+        ({ id, key } = await groupApi('POST', '', { invite }));
+        invite.g = id;
+      } catch (err) { toast(`揪團名單暫時無法上線（${err.message}），朋友報名會用 LINE 傳給你`); }
+    }
+    groups = [{
+      id, key, role: 'host', invite, members: [], closed: false, at: Date.now(),
+    }, ...groups];
+    saveGroups(); renderGroups();
+    buzz();
+    openStudio({ kind: 'group', gid: id });
+  }
+
+  // ---------- 揪團 page: what friends see from the link, and the organiser's own view with the sign-ups
+  let invPick = new Set();
+  async function refreshGroup(g) {
+    if (!CONFIG.groups || !g.invite.g) return g;
+    try {
+      const r = await groupApi('GET', `/${g.invite.g}`);
+      g.members = r.members; g.closed = r.closed;
+      if (groupOf(g.id)) saveGroups();
+    } catch { /* show what we have */ }
+    return g;
+  }
+  function groupViewHtml(g) {
+    const inv = g.invite;
+    const host = g.role === 'host';
+    const joined = g.role === 'member';
+    const members = g.members || [];
+    const left = inv.dl ? daysBetween(TODAY, inv.dl) - 1 : null;
+    const going = 1 + members.length;
+    const need = Math.max(0, inv.t - going);
+    const { code } = country(inv.n);
+    let deadlineText = '';
+    if (left != null) deadlineText = left >= 0 ? `報名截止 ${md(inv.dl)}・還有 ${left} 天` : '已過報名截止日';
+    let datesTitle = '日期';
+    if (inv.o.length > 1) datesTitle = host ? '日期投票' : '選你可以的日期';
+    let joinLabel = joined ? '更新我的報名' : '我要參加 +1';
+    if (g.closed) joinLabel = '已截止報名';
+    const f = flightInfo(code);
+    const votes = inv.o.map((_, i) => members.filter((m) => (m.opts || []).includes(i)).length);
+    const best = votes.indexOf(Math.max(...votes));
+    const d = DEST[inv.d];
+    const cost = d ? tripCost(d, inv.days) : null;
+    const people = [{ name: inv.h || '發起人', host: true }, ...members];
+    return `
+      <figure class="inv-hero">${invitePhoto(inv) ? `<img src="${esc(invitePhoto(inv))}" alt="" referrerpolicy="no-referrer">` : ''}<figcaption><span class="inv-pill ${g.closed ? 'closed' : ''}">${g.closed ? '已截止' : '揪團中'}</span><small>${esc(inv.h || '朋友')} 揪你一起去</small><b class="serif">${esc(inv.c)}！</b><span>${flag(code)} ${esc(country(inv.n).name)}${f ? `・${f.text}` : ''}</span></figcaption></figure>
+      <div class="inv-facts">
+        <div><small>${inv.o.length > 1 ? '日期投票中' : '出發日期'}</small><b>${inv.o.length > 1 ? `${inv.o.length} 個選項` : optText(inv.o[0])}</b></div>
+        <div><small>天數</small><b>${inv.days} 天</b></div>
+        <div><small>每人約</small><b>${inv.p ? `NT$${fmt(inv.p)}` : '一起討論'}</b></div>
+      </div>
+      ${inv.m ? `<p class="badge-line">「${esc(inv.m)}」</p>` : ''}
+      <section class="inv-roster">
+        <div class="row"><h3>${going} / ${inv.t} 人${need ? `・還差 ${need} 人` : '・人數到齊'}</h3><span class="spacer"></span><span class="small muted">${deadlineText}</span></div>
+        <div class="usage"><div style="width:${Math.min(100, (going / inv.t) * 100)}%;background:var(--brand-2)"></div></div>
+        <div class="inv-people">${people.map((m, i) => `<span class="inv-person ${m.host ? 'host' : ''}" style="--i:${i}"><i style="background:${INKS[i % INKS.length]}">${esc([...(m.name || '?')][0])}</i><b>${esc(m.name)}</b><small>${m.host ? '發起人' : esc(m.msg || (m.opts?.length && inv.o.length > 1 ? m.opts.map((k) => md(inv.o[k][0])).join('、') : '要去'))}</small></span>`).join('')}${Array.from({ length: Math.min(need, 5) }, (_, i) => `<span class="inv-person empty" style="--i:${people.length + i}"><i>＋</i><b>等你</b></span>`).join('')}</div>
+        ${host && !CONFIG.groups ? '<p class="small muted">朋友報名會用 LINE 傳訊息給你。</p>' : ''}
+      </section>
+      ${inv.o.length > 1 || !host ? `<section><h3>${datesTitle}</h3><div class="inv-opts">${inv.o.map((o, i) => `<button class="inv-opt ${invPick.has(i) ? 'on' : ''} ${i === best && votes[i] ? 'top' : ''}" data-inv-opt="${i}" ${host ? 'disabled' : ''}><b>${optText(o)}</b><small>${HOLIDAYS[o[0]] || HOLIDAYS[addDays(o[0], 1)] ? `${HOLIDAYS[o[0]] || HOLIDAYS[addDays(o[0], 1)]}連假・` : ''}${votes[i]} 人可以</small></button>`).join('')}</div></section>` : ''}
+      <section><h3>會去的地方</h3><div class="gallery">${inviteSpots(inv).map((sp) => `<figure class="ph-card"><div class="ph ${sp.photo ? '' : 'ph-missing'}">${sp.photo ? `<img src="${esc(sp.photo)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</div><figcaption><b>${esc(sp.name)}</b></figcaption></figure>`).join('')}</div></section>
+      ${inv.pl?.length ? `<section><h3>行程（${inv.pl.length} 天）</h3><ol class="inv-plan">${inv.pl.map((day, i) => `<li><b>Day ${i + 1}${inv.o.length === 1 ? `・${md(addDays(inv.o[0][0], i))}` : ''}</b><span>${day.map(esc).join('・') || '自由活動'}</span></li>`).join('')}</ol></section>` : ''}
+      ${cost ? `<section><h3>費用概估（每人）</h3>${costRows(cost)}<p class="small muted">機票、住宿與門票依日期與訂購管道而定。</p></section>` : ''}
+      <section class="inv-esim"><div><b>全團一起上網</b><small class="muted">一次買 ${inv.t} 張 eSIM，用 LINE 一張張分給團員，落地就能上網。</small></div><button class="btn sm" data-plan="${packFor(code)}" ${packFor(code) !== code ? `data-for="${code}"` : ''}>看 ${esc(country(inv.n).name)} eSIM</button></section>
+      ${host ? `<div class="sheet-bar inv-bar"><button class="btn" data-group-close="${g.id}">${g.closed ? '重新開放' : '截止報名'}</button><button class="btn" data-group-make="${g.id}">成團！加到行程表</button><button class="btn primary" data-group-share="${g.id}">分享邀請</button></div>
+        <button class="link-btn danger-text" data-group-del="${g.id}">刪除這個揪團</button>`
+    : `<div class="inv-join"><input class="input" id="inv-name" maxlength="20" placeholder="你的暱稱（會顯示在名單上）" value="${esc(store.get('nick', '') || user?.name || '')}" aria-label="你的暱稱"><input class="input" id="inv-msg" maxlength="60" placeholder="想說的話（可不填），例如：我可以！" aria-label="想說的話"></div>
+        <div class="sheet-bar inv-bar"><button class="btn" data-group-share="${g.id}">轉給朋友</button>${joined ? `<button class="btn" data-group-make="${g.id}">加到我的行程表</button>` : ''}<button class="btn primary" data-group-join="${g.id}" ${g.closed ? 'disabled' : ''}>${joinLabel}</button></div>
+        ${joined ? `<button class="link-btn danger-text" data-group-leave="${g.id}">我不去了</button>` : ''}`}`;
+  }
+  async function openGroupView(g, quiet) {
+    openGroupView.current = g;
+    if (!quiet) invPick = new Set(g.joinedOpts || (g.invite.o.length === 1 ? [0] : []));
+    if (!quiet) openModal(`${esc(g.invite.h || '朋友')}的揪團`, `<div class="inv">${groupViewHtml(g)}</div>`, { sheet: 'tall' });
+    await refreshGroup(g);
+    const box = $('#modal .inv');
+    if (box) { const top = modal.scrollTop; box.innerHTML = groupViewHtml(g); modal.scrollTop = top; }
+  }
+  async function joinGroupTrip(g, button) {
+    const name = $('#inv-name')?.value.trim();
+    if (!name) { toast('填一下你的暱稱'); $('#inv-name')?.focus(); return; }
+    const msg = $('#inv-msg')?.value.trim() || '';
+    const opts = [...invPick];
+    if (g.invite.o.length > 1 && !opts.length) { toast('選一個你可以的日期'); return; }
+    store.set('nick', name);
+    button.disabled = true;
+    if (CONFIG.groups && g.invite.g) {
+      try {
+        const r = await groupApi('POST', `/${g.invite.g}/join`, {
+          who: whoAmI(), name, opts, msg,
+        });
+        g.members = r.members; g.closed = r.closed;
+      } catch (err) { button.disabled = false; toast(err.message); return; }
+    } else {
+      // Without the group server, the sign-up goes to the organiser as a message.
+      const text = `我要參加${g.invite.h ? ` ${g.invite.h} 的` : ''}${g.invite.c}揪團！我是 ${name}${opts.length ? `，可以 ${opts.map((i) => optText(g.invite.o[i])).join('、')}` : ''}${msg ? `。${msg}` : ''}`;
+      if (navigator.share) navigator.share({ text }).catch(() => {}); else window.open(`https://line.me/R/share?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+      g.members = [...(g.members || []).filter((m) => m.name !== name), {
+        name, opts, msg, at: Date.now(),
+      }];
+    }
+    const first = g.role !== 'member';
+    g.role = 'member'; g.joinedOpts = opts; g.at = g.at || Date.now();
+    groups = [g, ...groups.filter((x) => x.id !== g.id)];
+    saveGroups(); renderGroups();
+    const box = $('#modal .inv');
+    if (box) box.innerHTML = groupViewHtml(g);
+    buzz();
+    setTimeout(() => burst($('#modal .inv-people .inv-person:not(.host):not(.empty):last-of-type') || $('#modal .inv-people'), 24), 120);
+    toast(first ? `報名成功！${g.invite.h || '發起人'}會看到你在名單上` : '已更新你的報名');
+  }
+  function groupToTrip(g) {
+    const inv = g.invite;
+    const members = g.members || [];
+    const votes = inv.o.map((_, i) => members.filter((m) => (m.opts || []).includes(i)).length);
+    const pick = g.role === 'member' && g.joinedOpts?.length ? g.joinedOpts[0] : votes.indexOf(Math.max(...votes));
+    const [start] = inv.o[pick] || inv.o[0];
+    const end = addDays(start, inv.days - 1);
+    const d = DEST[inv.d];
+    if (trips.some((t) => t.city === inv.c && t.start === start)) { toast('行程表裡已經有這趟了'); openPlanner(trips.find((t) => t.city === inv.c && t.start === start).id); return; }
+    const t = {
+      id: `t-${uid()}`, src: 'group', n: inv.n, dest: d ? d.id : '', city: inv.c, lat: d ? d.lat : inv.la, lng: d ? d.lng : inv.lo, start, end, tags: inv.tags || [], gb: '', note: `${inv.h || '朋友'}揪團・${1 + members.length} 人`,
+    };
+    const people = Math.max(1, 1 + members.length);
+    t.plan = seedPlan(t);
+    t.plan.days = Array.from({ length: inv.days }, (_, i) => (inv.pl?.[i] || []).map((line) => {
+      const m = line.match(/^(\d{1,2}:\d{2})\s+(.+)$/);
+      return m ? newItem(m[2], m[1]) : newItem(line, '');
+    }));
+    t.plan.budget.people = people;
+    trips.push(t);
+    save(); renderAll();
+    modal.close();
+    toast(`已加到行程表：${inv.c} ${md(start)}–${md(end)}・${people} 人`);
+    openPlanner(t.id);
+  }
+  function readSharedJoin() {
+    const m = window.location.hash.match(/^#join=([\w-]+)/);
+    if (!m) return null;
+    try {
+      const inv = fromB64url(m[1]);
+      const o = (Array.isArray(inv.o) ? inv.o : []).filter((r) => Array.isArray(r) && /^\d{4}-\d\d-\d\d$/.test(r[0]) && /^\d{4}-\d\d-\d\d$/.test(r[1])).slice(0, 3);
+      if (!inv.c || !o.length) return null;
+      return {
+        v: 1, d: DEST[inv.d] ? inv.d : '', c: String(inv.c).slice(0, 30), n: String(inv.n || ''), la: Number(inv.la) || null, lo: Number(inv.lo) || null, o, days: Math.min(30, Math.max(1, Number(inv.days) || 5)), p: Math.max(0, Number(inv.p) || 0), t: Math.min(30, Math.max(2, Number(inv.t) || 4)),
+        dl: /^\d{4}-\d\d-\d\d$/.test(inv.dl || '') ? inv.dl : '', m: String(inv.m || '').slice(0, 300), h: String(inv.h || '').slice(0, 20), tags: (Array.isArray(inv.tags) ? inv.tags : []).filter((k) => ELEMENTS[k]).slice(0, 4),
+        pl: (Array.isArray(inv.pl) ? inv.pl : []).slice(0, 14).map((day) => (Array.isArray(day) ? day.slice(0, 8).map((x) => String(x).slice(0, 40)) : [])), g: /^[a-z0-9]{10}$/.test(inv.g || '') ? inv.g : '',
+      };
+    } catch { return null; }
+  }
+  function openSharedJoin(inv) {
+    const id = inv.g || `j-${hashText(JSON.stringify(inv))}`;
+    const known = groupOf(id);
+    window.history.replaceState(null, '', window.location.pathname);
+    openGroupView(known || {
+      id, invite: inv, role: 'guest', members: [], closed: false,
+    });
+  }
+  // 我的揪團 on 探索: the groups you started or joined, with how full they are.
+  function renderGroups() {
+    const box = $('#my-groups');
+    if (!box) return;
+    if (!groups.length) {
+      const picks = (recState.origin?.lat != null ? recommend(recState.origin) : []).slice(0, 3).map((r) => r.d);
+      box.innerHTML = `<div class="group-empty"><p class="muted small">挑一個想去的地方，系統幫你把日期、每人費用、景點與行程做成一張邀請，傳到 LINE 群組，朋友點連結就能喊 +1。</p>
+        <div class="group-ideas">${picks.map((d) => `<button class="group-idea" data-group-dest="${d.id}"><span class="ph">${imgHtml(destPhoto(d.id), d.name)}</span><b>揪團去${esc(d.name)}</b><small>每人約 NT$${fmt(Math.round(tripCost(d, d.hours > 8 ? 7 : 5).total / 1000) * 1000)}</small></button>`).join('')}</div></div>`;
+      return;
+    }
+    box.innerHTML = `<div class="group-row">${groups.map((g) => {
+      const inv = g.invite;
+      const going = 1 + (g.members || []).length;
+      return `<button class="group-card" data-group-open="${g.id}"><span class="ph">${invitePhoto(inv) ? `<img src="${esc(invitePhoto(inv))}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}<em class="inv-pill ${g.closed ? 'closed' : ''}">${g.role === 'host' ? '我發起' : '我參加'}</em></span>
+        <b>${esc(inv.c)}</b><small>${inv.o.length > 1 ? `${inv.o.length} 個日期投票中` : optText(inv.o[0])}</small>
+        <span class="usage"><span style="width:${Math.min(100, (going / inv.t) * 100)}%"></span></span><small>${going} / ${inv.t} 人${g.closed ? '・已截止' : ''}</small></button>`;
+    }).join('')}</div>`;
+  }
+
+  // ---------- 打卡 preview: the postcard as it will look, updated while you choose
+  function ciPreviewHtml() {
+    const t = trips.find((x) => x.id === ($('#ci-trip')?.value || ci?.tripId));
+    if (!t || !ci) return '';
+    const typed = $('#ci-place')?.value.trim();
+    const place = typed || ci.place || t.city;
+    const caption = $('#ci-caption')?.value.trim() || '';
+    const date = isOngoing(t) ? TODAY : ([ci.taken, LIB.find((p) => p.id === ci.photoId)?.taken].find((x) => x && x >= t.start && x <= t.end) || t.start);
+    const own = ci.preview || (ci.photoId ? libSrc(LIB.find((p) => p.id === ci.photoId) || {}, 'full') : '');
+    const [code, i] = (ci.key || '').split(':');
+    const sight = code ? sightsOf(code)[Number(i)] : null;
+    const fallback = destPhoto(t.dest)?.src || '';
+    const local = spotPhoto(t.dest, place)?.src;
+    const src = own || local || (sight?.img ? thumbAt(sight.img.src, 960) : fallback);
+    const no = allCheckins().length + 1;
+    const fake = { id: `pv-${no}`, place, date };
+    return `<div class="ci-pv ${own ? 'own' : 'stand-in'}">
+      <div class="ci-pv-photo">${src ? `<img src="${esc(src)}" data-fallback="${esc(fallback)}" alt="" referrerpolicy="no-referrer">` : ''}${own ? '' : '<span class="ci-pv-hint">先用景點照片預覽，拍一張就換成你的</span>'}</div>
+      ${stampBig(t, fake)}
+      <div class="ci-pv-text"><small>CHECK-IN No.${String(no).padStart(2, '0')}</small><b class="serif">${esc(t.city)}</b>${place !== t.city ? `<span>${esc(place)}</span>` : ''}${caption || ci.mood ? `<em>「${esc([ci.mood, caption].filter(Boolean).join('｜'))}」</em>` : '<em class="muted">選個心情、寫一句話，會出現在這裡</em>'}<span class="ci-pv-meta">${flag(country(t.n).code)} ${esc(country(t.n).name)}・${date.replace(/-/g, '.')}</span></div>
+    </div>`;
+  }
+  function ciPreview() {
+    const box = $('#modal .ci-pv-box');
+    if (!box) return;
+    box.innerHTML = ciPreviewHtml();
+    // A sight photo that cannot load falls back to the city's own photo.
+    const im = box.querySelector('.ci-pv-photo img');
+    im?.addEventListener('error', () => { if (im.dataset.fallback && !im.src.endsWith(im.dataset.fallback)) im.src = im.dataset.fallback; else im.remove(); }, { once: true });
+  }
+  document.addEventListener('input', (e) => {
+    const { id } = e.target;
+    if (id === 'ci-place' || id === 'ci-caption') ciPreview();
+    if (id === 'gf-price' && gf) gf.priceEdited = true;
+    if (id === 'gf-msg' && gf) gf.msgEdited = true;
+  });
+  document.addEventListener('change', (e) => {
+    const { id } = e.target;
+    if (id === 'ci-trip') ciPreview();
+    if (id === 'gf-deadline' && gf) { gf.deadline = e.target.value; gf.dlEdited = true; }
+    if (id === 'gf-dest' && gf) {
+      readGroupForm();
+      const d = DEST[e.target.value];
+      if (!d) return;
+      Object.assign(gf, {
+        d: d.id, c: d.name, n: COUNTRIES[d.c].n, la: d.lat, lo: d.lng, tags: d.tags.slice(0, 3),
+      });
+      gfRefresh(false);
+    }
+  });
+  // The 揪團 invitation card for the share studio.
+  function groupCardData(g) {
+    const inv = g.invite;
+    const going = 1 + (g.members || []).length;
+    const need = Math.max(0, inv.t - going);
+    const f = flightInfo(country(inv.n).code);
+    return {
+      photo: invitePhoto(inv), city: inv.c, host: inv.h, voting: inv.o.length > 1, closed: g.closed,
+      dateText: inv.o.length > 1 ? `${md(inv.o[0][0])}–${md(inv.o[0][1])} 等 ${inv.o.length} 個日期` : `${md(inv.o[0][0])} – ${md(inv.o[0][1])}`,
+      price: inv.p ? `NT$${fmt(inv.p)}` : '一起討論', sub: [`${inv.days} 天`, f?.text, `名額 ${inv.t} 人`].filter(Boolean).join('・'),
+      spots: inviteSpots(inv).slice(0, 3), need: need ? `還差 ${need} 人` : '人數到齊', message: inv.m, cta: inv.dl ? `${md(inv.dl)} 前點連結喊 +1` : '點連結喊 +1', brand: CONFIG.brand,
+    };
+  }
+
   // ---------- the check-in button that follows you on 首頁 and 足跡
   function renderFab() {
     const fab = $('#ci-fab');
@@ -4964,9 +5370,82 @@
       ci.place = ds.ciPlace; ci.key = ds.ciKey || '';
       $$('#ci-places [data-ci-place]').forEach((b) => b.classList.toggle('on', b === t));
       $('#ci-place').value = ds.ciPlace;
+      ciPreview();
       return;
     }
-    if (ds.ciMood) { ci.mood = ci.mood === ds.ciMood ? '' : ds.ciMood; $$('[data-ci-mood]').forEach((b) => b.classList.toggle('on', b.dataset.ciMood === ci.mood)); return; }
+    if (ds.ciMood) { ci.mood = ci.mood === ds.ciMood ? '' : ds.ciMood; $$('[data-ci-mood]').forEach((b) => b.classList.toggle('on', b.dataset.ciMood === ci.mood)); ciPreview(); return; }
+    if ('ciSample' in ds) { openStudio({ kind: 'sample' }); return; }
+    if (ds.groupDest) { openGroupForm({ dest: ds.groupDest }); return; }
+    if (ds.groupTrip) { openGroupForm({ tripId: ds.groupTrip }); return; }
+    if ('groupNew' in ds) { openGroupForm(); return; }
+    if (ds.gfOpt) {
+      readGroupForm();
+      const r = ds.gfOpt.split('|');
+      const has = gf.opts.some((o) => o.join('|') === ds.gfOpt);
+      if (!has && gf.opts.length >= 3) { toast('最多 3 個日期讓朋友投票'); return; }
+      gf.opts = has ? gf.opts.filter((o) => o.join('|') !== ds.gfOpt) : [...gf.opts, r];
+      gfRefresh();
+      return;
+    }
+    if ('gfAdd' in ds) {
+      readGroupForm();
+      const start = $('#gf-date')?.value;
+      if (!start) { toast('先選一個出發日'); return; }
+      if (gf.opts.length >= 3) { toast('最多 3 個日期讓朋友投票'); return; }
+      if (!gf.opts.some((o) => o[0] === start)) gf.opts = [...gf.opts, [start, addDays(start, gf.days - 1)]];
+      gfRefresh();
+      return;
+    }
+    if (ds.gfDays) {
+      readGroupForm();
+      gf.days = Math.min(21, Math.max(2, gf.days + Number(ds.gfDays)));
+      gf.opts = gf.opts.map(([s]) => [s, addDays(s, gf.days - 1)]);
+      if (DEST[gf.d]) gf.pl = null;
+      gfRefresh();
+      return;
+    }
+    if (ds.gfTarget) { readGroupForm(); gf.target = Math.min(20, Math.max(2, gf.target + Number(ds.gfTarget))); gfRefresh(); return; }
+    if ('gfCreate' in ds) { createGroupTrip(t); return; }
+    if (ds.groupOpen) { const g = groupOf(ds.groupOpen); if (g) openGroupView(g); return; }
+    if (ds.groupShare) {
+      const g = groupOf(ds.groupShare);
+      if (g) { openStudio({ kind: 'group', gid: g.id }); return; }
+      const cur = openGroupView.current;
+      if (!cur) return;
+      const link = `${window.location.origin}${window.location.pathname}#join=${b64url(cur.invite)}`;
+      const text = `${cur.invite.h ? `${cur.invite.h} ` : ''}揪團去${cur.invite.c}，${cur.invite.days} 天・每人約 NT$${fmt(cur.invite.p)}，一起嗎？`;
+      if (navigator.share) navigator.share({ text, url: link }).catch(() => {});
+      else window.open(`https://line.me/R/share?text=${encodeURIComponent(`${text}\n${link}`)}`, '_blank', 'noopener');
+      return;
+    }
+    if (ds.invOpt) { const i = Number(ds.invOpt); if (invPick.has(i)) invPick.delete(i); else invPick.add(i); t.classList.toggle('on', invPick.has(i)); return; }
+    if (ds.groupJoin) {
+      const g = groupOf(ds.groupJoin) || (openGroupView.current?.id === ds.groupJoin ? openGroupView.current : null);
+      if (g) joinGroupTrip(g, t);
+      return;
+    }
+    if (ds.groupMake) { const g = groupOf(ds.groupMake); if (g) groupToTrip(g); return; }
+    if (ds.groupClose) {
+      const g = groupOf(ds.groupClose);
+      if (!g) return;
+      const next = !g.closed;
+      const done = () => { g.closed = next; saveGroups(); renderGroups(); openGroupView(g, true); toast(next ? '已截止報名' : '重新開放報名'); };
+      if (CONFIG.groups && g.invite.g && g.key) groupApi('POST', `/${g.invite.g}/close`, { key: g.key, closed: next }).then(done, (err) => toast(err.message)); else done();
+      return;
+    }
+    if (ds.groupLeave) {
+      const g = groupOf(ds.groupLeave);
+      if (!g) return;
+      askConfirm('不去了？', '你的名字會從名單上拿掉，之後還可以從連結重新報名。', '不去了', () => {
+        if (CONFIG.groups && g.invite.g) groupApi('POST', `/${g.invite.g}/leave`, { who: whoAmI() }).catch(() => {});
+        groups = groups.filter((x) => x.id !== g.id); saveGroups(); renderGroups(); toast('已退出這個揪團');
+      });
+      return;
+    }
+    if (ds.groupDel) {
+      askConfirm('刪除這個揪團？', '只會從你的「我的揪團」拿掉，已經傳出去的連結還看得到。', '刪除', () => { groups = groups.filter((x) => x.id !== ds.groupDel); saveGroups(); renderGroups(); });
+      return;
+    }
     if ('ciGps' in ds) { ciLocate(); return; }
     if ('ciSave' in ds) { saveCheckin(t); return; }
     if (ds.ciOpen) { const [tripId, id] = ds.ciOpen.split(':'); openCheckinView(tripId, id); return; }
@@ -5075,7 +5554,7 @@
     document.title = CONFIG.brand;
     $$('[data-brand]').forEach((n) => { n.textContent = CONFIG.brand; });
     $$('#year-seg button').forEach((b) => b.classList.toggle('on', b.dataset.year === settings.year));
-    renderCover(); renderHero(); renderStats(); renderMapRecs(); renderReview(); renderRecs(); renderEsim(); renderTrips(); renderCards(); renderBadgeWall(); renderQuickArt(); renderLibrary(); renderFab();
+    renderCover(); renderHero(); renderStats(); renderMapRecs(); renderReview(); renderRecs(); renderEsim(); renderTrips(); renderCards(); renderBadgeWall(); renderQuickArt(); renderLibrary(); renderFab(); renderGroups();
     if (currentTab === 'plan') renderPlanner();
     drawMap();
     animateIn($(`[data-view="${currentTab}"]`));
@@ -5087,7 +5566,7 @@
       if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) return;
       const data = await res.json();
       Object.assign(CONFIG, {
-        ai: Boolean(data.ai), brand: data.brand || CONFIG.brand, esimUrl: data.esimUrl || CONFIG.esimUrl, guideVideo: data.guideVideo || '', liff: data.liff || '',
+        ai: Boolean(data.ai), brand: data.brand || CONFIG.brand, esimUrl: data.esimUrl || CONFIG.esimUrl, guideVideo: data.guideVideo || '', liff: data.liff || '', groups: Boolean(data.groups),
       });
     } catch { /* static preview without the API */ }
   }
@@ -5097,12 +5576,15 @@
   pendingGift = readGift();
   const sharedAlbum = readSharedAlbum();
   const sharedPost = readSharedPost();
+  const sharedJoin = readSharedJoin();
   $('#ci-fab .ci-fab-art').innerHTML = pic('camera');
   window.addEventListener('hashchange', () => { const g = readGift(); if (g) { pendingGift = g; if (user) openGift(g); } });
   Promise.all([loadConfig(), loadPhotos(), loadLibrary()]).finally(() => {
     if (user) showApp(); else showLogin();
     if (sharedAlbum) openAlbum(sharedAlbum.year, sharedAlbum);
     if (sharedPost) openSharedPost(sharedPost);
+    if (sharedJoin) openSharedJoin(sharedJoin);
+    if (groups.some((g) => g.invite.g)) Promise.all(groups.map(refreshGroup)).then(renderGroups);
     // Inside the LINE app, coming back from LINE login, or on a later visit: sign in without another tap.
     if (CONFIG.liff && !sharedAlbum) {
       // Every visit with an active LINE login pulls, so changes made on another phone show up here.

@@ -1,0 +1,3356 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IKIGAI 生き甲斐</title>
+<meta name="description" content="用四個圈找出你的 IKIGAI：熱愛、擅長、世界需要、可以獲得報酬。">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141416" media="(prefers-color-scheme: dark)">
+<style>
+  /* Layout: one centred column; the four circle colours carry through the progress bar, tags and diagram. */
+  :root {
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --surface-2: #efede8;
+    --text: #1d1c1a;
+    --muted: #67625a;
+    --border: #e3dfd7;
+    --accent: #1d1c1a;
+    --accent-text: #ffffff;
+    --love: #dc4f67;
+    --good: #dd9324;
+    --need: #23988b;
+    --paid: #4f63d6;
+    --danger: #b3261e;
+    --ok: #1f7a4f;
+    --shadow: 0 1px 2px rgba(30, 25, 15, .06), 0 8px 24px rgba(30, 25, 15, .06);
+    --blend: multiply;
+    --radius: 16px;
+    --ease: cubic-bezier(.2, .8, .2, 1);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416;
+      --surface: #1d1d21;
+      --surface-2: #26262b;
+      --text: #f0eee9;
+      --muted: #a29d94;
+      --border: #34343a;
+      --accent: #f0eee9;
+      --accent-text: #141416;
+      --love: #f27c90;
+      --good: #f2b552;
+      --need: #4ec6b7;
+      --paid: #8796f3;
+      --danger: #f2b8b5;
+      --ok: #7fd3a6;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+      --blend: screen;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    /* The step slide-in starts slightly off to the side; never let it scroll the page sideways. */
+    overflow-x: clip;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  }
+  button { font: inherit; color: inherit; }
+  .wrap {
+    max-width: 920px; margin: 0 auto;
+    padding-block: 18px 120px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  [hidden] { display: none !important; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 2px solid var(--paid); outline-offset: 2px; }
+
+  /* Header */
+  .top { display: flex; align-items: center; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 0; cursor: pointer; text-align: left; }
+  .brand svg { width: 34px; height: 34px; flex: none; }
+  .brand b { font-size: 20px; letter-spacing: .04em; display: block; line-height: 1.1; }
+  .brand small { color: var(--muted); font-size: 12px; letter-spacing: .25em; }
+  .saved { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; opacity: 0; transition: opacity .3s; }
+  .saved.show { opacity: 1; }
+  .saved::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+
+  /* Progress */
+  .progress { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin: 18px 0 20px; }
+  .progress button {
+    border: 0; background: none; padding: 0; cursor: pointer; display: grid; gap: 6px; text-align: left; min-width: 0;
+  }
+  .progress .bar { height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; }
+  .progress .bar i { display: block; height: 100%; width: 0; background: var(--c, var(--text)); border-radius: inherit; transition: width .5s var(--ease); }
+  .progress .done .bar i, .progress [aria-current] .bar i { width: 100%; }
+  .progress [aria-current] .bar i { opacity: .55; }
+  .progress .done[aria-current] .bar i { opacity: 1; }
+  .progress span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .progress [aria-current] span { color: var(--text); font-weight: 700; }
+  .progress .done span::after { content: " ✓"; color: var(--ok); }
+  @media (max-width: 560px) { .progress span { font-size: 11px; } }
+
+  /* Views */
+  .view.fwd { animation: enter .45s var(--ease) both; }
+  .view.back { animation: enter-back .45s var(--ease) both; }
+  @keyframes enter { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+  @keyframes enter-back { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); }
+  .card + .card { margin-top: 16px; }
+  #aiCard { scroll-margin-top: 16px; }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.3; }
+  .card h2 { margin: 0 0 6px; font-size: 22px; }
+  .card h3 { margin: 18px 0 8px; font-size: 16px; }
+  .hint { color: var(--muted); margin: 0 0 14px; }
+
+  /* Intro */
+  .intro { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; align-items: center; margin-top: 36px; }
+  @media (max-width: 720px) { .intro { grid-template-columns: 1fr; } }
+  .intro h1 { font-size: clamp(30px, 6vw, 44px); margin: 0 0 10px; letter-spacing: .02em; }
+  .intro h1 span { display: block; font-size: .45em; color: var(--muted); letter-spacing: .3em; font-weight: 500; margin-top: 6px; }
+  .intro p { color: var(--muted); margin: 0 0 18px; }
+  .intro ul { list-style: none; padding: 0; margin: 0 0 22px; display: grid; gap: 8px; }
+  .intro li { display: flex; gap: 10px; align-items: baseline; }
+  .intro li i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; transform: translateY(1px); }
+  .intro .ctas { display: flex; flex-wrap: wrap; gap: 10px; }
+  .intro-art svg { width: 100%; max-width: 380px; display: block; margin: 0 auto; }
+
+  /* Diagram */
+  svg.venn { width: 100%; height: auto; display: block; overflow: visible; }
+  svg.venn circle.ring { mix-blend-mode: var(--blend); transform-box: fill-box; transform-origin: center; transition: fill-opacity .35s var(--ease), stroke-width .35s; }
+  svg.venn.animate circle.ring { animation: pop .7s var(--ease) both; animation-delay: calc(var(--i) * 90ms); }
+  svg.venn.float circle.ring { animation: pop .7s var(--ease) both, drift 7s ease-in-out infinite alternate; animation-delay: calc(var(--i) * 90ms), calc(.8s + var(--i) * .6s); }
+  @keyframes pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+  @keyframes drift { from { transform: translate(0, 0); } to { transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 1px)); } }
+  svg.venn circle.dim { fill-opacity: .06; stroke-opacity: .35; }
+  svg.venn circle.hl { fill-opacity: .42; stroke-width: 2.5; }
+  svg.venn text { fill: var(--text); font-size: 13px; text-anchor: middle; pointer-events: none; }
+  svg.venn text.lbl { font-size: 14px; font-weight: 700; }
+  svg.venn text.n { font-size: 12px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  svg.venn text.center { font-size: 13px; font-weight: 800; letter-spacing: .05em; }
+  svg.venn.compact text.lbl { font-size: 26px; }
+  svg.venn.compact text.center { font-size: 22px; }
+  svg.venn .hit { fill: transparent; cursor: pointer; transition: fill .2s; }
+  svg.venn .hit:hover { fill: color-mix(in srgb, var(--text) 8%, transparent); }
+  svg.venn .hit.on { fill: color-mix(in srgb, var(--text) 14%, transparent); }
+
+  /* Circle step */
+  .step-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
+  .step-side { position: sticky; top: 16px; display: grid; gap: 10px; }
+  .step-side .card { padding: 14px; }
+  .step-side p { margin: 0; font-size: 13px; color: var(--muted); text-align: center; }
+  /* On phones the diagram becomes a small, non-sticky strip above the form. */
+  @media (max-width: 720px) {
+    .step-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .step-grid .step-side { position: static; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 12px; }
+    .step-grid .step-side .card { padding: 6px; border-radius: 12px; }
+    .step-grid .step-side p { text-align: left; }
+  }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: .08em; color: var(--c); margin-bottom: 6px; }
+  .eyebrow::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+  .prompts { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; }
+  .prompts li { font-size: 13.5px; color: var(--muted); background: var(--surface-2); border-radius: 8px; padding: 3px 10px; }
+
+  .add-row { display: flex; gap: 8px; }
+  input[type="text"], textarea {
+    flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg);
+    border: 1.5px solid var(--border); border-radius: 12px; padding: 11px 14px; transition: border-color .2s;
+  }
+  input[type="text"]:focus, textarea:focus { border-color: var(--c, var(--paid)); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, var(--paid)) 22%, transparent); }
+  textarea { width: 100%; min-height: 84px; resize: vertical; }
+  .field-hint { font-size: 12.5px; color: var(--muted); margin: 6px 2px 0; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border-radius: 12px; padding: 10px 18px; cursor: pointer; font-weight: 600;
+    border: 1.5px solid var(--accent); background: var(--accent); color: var(--accent-text);
+    transition: transform .15s var(--ease), opacity .2s, background .2s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn.ghost { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn.ghost:hover { border-color: var(--muted); }
+  .btn.danger { background: transparent; color: var(--danger); border-color: var(--border); }
+  .btn.small { padding: 6px 12px; font-size: 14px; border-radius: 10px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; min-height: 38px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px; padding: 6px 6px 6px 13px; border-radius: 999px;
+    background: color-mix(in srgb, var(--c) 15%, transparent); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  }
+  .tag.fresh { animation: tag-in .35s var(--ease) both; }
+  .tag.static { animation: none; padding-right: 13px; }
+  .tag .also { display: inline-flex; gap: 2px; margin-left: 2px; }
+  .tag .also i { width: 7px; height: 7px; border-radius: 50%; background: var(--d); }
+  @keyframes tag-in { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
+  .tag button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 17px; line-height: 1; width: 26px; height: 26px; border-radius: 50%; }
+  .tag button:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+  .empty { color: var(--muted); font-size: 14px; margin: 14px 0 0; padding: 14px; border: 1.5px dashed var(--border); border-radius: 12px; text-align: center; }
+  .meter { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .meter b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; align-items: center; }
+  .chips > span { color: var(--muted); font-size: 13px; margin-right: 2px; }
+  .chip { font-size: 14px; border: 1px dashed var(--border); background: transparent; border-radius: 999px; padding: 4px 11px; cursor: pointer; transition: border-color .2s, transform .15s; }
+  .chip:hover { border-style: solid; border-color: var(--c, var(--muted)); }
+  .chip:active { transform: scale(.95); }
+
+  /* Sticky nav */
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    padding-top: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .nav-inner { max-width: 920px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
+  .nav-inner .info { color: var(--muted); font-size: 13px; flex: 1; min-width: 0; text-align: center; }
+  .nav[hidden] { display: none; }
+
+  /* Match step */
+  .match-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+  .seg button { border: 0; background: transparent; color: var(--muted); padding: 5px 12px; font-size: 13.5px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+  .items { display: grid; gap: 8px; }
+  .item {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg);
+  }
+  .item .name { font-weight: 600; overflow-wrap: anywhere; }
+  .item .dots { display: inline-flex; gap: 3px; margin-left: 8px; vertical-align: 1px; }
+  .item .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background .25s; }
+  .item .dots i.on { background: var(--text); }
+  .toggles { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .toggle {
+    border: 1.5px solid color-mix(in srgb, var(--c) 50%, transparent); background: transparent; color: var(--text);
+    border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer; white-space: nowrap;
+    transition: background .2s, color .2s, transform .15s;
+  }
+  .toggle[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: #fff; }
+  .toggle:active { transform: scale(.94); }
+  @media (max-width: 560px) { .item { grid-template-columns: 1fr; } .toggles { justify-content: flex-start; } }
+
+  /* Result */
+  .result-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  @media (max-width: 760px) { .result-grid { grid-template-columns: 1fr; } }
+  .result-grid .diagram { max-width: 440px; margin: 0 auto; width: 100%; }
+  .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; }
+  .stat { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+  .stat b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .stat span { font-size: 12.5px; color: var(--muted); }
+  .region { border-left: 4px solid var(--c, var(--border)); padding: 4px 0 4px 12px; margin: 0 0 16px; animation: enter .5s var(--ease) both; }
+  .region h4 { margin: 0; font-size: 15px; }
+  .region p { margin: 2px 0 6px; color: var(--muted); font-size: 14px; }
+  .region .tags { margin-top: 4px; min-height: 0; }
+  .filter-note { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
+  .filter-note button { border: 0; background: none; color: var(--paid); cursor: pointer; padding: 0; font-size: 14px; }
+  .next-tip { background: color-mix(in srgb, var(--paid) 10%, transparent); border-radius: 12px; padding: 12px 14px; font-size: 14.5px; margin-top: 4px; }
+
+  /* AI */
+  .ai-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .status { font-size: 14px; color: var(--muted); }
+  .alert { margin-top: 12px; border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); background: color-mix(in srgb, var(--danger) 8%, transparent); border-radius: 12px; padding: 12px 14px; display: grid; gap: 10px; }
+  .alert p { margin: 0; color: var(--danger); font-weight: 600; }
+  .alert .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .skeleton { display: grid; gap: 10px; margin-top: 14px; }
+  .skeleton i { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2)); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+  .skeleton i:nth-child(2) { width: 85%; } .skeleton i:nth-child(3) { width: 92%; } .skeleton i:nth-child(4) { width: 60%; }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .ai-out { margin-top: 12px; }
+  .ai-out h3 { font-size: 17px; margin: 18px 0 4px; }
+  .ai-out h3:first-child { margin-top: 4px; }
+  .ai-out ul, .ai-out ol { padding-left: 22px; margin: 4px 0; }
+  .ai-out p { margin: 6px 0; }
+  .ai-out > * { animation: enter .4s var(--ease) both; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+  .confirm { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; color: var(--danger); }
+
+
+  /* Proportion legend */
+  .legend { display: grid; gap: 6px; margin-top: 12px; }
+  .legend-row { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+  .legend-row .lab { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .legend-row .lab i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+  .legend-row .track { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .legend-row .track b { display: block; height: 100%; border-radius: inherit; background: var(--c); width: 0; transition: width .8s var(--ease); }
+  .legend-row .num { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 76px; }
+  .legend-note { font-size: 12.5px; color: var(--muted); margin: 2px 0 0; text-align: center; }
+
+  /* Career plan */
+  .dirs { display: grid; gap: 12px; }
+  .dir { border: 1.5px solid var(--border); border-radius: 14px; padding: 14px; background: var(--bg); display: grid; gap: 12px; transition: border-color .25s; }
+  .dir.main { border-color: var(--text); }
+  .dir-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .dir-head input { flex: 1 1 200px; font-weight: 700; }
+  .badge { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: var(--accent); color: var(--accent-text); white-space: nowrap; }
+  .dir-body { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; align-items: center; }
+  @media (max-width: 560px) { .dir-body { grid-template-columns: 1fr; } .dir-body .mini { max-width: 180px; margin: 0 auto; } }
+  .sliders { display: grid; gap: 6px; }
+  .slider { display: grid; grid-template-columns: 70px minmax(0, 1fr) 30px; gap: 8px; align-items: center; font-size: 13.5px; }
+  .slider input[type="range"] { width: 100%; accent-color: var(--c); }
+  .slider output { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .fit { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .fit .track { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .fit .track b { display: block; height: 100%; background: linear-gradient(90deg, var(--love), var(--good), var(--need), var(--paid)); border-radius: inherit; transition: width .4s var(--ease); }
+  .goals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 720px) { .goals { grid-template-columns: 1fr; } }
+  .goal label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .goal textarea { min-height: 72px; }
+  .actions-list { display: grid; gap: 14px; margin-top: 8px; }
+  .horizon h4 { margin: 0 0 6px; font-size: 13.5px; color: var(--muted); }
+  .act { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+  .act + .act { margin-top: 6px; }
+  .act input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--ok); flex: none; }
+  .act label { flex: 1; min-width: 0; overflow-wrap: anywhere; cursor: pointer; }
+  .act.done label { color: var(--muted); text-decoration: line-through; }
+  .act button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 17px; width: 28px; height: 28px; border-radius: 50%; }
+  .act button:hover { color: var(--danger); }
+  .add-action { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; margin-top: 12px; }
+  @media (max-width: 560px) { .add-action { grid-template-columns: minmax(0, 1fr) auto; } .add-action input { grid-column: 1 / -1; } }
+  select { font: inherit; color: var(--text); background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 9px 10px; }
+  .plan-progress { display: flex; align-items: center; gap: 10px; font-size: 14px; margin-top: 4px; }
+  .plan-progress .track { flex: 1; height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .plan-progress .track b { display: block; height: 100%; background: var(--ok); border-radius: inherit; transition: width .4s var(--ease); }
+
+  /* Career suggestions */
+  .careers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 640px) { .careers { grid-template-columns: 1fr; } }
+  .career { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--bg); display: grid; gap: 6px; align-content: start; }
+  .career-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+  .career p { margin: 0; font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+  .career .btn { justify-self: start; }
+  .ccs { display: inline-flex; gap: 3px; flex-wrap: wrap; }
+  .cc { font-size: 11.5px; border-radius: 999px; padding: 0 7px; border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); color: var(--muted); }
+  .cc.on { background: var(--c); border-color: var(--c); color: #fff; }
+  .paths { display: grid; gap: 8px; }
+  .path { border-left: 4px solid var(--paid); padding: 4px 0 4px 12px; }
+  .path b { font-size: 15.5px; }
+  .path p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .path-tag { display: inline-block; font-size: 12px; font-weight: 700; background: var(--surface-2); border-radius: 999px; padding: 1px 9px; margin-right: 8px; }
+  .skills { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+  .skills li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); }
+  .skills li span { font-size: 13px; color: var(--muted); }
+  .gap { margin-top: 12px; background: color-mix(in srgb, var(--good) 14%, transparent); border-radius: 12px; padding: 10px 14px; font-size: 14.5px; }
+  .timeline { list-style: none; padding: 0; margin: 0 0 10px; display: grid; gap: 0; }
+  .timeline li { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); font-size: 14.5px; }
+  .timeline li:last-child { border-bottom: 1px solid var(--border); }
+  .timeline li span { font-weight: 700; color: var(--muted); font-size: 13.5px; }
+
+  /* Profile form */
+  .profile-form { display: grid; gap: 12px; max-width: 520px; }
+  .profile-form label.f { display: grid; gap: 4px; font-weight: 600; font-size: 14.5px; }
+  .profile-form label.f span { font-weight: 400; color: var(--muted); font-size: 13px; }
+  .profile-form input[type="text"], .profile-form input[type="email"], .profile-form input[type="tel"] {
+    font: inherit; color: var(--text); background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 11px 14px;
+  }
+  .profile-form input:focus { border-color: var(--paid); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--paid) 22%, transparent); }
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--text); background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
+  .consent input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--paid); }
+  .form-error { color: var(--danger); font-size: 14px; margin: 0; }
+  .me-line { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); margin-top: 10px; }
+
+  /* Share and export */
+  .share-section + .share-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+  .share-section h3 { margin: 0 0 4px; }
+  .cards-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+  @media (max-width: 640px) { .cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .card-prev { display: grid; gap: 8px; }
+  .card-prev img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); animation: enter .4s var(--ease) both; }
+  .card-prev .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .link-row { display: flex; gap: 8px; margin-top: 10px; }
+  .link-row input { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-top: 8px; font-size: 14px; }
+  .opts label { display: inline-flex; gap: 6px; align-items: center; }
+  .opts input[type="text"] { flex: 0 1 200px; padding: 8px 12px; }
+  .fine { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+
+  .card-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .card-opts .sw { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 6px; vertical-align: -2px; border: 1px solid var(--border); }
+  .cards-grid.story { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cards-grid.story .card-prev img { aspect-ratio: 9 / 16; }
+  .card-prev .row { align-items: center; }
+  .card-prev .cap { font-size: 13px; color: var(--muted); margin-right: auto; }
+  .seg button.locked { opacity: .55; }
+  .seg button.locked::after { content: " 🔒"; }
+  .ref-progress, .ref-done { margin: 4px 0 12px; display: grid; gap: 8px; }
+  .ref-head { display: flex; justify-content: space-between; gap: 10px; font-size: 14.5px; }
+  .ref-head span { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 700; }
+  .ref-progress .track { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .ref-progress .track b { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--good), var(--love)); transition: width .6s var(--ease); }
+  .ref-done { background: color-mix(in srgb, var(--good) 16%, transparent); border-radius: 12px; padding: 12px 14px; font-size: 14.5px; }
+  .ref-done span { color: var(--muted); }
+  .invite-box { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; font-size: 14.5px; overflow-wrap: anywhere; }
+
+  /* Shared view */
+  .banner { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: color-mix(in srgb, var(--paid) 12%, transparent); border-radius: 14px; padding: 12px 16px; margin: 18px 0 16px; }
+  .banner p { margin: 0; }
+  .plan-read .goal-box { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+  .plan-read .goal-box b { display: block; font-size: 13px; color: var(--muted); }
+  .career-list { display: grid; gap: 14px; }
+  .career-detail { border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: grid; gap: 10px; }
+  .cd-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+  .cd-no { width: 34px; height: 34px; border-radius: 50%; display: grid; place-content: center; background: var(--text); color: var(--surface); font-weight: 800; }
+  .cd-title { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  .cd-title b { font-size: 18px; }
+  .cd-match { display: grid; text-align: right; font-size: 12px; color: var(--muted); }
+  .cd-match b { font-size: 20px; color: var(--need); font-variant-numeric: tabular-nums; }
+  .cd-why { margin: 0; font-size: 14.5px; color: var(--muted); }
+  .cd-label { display: block; font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 6px; width: 100%; }
+  .cd-skills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .skill-tag { font-size: 13.5px; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--love) 12%, transparent); border: 1px dashed color-mix(in srgb, var(--love) 50%, transparent); }
+  .skill-tag.have { background: color-mix(in srgb, var(--need) 14%, transparent); border: 1px solid color-mix(in srgb, var(--need) 45%, transparent); }
+  .cd-gaps ul, .cd-advice ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 14.5px; }
+  .cd-gaps { background: color-mix(in srgb, var(--good) 10%, transparent); border-radius: 12px; padding: 10px 12px; }
+  .cd-detail-btn { justify-self: start; }
+  .weeks { width: 100%; border-collapse: collapse; font-size: 14px; margin: 6px 0 4px; }
+  .weeks th, .weeks td { text-align: left; vertical-align: top; padding: 9px 10px; border-top: 1px solid var(--border); }
+  .weeks th { white-space: nowrap; color: var(--muted); font-weight: 700; width: 7.5em; }
+  .weeks td b { display: block; margin-bottom: 2px; }
+  .weeks td small { display: block; color: var(--muted); margin-top: 3px; }
+  .phase .checks { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--surface); font-size: 13.5px; }
+  .phase .checks b { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 3px; }
+  .phase .time { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+  @media (max-width: 560px) { .weeks th { width: 5.5em; } }
+  /* ability analysis and roadmap */
+  .score-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: center; margin: 4px 0 8px; }
+  .score-ring { width: 138px; aspect-ratio: 1; border-radius: 50%; display: grid; place-content: center; text-align: center;
+    background: radial-gradient(closest-side, var(--surface) 78%, transparent 79% 100%), conic-gradient(var(--love), var(--good), var(--need), var(--paid) calc(var(--p) * 1%), var(--border) 0); }
+  .score-ring b { font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .score-ring span { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .score-text > b { font-size: 19px; }
+  .score-text p { margin: 4px 0 10px; color: var(--muted); font-size: 14.5px; }
+  .mini-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mini-stats span { display: grid; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); font-size: 12px; color: var(--muted); }
+  .mini-stats b { font-size: 18px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .an-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; }
+  .ranks { display: grid; gap: 7px; }
+  .rank-row { display: grid; grid-template-columns: minmax(0, 8.5em) minmax(0, 1fr) 3.4em; gap: 10px; align-items: center; font-size: 14px; }
+  .rank-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank-label em { font-style: normal; color: var(--muted); font-size: 12px; margin-right: 6px; font-variant-numeric: tabular-nums; }
+  .rank-track { height: 10px; border-radius: 999px; background: var(--border); overflow: hidden; }
+  .rank-fill { display: block; height: 100%; width: var(--w); background: var(--c); border-radius: inherit; animation: grow .9s var(--ease) both; transform-origin: left; }
+  @keyframes grow { from { transform: scaleX(0); } }
+  .rank-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+  .strengths { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .strengths li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--good) 12%, transparent); }
+  .strengths.grow li { background: var(--surface-2); }
+  .strengths span { font-size: 14px; }
+  .strengths small, .prio small { color: var(--muted); font-size: 12.5px; }
+  .assets { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .assets em { font-style: normal; color: var(--muted); font-size: 12px; margin-right: 8px; font-variant-numeric: tabular-nums; }
+  .assets li { display: flex; justify-content: space-between; gap: 10px; font-size: 14.5px; }
+  .dots { display: inline-flex; gap: 4px; align-items: center; }
+  .dots .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+  .dots .dot.on { background: var(--c); }
+  .prio { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+  .prio li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 14.5px; }
+  .prio .tag { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .prio .tag.hot { background: var(--love); color: #fff; }
+  .roadmap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 10px 0 6px; }
+  .phase { padding: 14px; border-radius: 16px; background: var(--surface-2); border-top: 4px solid var(--c, var(--need)); }
+  .phase:nth-child(1) { --c: var(--love); } .phase:nth-child(2) { --c: var(--good); } .phase:nth-child(3) { --c: var(--paid); }
+  .phase-head { display: flex; gap: 10px; align-items: center; }
+  .phase-head div { display: grid; }
+  .phase-head span:not(.phase-no) { font-size: 12.5px; color: var(--muted); }
+  .phase-no { width: 28px; height: 28px; border-radius: 50%; display: grid; place-content: center; background: var(--c); color: #fff; font-weight: 800; font-size: 14px; flex: none; }
+  .phase-goal { font-weight: 700; margin: 10px 0 6px; font-size: 14.5px; }
+  .phase ul, .plain-list { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 14px; }
+  @media (max-width: 720px) { .an-grid, .roadmap { grid-template-columns: 1fr; } }
+  @media (max-width: 460px) { .score-hero { grid-template-columns: 1fr; justify-items: center; text-align: center; } .mini-stats { justify-content: center; } }
+  .report { display: none; }
+
+  /* Toast */
+  .toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 30; display: grid; gap: 8px; width: min(440px, calc(100% - 32px)); pointer-events: none; }
+  .toast {
+    pointer-events: auto; display: flex; align-items: center; gap: 12px; justify-content: space-between;
+    background: var(--accent); color: var(--accent-text); border-radius: 12px; padding: 10px 14px; font-size: 14px;
+    box-shadow: var(--shadow); animation: toast-in .3s var(--ease) both;
+  }
+  .toast button { border: 0; background: none; color: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; white-space: nowrap; }
+  .toast.out { animation: toast-out .25s ease both; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes toast-out { to { opacity: 0; transform: translateY(6px); } }
+
+  footer { margin-top: 28px; color: var(--muted); font-size: 13px; text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
+  @media print {
+    @page { size: A4; margin: 14mm; }
+    :root { --bg: #fff; --surface: #fff; --surface-2: #f2f0ec; --text: #1d1c1a; --muted: #5d5850; --border: #ddd8cf; --blend: multiply; color-scheme: light; }
+    body { background: #fff; color: #1d1c1a; font-size: 11pt; }
+    .wrap, .nav, .toasts { display: none !important; }
+    .report { display: block !important; }
+    .report h1 { font-size: 22pt; margin: 0 0 2mm; }
+    .report h2 { font-size: 14pt; margin: 7mm 0 2mm; border-bottom: 1px solid var(--border); padding-bottom: 1.5mm; }
+    .report .meta { color: var(--muted); margin: 0 0 5mm; }
+    .report .r-top { display: grid; grid-template-columns: 78mm 1fr; gap: 8mm; align-items: center; }
+    .report .r-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; margin-bottom: 4mm; }
+    .report .r-stats div { background: var(--surface-2); border-radius: 3mm; padding: 2.5mm 3mm; }
+    .report .r-stats b { display: block; font-size: 16pt; }
+    .report table { width: 100%; border-collapse: collapse; }
+    .report td, .report th { text-align: left; vertical-align: top; padding: 1.8mm 2mm; border-bottom: 1px solid var(--border); }
+    .report th { width: 34mm; white-space: nowrap; }
+    .report .dot { display: inline-block; width: 3mm; height: 3mm; border-radius: 50%; background: var(--c); margin-right: 1.5mm; }
+    .report section { break-inside: avoid; }
+    .report .ai p, .report .ai li { margin: 1mm 0; }
+    .report .ai h3 { font-size: 12pt; margin: 3mm 0 1mm; }
+    .report .foot { margin-top: 8mm; color: var(--muted); font-size: 9pt; text-align: center; }
+    .report svg.venn { width: 78mm; }
+    .report svg.venn circle.ring { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <button class="brand" type="button" id="home" aria-label="回到開始">
+      <svg viewBox="0 0 34 34" aria-hidden="true">
+        <circle cx="17" cy="11" r="8" fill="var(--love)" fill-opacity=".55"/>
+        <circle cx="11" cy="17" r="8" fill="var(--good)" fill-opacity=".55"/>
+        <circle cx="23" cy="17" r="8" fill="var(--need)" fill-opacity=".55"/>
+        <circle cx="17" cy="23" r="8" fill="var(--paid)" fill-opacity=".55"/>
+      </svg>
+      <span><b>IKIGAI</b><small>生き甲斐</small></span>
+    </button>
+    <span class="saved" id="saved" role="status">已自動儲存</span>
+  </header>
+
+  <nav class="progress" id="progress" aria-label="步驟"></nav>
+  <main id="view"></main>
+
+  <footer>填寫內容會自動儲存在這台裝置。看結果前請留下姓名與 Email；同意後，填寫內容會提供給本服務的顧問，用於寄送報告、生涯諮詢與後續聯繫，不會提供給其他第三方。</footer>
+</div>
+
+<div class="nav" id="nav" hidden><div class="nav-inner" id="navInner"></div></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="report" id="report"></div>
+<script src="/ikigai/qrcode.js"></script>
+<input type="file" id="importFile" accept="application/json,.json" class="sr-only" aria-hidden="true" tabindex="-1">
+
+<script>
+(() => {
+  const CIRCLES = [
+    { key: 'love', label: '你熱愛的', short: '熱愛', color: 'var(--love)', hex: '#dc4f67',
+      hint: '做什麼事會讓你忘記時間？就算沒有錢也想做的事。',
+      prompts: ['做什麼會忘記時間？', '小時候最愛做什麼？', '週末自然會去做的事？'],
+      examples: ['寫作', '學習新知', '和人聊天', '設計', '運動', '音樂', '料理', '旅行', '照顧動物', '解決難題'] },
+    { key: 'good', label: '你擅長的', short: '擅長', color: 'var(--good)', hex: '#dd9324',
+      hint: '別人常找你幫忙什麼？包含技能，也包含特質。',
+      prompts: ['朋友常找你幫什麼忙？', '學得比別人快的事？', '被稱讚過的能力？'],
+      examples: ['溝通表達', '數據分析', '寫程式', '組織規劃', '教學', '攝影', '傾聽', '銷售', '研究', '手作'] },
+    { key: 'need', label: '世界需要的', short: '世界需要', color: 'var(--need)', hex: '#23988b',
+      hint: '你在意哪些問題？身邊的人、社區或社會缺少什麼？',
+      prompts: ['身邊的人常抱怨什麼？', '新聞上你最在意的問題？', '十年前的你需要什麼幫助？'],
+      examples: ['心理健康支持', '環境永續', '教育資源', '長期照顧', '數位能力', '在地社區', '食品安全', '資訊辨識'] },
+    { key: 'paid', label: '可以獲得報酬的', short: '報酬', color: 'var(--paid)', hex: '#4f63d6',
+      hint: '有人願意為哪些事付錢？你現在或過去靠什麼賺錢？',
+      prompts: ['現在靠什麼賺錢？', '別人付過錢請你做的事？', '市場上有哪些相關職缺？'],
+      examples: ['顧問', '軟體開發', '內容創作', '課程講師', '行銷企劃', '設計接案', '業務', '翻譯'] },
+  ];
+  const KEYS = CIRCLES.map((c) => c.key);
+  const BY_KEY = Object.fromEntries(CIRCLES.map((c) => [c.key, c]));
+  const PAIRS = [
+    { keys: ['love', 'good'], name: '熱情 Passion', short: '熱情', desc: '熱愛 × 擅長：做起來開心又做得好。' },
+    { keys: ['love', 'need'], name: '使命 Mission', short: '使命', desc: '熱愛 × 世界需要：讓你覺得有意義的事。' },
+    { keys: ['good', 'paid'], name: '專業 Profession', short: '專業', desc: '擅長 × 報酬：能穩定賺錢的能力。' },
+    { keys: ['need', 'paid'], name: '天職 Vocation', short: '天職', desc: '世界需要 × 報酬：市場願意付錢解決的問題。' },
+    { keys: ['love', 'paid'], name: '熱愛 × 報酬', desc: '喜歡、也有人付錢，但還需要練到夠好、找到意義。' },
+    { keys: ['good', 'need'], name: '擅長 × 世界需要', desc: '能幫上忙的能力，想想怎麼讓它有收入、也讓你投入。' },
+  ];
+  const TRIPLES = [
+    { missing: 'need', desc: '滿足，但覺得自己沒那麼有用。想想誰需要它。' },
+    { missing: 'paid', desc: '喜悅又充實，但還不富裕。想想誰願意付錢。' },
+    { missing: 'good', desc: '興奮，但能力還不確定。需要刻意練習。' },
+    { missing: 'love', desc: '舒適，但可能感到空虛。找找讓自己投入的部分。' },
+  ];
+  const HORIZONS = [
+    { key: 'd30', label: '30 天' },
+    { key: 'd90', label: '90 天' },
+    { key: 'y1', label: '1 年' },
+  ];
+  const MAX_DIRS = 3;
+  const MAX_ACTIONS = 30;
+  const SAMPLE = {
+    items: [
+      ['寫作', 'love good need paid'], ['教學', 'good need paid'], ['和人聊天', 'love good'],
+      ['學習新知', 'love need'], ['數據分析', 'good paid'], ['攝影', 'love'], ['料理', 'love'],
+      ['教育資源', 'need'], ['課程講師', 'paid need'], ['心理健康支持', 'need love'],
+    ],
+    note: '範例：目前是工程師，工作 5 年，想找下一步方向。',
+    plan: {
+      dirs: [['技術寫作與教學創作者', 5, 4, 4, 3], ['企業內訓講師', 3, 4, 3, 5]],
+      goals: { d30: '每週發表 1 篇教學文章，共 4 篇', d90: '開一堂 2 小時的線上小課，招到 10 位學員', y1: '寫作與教學收入達到每月 2 萬元' },
+      actions: [['訪談 3 位在做技術寫作的人', 'd30', true], ['每週寫一篇學習筆記', 'd30', false], ['建立作品集網頁', 'd30', false],
+        ['設計第一堂小課的大綱', 'd90', false], ['找到第一位付費學員', 'd90', false], ['和 2 家公司洽談內訓', 'y1', false]],
+    },
+  };
+
+  const STORE_KEY = 'ikigai:v1';
+  const STEP_LIST = [...CIRCLES.map((c) => ({ id: c.key, label: c.short, color: c.color })),
+    { id: 'match', label: '交集對照' }, { id: 'result', label: '結果' }, { id: 'plan', label: '生涯規劃' }];
+  const ORDER = ['intro', ...STEP_LIST.map((s) => s.id)];
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const blankPlan = () => ({ dirs: [], main: null, goals: { d30: '', d90: '', y1: '' }, actions: [] });
+  const newRid = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(36).padStart(2, '0')).join('').slice(0, 20);
+  const blankProfile = () => ({ name: '', contact: '', email: '', consent: false, consentAt: null });
+  const blank = () => ({
+    items: [], note: '', step: 'intro', ai: '', name: '', plan: blankPlan(),
+    rid: newRid(), startedAt: Date.now(), profile: blankProfile(), events: [], isSample: false,
+    referredBy: '', source: '',
+  });
+  let shareMode = false;
+  let state = load();
+  let filter = null;
+  let matchFilter = 'all';
+  let aiAvailable = false; // turned on only when /ikigai/status reports AI is enabled
+  let aiError = null;
+  let aiBusy = false;
+  let planBusy = false;
+  let planError = null;
+  let animateResult = true;
+  let lastStep = state.step;
+  const seenTags = new Set();
+  let cardUrls = [];
+
+  // ---------- storage ----------
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const s = sanitize(JSON.parse(raw));
+        if (!s.items.length && s.step !== 'intro') s.step = 'intro';
+        return s;
+      }
+    } catch (e) { /* storage unavailable */ }
+    return blank();
+  }
+  let savedTimer;
+  function save(quiet) {
+    if (shareMode) return;
+    scheduleSync();
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { return; }
+    if (quiet) return;
+    const el = document.getElementById('saved');
+    el.classList.add('show');
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(() => el.classList.remove('show'), 1600);
+  }
+  // Function declarations, so load() can use them before this point in the file runs.
+  function str(v, max) { return typeof v === 'string' ? v.slice(0, max) : ''; }
+  function score(v) { return Math.min(5, Math.max(1, Math.round(Number(v)) || 3)); }
+  function sanitizePlan(p) {
+    const plan = blankPlan();
+    if (!p || typeof p !== 'object') return plan;
+    (Array.isArray(p.dirs) ? p.dirs : []).slice(0, MAX_DIRS).forEach((d) => {
+      const title = str(d?.title, 60).trim();
+      if (!title) return;
+      plan.dirs.push({ id: str(d.id, 20) || uid(), title, s: Object.fromEntries(KEYS.map((k) => [k, score(d.s?.[k])])) });
+    });
+    plan.main = plan.dirs.some((d) => d.id === p.main) ? p.main : (plan.dirs[0]?.id || null);
+    HORIZONS.forEach(({ key }) => { plan.goals[key] = str(p.goals?.[key], 200); });
+    (Array.isArray(p.actions) ? p.actions : []).slice(0, MAX_ACTIONS).forEach((a) => {
+      const text = str(a?.text, 80).trim();
+      if (!text) return;
+      plan.actions.push({ id: str(a.id, 20) || uid(), text, h: HORIZONS.some((h) => h.key === a.h) ? a.h : 'd30', done: Boolean(a.done) });
+    });
+    return plan;
+  }
+  function sanitize(data) {
+    const s = blank();
+    if (data && Array.isArray(data.items)) {
+      data.items.slice(0, 80).forEach((it) => {
+        if (!it || typeof it.text !== 'string') return;
+        const text = it.text.trim().slice(0, 60);
+        if (!text) return;
+        const c = {};
+        KEYS.forEach((k) => { c[k] = Boolean(it.c && it.c[k]); });
+        if (!KEYS.some((k) => c[k])) return;
+        if (!s.items.some((x) => x.text === text)) s.items.push({ id: it.id || uid(), text, c });
+      });
+    }
+    s.note = str(data?.note, 300);
+    s.ai = str(data?.ai, 8000);
+    s.name = str(data?.name, 20);
+    s.plan = sanitizePlan(data?.plan);
+    if (typeof data?.rid === 'string' && /^[a-z0-9]{12,40}$/.test(data.rid)) s.rid = data.rid;
+    if (Number.isFinite(data?.startedAt)) s.startedAt = data.startedAt;
+    if (data?.profile && typeof data.profile === 'object') {
+      s.profile = {
+        name: str(data.profile.name, 40), contact: str(data.profile.contact, 80), email: str(data.profile.email, 120),
+        consent: data.profile.consent === true, consentAt: Number.isFinite(data.profile.consentAt) ? data.profile.consentAt : null,
+      };
+    }
+    if (Array.isArray(data?.events)) s.events = data.events.filter((e) => e && Number.isFinite(e.t) && typeof e.type === 'string').slice(-300);
+    s.isSample = data?.isSample === true;
+    if (typeof data?.referredBy === 'string' && /^[a-z0-9]{12,40}$/.test(data.referredBy)) s.referredBy = data.referredBy;
+    s.source = str(data?.source, 20);
+    if (ORDER.includes(data?.step)) s.step = data.step;
+    return s;
+  }
+  function uid() { return Math.random().toString(36).slice(2, 10); }
+
+  // ---------- helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const inCircle = (k) => state.items.filter((it) => it.c[k]);
+  const hasAll = (it, keys) => keys.every((k) => it.c[k]);
+  const exact = (it, keys) => KEYS.every((k) => it.c[k] === keys.includes(k));
+  const circlesOf = (it) => KEYS.filter((k) => it.c[k]);
+  const mainDir = () => state.plan.dirs.find((d) => d.id === state.plan.main) || null;
+  const fitOf = (d) => KEYS.reduce((sum, k) => sum + d.s[k], 0);
+  const today = () => new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+  const owner = () => (state.name ? `${state.name}的` : '我的');
+  const stepDone = (id) => {
+    if (KEYS.includes(id)) return inCircle(id).length > 0;
+    if (id === 'match') return state.items.some((it) => circlesOf(it).length > 1);
+    if (id === 'result') return Boolean(state.ai) || state.plan.dirs.length > 0;
+    if (id === 'plan') return Boolean(mainDir()) && state.plan.actions.length > 0;
+    return false;
+  };
+
+  function toast(text, action) {
+    const box = $('toasts');
+    const el = document.createElement('div');
+    el.className = 'toast';
+    const span = document.createElement('span');
+    span.textContent = text;
+    el.appendChild(span);
+    const dismiss = () => { el.classList.add('out'); setTimeout(() => el.remove(), 260); };
+    if (action) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = action.label;
+      b.addEventListener('click', () => { action.run(); dismiss(); });
+      el.appendChild(b);
+    }
+    box.appendChild(el);
+    setTimeout(dismiss, action ? 6000 : 2600);
+    while (box.children.length > 3) box.firstChild.remove();
+  }
+
+  // ---------- data changes ----------
+  function addItem(key, text) {
+    text = text.replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!text) return 'empty';
+    const found = state.items.find((it) => it.text.toLowerCase() === text.toLowerCase());
+    if (found) {
+      if (found.c[key]) return 'dup';
+      found.c[key] = true;
+    } else {
+      if (inCircle(key).length >= 20) return 'full';
+      state.items.push({ id: uid(), text, c: Object.fromEntries(KEYS.map((k) => [k, k === key])) });
+    }
+    state.ai = '';
+    return 'ok';
+  }
+  function addMany(key, raw) {
+    const results = raw.split(/[,，、;；\n]/).map((t) => addItem(key, t));
+    save();
+    const added = results.filter((r) => r === 'ok').length;
+    if (results.includes('full')) toast('每個圈最多 20 項');
+    else if (!added && results.includes('dup')) toast('這一項已經在這個圈裡了');
+    return added;
+  }
+  function removeFromCircle(id, key) {
+    const it = state.items.find((x) => x.id === id);
+    if (!it) return;
+    const before = JSON.parse(JSON.stringify(state.items));
+    it.c[key] = false;
+    if (!KEYS.some((k) => it.c[k])) state.items = state.items.filter((x) => x.id !== id);
+    state.ai = '';
+    save();
+    toast(`已從「${BY_KEY[key].short}」移除「${it.text}」`, { label: '復原', run: () => { state.items = before; save(); render(); } });
+  }
+  function loadSample() {
+    state = blank();
+    SAMPLE.items.forEach(([text, keys]) => {
+      const set = keys.split(' ');
+      state.items.push({ id: uid(), text, c: Object.fromEntries(KEYS.map((k) => [k, set.includes(k)])) });
+    });
+    state.note = SAMPLE.note;
+    SAMPLE.plan.dirs.forEach(([title, ...nums]) => state.plan.dirs.push({ id: uid(), title, s: Object.fromEntries(KEYS.map((k, i) => [k, nums[i]])) }));
+    state.plan.main = state.plan.dirs[0].id;
+    state.plan.goals = { ...SAMPLE.plan.goals };
+    state.plan.actions = SAMPLE.plan.actions.map(([text, h, done]) => ({ id: uid(), text, h, done }));
+    state.step = 'result';
+    state.isSample = true;
+    logEvent('載入範例');
+    animateResult = true;
+    save();
+    render();
+    toast('已載入範例，隨時可以按「全部清除」重新開始');
+  }
+
+  // ---------- activity log and sync to the consultant ----------
+  const STEP_NAMES = { intro: '介紹', love: '熱愛', good: '擅長', need: '世界需要', paid: '報酬', match: '交集對照', result: '結果', plan: '生涯規劃' };
+  function logEvent(type, detail = '') {
+    if (shareMode) return;
+    state.events.push({ t: Date.now(), type, detail: String(detail).slice(0, 80) });
+    if (state.events.length > 300) state.events.splice(0, state.events.length - 300);
+  }
+  const canSync = () => !shareMode && !state.isSample && state.profile.consent;
+  function recordPayload() {
+    const ins = careerInsights();
+    const main = mainDir();
+    return {
+      id: state.rid,
+      startedAt: state.startedAt,
+      step: state.step,
+      profile: state.profile,
+      items: state.items.map((it) => ({ text: it.text, c: it.c })),
+      note: state.note,
+      plan: {
+        dirs: state.plan.dirs.map((d) => ({ title: d.title, s: d.s, main: Boolean(main && d.id === main.id) })),
+        goals: state.plan.goals,
+        actions: state.plan.actions.map((a) => ({ text: a.text, h: a.h, done: a.done })),
+      },
+      insights: {
+        archetype: (({ name, tagline, strengths, advice }) => ({ name, tagline, strengths, advice }))(archetype()),
+        careers: ins.careers.map((c) => ({
+          name: c.name, circles: c.circles, skills: c.skills, items: c.items, match: c.match, have: c.have, gaps: c.gaps, advice: [...c.advice, c.firstStep],
+        })),
+        paths: ins.paths.map((p) => ({ title: p.title, career: p.career.name })),
+        skills: ins.skills.map((x) => x.name),
+        weakest: ins.weakest.key,
+        analysis: (({ index, level, balance, abilities, careers, strong, grow, assets, priorities, roadmap, weeks, habits, risk }) => ({
+          index, level, balance,
+          abilities: abilities.filter((x) => x.score).map((x) => ({ name: x.name, score: x.score })),
+          careers: careers.map((c) => ({ name: c.name, match: c.match })),
+          strong: strong.map((x) => ({ name: x.name, use: x.use })),
+          grow: grow.map((x) => ({ name: x.name, tip: x.grow })),
+          assets: assets.map((x) => ({ text: x.text, n: x.circles.length })),
+          priorities: priorities.map((x) => ({ name: x.name, level: x.level })),
+          roadmap: roadmap.map((st) => ({ title: st.title, when: st.when, goal: st.goal, actions: st.actions, checks: st.checks, time: st.time })),
+          weeks: weeks.map((w) => ({ when: w.when, title: w.title, tasks: w.tasks, output: w.output })),
+          habits, risk,
+        }))(analysis()),
+      },
+      ai: state.ai,
+      events: state.events,
+      referredBy: state.referredBy,
+      source: state.source,
+    };
+  }
+  let syncTimer = null;
+  let syncing = false;
+  function scheduleSync(delay = 2500) {
+    if (!canSync()) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, delay);
+  }
+  async function syncNow() {
+    if (!canSync()) return;
+    if (syncing) { scheduleSync(); return; }
+    syncing = true;
+    clearTimeout(syncTimer);
+    try {
+      const res = await fetch('/ikigai/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(recordPayload()), keepalive: true });
+      if (!res.ok && res.status >= 500) scheduleSync(30000);
+    } catch (err) {
+      scheduleSync(30000);
+    } finally {
+      syncing = false;
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && canSync() && syncTimer && navigator.sendBeacon) {
+      clearTimeout(syncTimer);
+      syncTimer = null;
+      navigator.sendBeacon('/ikigai/records', new Blob([JSON.stringify(recordPayload())], { type: 'application/json' }));
+    }
+  });
+
+  // ---------- report email ----------
+  let mailEnabled = false;
+  fetch('/ikigai/mail-status').then((r) => r.json()).then((d) => {
+    mailEnabled = Boolean(d.enabled);
+    if (!shareMode && (state.step === 'result' || state.step === 'plan')) render();
+  }).catch(() => {});
+  async function sendReport(auto) {
+    if (!canSync()) return;
+    const btn = $('mailBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '寄送中…'; }
+    try {
+      clearTimeout(syncTimer);
+      // Save first so the email is built from the latest answers.
+      await fetch('/ikigai/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(recordPayload()) });
+      const res = await fetch('/ikigai/report-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: state.rid }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '報告寄送失敗，請稍後再試');
+      logEvent('寄送完整報告', data.to);
+      save(true);
+      toast(`完整報告已寄到 ${data.to}，沒收到請查看垃圾郵件`);
+    } catch (err) {
+      if (!auto || !/剛寄出/.test(err.message)) toast(err.message);
+    } finally {
+      if ($('mailBtn')) { $('mailBtn').disabled = false; $('mailBtn').textContent = '寄完整報告到信箱'; }
+    }
+  }
+
+  // ---------- basic info form (shown once, before the results) ----------
+  let editingProfile = false;
+  function renderProfileForm() {
+    const p = state.profile;
+    $('view').innerHTML = `
+      <section class="${viewClass()}">
+        <div class="card">
+          <div class="eyebrow" style="--c:var(--text)">看結果前</div>
+          <h2>留下您的基本資料</h2>
+          <p class="hint">${mailEnabled ? '填好後，<b>完整報告會寄到您的 Email</b>，包含建議職業、需要加強的能力和 90 天準備計畫。' : '顧問會依您的結果提供後續建議與聯繫。'}</p>
+          <form class="profile-form" id="profileForm" novalidate>
+            <label class="f" for="pfName">姓名</label>
+            <input type="text" id="pfName" maxlength="40" autocomplete="name" value="${esc(p.name)}" required>
+            <label class="f" for="pfEmail">Email <span>${mailEnabled ? '完整報告會寄到這裡' : '必填'}</span></label>
+            <input type="email" id="pfEmail" maxlength="120" autocomplete="email" inputmode="email" value="${esc(p.email)}" required>
+            <label class="f" for="pfContact">手機或 LINE ID <span>選填</span></label>
+            <input type="tel" id="pfContact" maxlength="80" autocomplete="tel" value="${esc(p.contact)}">
+            <label class="consent" for="pfConsent"><input type="checkbox" id="pfConsent" ${p.consent ? 'checked' : ''}>
+              <span>我同意將以上基本資料與本次填寫的內容提供給本服務的顧問，用於寄送報告、生涯諮詢與後續聯繫。資料不會提供給其他第三方，我可以隨時要求刪除。</span></label>
+            <p class="form-error" id="pfError" role="alert"></p>
+            <div class="row" style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn" type="submit">${editingProfile ? '儲存' : mailEnabled ? '看結果並寄送完整報告' : '看我的結果'}</button>
+              ${editingProfile ? '<button class="btn ghost" type="button" id="pfCancel">取消</button>' : ''}
+            </div>
+          </form>
+        </div>
+      </section>`;
+    $('profileForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = $('pfName').value.replace(/\s+/g, ' ').trim();
+      const contact = $('pfContact').value.replace(/\s+/g, ' ').trim();
+      const email = $('pfEmail').value.trim();
+      const err = !name ? '請填寫姓名' : !email ? '請填寫 Email' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? 'Email 格式不正確' : !$('pfConsent').checked ? '請勾選同意，才能提供您的結果' : '';
+      if (err) { $('pfError').textContent = err; return; }
+      const first = !state.profile.consent;
+      state.profile = { name: name.slice(0, 40), contact: contact.slice(0, 80), email: email.slice(0, 120), consent: true, consentAt: state.profile.consentAt || Date.now() };
+      if (!state.name) state.name = name.slice(0, 20);
+      logEvent(first ? '留下基本資料' : '修改基本資料');
+      editingProfile = false;
+      animateResult = true;
+      save();
+      if (first && mailEnabled) sendReport(true);
+      else syncNow();
+      render();
+      window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+    if ($('pfCancel')) $('pfCancel').addEventListener('click', () => { editingProfile = false; render(); });
+    $('pfName').focus({ preventScroll: true });
+  }
+
+  function go(step) {
+    if (step === state.step) return;
+    logEvent('前往', STEP_NAMES[step] || step);
+    lastStep = state.step;
+    state.step = step;
+    if (step === 'result') animateResult = true;
+    save(true);
+    render();
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  }
+  const nextOf = (step) => ORDER[Math.min(ORDER.indexOf(step) + 1, ORDER.length - 1)];
+  const prevOf = (step) => ORDER[Math.max(ORDER.indexOf(step) - 1, 0)];
+
+  // ---------- proportional circles ----------
+  const CENTERS = { love: [200, 132], good: [132, 200], need: [268, 200], paid: [200, 268] };
+  // Each circle's area follows its weight; the largest circle keeps full size.
+  function radiiFrom(weights) {
+    const max = Math.max(...KEYS.map((k) => weights[k] || 0));
+    return Object.fromEntries(KEYS.map((k) => [k, max ? 62 + 46 * Math.sqrt((weights[k] || 0) / max) : 98]));
+  }
+  // Each circle's name (and count) sits inside that circle, on its outer side, sized to fit the circle.
+  const OUTWARD = { love: [0, -1], good: [-1, 0], need: [1, 0], paid: [0, 1] };
+  const LABEL_SVG = { max: 15, ratio: 0.21 };
+  const LABEL_COMPACT = { max: 26, ratio: 0.34, twoLine: true };
+  const LABEL_CANVAS = { max: 22, ratio: 0.25 };
+  function circleLabel(key, rr, size, withCount) {
+    const text = BY_KEY[key].short;
+    const lines = size.twoLine && text.length > 2 ? [text.slice(0, 2), text.slice(2)] : [text];
+    const f = Math.min(size.max, rr * size.ratio);
+    const nf = f * 0.82;
+    const w = Math.max(...lines.map((l) => l.length)) * f;
+    const h = lines.length * f * 1.12 + (withCount ? nf * 1.25 : 0);
+    const [dx, dy] = OUTWARD[key];
+    const d = Math.max(rr * 0.25, rr * 0.9 - (dx ? w / 2 : h / 2));
+    const cx = CENTERS[key][0] + dx * d;
+    const cy = CENTERS[key][1] + dy * d;
+    const top = cy - h / 2;
+    return {
+      lines, f, nf, w, h, cx, cy,
+      baselines: lines.map((_, i) => top + f * (0.88 + i * 1.12)),
+      countY: top + lines.length * f * 1.12 + nf * 0.98,
+    };
+  }
+  const countWeights = () => Object.fromEntries(KEYS.map((k) => [k, inCircle(k).length]));
+
+  function venn(opts = {}) {
+    const {
+      highlight, counts = true, interactive = false, anim = false, float = false, compact = false, radii = null,
+    } = opts;
+    const r = radii || (state.items.length ? radiiFrom(countWeights()) : radiiFrom({ love: 1, good: 1, need: 1, paid: 1 }));
+    const count = (keys) => state.items.filter((it) => hasAll(it, keys)).length;
+    const drift = { love: [0, -5], good: [-5, 0], need: [5, 0], paid: [0, 5] };
+    const pairPos = [
+      { keys: ['love', 'good'], xy: [142, 142], name: '熱情' },
+      { keys: ['love', 'need'], xy: [258, 142], name: '使命' },
+      { keys: ['good', 'paid'], xy: [142, 258], name: '專業' },
+      { keys: ['need', 'paid'], xy: [258, 258], name: '天職' },
+    ];
+    const isOn = (keys) => filter && filter.length === keys.length && keys.every((k) => filter.includes(k));
+    const rings = CIRCLES.map((c, i) => {
+      const cls = highlight ? (highlight === c.key ? 'hl' : 'dim') : '';
+      const empty = !radii && state.items.length && !inCircle(c.key).length ? ' stroke-dasharray="6 6"' : '';
+      return `<circle class="ring ${cls}" style="--i:${i};--dx:${drift[c.key][0]};--dy:${drift[c.key][1]}" cx="${CENTERS[c.key][0]}" cy="${CENTERS[c.key][1]}" r="${r[c.key].toFixed(1)}" fill="${c.color}" fill-opacity=".26" stroke="${c.color}" stroke-width="1.5"${empty}/>`;
+    }).join('');
+    const labels = CIRCLES.map((c) => {
+      const L = circleLabel(c.key, r[c.key], compact ? LABEL_COMPACT : LABEL_SVG, counts);
+      const hit = interactive ? `<circle class="hit ${isOn([c.key]) ? 'on' : ''}" data-filter="${c.key}" cx="${L.cx.toFixed(1)}" cy="${L.cy.toFixed(1)}" r="${(Math.max(L.w, L.h) / 2 + 8).toFixed(1)}" tabindex="0" role="button" aria-label="篩選${c.label}"></circle>` : '';
+      const txt = L.lines.map((l, i) => `<text class="lbl" x="${L.cx.toFixed(1)}" y="${L.baselines[i].toFixed(1)}" style="font-size:${L.f.toFixed(1)}px">${l}</text>`).join('');
+      const n = counts ? `<text class="n" x="${L.cx.toFixed(1)}" y="${L.countY.toFixed(1)}" style="font-size:${L.nf.toFixed(1)}px" data-count="${inCircle(c.key).length}">${inCircle(c.key).length} 項</text>` : '';
+      return `${hit}${txt}${n}`;
+    }).join('');
+    const pairs = pairPos.map((p) => {
+      if (compact) return '';
+      const hit = interactive ? `<circle class="hit ${isOn(p.keys) ? 'on' : ''}" data-filter="${p.keys.join(',')}" cx="${p.xy[0]}" cy="${p.xy[1] + 4}" r="24" tabindex="0" role="button" aria-label="篩選${p.name}"></circle>` : '';
+      const n = counts ? `<text class="n" x="${p.xy[0]}" y="${p.xy[1] + 16}" data-count="${count(p.keys)}">${count(p.keys)}</text>` : '';
+      return `${hit}<text x="${p.xy[0]}" y="${p.xy[1]}">${p.name}</text>${n}`;
+    }).join('');
+    const cHit = interactive ? `<circle class="hit ${isOn(KEYS) ? 'on' : ''}" data-filter="${KEYS.join(',')}" cx="200" cy="204" r="24" tabindex="0" role="button" aria-label="篩選 IKIGAI 中心"></circle>` : '';
+    const cN = counts ? `<text class="n" x="200" y="216" data-count="${count(KEYS)}">${count(KEYS)}</text>` : '';
+    const cls = `venn${anim && !reduceMotion ? ' animate' : ''}${float && !reduceMotion ? ' float' : ''}${compact ? ' compact' : ''}`;
+    return `<svg class="${cls}" viewBox="0 0 400 400" role="img" aria-label="IKIGAI 四圈圖，圓的大小代表各圈的份量">${rings}${labels}${pairs}${cHit}<text class="center" x="200" y="200">IKIGAI</text>${cN}</svg>`;
+  }
+
+  function legendHtml() {
+    const total = KEYS.reduce((n, k) => n + inCircle(k).length, 0) || 1;
+    const max = Math.max(...KEYS.map((k) => inCircle(k).length)) || 1;
+    return `<div class="legend">${CIRCLES.map((c) => {
+      const n = inCircle(c.key).length;
+      return `<div class="legend-row" style="--c:${c.color}"><span class="lab"><i></i>${c.short}</span><span class="track"><b data-w="${(n / max) * 100}"></b></span><span class="num">${n} 項 · ${Math.round((n / total) * 100)}%</span></div>`;
+    }).join('')}<p class="legend-note">圓越大，代表這一圈寫得越多</p></div>`;
+  }
+  function growBars(root) {
+    requestAnimationFrame(() => root.querySelectorAll('[data-w]').forEach((b) => { b.style.width = `${b.dataset.w}%`; }));
+  }
+
+  function countUp(root) {
+    if (reduceMotion) return;
+    root.querySelectorAll('[data-count]').forEach((el) => {
+      const target = Number(el.dataset.count);
+      if (!target) return;
+      const suffix = el.textContent.replace(/^\d+/, '');
+      const start = performance.now();
+      const tick = (now) => {
+        const p = Math.min(1, (now - start) / 700);
+        el.textContent = Math.round(target * (1 - (1 - p) ** 3)) + suffix;
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      el.textContent = `0${suffix}`;
+      requestAnimationFrame(tick);
+    });
+  }
+
+  // ---------- chrome ----------
+  function renderProgress() {
+    const nav = $('progress');
+    nav.hidden = state.step === 'intro' || shareMode;
+    nav.style.gridTemplateColumns = `repeat(${STEP_LIST.length}, minmax(0, 1fr))`;
+    nav.innerHTML = STEP_LIST.map((st) => {
+      const cur = state.step === st.id ? 'aria-current="step"' : '';
+      const n = KEYS.includes(st.id) ? `（${inCircle(st.id).length}）` : '';
+      return `<button type="button" data-step="${st.id}" class="${stepDone(st.id) ? 'done' : ''}" ${cur} style="--c:${st.color || 'var(--text)'}" aria-label="${st.label}${n}">
+        <div class="bar"><i></i></div><span>${st.label}</span></button>`;
+    }).join('');
+  }
+
+  function renderNav() {
+    const nav = $('nav');
+    const step = state.step;
+    if (step === 'intro' || shareMode) { nav.hidden = true; return; }
+    nav.hidden = false;
+    const idx = ORDER.indexOf(step);
+    let info = '';
+    if (KEYS.includes(step)) {
+      const n = inCircle(step).length;
+      info = n ? `已寫 ${n} 項` : '先寫 1 項以上';
+    } else if (step === 'match') {
+      info = `${state.items.filter((it) => circlesOf(it).length > 1).length} 項跨圈`;
+    } else if (step === 'plan') {
+      const done = state.plan.actions.filter((a) => a.done).length;
+      info = state.plan.actions.length ? `行動完成 ${done}/${state.plan.actions.length}` : '';
+    }
+    let back = '上一步';
+    if (idx <= 1) back = '介紹';
+    else if (step === 'result') back = '調整勾選';
+    else if (step === 'plan') back = '結果';
+    let right = `<button class="btn" type="button" data-go="${nextOf(step)}">下一步 →</button>`;
+    if (step === 'paid') right = '<button class="btn" type="button" data-go="match">交集對照 →</button>';
+    if (step === 'match') right = '<button class="btn" type="button" data-go="result">看結果 →</button>';
+    if (step === 'result') right = '<button class="btn" type="button" data-go="plan">生涯規劃 →</button>';
+    if (step === 'plan') right = '<button class="btn" type="button" data-scroll="shareCard">分享與匯出 ↓</button>';
+    $('navInner').innerHTML = `
+      <button class="btn ghost" type="button" data-go="${prevOf(step)}">← ${back}</button>
+      <span class="info">${info}</span>
+      ${right}`;
+  }
+
+  // Slide only when the step changes, not when the same step re-renders.
+  function viewClass() {
+    if (lastStep === state.step) return 'view';
+    return ORDER.indexOf(state.step) < ORDER.indexOf(lastStep) ? 'view back' : 'view fwd';
+  }
+
+  // ---------- intro ----------
+  function renderIntro() {
+    $('view').innerHTML = `
+      <section class="${viewClass()} intro">
+        <div>
+          <h1>找出你的 IKIGAI<span>生き甲斐 · 人生的意義</span></h1>
+          <p>寫下四個圈，看看它們在哪裡重疊，再把交集變成生涯計畫。完成後可以產生字卡、分享連結或匯出 PDF。大約 15 分鐘。</p>
+          <ul>${CIRCLES.map((c) => `<li style="--c:${c.color}"><i></i><span><b>${c.label}</b>：${c.hint}</span></li>`).join('')}</ul>
+          <div class="ctas">
+            <button class="btn" type="button" id="start">${state.items.length ? '繼續填寫' : '開始填寫'}</button>
+            <button class="btn ghost" type="button" id="sample">${state.items.length ? '看我的結果' : '先看範例'}</button>
+          </div>
+        </div>
+        <div class="intro-art">${venn({ counts: false, anim: true, float: true, radii: radiiFrom({ love: 1, good: 1, need: 1, paid: 1 }) })}</div>
+      </section>`;
+    $('start').addEventListener('click', () => go(state.items.length ? (KEYS.find((k) => !inCircle(k).length) || 'match') : 'love'));
+    $('sample').addEventListener('click', () => (state.items.length ? go('result') : loadSample()));
+  }
+
+  // ---------- circle steps ----------
+  function tagHtml(it, key, color) {
+    const others = circlesOf(it).filter((k) => k !== key);
+    const also = others.length ? `<span class="also" title="也在：${others.map((k) => BY_KEY[k].short).join('、')}">${others.map((k) => `<i style="--d:${BY_KEY[k].color}"></i>`).join('')}</span>` : '';
+    const btn = key ? `<button type="button" data-remove="${it.id}" data-key="${key}" aria-label="移除 ${esc(it.text)}">×</button>` : '';
+    const fresh = key && !seenTags.has(`${key}:${it.id}`) ? ' fresh' : '';
+    if (key) seenTags.add(`${key}:${it.id}`);
+    return `<li class="tag${key ? '' : ' static'}${fresh}" data-id="${it.id}" style="--c:${color || 'var(--muted)'}">${esc(it.text)}${also}${btn}</li>`;
+  }
+
+  function renderCircle(key, focus) {
+    const c = BY_KEY[key];
+    const idx = KEYS.indexOf(key);
+    const items = inCircle(key);
+    const others = state.items.filter((it) => !it.c[key]);
+    const unusedExamples = c.examples.filter((e) => !state.items.some((it) => it.text === e && it.c[key]));
+    $('view').innerHTML = `
+      <section class="${viewClass()} step-grid" style="--c:${c.color}">
+        <aside class="step-side"><div class="card">${venn({ highlight: key, compact: true, counts: false })}</div><p>第 ${idx + 1} 圈，共 4 圈 · 這一圈 ${items.length} 項<br>寫越多，圓就越大</p></aside>
+        <div class="card">
+          <div class="eyebrow">第 ${idx + 1} 步 · ${c.short}</div>
+          <h2>${c.label}</h2>
+          <p class="hint">${c.hint}</p>
+          <ul class="prompts" aria-label="提示問題">${c.prompts.map((p) => `<li>${p}</li>`).join('')}</ul>
+          <form class="add-row" id="addForm">
+            <label class="sr-only" for="addInput">新增${c.label}</label>
+            <input type="text" id="addInput" maxlength="200" placeholder="輸入後按 Enter" autocomplete="off" enterkeyhint="done">
+            <button class="btn" type="submit">新增</button>
+          </form>
+          <p class="field-hint">可一次輸入多項，用逗號、頓號或換行分隔。每項最多 60 字。</p>
+          ${items.length ? `<ul class="tags" id="tags">${items.map((it) => tagHtml(it, key, c.color)).join('')}</ul>` : '<p class="empty">還沒有項目。先寫 3 到 8 項就很好，也可以點下面的靈感。</p>'}
+          ${items.length ? `<p class="meter">已寫 <b>${items.length}</b> 項${items.length < 3 ? '，再想 1、2 項會更完整' : items.length > 10 ? '，很充實了' : ''}</p>` : ''}
+          ${unusedExamples.length ? `<div class="chips"><span>靈感</span>${unusedExamples.map((e) => `<button type="button" class="chip" data-chip="${esc(e)}">+ ${esc(e)}</button>`).join('')}</div>` : ''}
+          ${others.length ? `<div class="chips"><span>其他圈寫過的</span>${others.map((it) => `<button type="button" class="chip" data-chip="${esc(it.text)}">+ ${esc(it.text)}</button>`).join('')}</div>` : ''}
+        </div>
+      </section>`;
+    const input = $('addInput');
+    $('addForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!input.value.trim()) { input.focus(); return; }
+      addMany(key, input.value);
+      input.value = '';
+      render({ focusInput: true });
+    });
+    input.addEventListener('paste', (e) => {
+      const t = e.clipboardData.getData('text');
+      if (/\n/.test(t)) { e.preventDefault(); addMany(key, t); render({ focusInput: true }); }
+    });
+    if (focus) input.focus({ preventScroll: true });
+  }
+
+  // ---------- match ----------
+  function renderMatch() {
+    const rows = state.items.filter((it) => {
+      const n = circlesOf(it).length;
+      return matchFilter === 'all' || (matchFilter === 'single' ? n === 1 : n > 1);
+    });
+    const single = state.items.filter((it) => circlesOf(it).length === 1).length;
+    $('view').innerHTML = `
+      <section class="${viewClass()}">
+        <div class="card">
+          <div class="eyebrow" style="--c:var(--text)">第 5 步 · 交集對照</div>
+          <h2>每一項還屬於哪些圈？</h2>
+          <p class="hint">點彩色按鈕切換。例如「寫作」是你熱愛的，可能也是你擅長的。屬於越多圈，越靠近中心。</p>
+          ${state.items.length ? `
+          <div class="match-tools">
+            <div class="seg" role="group" aria-label="篩選項目">
+              <button type="button" data-mf="all" aria-pressed="${matchFilter === 'all'}">全部 ${state.items.length}</button>
+              <button type="button" data-mf="single" aria-pressed="${matchFilter === 'single'}">只在 1 圈 ${single}</button>
+              <button type="button" data-mf="multi" aria-pressed="${matchFilter === 'multi'}">跨圈 ${state.items.length - single}</button>
+            </div>
+          </div>
+          <div class="items">${rows.map((it) => `
+            <div class="item">
+              <div><span class="name">${esc(it.text)}</span><span class="dots" aria-label="${circlesOf(it).length} 圈">${KEYS.map((k) => `<i class="${it.c[k] ? 'on' : ''}"></i>`).join('')}</span></div>
+              <div class="toggles">${CIRCLES.map((c) => `<button type="button" class="toggle" style="--c:${c.color}" data-id="${it.id}" data-key="${c.key}" aria-pressed="${it.c[c.key]}" aria-label="${esc(it.text)} 屬於${c.label}">${c.short}</button>`).join('')}</div>
+            </div>`).join('') || '<p class="empty">沒有符合的項目。</p>'}</div>` : '<p class="empty">還沒有任何項目，請先回到前面四步填寫。</p>'}
+          <h3>補充說明（選填）</h3>
+          <label class="sr-only" for="note">補充說明</label>
+          <textarea id="note" maxlength="300" placeholder="例如：目前職業、年資、想轉換的方向、時間或經濟限制。會一起寫進你的報告。">${esc(state.note)}</textarea>
+        </div>
+      </section>`;
+    let noteTimer;
+    $('note').addEventListener('input', (e) => {
+      state.note = e.target.value;
+      state.ai = '';
+      clearTimeout(noteTimer);
+      noteTimer = setTimeout(() => save(), 500);
+    });
+  }
+
+  // ---------- result ----------
+  function regionHtml(title, desc, items, color, i) {
+    if (!items.length) return '';
+    return `<div class="region" style="--c:${color};animation-delay:${i * 60}ms"><h4>${title}（${items.length}）</h4><p>${desc}</p>
+      <ul class="tags">${items.map((it) => tagHtml(it, null, color)).join('')}</ul></div>`;
+  }
+
+  function regionsHtml() {
+    const pool = filter ? state.items.filter((it) => hasAll(it, filter)) : state.items;
+    const parts = [];
+    parts.push(regionHtml('IKIGAI 中心', '同時落在四個圈。這是最值得投入的方向。', pool.filter((it) => hasAll(it, KEYS)), 'var(--text)', 0));
+    TRIPLES.forEach((t, i) => {
+      const keys = KEYS.filter((k) => k !== t.missing);
+      parts.push(regionHtml(`差一圈：缺「${BY_KEY[t.missing].short}」`, `${keys.map((k) => BY_KEY[k].short).join(' × ')}。${t.desc}`, pool.filter((it) => exact(it, keys)), BY_KEY[t.missing].color, i + 1));
+    });
+    PAIRS.forEach((p, i) => parts.push(regionHtml(p.name, p.desc, pool.filter((it) => exact(it, p.keys)), BY_KEY[p.keys[0]].color, i + 5)));
+    CIRCLES.forEach((c, i) => parts.push(regionHtml(`只在「${c.short}」`, '目前只屬於一個圈，回到交集對照看看能不能多勾一圈。', pool.filter((it) => exact(it, [c.key])), c.color, i + 11)));
+    const html = parts.filter(Boolean).join('');
+    const note = filter ? `<p class="filter-note">只顯示包含「${filter.map((k) => BY_KEY[k].short).join(' × ')}」的項目。<button type="button" id="clearFilter">顯示全部</button></p>` : '';
+    return note + (html || '<p class="empty">沒有符合的項目。</p>');
+  }
+
+  function nextTip() {
+    const center = state.items.filter((it) => hasAll(it, KEYS)).length;
+    const near = state.items.filter((it) => circlesOf(it).length === 3);
+    const weakest = CIRCLES.slice().sort((a, b) => inCircle(a.key).length - inCircle(b.key).length)[0];
+    if (center) return `你有 <b>${center}</b> 項落在中心。下一步到「生涯規劃」，把它變成具體方向。`;
+    if (near.length) {
+      const it = near[0];
+      const miss = BY_KEY[KEYS.find((k) => !it.c[k])];
+      return `「${esc(it.text)}」只差「${miss.short}」一圈。想想看：${miss.hint}`;
+    }
+    return `目前最小的圈是「${weakest.short}」（${inCircle(weakest.key).length} 項），回去補幾項，交集會更清楚。`;
+  }
+
+  function mdToHtml(md) {
+    const lines = esc(md).split('\n');
+    let html = '';
+    let list = null;
+    const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    const close = () => { if (list) { html += `</${list}>`; list = null; } };
+    lines.forEach((raw) => {
+      const line = raw.trim();
+      let m;
+      if (!line) { close(); return; }
+      if ((m = line.match(/^#{1,6}\s+(.*)$/))) { close(); html += `<h3>${inline(m[1])}</h3>`; return; }
+      if ((m = line.match(/^[-*•]\s+(.*)$/))) { if (list !== 'ul') { close(); html += '<ul>'; list = 'ul'; } html += `<li>${inline(m[1])}</li>`; return; }
+      if ((m = line.match(/^\d+[.)、]\s*(.*)$/))) { if (list !== 'ol') { close(); html += '<ol>'; list = 'ol'; } html += `<li>${inline(m[1])}</li>`; return; }
+      close();
+      html += `<p>${inline(line)}</p>`;
+    });
+    close();
+    return html;
+  }
+
+  function aiBlock() {
+    const filled = KEYS.filter((k) => inCircle(k).length).length;
+    let status = '';
+    if (!aiAvailable) status = '深度解析目前暫停服務。';
+    else if (filled < 2) status = '至少填兩個圈才能分析。';
+    else if (!state.ai && !aiBusy) status = '約需 10 到 30 秒。';
+    const err = aiError ? `<div class="alert" role="alert"><p>${esc(aiError)}</p>
+        <div class="row"><button class="btn small" type="button" id="aiRetry">重試</button></div></div>` : '';
+    const body = aiBusy ? '<div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i></div>' : (state.ai ? mdToHtml(state.ai) : '');
+    return `
+      <div class="ai-head">
+        <button class="btn" type="button" id="aiBtn" ${filled < 2 || !aiAvailable || aiBusy ? 'disabled' : ''}>${aiBusy ? '解析中…' : state.ai ? '重新解析' : '深度解析'}</button>
+        <span class="status" id="aiStatus" role="status">${status}</span>
+      </div>
+      ${err}
+      <div class="ai-out" id="aiOut" aria-busy="${aiBusy}">${body}</div>`;
+  }
+
+  function resultSummaryHtml(interactive) {
+    const center = state.items.filter((it) => hasAll(it, KEYS)).length;
+    const near = state.items.filter((it) => circlesOf(it).length === 3).length;
+    const cross = state.items.filter((it) => circlesOf(it).length > 1).length;
+    return `
+      <div class="summary">
+        <div class="stat"><b data-count="${center}">${center}</b><span>IKIGAI 中心</span></div>
+        <div class="stat"><b data-count="${near}">${near}</b><span>差一圈</span></div>
+        <div class="stat"><b data-count="${cross}">${cross}</b><span>跨圈項目</span></div>
+      </div>
+      <div class="result-grid">
+        <div class="diagram">${venn({ interactive, anim: animateResult })}${legendHtml()}</div>
+        <div id="regions">${regionsHtml()}</div>
+      </div>`;
+  }
+
+  function renderResult() {
+    $('view').innerHTML = `
+      <section class="${viewClass()}">
+        <div class="card">
+          <div class="eyebrow" style="--c:var(--text)">第 6 步 · 結果</div>
+          <h2>${esc(owner())} IKIGAI</h2>
+          ${resultSummaryHtml(true)}
+          <p class="next-tip">${nextTip()}</p>
+        </div>
+        ${analysisCardHtml()}
+        ${careerCardHtml()}
+        ${roadmapCardHtml()}
+        <div id="aiSlot">${aiCardHtml()}</div>
+        ${shareCardHtml()}
+      </section>`;
+    if (animateResult) countUp($('view'));
+    animateResult = false;
+    growBars($('view'));
+    bindResult();
+    bindCareerCard();
+    bindShareCard();
+  }
+
+  function refreshRegions() {
+    $('regions').innerHTML = regionsHtml();
+    document.querySelectorAll('svg.venn .hit').forEach((h) => {
+      const keys = h.dataset.filter.split(',');
+      h.classList.toggle('on', Boolean(filter && filter.join() === keys.join()));
+    });
+    bindClearFilter();
+  }
+  function bindClearFilter() {
+    const clear = $('clearFilter');
+    if (clear) clear.addEventListener('click', () => { filter = null; refreshRegions(); });
+  }
+  // The analysis card only shows while the server has AI turned on (IKIGAI_AI_ENABLED).
+  function aiCardHtml() {
+    if (!aiAvailable) return '';
+    return `<div class="card" id="aiCard">
+          <h2>深度解析</h2>
+          <p class="hint">依你的四個圈，寫出更完整的解析：四個交集、可能的 IKIGAI 方向、建議職業、需要加強的能力，和分階段的職業規劃。</p>
+          <div id="aiBox">${aiBlock()}</div>
+        </div>`;
+  }
+  function refreshAi() {
+    if ($('aiSlot')) { $('aiSlot').innerHTML = aiCardHtml(); if ($('aiBtn')) bindAi(); return; }
+    if (!$('aiBox')) return;
+    $('aiBox').innerHTML = aiBlock();
+    bindAi();
+  }
+  function bindAi() {
+    if (!$('aiBtn')) return;
+    $('aiBtn').addEventListener('click', runAi);
+    if ($('aiRetry')) $('aiRetry').addEventListener('click', runAi);
+  }
+  function bindVennFilter() {
+    document.querySelectorAll('svg.venn .hit').forEach((h) => {
+      const toggle = () => {
+        const keys = h.dataset.filter.split(',');
+        filter = filter && filter.join() === keys.join() ? null : keys;
+        refreshRegions();
+      };
+      h.addEventListener('click', toggle);
+      h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+    });
+    bindClearFilter();
+  }
+  function bindResult() {
+    bindVennFilter();
+    bindAi();
+  }
+
+  // ---------- career suggestions (built in, no server call) ----------
+  // Each entry: keywords found in the visitor's items -> careers and the skills those careers need.
+  const CAREER_KB = [
+    { k: ['寫作', '文字', '文案', '編輯', '寫文章', '部落格'], careers: ['文案企劃', '內容編輯', '技術寫作', '自媒體創作者'], skills: ['文案寫作', '內容行銷與 SEO', '編輯校對'] },
+    { k: ['教學', '講師', '教書', '輔導', '課程', '家教', '帶人'], careers: ['企業內訓講師', '線上課程設計師', '教師或家教', '學習體驗設計師'], skills: ['課程設計', '簡報表達', '引導技巧'] },
+    { k: ['聊天', '溝通', '表達', '人際', '交朋友', '說話'], careers: ['客戶成功經理', '人資招募專員', '公關專員', '職涯顧問'], skills: ['溝通協調', '提問與傾聽', '衝突處理'] },
+    { k: ['傾聽', '陪伴', '同理'], careers: ['職涯諮詢師', '員工關懷專員', '客服主管'], skills: ['助人技巧', '提問與傾聽', '心理學基礎'] },
+    { k: ['數據', '分析', '統計', 'excel', 'Excel', '報表'], careers: ['數據分析師', '商業分析師', '市場研究員'], skills: ['SQL 與資料處理', '資料視覺化', '統計基礎'] },
+    { k: ['研究', '閱讀', '學習', '知識', '調查'], careers: ['產業分析師', '使用者研究員', '知識型內容創作者', '研究助理'], skills: ['研究方法', '資料整理', '寫作'] },
+    { k: ['程式', '軟體', '開發', '工程', '寫code', 'coding', '電腦', '網站'], careers: ['軟體工程師', '前端工程師', '自動化工程師', '技術顧問'], skills: ['程式設計', '系統設計', 'Git 版本控制'] },
+    { k: ['設計', '美術', '畫畫', '繪畫', '視覺', '插畫', 'UI', '美感'], careers: ['UI/UX 設計師', '平面設計師', '品牌設計師', '插畫家'], skills: ['Figma 等設計工具', '視覺設計原則', '使用者研究'] },
+    { k: ['攝影', '拍照', '影像', '影片', '剪輯', '拍片'], careers: ['攝影師', '影像剪輯師', '短影音創作者', '品牌影像企劃'], skills: ['拍攝技巧', '剪輯軟體', '腳本企劃'] },
+    { k: ['行銷', '社群', '品牌', '廣告', '企劃'], careers: ['行銷企劃', '社群經理', '品牌經理', '成長行銷專員'], skills: ['數位廣告投放', '社群經營', '成效數據追蹤'] },
+    { k: ['銷售', '業務', '談判', '賣東西', '推銷'], careers: ['業務代表', '客戶經理', '業務開發', '電商經營者'], skills: ['銷售技巧', '談判', '客戶關係管理'] },
+    { k: ['組織', '規劃', '管理', '專案', '領導', '統籌', '安排'], careers: ['專案經理', '營運專員', '活動企劃', '產品經理'], skills: ['專案管理', '時間管理', '跨部門協作'] },
+    { k: ['顧問', '諮詢', '建議'], careers: ['管理顧問', '職涯顧問', '專業領域顧問'], skills: ['問題拆解', '簡報表達', '商業分析'] },
+    { k: ['心理', '諮商', '心理健康', '情緒'], careers: ['心理諮商相關工作', '社工師', '員工關懷專員', '職涯諮詢師'], skills: ['助人技巧', '心理學基礎', '相關證照'] },
+    { k: ['環境', '永續', '環保', '綠能', '氣候', 'ESG'], careers: ['ESG 專員', '永續顧問', '環境教育推廣'], skills: ['ESG 報告撰寫', '碳盤查', '政策法規'] },
+    { k: ['教育'], careers: ['教育科技企劃', '教育非營利組織專員', '課程開發專員'], skills: ['課程設計', '提案與募資', '教育科技工具'] },
+    { k: ['長照', '照顧', '長期照顧', '醫療', '健康', '護理', '老人'], careers: ['照顧管理專員', '長照服務員', '健康產業企劃', '健康管理師'], skills: ['照顧技術', '相關證照', '溝通同理'] },
+    { k: ['數位能力', '數位', '科技', '3C'], careers: ['數位轉型顧問', '數位課程講師', '資訊支援專員'], skills: ['數位工具應用', '教學設計', '需求訪談'] },
+    { k: ['社區', '在地', '地方', '公益', '志工', '非營利'], careers: ['社區營造工作者', '地方創生企劃', '非營利組織專員'], skills: ['社區經營', '提案寫作', '活動企劃'] },
+    { k: ['料理', '烹飪', '做菜', '餐飲', '烘焙', '甜點', '食物', '咖啡'], careers: ['餐飲創業', '食品研發', '料理講師', '美食內容創作者'], skills: ['料理技術', '食品安全知識', '成本控管'] },
+    { k: ['食品安全', '食安', '營養'], careers: ['品保專員', '營養諮詢', '食品檢驗相關工作'], skills: ['食品法規', '營養學', '相關證照'] },
+    { k: ['運動', '健身', '體育', '跑步', '瑜珈'], careers: ['健身教練', '運動推廣企劃', '運動內容創作者'], skills: ['教練證照', '運動科學', '個人品牌經營'] },
+    { k: ['音樂', '樂器', '唱歌', '彈琴'], careers: ['音樂老師', '音樂製作', '表演工作者'], skills: ['樂理與演奏', '音樂製作軟體', '個人品牌經營'] },
+    { k: ['旅行', '旅遊', '觀光', '出國'], careers: ['旅遊規劃師', '領隊導遊', '旅遊內容創作者'], skills: ['行程規劃', '外語能力', '導覽解說'] },
+    { k: ['動物', '寵物', '貓', '狗'], careers: ['寵物照顧師', '寵物品牌經營', '動物保護組織專員'], skills: ['動物照護知識', '相關證照', '電商經營'] },
+    { k: ['翻譯', '外語', '英文', '日文', '韓文', '語言'], careers: ['譯者', '口譯', '國際業務'], skills: ['外語檢定', '專業領域術語', '翻譯工具'] },
+    { k: ['內容', '自媒體', '創作', 'YouTube', 'Podcast', '經營粉專'], careers: ['內容創作者', '自媒體經營者', '內容策略專員'], skills: ['內容企劃', '個人品牌經營', '成效數據追蹤'] },
+    { k: ['手作', '工藝', 'DIY', '手工', '木工', '編織'], careers: ['手作品牌經營', '手作課程講師', '工藝設計師'], skills: ['工藝技術', '電商經營', '定價策略'] },
+    { k: ['解決問題', '難題', '邏輯', '思考'], careers: ['產品經理', '管理顧問', '系統分析師'], skills: ['問題拆解', '邏輯思考', '系統思考'] },
+    { k: ['資訊辨識', '媒體', '新聞', '查證'], careers: ['事實查核員', '記者', '媒體識讀講師'], skills: ['查證方法', '新聞寫作', '研究方法'] },
+    { k: ['財務', '理財', '會計', '投資', '記帳'], careers: ['理財規劃顧問', '財務分析師', '會計人員'], skills: ['財務報表', '相關證照', 'Excel 進階'] },
+    { k: ['人資', '招募', '人才'], careers: ['人資專員', '招募顧問', '組織發展專員'], skills: ['面談技巧', '勞動法規', '組織發展'] },
+    { k: ['電商', '網拍', '創業', '開店', '做生意'], careers: ['電商經營者', '創業家', '小店主'], skills: ['電商平台操作', '數位行銷', '財務管理'] },
+    { k: ['遊戲', '電玩'], careers: ['遊戲企劃', '遊戲社群經營', '遊戲測試'], skills: ['遊戲設計', '社群經營', '企劃書撰寫'] },
+    { k: ['法律', '法規'], careers: ['法務專員', '法規遵循專員'], skills: ['法律知識', '合約審閱'] },
+  ];
+  const GAP_ADVICE = {
+    love: '多嘗試新活動，記下做什麼事時最投入、最不覺得累。',
+    good: '挑 1 項技能刻意練習 30 天，做出一個小作品並請人給回饋。',
+    need: '訪談 3 位可能的服務對象，了解他們真正的困擾和需求。',
+    paid: '研究市場行情：找 5 個相關職缺或服務，看要求的能力和收費方式。',
+  };
+
+  // How to build each skill a suggested career needs (first matching pattern wins).
+  const SKILL_TIPS = [
+    [/編輯|校對/, '幫朋友的文章做校對和改寫，練習抓錯字、順句子和下標題。'],
+    [/SEO/, '學關鍵字研究，寫 4 篇以關鍵字為主題的文章，追蹤搜尋流量。'],
+    [/廣告投放/, '用小預算（例如 1,000 元）投一次廣告，比較不同素材的成效。'],
+    [/成效數據|數位行銷/, '學會 Google Analytics 基本報表，替一個網站或帳號做月報。'],
+    [/社群經營|社群/, '經營一個社群帳號 8 週，每週看數據調整一次內容。'],
+    [/個人品牌/, '固定在一個平台每週發文，3 個月後檢視追蹤數和互動。'],
+    [/企劃書|提案寫作|內容企劃|腳本/, '寫一份完整企劃書（目標、對象、預算、時程），請有經驗的人給意見。'],
+    [/寫作|文案|新聞/, '每週寫 2 篇並請有經驗的人修改，3 個月累積 10 篇作品。'],
+    [/ESG|碳盤查/, '讀 2 份企業永續報告，練習整理成一頁重點和改善建議。'],
+    [/簡報/, '練習 5 分鐘簡報並錄影檢討，在讀書會或公司實際分享一次。'],
+    [/引導/, '帶一次小組討論或工作坊，練習提問、控場和收斂結論。'],
+    [/課程設計|教學設計/, '把一個主題做成 30 分鐘小課，實際教 3 個人並收回饋。'],
+    [/教育科技|數位工具/, '學會 3 個常用工具（例如 Canva、Notion、Google 表單），用它們完成一個小專案。'],
+    [/SQL|資料處理/, '學 SQL 基本查詢，用公開資料庫練習 20 題。'],
+    [/視覺化/, '用 Excel 或 Looker Studio 把一份公開資料做成圖表儀表板。'],
+    [/統計/, '讀完一本統計入門（平均、分布、相關），用自己的資料算一次。'],
+    [/Excel/, '學會樞紐分析表和常用函數，做一份每月報表。'],
+    [/商業分析/, '挑一家公司寫一頁分析：客群、收入來源、競爭者和機會。'],
+    [/財務報表/, '讀懂一家上市公司的三大報表，整理成一頁重點。'],
+    [/財務管理|成本/, '替自己或一個小專案做 3 個月的收支表，找出可以省下的成本。'],
+    [/研究方法|資料整理/, '選一個問題做小型研究：設計 10 題問卷、收 30 份回覆並寫結論。'],
+    [/Figma/, '跟著教學用 Figma 重做 2 個 App 畫面，再設計一個自己的。'],
+    [/視覺設計/, '學排版、配色和字體原則，每週做一張練習作品。'],
+    [/使用者研究|需求訪談/, '訪談 5 位使用者，整理成一份需求洞察報告。'],
+    [/拍攝/, '每週拍一組主題照片，請攝影同好給回饋。'],
+    [/剪輯/, '每週剪一支 1 分鐘短影音，8 週後比較進步。'],
+    [/音樂製作/, '用軟體完成一首 1 分鐘的作品，上傳並收集回饋。'],
+    [/遊戲設計/, '設計一個簡單的桌遊或小遊戲，找 5 個人試玩並修改。'],
+    [/Git/, '把自己的專案放上 GitHub，練習分支、合併和寫說明文件。'],
+    [/系統設計/, '畫出一個你熟悉服務的系統架構圖，請工程師朋友指正。'],
+    [/程式/, '跟著線上課程做一個小專案，完成後放上 GitHub。'],
+    [/銷售/, '試著賣出一個小產品或服務，記錄成交和被拒絕的原因。'],
+    [/談判/, '在採購、接案或租屋時練習議價，事後寫下哪裡可以更好。'],
+    [/客戶關係/, '用試算表整理 20 位潛在客戶，每兩週追蹤一次。'],
+    [/定價/, '研究 5 個同業的價格，替自己的服務訂出 3 種方案。'],
+    [/電商/, '開一個小賣場上架 3 項商品，走完一次從上架到出貨的流程。'],
+    [/專案管理/, '主動負責一個小專案，練習排時程、分工和回報進度。'],
+    [/時間管理/, '用每週計畫表安排 4 週，檢討哪些時間被浪費、怎麼改。'],
+    [/活動企劃/, '辦一場 10～20 人的小活動，從報名到檢討全部自己來。'],
+    [/跨部門|溝通協調/, '參與一個跨團隊合作，負責整理會議紀錄和追進度。'],
+    [/組織發展/, '研究一家公司的組織架構和培訓制度，寫一頁改善建議。'],
+    [/面談/, '模擬 5 次面談，練習結構化提問和記錄重點。'],
+    [/勞動法規|法規|法律|合約/, '讀完相關法規重點，找 3 個實際案例練習判斷。'],
+    [/助人技巧|提問|傾聽/, '每週做一次一對一深談，記錄問了什麼、聽到什麼、下次怎麼問更好。'],
+    [/同理|衝突/, '遇到意見不合時練習先複述對方的想法，再說自己的觀點。'],
+    [/心理學/, '讀一本心理學入門書，或修一門線上課程並寫心得。'],
+    [/證照|教練/, '查清楚需要的證照，排定 3～6 個月的考照時程。'],
+    [/食品|營養|運動科學|照顧技術|動物照護|術語|知識/, '找一門有結業證書的課程，3 個月內完成並把重點整理成筆記。'],
+    [/外語/, '每天 30 分鐘練習，3 個月後報名一次檢定確認程度。'],
+    [/翻譯/, '每週翻譯一篇文章，和專業譯本比對差異。'],
+    [/問題拆解|邏輯|系統思考/, '每週拆解一個真實問題，寫下原因、選項和你的建議。'],
+    [/料理/, '每週練一道菜並記錄配方，3 個月後辦一次試吃會。'],
+    [/工藝|樂理|演奏/, '每週固定練習並記錄成品，3 個月後辦一次小型發表。'],
+    [/行程規劃|導覽/, '替朋友規劃一次一日遊並實際帶隊，收集回饋。'],
+    [/社區|募資|政策/, '參與一個在地或公益專案，先從協助者做起。'],
+  ];
+  const skillTip = (name) => (SKILL_TIPS.find(([re]) => re.test(name)) || [null, '找一門入門課，搭配一個小作品練習，再請業內人士給回饋。'])[1];
+  // Advice for each circle a career does not cover yet.
+  const CAREER_GAP = {
+    love: (n) => `還不確定自己喜不喜歡：先接一個「${n}」相關的小任務試做，確認做得開心再投入。`,
+    good: (n) => `能力還需要補強：照下面「要補足的能力」練 2～3 個月，再用作品證明你能勝任「${n}」。`,
+    need: (n) => `想清楚為誰服務：訪談 3 位可能的客戶或使用者，找出「${n}」能幫他們解決什麼問題。`,
+    paid: (n) => `確認收入來源：查 5 個「${n}」的職缺薪資或接案行情，算算多久能達到你要的收入。`,
+  };
+
+  function careerInsights() {
+    const byCareer = new Map();
+    state.items.forEach((it) => {
+      const circles = circlesOf(it);
+      const text = it.text.toLowerCase();
+      CAREER_KB.forEach((entry, entryIdx) => {
+        if (!entry.k.some((kw) => text.includes(kw.toLowerCase()))) return;
+        entry.careers.forEach((name, rank) => {
+          const c = byCareer.get(name) || { name, entryIdx, score: 0, items: new Set(), circles: new Set(), skills: new Set() };
+          c.score += circles.length * 2 + (circles.length === 4 ? 3 : 0) - rank * 0.3;
+          c.items.add(it.text);
+          circles.forEach((k) => c.circles.add(k));
+          entry.skills.forEach((s) => c.skills.add(s));
+          byCareer.set(name, c);
+        });
+      });
+    });
+    // Three careers, preferring different groups so one strong item does not crowd out the rest.
+    const sorted = [...byCareer.values()]
+      .map((c) => ({ ...c, items: [...c.items], circles: KEYS.filter((k) => c.circles.has(k)), skills: [...c.skills] }))
+      .sort((a, b) => b.circles.length - a.circles.length || b.score - a.score);
+    const careers = [];
+    sorted.forEach((c) => { if (careers.length < 3 && !careers.some((x) => x.entryIdx === c.entryIdx)) careers.push(c); });
+    sorted.forEach((c) => { if (careers.length < 3 && !careers.includes(c)) careers.push(c); });
+
+    // Skills the top careers need that the visitor has not listed as a strength.
+    const strengths = inCircle('good').map((it) => it.text.toLowerCase());
+    const has = (skill) => strengths.some((g) => skill.toLowerCase().includes(g) || g.includes(skill.toLowerCase().slice(0, 2)));
+    careers.forEach((c) => {
+      c.have = c.skills.filter(has);
+      c.gaps = c.skills.filter((x) => !has(x)).map((name) => ({ name, tip: skillTip(name) }));
+      const covered = c.skills.length ? c.have.length / c.skills.length : 0;
+      c.match = Math.min(98, Math.round(40 + (c.circles.length / 4) * 35 + covered * 15 + (Math.min(3, c.items.length) / 3) * 10));
+      c.advice = KEYS.filter((k) => !c.circles.includes(k)).map((k) => CAREER_GAP[k](c.name));
+      if (!c.advice.length) c.advice.push(`四個圈都符合，是最值得優先投入的方向：直接開始累積「${c.name}」的作品和實績。`);
+      c.firstStep = `這週就做：找 3 個「${c.name}」的職缺或案子，圈出你還沒有的要求`;
+    });
+    const need = new Map();
+    careers.slice(0, 3).forEach((c) => c.skills.forEach((s) => { if (!has(s)) need.set(s, [...(need.get(s) || []), c.name]); }));
+    const skills = [...need.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 6).map(([name, forCareers]) => ({ name, forCareers }));
+    const owned = [...new Set(careers.slice(0, 3).flatMap((c) => c.skills).filter(has))];
+
+    const weakest = CIRCLES.slice().sort((a, b) => inCircle(a.key).length - inCircle(b.key).length)[0];
+    const pick = (keys, exclude) => careers.find((c) => keys.every((k) => c.circles.includes(k)) && !exclude.includes(c.name));
+    const paths = [];
+    const stable = pick(['good', 'paid'], []);
+    if (stable) paths.push({ title: '穩定發展', career: stable, how: `用你已經擅長、也有人付錢的能力，往「${stable.name}」深耕，最快看到成果。` });
+    const passion = pick(['love', 'good'], paths.map((p) => p.career.name));
+    if (passion) paths.push({ title: '熱情轉型', career: passion, how: `把熱愛又擅長的事變成工作，往「${passion.name}」發展，需要補上市場與收入的部分。` });
+    const mission = pick(['love', 'need'], paths.map((p) => p.career.name));
+    if (mission) paths.push({ title: '斜槓試水溫', career: mission, how: `先用副業或專案的方式做「${mission.name}」，確認有人需要、自己也做得久，再決定要不要全職。` });
+
+    const top = careers[0];
+    const s1 = skills[0] ? skills[0].name : '核心技能';
+    const s2 = skills[1] ? skills[1].name : '作品集';
+    const timeline = top ? [
+      { h: 'd30', when: '第 1 個月', what: `探索：訪談 2 位正在做「${top.name}」的人，整理 5 個相關職缺的要求` },
+      { h: 'd90', when: '第 2～3 個月', what: `補強：學習「${s1}」和「${s2}」，完成一個能展示的小作品` },
+      { h: 'd90', when: '第 4～6 個月', what: '實戰：用作品接第一個案子、做志工專案，或開始投遞履歷' },
+      { h: 'y1', when: '6～12 個月', what: `累積：建立作品集與人脈，評估是否全職轉向「${top.name}」` },
+    ] : [];
+    return { careers, skills, owned, weakest, paths, timeline };
+  }
+
+  // ---------- ability analysis, rankings and staged roadmap (built in) ----------
+  const ABILITIES = [
+    { name: '溝通表達', k: ['溝通', '表達', '說話', '聊天', '簡報', '演講', '主持', '口才', '說故事', '人際', '交朋友', '談判', '公關'],
+      use: '適合需要說服、協調和對外溝通的角色。', grow: '每週做一次 3 分鐘的口頭分享，錄下來檢討。' },
+    { name: '文字內容', k: ['寫作', '文字', '文案', '編輯', '寫文章', '部落格', '內容', '自媒體', '翻譯', '新聞', '閱讀'],
+      use: '能把想法變成文章、腳本和教材，是很好放大的能力。', grow: '每週寫一篇 500 字的短文，固定發表。' },
+    { name: '創意設計', k: ['設計', '美術', '畫', '繪', '插畫', '視覺', '美感', '創意', '攝影', '拍照', '影像', '影片', '剪輯', '音樂', '手作', '工藝', '料理', '烘焙'],
+      use: '能做出看得見的作品，作品集就是最好的履歷。', grow: '模仿 3 個喜歡的作品，再做一個自己的版本。' },
+    { name: '分析思考', k: ['分析', '數據', '統計', '研究', '邏輯', '思考', '解決問題', '難題', '財務', '理財', '投資', '會計', '報表', 'excel', '調查'],
+      use: '擅長拆解問題、用數字說話，適合決策和策略相關工作。', grow: '每週分析一個生活或工作中的問題，寫下結論與依據。' },
+    { name: '科技工具', k: ['程式', '軟體', '開發', '工程', 'coding', '寫code', '電腦', '網站', 'app', '科技', '數位', '自動化', '3c'],
+      use: '能用工具提高效率，在各行各業都吃香。', grow: '每月學會一個新工具，用它解決一個實際問題。' },
+    { name: '助人關懷', k: ['傾聽', '陪伴', '同理', '照顧', '心理', '諮商', '情緒', '長照', '醫療', '健康', '護理', '志工', '公益', '動物', '寵物', '關懷'],
+      use: '讓人信任、願意敞開，適合服務、諮詢和照護領域。', grow: '練習提問技巧，每次對話多問一個「為什麼」。' },
+    { name: '教學引導', k: ['教學', '講師', '教書', '輔導', '課程', '家教', '帶人', '培訓', '教練', '引導', '分享', '教育'],
+      use: '能把會的東西教給別人，可以發展成課程或內訓。', grow: '把一項專長整理成 30 分鐘的小課，教給 3 個人。' },
+    { name: '組織管理', k: ['組織', '規劃', '管理', '專案', '領導', '統籌', '安排', '活動', '企劃', '行政', '整理', '營運'],
+      use: '能讓事情有條理地完成，是升遷到管理職的關鍵。', grow: '主動負責一個小專案，練習排時程和分工。' },
+    { name: '商業行銷', k: ['行銷', '社群', '品牌', '廣告', '銷售', '業務', '推銷', '電商', '網拍', '創業', '開店', '做生意', '顧問'],
+      use: '知道怎麼讓價值被看見、被買單，是變現的核心。', grow: '試著賣出一個小東西或服務，記錄整個過程。' },
+  ];
+  const CIRCLE_WEIGHT = { good: 3, paid: 2, love: 1.5, need: 1 };
+  const LEVELS = [
+    [80, '非常接近你的 IKIGAI', '方向已經很清楚，接下來重點是放大成果、提高收入。'],
+    [60, '方向清楚，持續累積', '有明確的交集，補上較弱的圈就能更接近 IKIGAI。'],
+    [40, '輪廓正在成形', '已經找到一些線索，建議用小實驗驗證哪個方向最適合。'],
+    [0, '探索初期', '先多寫一些項目，越具體越好，答案會慢慢浮現。'],
+  ];
+  const RISK_TIPS = {
+    love: '熱愛的事變少時容易倦怠：每週保留一段時間做純粹喜歡的事。',
+    good: '能力還不夠紮實時，先別急著全職投入：用 3 個月刻意練習，再接案驗證。',
+    need: '沒想清楚「誰需要」，做得再好也難持久：先找到 3 個真實的服務對象。',
+    paid: '收入還不穩定前不要裸辭：先用副業或專案驗證有人願意付錢。',
+  };
+
+  function analysis() {
+    const ins = careerInsights();
+    const total = state.items.length;
+    const abilities = ABILITIES.map((a, order) => {
+      let raw = 0;
+      const from = [];
+      state.items.forEach((it) => {
+        const text = it.text.toLowerCase();
+        if (!a.k.some((kw) => text.includes(kw))) return;
+        raw += circlesOf(it).reduce((sum, k) => sum + CIRCLE_WEIGHT[k], 0);
+        from.push(it.text);
+      });
+      return { ...a, raw, from, order };
+    });
+    const top = Math.max(7.5, ...abilities.map((a) => a.raw));
+    abilities.forEach((a) => { a.score = Math.round((a.raw / top) * 100); });
+    abilities.sort((a, b) => b.score - a.score || a.order - b.order);
+    const strong = abilities.filter((a) => a.score > 0).slice(0, 3);
+    const grow = abilities.filter((a) => !strong.includes(a)).slice(-2).reverse();
+
+    const counts = KEYS.map((k) => inCircle(k).length);
+    const sum = counts.reduce((a, b) => a + b, 0);
+    const entropy = sum ? -counts.filter(Boolean).reduce((h, n) => h + (n / sum) * Math.log(n / sum), 0) / Math.log(4) : 0;
+    const balance = Math.round(entropy * 100);
+    const circles = CIRCLES.map((c, i) => ({ key: c.key, short: c.short, n: counts[i], pct: Math.round((counts[i] / Math.max(1, ...counts)) * 100) }))
+      .sort((a, b) => b.n - a.n);
+
+    const careers = ins.careers.map((c) => ({ name: c.name, circles: c.circles, match: c.match })).sort((a, b) => b.match - a.match);
+
+    const assets = state.items.slice().sort((a, b) => circlesOf(b).length - circlesOf(a).length).slice(0, 5)
+      .map((it) => ({ text: it.text, circles: circlesOf(it) }));
+    const center = state.items.filter((it) => hasAll(it, KEYS)).length;
+    const near = state.items.filter((it) => circlesOf(it).length === 3).length;
+    const index = total ? Math.round(
+      35 * Math.min(1, (center * 2 + near) / 3)
+      + 25 * entropy
+      + 25 * ((careers[0] ? careers[0].match : 30) / 100)
+      + 15 * Math.min(1, total / 12),
+    ) : 0;
+    const [, level, levelTip] = LEVELS.find(([min]) => index >= min);
+    const priorities = ins.skills.map((x, i) => ({ name: x.name, forCareers: x.forCareers, level: i < 2 ? '優先' : (i < 4 ? '其次' : '之後') }));
+
+    const goal = careers[0] ? careers[0].name : (mainDir() ? mainDir().title : '你的方向');
+    const backup = careers[1] ? careers[1].name : '';
+    const third = careers[2] ? careers[2].name : '';
+    const s1 = priorities[0] ? priorities[0].name : '核心技能';
+    const s2 = priorities[1] ? priorities[1].name : '作品集';
+    const s3 = priorities[2] ? priorities[2].name : '';
+    const best = strong[0] ? strong[0].name : '你的強項';
+    const weak = ins.weakest;
+    const roadmap = [
+      { key: 'explore', h: 'd30', when: '0～3 個月', title: '探索驗證期', goal: `確認「${goal}」是不是真的適合你`,
+        time: '每週 3～5 小時：平日 2 次各 1 小時，週末 2 小時',
+        actions: [
+          `訪談 2～3 位正在做「${goal}」的人，問他們的一天、收入和入行方式`,
+          `整理「${goal}」${backup ? `和「${backup}」` : ''}各 5 個職缺或案子，列出共同要求的能力`,
+          `用「${best}」做一個週末小實驗，看自己做得開不開心`,
+          `開始學「${s1}」的基礎，每週寫一篇學習筆記`,
+          GAP_ADVICE[weak.key],
+        ],
+        checks: ['完成 2 次以上的業內訪談', `決定主要方向（${goal}${backup ? ` 或 ${backup}` : ''}）`, '寫下 3 個要補足的能力和學習順序'] },
+      { key: 'build', h: 'd90', when: '3～12 個月', title: '能力建立期', goal: '補齊關鍵能力，做出能證明實力的作品',
+        time: '每週 5～8 小時：平日每天 30～60 分鐘學習，週末半天做作品',
+        actions: [
+          `系統學習「${s1}」${s2 ? `和「${s2}」` : ''}，完成一門完整課程`,
+          `完成 2～3 個能公開展示的「${goal}」作品，整理成作品集`,
+          s3 ? `補強「${s3}」，用在下一個作品裡` : '把作品分享到社群或作品平台，收集回饋',
+          '用作品接第一個案子、專案或志工機會，拿到真實回饋',
+          '每季回顧一次：哪些事最投入、哪些最有收入，調整方向',
+        ],
+        checks: ['作品集有 3 件作品', '完成第一個真實案子或專案', '至少 1 位業內人士認可你的作品'] },
+      { key: 'grow', h: 'y1', when: '1～3 年', title: '定位深耕期', goal: `在「${goal}」建立專業定位與穩定收入`,
+        time: '視轉換方式：全職投入，或在本業之外每週 8～10 小時經營',
+        actions: [
+          '建立個人品牌：固定在一個平台分享專業內容，每月至少 2 篇',
+          '累積 3 個代表作品或成功案例，作為轉職或提高報價的依據',
+          '設定收入目標，評估全職、兼職或自行接案哪種最適合',
+          '加入相關社群或公會，建立 10 位以上的業內人脈',
+          backup ? `保留備案：持續關注「${backup}」${third ? `和「${third}」` : ''}，作為第二條路` : '保留一條備案路線，降低轉換風險',
+        ],
+        checks: ['有穩定的收入來源（工作或固定客戶）', '別人提到這個領域會想到你', '收入達到你設定的目標'] },
+    ];
+    // Two-week blocks for the first 12 weeks.
+    const weeks = [
+      { when: '第 1～2 週', title: '認識職業', tasks: [`列出 ${[goal, backup, third].filter(Boolean).map((x) => `「${x}」`).join('、')}各 5 個職缺或案子`, '圈出共同要求的能力和你還沒有的部分'], output: '一份「職業需求對照表」' },
+      { when: '第 3～4 週', title: '訪談驗證', tasks: [`找 2～3 位「${goal}」從業者聊 30 分鐘`, '試做一個相關的小任務，記錄做的感受'], output: '決定主要方向' },
+      { when: '第 5～6 週', title: `補能力：${s1}`, tasks: [`學習「${s1}」的基礎`, skillTip(s1)], output: '一份學習筆記和練習成果' },
+      { when: '第 7～8 週', title: `補能力：${s2}`, tasks: [`學習「${s2}」`, skillTip(s2)], output: '能拿出來展示的練習作品' },
+      { when: '第 9～10 週', title: '做作品', tasks: [`完成一個和「${goal}」相關、可以公開的作品`, '請 2 位業內人士給回饋並修改'], output: '作品集第一件作品' },
+      { when: '第 11～12 週', title: '投入市場', tasks: ['更新履歷、自我介紹和作品集頁面', '投遞或洽談 5 個機會，回顧 12 週成果並訂下一季計畫'], output: '第一個面試、案子或合作機會' },
+    ];
+    const habits = [
+      `每天 30 分鐘練習「${s1}」`,
+      `每週記錄一個和「${weak.short}」有關的發現，慢慢補強最弱的圈`,
+      '每月和一位業內人士聊天，擴展人脈',
+    ];
+    return {
+      index, level, levelTip, balance, circles, abilities, strong, grow, careers, assets, priorities, roadmap, weeks, habits,
+      risk: RISK_TIPS[weak.key], weakest: weak, crossPct: total ? Math.round((state.items.filter((it) => circlesOf(it).length > 1).length / total) * 100) : 0,
+    };
+  }
+
+  function rankBar(label, pct, color, extra = '') {
+    return `<div class="rank-row"><span class="rank-label">${label}</span><span class="rank-track"><span class="rank-fill" style="--w:${pct}%;--c:${color}"></span></span><span class="rank-val">${extra || `${pct}`}</span></div>`;
+  }
+
+  function analysisCardHtml() {
+    const a = analysis();
+    if (!state.items.length) return '';
+    const dots = (keys) => CIRCLES.map((c) => `<i class="dot${keys.includes(c.key) ? ' on' : ''}" style="--c:${c.color}"></i>`).join('');
+    return `
+      <div class="card" id="analysisCard">
+        <h2>能力分析與排名</h2>
+        <div class="score-hero">
+          <div class="score-ring" style="--p:${a.index}"><b data-count="${a.index}">${a.index}</b><span>IKIGAI 契合指數</span></div>
+          <div class="score-text"><b>${a.level}</b><p>${a.levelTip}</p>
+            <div class="mini-stats"><span><b>${a.balance}</b>四圈平衡度</span><span><b>${a.crossPct}%</b>跨圈項目</span><span><b>${a.careers[0] ? `${a.careers[0].match}%` : '—'}</b>最佳職業契合</span></div>
+          </div>
+        </div>
+        <div class="an-grid">
+          <div>
+            <h3>能力雷達排名</h3>
+            <div class="ranks">${a.abilities.map((x, i) => rankBar(`<em>${String(i + 1).padStart(2, '0')}</em>${x.name}`, x.score, i < 3 && x.score ? 'var(--good)' : 'var(--muted)', x.score ? '' : '—')).join('')}</div>
+            <p class="fine">依你寫的項目推算，「擅長」和「報酬」圈的項目權重較高。</p>
+          </div>
+          <div>
+            <h3>職業契合度排名</h3>
+            ${a.careers.length ? `<div class="ranks">${a.careers.map((c, i) => rankBar(`<em>${String(i + 1).padStart(2, '0')}</em>${esc(c.name)}`, c.match, 'var(--need)', `${c.match}%`)).join('')}</div>` : '<p class="hint">項目寫得更具體一點，就能看到職業排名。</p>'}
+            <h3>四圈強弱</h3>
+            <div class="ranks">${a.circles.map((c) => rankBar(c.short, c.pct, BY_KEY[c.key].color, `${c.n} 項`)).join('')}</div>
+          </div>
+        </div>
+        <div class="an-grid">
+          <div>
+            <h3>你的前三強項</h3>
+            ${a.strong.length ? `<ul class="strengths">${a.strong.map((x) => `<li><b>${x.name}</b><span>${x.use}</span><small>依據：${x.from.map(esc).join('、')}</small></li>`).join('')}</ul>` : '<p class="hint">「擅長」圈多寫幾項，就能分析你的強項。</p>'}
+            <h3>可以發展的能力</h3>
+            <ul class="strengths grow">${a.grow.map((x) => `<li><b>${x.name}</b><span>${x.grow}</span></li>`).join('')}</ul>
+          </div>
+          <div>
+            <h3>核心資產排名</h3>
+            <ol class="assets">${a.assets.map((x, i) => `<li><span><em>${String(i + 1).padStart(2, '0')}</em>${esc(x.text)}</span><span class="dots" aria-label="符合 ${x.circles.length} 個圈">${dots(x.circles)}</span></li>`).join('')}</ol>
+            <p class="fine">符合越多圈的項目，越值得投入時間放大。</p>
+            ${a.priorities.length ? `<h3>能力補強優先順序</h3><ol class="prio">${a.priorities.map((x) => `<li><span class="tag ${x.level === '優先' ? 'hot' : ''}">${x.level}</span><b>${esc(x.name)}</b><small>${x.forCareers.map(esc).join('、')}需要</small></li>`).join('')}</ol>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function roadmapCardHtml(readOnly) {
+    if (!state.items.length) return '';
+    const a = analysis();
+    return `
+      <div class="card" id="roadmapCard">
+        <h2>詳細生涯規劃</h2>
+        <p class="hint">依你的 3 個建議職業、強項和要補足的能力，排出從現在到 3 年後的路線，以及前 12 週每兩週要做的事。</p>
+        <div class="roadmap">${a.roadmap.map((st, i) => `
+          <div class="phase" style="--i:${i}">
+            <div class="phase-head"><span class="phase-no">${i + 1}</span><div><b>${st.title}</b><span>${st.when}</span></div></div>
+            <p class="phase-goal">${esc(st.goal)}</p>
+            <ul>${st.actions.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+            <div class="checks"><b>完成這個階段的檢核點</b>${st.checks.map((x) => `☐ ${esc(x)}`).join('<br>')}</div>
+            <p class="time">時間安排：${esc(st.time)}</p>
+          </div>`).join('')}</div>
+        <h3>前 12 週詳細行動表</h3>
+        <table class="weeks">${a.weeks.map((w) => `<tr><th>${w.when}</th><td><b>${esc(w.title)}</b>${w.tasks.map((x) => `・${esc(x)}`).join('<br>')}<small>完成後你會有：${esc(w.output)}</small></td></tr>`).join('')}</table>
+        <div class="an-grid">
+          <div><h3>每週好習慣</h3><ul class="plain-list">${a.habits.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>
+          <div><h3>風險提醒</h3><p class="gap" style="margin:0">${esc(a.risk)}</p></div>
+        </div>
+        ${readOnly ? '' : '<button class="btn ghost small" type="button" id="addTimeline" style="margin-top:14px">把規劃步驟加入行動清單</button>'}
+      </div>`;
+  }
+
+  function analysisReportHtml() {
+    if (!state.items.length) return '';
+    const a = analysis();
+    return `<section><h2>能力分析與排名</h2>
+      <p><b>IKIGAI 契合指數 ${a.index}／100：${a.level}</b>。${a.levelTip}（四圈平衡度 ${a.balance}、跨圈項目 ${a.crossPct}%）</p>
+      <table>
+        <tr><th>能力排名</th><td>${a.abilities.filter((x) => x.score).map((x, i) => `${i + 1}. ${x.name} ${x.score}`).join('　') || '—'}</td></tr>
+        <tr><th>職業契合度</th><td>${a.careers.map((c, i) => `${i + 1}. ${esc(c.name)} ${c.match}%`).join('　') || '—'}</td></tr>
+        <tr><th>前三強項</th><td>${a.strong.map((x) => `<b>${x.name}</b>：${x.use}`).join('<br>') || '—'}</td></tr>
+        <tr><th>可以發展</th><td>${a.grow.map((x) => `<b>${x.name}</b>：${x.grow}`).join('<br>')}</td></tr>
+        <tr><th>核心資產</th><td>${a.assets.map((x, i) => `${i + 1}. ${esc(x.text)}（${x.circles.length} 圈）`).join('　')}</td></tr>
+        ${a.priorities.length ? `<tr><th>補強順序</th><td>${a.priorities.map((x) => `[${x.level}] ${esc(x.name)}`).join('　')}</td></tr>` : ''}
+      </table>
+      <h3>詳細生涯規劃</h3>
+      <table>${a.roadmap.map((st) => `<tr><th>${st.title}<br><small>${st.when}</small></th><td><b>${esc(st.goal)}</b><br>${st.actions.map((x) => `・${esc(x)}`).join('<br>')}<br><small>檢核點：${st.checks.map(esc).join('；')}｜時間：${esc(st.time)}</small></td></tr>`).join('')}</table>
+      <h3>前 12 週詳細行動表</h3>
+      <table>${a.weeks.map((w) => `<tr><th>${w.when}</th><td><b>${esc(w.title)}</b>：${w.tasks.map(esc).join('；')}（成果：${esc(w.output)}）</td></tr>`).join('')}</table>
+      <p>每週好習慣：${a.habits.map(esc).join('；')}</p>
+      <p>風險提醒：${esc(a.risk)}</p>
+    </section>`;
+  }
+
+  const circleChips = (keys) => CIRCLES.map((c) => `<span class="cc${keys.includes(c.key) ? ' on' : ''}" style="--c:${c.color}">${c.short}</span>`).join('');
+
+  function careerCardHtml(readOnly) {
+    const ins = careerInsights();
+    const gap = `<div class="gap"><b>最需要補強的圈：${ins.weakest.short}</b>（${inCircle(ins.weakest.key).length} 項）　${GAP_ADVICE[ins.weakest.key]}</div>`;
+    if (!ins.careers.length) {
+      return `<div class="card" id="careerCard"><h2>職涯建議</h2>
+        <p class="hint">目前的項目還對應不到具體職業。試著寫得更具體一點，例如把「電腦」寫成「寫程式」、把「幫助人」寫成「教學」或「心理健康支持」。</p>${gap}</div>`;
+    }
+    const careerRows = ins.careers.map((c, i) => `
+      <div class="career-detail">
+        <div class="cd-head">
+          <span class="cd-no">${i + 1}</span>
+          <div class="cd-title"><b>${esc(c.name)}</b><span class="ccs" aria-label="符合 ${c.circles.length} 個圈">${circleChips(c.circles)}</span></div>
+          <span class="cd-match"><b>${c.match}%</b>契合度</span>
+        </div>
+        <p class="cd-why">為什麼適合：你寫了「${c.items.map(esc).join('、')}」，符合${c.circles.map((k) => BY_KEY[k].short).join('、')}。</p>
+        <div class="cd-skills">
+          <span class="cd-label">需要的能力</span>
+          ${c.skills.map((x) => `<span class="skill-tag${c.have.includes(x) ? ' have' : ''}">${c.have.includes(x) ? '✓ ' : ''}${esc(x)}</span>`).join('')}
+        </div>
+        ${c.gaps.length ? `<div class="cd-gaps"><span class="cd-label">要補足的能力與方法</span>
+          <ul>${c.gaps.map((g) => `<li><b>${esc(g.name)}</b>：${esc(g.tip)}</li>`).join('')}</ul></div>`
+    : '<p class="cd-why">需要的能力你大多已經具備，重點是累積作品和實績。</p>'}
+        <div class="cd-advice"><span class="cd-label">給你的建議</span>
+          <ul>${c.advice.map((x) => `<li>${esc(x)}</li>`).join('')}<li><b>${esc(c.firstStep)}</b></li></ul></div>
+        ${readOnly ? '' : `<button class="btn ghost small" type="button" data-addcareer="${i}">加入生涯規劃</button>`}
+      </div>`).join('');
+    const pathRows = ins.paths.map((p) => `<div class="path"><span class="path-tag">${p.title}</span><b>${esc(p.career.name)}</b><p>${esc(p.how)}</p></div>`).join('');
+    return `
+      <div class="card" id="careerCard">
+        <h2>3 個建議職業</h2>
+        <p class="hint">依你寫的項目和四個圈的交集挑出最適合的 3 個。打勾的是你已具備的能力，其餘是要補足的。</p>
+        <div class="career-list">${careerRows}</div>
+        ${pathRows ? `<h3>可以往哪個方向走</h3><div class="paths">${pathRows}</div>` : ''}
+        ${ins.owned.length ? `<p class="fine">你已具備：${ins.owned.map(esc).join('、')}</p>` : ''}
+        ${gap}
+        <p class="fine">建議僅供參考，實際選擇請依自己的情況與市場狀況判斷。</p>
+      </div>`;
+  }
+
+  function bindCareerCard() {
+    const card = $('careerCard');
+    if (!card) return;
+    const ins = careerInsights();
+    card.querySelectorAll('[data-addcareer]').forEach((b) => b.addEventListener('click', () => {
+      const c = ins.careers[Number(b.dataset.addcareer)];
+      if (state.plan.dirs.some((d) => d.title === c.name)) { toast('這個職業已經在生涯規劃裡了'); return; }
+      if (state.plan.dirs.length >= MAX_DIRS) { toast(`生涯規劃最多 ${MAX_DIRS} 個方向，請先刪除一個`); return; }
+      logEvent('加入職業', c.name);
+      const d = { id: uid(), title: c.name, s: Object.fromEntries(KEYS.map((k) => [k, c.circles.includes(k) ? 4 : 2])) };
+      state.plan.dirs.push(d);
+      if (!state.plan.main) state.plan.main = d.id;
+      save();
+      toast(`已把「${c.name}」加入生涯規劃`, { label: '前往', run: () => go('plan') });
+      renderProgress();
+    }));
+    if ($('addTimeline')) {
+      $('addTimeline').addEventListener('click', () => {
+        const an = analysis();
+        const steps = [...an.weeks.map((w) => [`${w.when}：${w.title}（${w.output}）`, 'd90']), ...an.roadmap.slice(1).flatMap((st) => st.actions.slice(0, 2).map((x) => [x, 'y1']))];
+        const added = steps.map(([x, h]) => addAction(x.slice(0, 80), h)).filter(Boolean).length;
+        save();
+        toast(added ? `已加入 ${added} 項行動` : '這些步驟已經在行動清單裡了', added ? { label: '前往', run: () => go('plan') } : null);
+        renderProgress();
+      });
+    }
+  }
+
+  function careerReportHtml() {
+    const ins = careerInsights();
+    if (!ins.careers.length) return '';
+    return `<section><h2>職涯建議</h2>
+      <table>${ins.careers.map((c) => `<tr><th>${esc(c.name)}<br><small>契合度 ${c.match}%</small></th><td>符合：${c.circles.map((k) => BY_KEY[k].short).join('、')}　依據：${c.items.map(esc).join('、')}
+        <br>需要的能力：${c.skills.map((x) => (c.have.includes(x) ? `✓${esc(x)}` : esc(x))).join('、')}
+        ${c.gaps.length ? `<br>要補足：${c.gaps.map((g) => `<b>${esc(g.name)}</b>（${esc(g.tip)}）`).join('；')}` : ''}
+        <br>建議：${[...c.advice, c.firstStep].map(esc).join('；')}</td></tr>`).join('')}</table>
+      ${ins.paths.length ? `<h3>可以往哪個方向走</h3><table>${ins.paths.map((p) => `<tr><th>${p.title}</th><td><b>${esc(p.career.name)}</b>　${esc(p.how)}</td></tr>`).join('')}</table>` : ''}
+      ${ins.skills.length ? `<h3>需要加強的能力</h3><table>${ins.skills.map((s) => `<tr><th>${esc(s.name)}</th><td>${s.forCareers.map(esc).join('、')}需要</td></tr>`).join('')}</table>` : ''}
+      <p>最需要補強的圈：${ins.weakest.short}。${GAP_ADVICE[ins.weakest.key]}</p>
+    </section>`;
+  }
+
+  // Extra pages of the full report, unlocked by referrals.
+  function careerAdvancedHtml() {
+    const ins = careerInsights();
+    if (!ins.careers.length) return '';
+    const strengths = inCircle('good').map((it) => it.text.toLowerCase());
+    const has = (skill) => strengths.some((g) => skill.toLowerCase().includes(g) || g.includes(skill.toLowerCase().slice(0, 2)));
+    const pitch = `我擅長${inCircle('good').slice(0, 2).map((it) => it.text).join('、') || '學習新事物'}，熱愛${inCircle('love').slice(0, 2).map((it) => it.text).join('、') || '挑戰'}，希望用這些能力${inCircle('need').length ? `幫助${inCircle('need')[0].text}` : '創造價值'}。`;
+    return `<section><h2>完整版：前三個建議職業的準備方式</h2>
+      ${ins.careers.slice(0, 3).map((c) => {
+        const need = c.skills.filter((x) => !has(x));
+        const owned = c.skills.filter(has);
+        const s1 = need[0] || c.skills[0] || '核心技能';
+        return `<h3>${esc(c.name)}</h3><table>
+          <tr><th>為什麼適合</th><td>符合${c.circles.map((k) => BY_KEY[k].short).join('、')}；依據：${c.items.map(esc).join('、')}</td></tr>
+          <tr><th>需要的能力</th><td>${c.skills.map(esc).join('、')}</td></tr>
+          <tr><th>你已具備</th><td>${owned.map(esc).join('、') || '—'}</td></tr>
+          <tr><th>第 1～30 天</th><td>學習「${esc(s1)}」的基礎，每週整理一篇學習筆記</td></tr>
+          <tr><th>第 31～60 天</th><td>完成一個和「${esc(c.name)}」有關、可以公開展示的小作品</td></tr>
+          <tr><th>第 61～90 天</th><td>請 3 位業內人士給回饋，修正後放進作品集，並投遞或洽談 3 個機會</td></tr>
+        </table>`;
+      }).join('')}
+      <h3>自我介紹可以這樣說</h3><p>${esc(pitch)}</p>
+    </section>`;
+  }
+
+  function careerText() {
+    const ins = careerInsights();
+    if (!ins.careers.length) return [];
+    const lines = ['', '— 職涯建議 —'];
+    ins.careers.forEach((c) => lines.push(`・${c.name}（符合 ${c.circles.map((k) => BY_KEY[k].short).join('、')}）`));
+    ins.paths.forEach((p) => lines.push(`【${p.title}】${p.career.name}：${p.how}`));
+    if (ins.skills.length) lines.push(`需要加強：${ins.skills.map((s) => s.name).join('、')}`);
+    lines.push(`最需要補強的圈：${ins.weakest.short}。${GAP_ADVICE[ins.weakest.key]}`);
+    ins.timeline.forEach((t) => lines.push(`${t.when}：${t.what}`));
+    return lines;
+  }
+
+  // ---------- career plan ----------
+  function dirSuggestions() {
+    const taken = new Set(state.plan.dirs.map((d) => d.title));
+    return state.items
+      .filter((it) => circlesOf(it).length >= 2 && !taken.has(it.text))
+      .sort((a, b) => circlesOf(b).length - circlesOf(a).length)
+      .slice(0, 6);
+  }
+
+  function dirHtml(d) {
+    const isMain = d.id === state.plan.main;
+    const fit = fitOf(d);
+    return `
+      <div class="dir${isMain ? ' main' : ''}" data-dir="${d.id}">
+        <div class="dir-head">
+          <label class="sr-only" for="dt-${d.id}">方向名稱</label>
+          <input type="text" id="dt-${d.id}" class="dir-title" data-dir="${d.id}" maxlength="60" value="${esc(d.title)}">
+          ${isMain ? '<span class="badge">主要方向</span>' : `<button class="btn ghost small" type="button" data-main="${d.id}">設為主要方向</button>`}
+          <button class="btn danger small" type="button" data-deldir="${d.id}" aria-label="刪除方向 ${esc(d.title)}">刪除</button>
+        </div>
+        <div class="dir-body">
+          <div class="mini" data-mini="${d.id}">${venn({ radii: radiiFrom(d.s), counts: false, compact: true })}</div>
+          <div class="sliders">
+            ${CIRCLES.map((c) => `<div class="slider" style="--c:${c.color}">
+              <label for="sl-${d.id}-${c.key}">${c.short}</label>
+              <input type="range" id="sl-${d.id}-${c.key}" min="1" max="5" step="1" value="${d.s[c.key]}" data-dir="${d.id}" data-key="${c.key}" aria-label="${esc(d.title)} 符合${c.label}的程度">
+              <output>${d.s[c.key]}</output></div>`).join('')}
+          </div>
+        </div>
+        <div class="fit"><span>契合度</span><span class="track"><b style="width:${(fit / 20) * 100}%"></b></span><b data-fit="${d.id}">${fit}/20</b></div>
+      </div>`;
+  }
+
+  function planBlock() {
+    const dir = mainDir();
+    const err = planError ? `<div class="alert" role="alert"><p>${esc(planError)}</p>
+      <div class="row"><button class="btn small" type="button" id="planRetry">重試</button></div></div>` : '';
+    return `
+      <div class="ai-head">
+        <button class="btn" type="button" id="planAi" ${!dir || !aiAvailable || planBusy ? 'disabled' : ''}>${planBusy ? '產生中…' : '產生建議計畫'}</button>
+        <span class="status">${!dir ? '先在上面選一個主要方向。' : planBusy ? '正在依你的四個圈整理計畫…' : '會依你的四個圈填入空白的目標，並建議行動清單。'}</span>
+      </div>${err}${planBusy ? '<div class="skeleton" aria-hidden="true"><i></i><i></i><i></i></div>' : ''}`;
+  }
+
+  function actionsHtml() {
+    const acts = state.plan.actions;
+    const done = acts.filter((a) => a.done).length;
+    const groups = HORIZONS.map((h) => {
+      const list = acts.filter((a) => a.h === h.key);
+      if (!list.length) return '';
+      return `<div class="horizon"><h4>${h.label}內</h4>${list.map((a) => `
+        <div class="act${a.done ? ' done' : ''}">
+          <input type="checkbox" id="ac-${a.id}" data-act="${a.id}" ${a.done ? 'checked' : ''}>
+          <label for="ac-${a.id}">${esc(a.text)}</label>
+          <button type="button" data-delact="${a.id}" aria-label="刪除行動 ${esc(a.text)}">×</button>
+        </div>`).join('')}</div>`;
+    }).join('');
+    return `
+      ${acts.length ? `<div class="plan-progress"><span>完成 <b>${done}</b>/${acts.length}</span><span class="track"><b style="width:${(done / acts.length) * 100}%"></b></span><span>${Math.round((done / acts.length) * 100)}%</span></div>` : ''}
+      <div class="actions-list">${groups || '<p class="empty">還沒有行動。寫下第一個能在這週開始的小行動。</p>'}</div>
+      <form class="add-action" id="actForm">
+        <label class="sr-only" for="actInput">新增行動</label>
+        <input type="text" id="actInput" maxlength="80" placeholder="例如：訪談 3 位在做這件事的人" autocomplete="off">
+        <label class="sr-only" for="actH">期限</label>
+        <select id="actH">${HORIZONS.map((h) => `<option value="${h.key}">${h.label}</option>`).join('')}</select>
+        <button class="btn" type="submit">新增</button>
+      </form>`;
+  }
+
+  function renderPlan() {
+    const sugg = dirSuggestions();
+    const careerSugg = careerInsights().careers.filter((c) => !state.plan.dirs.some((d) => d.title === c.name)).slice(0, 4);
+    const dir = mainDir();
+    $('view').innerHTML = `
+      <section class="${viewClass()}">
+        <div class="card">
+          <div class="eyebrow" style="--c:var(--text)">第 7 步 · 生涯規劃</div>
+          <h2>把交集變成方向</h2>
+          <p class="hint">寫下 1 到 3 個可能的職涯方向，替每個方向評估它符合四個圈的程度（1 到 5 分）。圓越大、越平均，代表越接近你的 IKIGAI。</p>
+          <div class="dirs" id="dirs">${state.plan.dirs.map(dirHtml).join('') || '<p class="empty">還沒有方向。可以從下面的建議開始，或自己寫一個。</p>'}</div>
+          ${state.plan.dirs.length < MAX_DIRS ? `
+          <form class="add-row" id="dirForm" style="margin-top:12px">
+            <label class="sr-only" for="dirInput">新增方向</label>
+            <input type="text" id="dirInput" maxlength="60" placeholder="例如：技術寫作與教學創作者" autocomplete="off">
+            <button class="btn" type="submit">新增方向</button>
+          </form>
+          ${careerSugg.length ? `<div class="chips"><span>建議職業</span>${careerSugg.map((c, i) => `<button type="button" class="chip" data-csugg="${i}">+ ${esc(c.name)}</button>`).join('')}</div>` : ''}
+          ${sugg.length ? `<div class="chips"><span>從你的交集開始</span>${sugg.map((it) => `<button type="button" class="chip" data-sugg="${it.id}">+ ${esc(it.text)}</button>`).join('')}</div>` : ''}` : '<p class="fine">最多 3 個方向。</p>'}
+        </div>
+        <div class="card">
+          <h2>${dir ? `「${esc(dir.title)}」的目標` : '目標'}</h2>
+          <p class="hint">目標要具體、可以衡量，例如「發表 4 篇文章」比「多寫作」好。</p>
+          <div class="goals">${HORIZONS.map((h) => `<div class="goal"><label for="g-${h.key}">${h.label}</label><textarea id="g-${h.key}" data-goal="${h.key}" maxlength="200" placeholder="${h.key === 'd30' ? '這個月要完成什麼？' : h.key === 'd90' ? '三個月後要看到什麼成果？' : '一年後希望在哪裡？'}">${esc(state.plan.goals[h.key])}</textarea></div>`).join('')}</div>
+          <div id="planBox" style="margin-top:14px">${aiAvailable ? planBlock() : ''}</div>
+        </div>
+        <div class="card">
+          <h2>行動清單</h2>
+          <p class="hint">完成就勾起來，進度會自動計算。</p>
+          <div id="actionsBox">${actionsHtml()}</div>
+        </div>
+        ${shareCardHtml()}
+      </section>`;
+    bindPlan();
+    bindShareCard();
+  }
+
+  function refreshPlanBlock() {
+    if (!$('planBox')) return;
+    $('planBox').innerHTML = aiAvailable ? planBlock() : '';
+    if (aiAvailable) bindPlanAi();
+  }
+  function refreshActions() {
+    $('actionsBox').innerHTML = actionsHtml();
+    bindActions();
+    renderProgress();
+    renderNav();
+  }
+  function bindPlanAi() {
+    if (!$('planAi')) return;
+    $('planAi').addEventListener('click', runPlan);
+    if ($('planRetry')) $('planRetry').addEventListener('click', runPlan);
+  }
+  function addAction(text, h, done = false) {
+    text = text.replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (!text || state.plan.actions.some((a) => a.text === text)) return false;
+    if (state.plan.actions.length >= MAX_ACTIONS) { toast(`最多 ${MAX_ACTIONS} 項行動`); return false; }
+    state.plan.actions.push({ id: uid(), text, h, done });
+    return true;
+  }
+  function bindActions() {
+    $('actForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (addAction($('actInput').value, $('actH').value)) { save(); refreshActions(); $('actInput').focus(); }
+    });
+  }
+  function addDirection(title, s) {
+    title = title.replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!title || state.plan.dirs.length >= MAX_DIRS) return;
+    if (state.plan.dirs.some((d) => d.title === title)) { toast('這個方向已經在清單裡了'); return; }
+    const d = { id: uid(), title, s: s || { love: 3, good: 3, need: 3, paid: 3 } };
+    state.plan.dirs.push(d);
+    if (!state.plan.main) state.plan.main = d.id;
+    save();
+    renderPlan();
+  }
+  function bindPlan() {
+    const view = $('view');
+    if ($('dirForm')) {
+      $('dirForm').addEventListener('submit', (e) => { e.preventDefault(); addDirection($('dirInput').value); });
+    }
+    view.querySelectorAll('.dir-title').forEach((inp) => {
+      inp.addEventListener('change', () => {
+        const d = state.plan.dirs.find((x) => x.id === inp.dataset.dir);
+        const title = inp.value.replace(/\s+/g, ' ').trim().slice(0, 60);
+        if (!d) return;
+        if (!title) { inp.value = d.title; return; }
+        d.title = title;
+        save();
+        if (d.id === state.plan.main) renderPlan();
+      });
+    });
+    view.querySelectorAll('input[type="range"]').forEach((r) => {
+      r.addEventListener('input', () => {
+        const d = state.plan.dirs.find((x) => x.id === r.dataset.dir);
+        d.s[r.dataset.key] = score(r.value);
+        r.nextElementSibling.textContent = d.s[r.dataset.key];
+        view.querySelector(`[data-mini="${d.id}"]`).innerHTML = venn({ radii: radiiFrom(d.s), counts: false, compact: true });
+        const fit = fitOf(d);
+        const fitEl = view.querySelector(`[data-fit="${d.id}"]`);
+        fitEl.textContent = `${fit}/20`;
+        fitEl.previousElementSibling.firstElementChild.style.width = `${(fit / 20) * 100}%`;
+      });
+      r.addEventListener('change', () => save());
+    });
+    let goalTimer;
+    view.querySelectorAll('[data-goal]').forEach((t) => t.addEventListener('input', () => {
+      state.plan.goals[t.dataset.goal] = t.value;
+      clearTimeout(goalTimer);
+      goalTimer = setTimeout(() => save(), 500);
+    }));
+    bindPlanAi();
+    bindActions();
+  }
+
+  // ---------- share & export card ----------
+  function shareCardHtml(readOnly) {
+    const hasPlan = Boolean(mainDir());
+    return `
+      <div class="card" id="shareCard">
+        <h2>分享與匯出</h2>
+        <div class="share-section">
+          <h3>分享字卡</h3>
+          <p class="hint">${readOnly ? '' : `你是「<b>${esc(archetype().name)}</b>」。`}選一種風格和尺寸，產生 ${hasPlan ? 7 : 6} 張字卡，每張都有 QR Code，朋友一掃就能測。${hasPlan ? '' : '完成「生涯規劃」後會多一張計畫字卡。'}</p>
+          <div class="card-opts">
+            <div class="seg" role="group" aria-label="風格">${Object.entries(THEMES).filter(([k]) => !readOnly || k !== 'gold').map(([k, v]) => `<button type="button" data-theme-pick="${k}" aria-pressed="${k === cardTheme}" class="${v.locked && !unlocked() ? 'locked' : ''}"><i class="sw" style="background:linear-gradient(135deg, ${v.bg[0]}, ${v.bg[1]})"></i>${v.label}</button>`).join('')}</div>
+            <div class="seg" role="group" aria-label="尺寸">${Object.entries(FORMATS).map(([k, v]) => `<button type="button" data-format-pick="${k}" aria-pressed="${k === cardFormat}">${v.label}</button>`).join('')}</div>
+          </div>
+          <div class="toolbar" style="margin-top:12px"><button class="btn" type="button" id="makeCards">產生字卡</button><button class="btn ghost" type="button" id="dlAll" hidden>全部下載</button></div>
+          <div class="cards-grid" id="cardsGrid"></div>
+        </div>
+        ${readOnly ? '' : `
+        <div class="share-section invite">
+          <h3>邀請朋友一起測</h3>
+          <p class="hint">把你的專屬連結傳給朋友。朋友透過你的連結、字卡 QR Code 或分享頁開始測驗，都會記下是你推薦的。</p>
+          <div id="refProgress"></div>
+          <div class="invite-box" id="inviteText">${esc(inviteText())}</div>
+          <div class="toolbar" style="margin-top:10px">
+            <button class="btn" type="button" id="copyInvite">複製邀請文字</button>
+            ${navigator.share ? '<button class="btn ghost" type="button" id="shareInvite">分享給朋友</button>' : ''}
+          </div>
+        </div>`}
+        ${readOnly ? '' : `
+        <div class="share-section">
+          <h3>分享連結</h3>
+          <p class="hint">別人點開連結會看到你的結果（唯讀），不會改到你的資料。</p>
+          <div class="opts">
+            <label for="shareName">顯示名稱</label>
+            <input type="text" id="shareName" maxlength="20" placeholder="選填，例如：小安" value="${esc(state.name)}">
+            <label${state.ai ? '' : ' hidden'}><input type="checkbox" id="shareAi" ${state.ai ? 'checked' : 'disabled'}> 包含深度解析</label>
+            <label><input type="checkbox" id="sharePlan" ${hasPlan ? 'checked' : 'disabled'}> 包含生涯規劃</label>
+          </div>
+          <div class="toolbar" style="margin-top:10px"><button class="btn" type="button" id="makeLink">產生分享連結</button></div>
+          <div id="linkBox"></div>
+          <p class="fine">連結裡直接包含你的清單內容，任何拿到連結的人都看得到，請只分享給信任的人。</p>
+        </div>`}
+        ${readOnly || !state.profile.consent || !mailEnabled || !state.profile.email ? '' : `<div class="share-section">
+          <h3>完整報告寄到信箱</h3>
+          <p class="hint">寄到 <b>${esc(state.profile.email)}</b>，內容包含人格類型、四個圈、建議職業、需要加強的能力、90 天準備計畫和生涯規劃。完成生涯規劃後再寄一次，報告會更完整。</p>
+          <button class="btn" type="button" id="mailBtn">寄完整報告到信箱</button>
+        </div>`}
+        ${readOnly || !state.profile.consent ? '' : `<div class="share-section">
+          <h3>我的基本資料</h3>
+          <div class="me-line"><span>${esc(state.profile.name)}${state.profile.contact ? ` · ${esc(state.profile.contact)}` : ''}${state.profile.email ? ` · ${esc(state.profile.email)}` : ''}</span><button class="btn ghost small" type="button" id="editProfile">修改</button></div>
+        </div>`}
+        <div class="share-section">
+          <h3>報告與備份</h3>
+          <div class="toolbar">
+            <button class="btn ghost" type="button" id="pdfBtn">匯出 PDF 報告</button>
+            <button class="btn ghost" type="button" id="copyBtn">複製文字</button>
+            ${readOnly ? '' : `<button class="btn ghost" type="button" id="exportBtn">匯出 JSON</button>
+            <button class="btn ghost" type="button" id="importBtn">匯入 JSON</button>
+            <span id="resetWrap"><button class="btn danger" type="button" id="resetBtn">全部清除</button></span>`}
+          </div>
+          <p class="fine">「匯出 PDF 報告」會開啟列印視窗，印表機請選「另存為 PDF」。</p>
+        </div>
+      </div>`;
+  }
+
+  function bindShareCard() {
+    renderReferralProgress();
+    refreshReferrals();
+    if ($('mailBtn')) $('mailBtn').addEventListener('click', () => sendReport(false));
+    if ($('editProfile')) $('editProfile').addEventListener('click', () => { editingProfile = true; render(); window.scrollTo(0, 0); });
+    $('makeCards').addEventListener('click', makeCards);
+    $('dlAll').addEventListener('click', downloadAll);
+    document.querySelectorAll('[data-theme-pick]').forEach((b) => b.addEventListener('click', () => {
+      if (THEMES[b.dataset.themePick].locked && !unlocked()) {
+        toast(`邀請 ${referral.goal} 位朋友完成測驗，就能解鎖「金箔」限定風格`);
+        return;
+      }
+      cardTheme = b.dataset.themePick;
+      document.querySelectorAll('[data-theme-pick]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      if (lastCards.length) makeCards();
+    }));
+    document.querySelectorAll('[data-format-pick]').forEach((b) => b.addEventListener('click', () => {
+      cardFormat = b.dataset.formatPick;
+      document.querySelectorAll('[data-format-pick]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      if (lastCards.length) makeCards();
+    }));
+    if ($('copyInvite')) {
+      $('copyInvite').addEventListener('click', () => { logEvent('邀請朋友', '複製'); save(true); copy(inviteText(), '已複製邀請文字，貼到 LINE 或 IG 就能分享'); });
+      if ($('shareInvite')) {
+        $('shareInvite').addEventListener('click', () => {
+          logEvent('邀請朋友', '分享');
+          save(true);
+          navigator.share({ title: 'IKIGAI 生涯羅盤', text: inviteText() }).catch(() => {});
+        });
+      }
+    }
+    $('pdfBtn').addEventListener('click', printReport);
+    $('copyBtn').addEventListener('click', () => { logEvent('複製文字'); save(true); copy(asText(), '已複製，可以貼到 LINE 或筆記'); });
+    if ($('shareName')) {
+      $('shareName').addEventListener('change', (e) => { state.name = e.target.value.trim().slice(0, 20); save(); });
+      $('makeLink').addEventListener('click', makeLink);
+    }
+    if ($('exportBtn')) {
+      $('exportBtn').addEventListener('click', exportJson);
+      $('importBtn').addEventListener('click', () => $('importFile').click());
+      bindReset();
+    }
+  }
+  function bindReset() {
+    $('resetBtn').addEventListener('click', () => {
+      $('resetWrap').innerHTML = '<span class="confirm">確定清除全部？無法復原。<button class="btn danger small" type="button" id="resetYes">清除</button><button class="btn ghost small" type="button" id="resetNo">取消</button></span>';
+      $('resetYes').addEventListener('click', () => { state = blank(); filter = null; aiError = null; planError = null; save(); lastStep = 'result'; render(); toast('已全部清除'); });
+      $('resetNo').addEventListener('click', () => { $('resetWrap').innerHTML = '<button class="btn danger" type="button" id="resetBtn">全部清除</button>'; bindReset(); });
+    });
+  }
+
+  // ---------- personality type ----------
+  const ARCHETYPES = {
+    ikigai: { name: 'IKIGAI 實踐者', en: 'THE INTEGRATOR', tagline: '熱愛、擅長、需要與報酬，已經在你身上交會。', strengths: ['方向清楚', '熱情變價值', '行動力強'], advice: '把中心的那件事做深、做久，讓更多人看見你的價值。' },
+    passion: { name: '熱情創作者', en: 'THE CREATOR', tagline: '做喜歡的事時，你也做得特別好。', strengths: ['投入', '創造力', '自我驅動'], advice: '找出誰需要你的作品，誰願意為它付費。' },
+    mission: { name: '使命實踐家', en: 'THE CHANGEMAKER', tagline: '你在意的事，正是世界缺少的。', strengths: ['同理心', '價值感', '影響力'], advice: '把熱情練成專業，讓善意也能養活自己。' },
+    profession: { name: '專業職人', en: 'THE EXPERT', tagline: '你的能力，市場已經願意買單。', strengths: ['專業', '穩定', '值得信賴'], advice: '找回讓你心動的部分，別讓工作只剩下工作。' },
+    vocation: { name: '天職開拓者', en: 'THE PATHFINDER', tagline: '你看得見需求，也知道怎麼讓它有價值。', strengths: ['洞察力', '務實', '解決問題'], advice: '把自己的熱愛放進去，會走得更遠。' },
+    love: { name: '探索夢想家', en: 'THE DREAMER', tagline: '你心裡有很多熱愛，正在找一個出口。', strengths: ['好奇心', '熱情', '想像力'], advice: '挑一件最愛的事，刻意練成你的強項。' },
+    good: { name: '潛力技術家', en: 'THE CRAFTSMAN', tagline: '你手上有能力，正等待屬於你的舞台。', strengths: ['學得快', '執行力', '專注'], advice: '想一想：這些能力可以幫上誰？' },
+    need: { name: '社會關懷者', en: 'THE CAREGIVER', tagline: '你總是先看見別人的需要。', strengths: ['同理', '責任感', '溫暖'], advice: '把關心變成一項專業，幫助更多人。' },
+    paid: { name: '務實行動派', en: 'THE ACHIEVER', tagline: '你知道價值在哪裡，也願意去爭取。', strengths: ['務實', '效率', '目標感'], advice: '留點時間給真正喜歡的事，動力會更持久。' },
+  };
+  const PAIR_KEYS = { passion: ['love', 'good'], mission: ['love', 'need'], profession: ['good', 'paid'], vocation: ['need', 'paid'] };
+  function archetype() {
+    if (state.items.some((it) => hasAll(it, KEYS))) return { key: 'ikigai', ...ARCHETYPES.ikigai };
+    const pairs = Object.entries(PAIR_KEYS).map(([key, keys]) => [key, state.items.filter((it) => hasAll(it, keys)).length]);
+    const [bestPair, n] = pairs.reduce((a, b) => (b[1] > a[1] ? b : a));
+    if (n > 0) return { key: bestPair, ...ARCHETYPES[bestPair] };
+    const big = CIRCLES.slice().sort((a, b) => inCircle(b.key).length - inCircle(a.key).length)[0].key;
+    return { key: big, ...ARCHETYPES[big] };
+  }
+  const topItems = (n) => state.items.slice().sort((a, b) => circlesOf(b).length - circlesOf(a).length).slice(0, n).map((it) => it.text);
+
+  // ---------- referral links ----------
+  const siteOrigin = () => location.origin;
+  const inviteUrl = (src) => `${siteOrigin()}/?ref=${state.rid}&src=${src}`;
+  const shortHost = () => location.host;
+  function inviteText() {
+    return `我剛做完 IKIGAI 生涯羅盤，原來我是「${archetype().name}」！用四個圈找出適合自己的方向，大約 15 分鐘，推薦你也測測看 👉 ${inviteUrl('invite')}`;
+  }
+
+  // ---------- cards (canvas) ----------
+  const FONT = '"PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Heiti TC", sans-serif';
+  const THEMES = {
+    dawn: {
+      label: '晨光', bg: ['#fdf8f3', '#efe7f6'], ink: '#1f1c1a', muted: '#6d665f', panel: 'rgba(255,255,255,0.74)', line: 'rgba(31,28,26,0.10)',
+      glow: 0.22, blend: 'multiply', alpha: '59', qrDark: '#1f1c1a', qrLight: '#ffffff', grain: 0.05,
+      c: { love: '#dc4f67', good: '#dd9324', need: '#23988b', paid: '#4f63d6' },
+    },
+    night: {
+      label: '夜空', bg: ['#12142a', '#2c1e40'], ink: '#f6f2ea', muted: '#bcb5cc', panel: 'rgba(255,255,255,0.08)', line: 'rgba(255,255,255,0.16)',
+      glow: 0.36, blend: 'screen', alpha: '52', qrDark: '#12142a', qrLight: '#f6f2ea', grain: 0.07,
+      c: { love: '#f27c90', good: '#f2b552', need: '#4ec6b7', paid: '#8796f3' },
+    },
+    washi: {
+      label: '和紙', bg: ['#f3ead9', '#e1d0b4'], ink: '#2b2418', muted: '#6f624e', panel: 'rgba(255,253,247,0.6)', line: 'rgba(43,36,24,0.15)',
+      glow: 0.16, blend: 'multiply', alpha: '55', qrDark: '#2b2418', qrLight: '#fbf6ec', grain: 0.09,
+      c: { love: '#c8485e', good: '#c98a24', need: '#2b8a7e', paid: '#4a5bb8' },
+    },
+  };
+  THEMES.gold = {
+    label: '金箔', locked: true, bg: ['#1c1712', '#3b2d18'], ink: '#f7ecd4', muted: '#d2bd92', panel: 'rgba(255,236,200,0.08)', line: 'rgba(246,226,180,0.24)',
+    glow: 0.3, blend: 'screen', alpha: '4d', qrDark: '#1c1712', qrLight: '#f7ecd4', grain: 0.08, foil: true,
+    c: { love: '#eaa79f', good: '#f0c46a', need: '#9fd3b9', paid: '#aab5ef' },
+  };
+  const FORMATS = { post: { w: 1080, h: 1350, label: '貼文 4:5' }, story: { w: 1080, h: 1920, label: '限時動態 9:16' } };
+
+  // ---------- referral reward ----------
+  const referral = { count: null, goal: 3, reward: '金色限定字卡與完整版職涯報告' };
+  const unlocked = () => referral.count !== null && referral.count >= referral.goal;
+  async function refreshReferrals() {
+    if (shareMode || state.isSample || !state.profile.consent) return;
+    try {
+      const res = await fetch(`/ikigai/referrals/${state.rid}`);
+      if (!res.ok) return;
+      Object.assign(referral, await res.json());
+      if (unlocked() && !state.events.some((e) => e.type === '解鎖獎勵')) { logEvent('解鎖獎勵', `${referral.count} 位朋友`); save(true); }
+      renderReferralProgress();
+    } catch (err) { /* offline: leave the progress hidden */ }
+  }
+  function renderReferralProgress() {
+    const box = $('refProgress');
+    if (!box || referral.count === null) return;
+    const pct = Math.min(100, (referral.count / referral.goal) * 100);
+    box.innerHTML = unlocked()
+      ? `<div class="ref-done"><b>已解鎖：${esc(referral.reward)}</b><span>已有 ${referral.count} 位朋友透過你完成測驗。字卡多了「金箔」風格，「下載完整版報告」也已開放。</span></div>`
+      : `<div class="ref-progress"><div class="ref-head"><b>邀請 ${referral.goal} 位朋友完成測驗，解鎖${esc(referral.reward)}</b><span>${referral.count}/${referral.goal}</span></div><span class="track"><b style="width:${pct}%"></b></span></div>`;
+    document.querySelectorAll('[data-theme-pick="gold"]').forEach((b) => { b.classList.toggle('locked', !unlocked()); b.title = unlocked() ? '' : `邀請 ${referral.goal} 位朋友即可解鎖`; });
+    if ($('pdfBtn')) $('pdfBtn').textContent = unlocked() ? '下載完整版報告' : '匯出 PDF 報告';
+  }
+
+  let cardTheme = 'dawn';
+  let cardFormat = 'post';
+
+  function wrapLines(ctx, text, maxW, maxLines) {
+    const lines = [];
+    let line = '';
+    [...String(text)].forEach((ch) => {
+      if (ch === '\n') { lines.push(line); line = ''; return; }
+      if (ctx.measureText(line + ch).width > maxW && line) { lines.push(line); line = ch; } else line += ch;
+    });
+    if (line) lines.push(line);
+    if (lines.length > maxLines) {
+      const cut = lines.slice(0, maxLines);
+      cut[maxLines - 1] = `${cut[maxLines - 1].slice(0, -1)}…`;
+      return cut;
+    }
+    return lines;
+  }
+  function drawText(ctx, text, x, y, maxW, lineH, maxLines) {
+    const lines = wrapLines(ctx, text, maxW, maxLines);
+    lines.forEach((l, i) => ctx.fillText(l, x, y + i * lineH));
+    return y + lines.length * lineH;
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  const font = (weight, size) => `${weight} ${size}px ${FONT}`;
+
+  let grainTile = null;
+  function grain() {
+    if (grainTile) return grainTile;
+    grainTile = document.createElement('canvas');
+    grainTile.width = 180;
+    grainTile.height = 180;
+    const g = grainTile.getContext('2d');
+    const img = g.createImageData(180, 180);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.random() * 255;
+      img.data[i] = v; img.data[i + 1] = v; img.data[i + 2] = v; img.data[i + 3] = Math.random() * 255;
+    }
+    g.putImageData(img, 0, 0);
+    return grainTile;
+  }
+
+  // Background, brand line and the QR footer shared by every card. Returns the content box.
+  function cardFrame(t, W, H, eyebrow) {
+    const cv = document.createElement('canvas');
+    cv.width = W;
+    cv.height = H;
+    const ctx = cv.getContext('2d');
+    const bg = ctx.createLinearGradient(0, 0, W * 0.4, H);
+    bg.addColorStop(0, t.bg[0]);
+    bg.addColorStop(1, t.bg[1]);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    // Soft colour glows in the corners, one per circle.
+    [[0.05, 0.08, 'love'], [0.98, 0.2, 'need'], [0.1, 0.78, 'good'], [0.95, 0.92, 'paid']].forEach(([fx, fy, k]) => {
+      const r = W * 0.62;
+      const g = ctx.createRadialGradient(W * fx, H * fy, 0, W * fx, H * fy, r);
+      g.addColorStop(0, `${t.c[k]}${Math.round(t.glow * 255).toString(16).padStart(2, '0')}`);
+      g.addColorStop(1, `${t.c[k]}00`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    });
+    ctx.save();
+    ctx.globalAlpha = t.grain;
+    ctx.fillStyle = ctx.createPattern(grain(), 'repeat');
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    if (t.foil) {
+      const foil = ctx.createLinearGradient(0, 0, W, H);
+      foil.addColorStop(0, '#f6dfa0'); foil.addColorStop(0.5, '#b8873a'); foil.addColorStop(1, '#f2d38a');
+      ctx.strokeStyle = foil;
+      ctx.lineWidth = 6;
+      roundRect(ctx, 34, 34, W - 68, H - 68, 36);
+      ctx.stroke();
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, 48, 48, W - 96, H - 96, 28);
+      ctx.stroke();
+      ctx.fillStyle = '#e9c97c';
+      ctx.font = font(800, 22);
+      ctx.textAlign = 'center';
+      ctx.fillText('LIMITED EDITION', W / 2, 76);
+      ctx.textAlign = 'left';
+    }
+    // Brand line
+    CIRCLES.forEach((c, i) => {
+      const [dx, dy] = [[0, -11], [-11, 0], [11, 0], [0, 11]][i];
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = t.c[c.key];
+      ctx.beginPath(); ctx.arc(100 + dx, 92 + dy, 15, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = t.ink;
+    ctx.font = font(800, 30);
+    ctx.fillText('IKIGAI', 134, 103);
+    ctx.fillStyle = t.muted;
+    ctx.font = font(500, 26);
+    ctx.fillText('生涯羅盤', 248, 103);
+    if (eyebrow) {
+      ctx.textAlign = 'right';
+      ctx.fillText(eyebrow, W - 80, 103);
+      ctx.textAlign = 'left';
+    }
+    // Footer with QR code and invitation
+    const fh = 250;
+    const fy = H - fh;
+    ctx.strokeStyle = t.line;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(80, fy); ctx.lineTo(W - 80, fy); ctx.stroke();
+    const qrSize = 168;
+    const qx = W - 80 - qrSize;
+    const qy = fy + 40;
+    drawQr(ctx, qx, qy, qrSize, inviteUrl('card'), t);
+    ctx.fillStyle = t.ink;
+    ctx.font = font(800, 40);
+    ctx.fillText('你的 IKIGAI 是什麼？', 80, fy + 96);
+    ctx.fillStyle = t.muted;
+    ctx.font = font(500, 28);
+    ctx.fillText('掃描 QR Code，15 分鐘找到方向', 80, fy + 144);
+    ctx.font = font(600, 26);
+    ctx.fillText(shortHost(), 80, fy + 190);
+    return { cv, ctx, top: 170, bottom: fy - 40 };
+  }
+
+  function drawQr(ctx, x, y, size, url, t) {
+    roundRect(ctx, x, y, size, size, 18);
+    ctx.fillStyle = t.qrLight;
+    ctx.fill();
+    if (typeof window.qrcode !== 'function') return;
+    try {
+      const qr = window.qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      const n = qr.getModuleCount();
+      const pad = 14;
+      const cell = (size - pad * 2) / n;
+      ctx.fillStyle = t.qrDark;
+      for (let r = 0; r < n; r += 1) {
+        for (let c = 0; c < n; c += 1) {
+          if (qr.isDark(r, c)) ctx.fillRect(x + pad + c * cell, y + pad + r * cell, Math.ceil(cell), Math.ceil(cell));
+        }
+      }
+    } catch (err) { /* leave the panel blank if the link is too long */ }
+  }
+
+  function drawVenn(ctx, t, cx, cy, size, radii, opts = {}) {
+    const k = size / 400;
+    const pos = (key) => [cx + (CENTERS[key][0] - 200) * k, cy + (CENTERS[key][1] - 200) * k];
+    ctx.save();
+    ctx.globalCompositeOperation = t.blend;
+    CIRCLES.forEach((c) => {
+      const [x, y] = pos(c.key);
+      const r = radii[c.key] * k;
+      const g = ctx.createRadialGradient(x, y, r * 0.1, x, y, r);
+      g.addColorStop(0, `${t.c[c.key]}${t.alpha}`);
+      g.addColorStop(1, `${t.c[c.key]}${Math.max(16, parseInt(t.alpha, 16) - 26).toString(16)}`);
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = g; ctx.fill();
+    });
+    ctx.restore();
+    CIRCLES.forEach((c) => {
+      const [x, y] = pos(c.key);
+      ctx.beginPath(); ctx.arc(x, y, radii[c.key] * k, 0, Math.PI * 2);
+      ctx.strokeStyle = t.c[c.key]; ctx.lineWidth = 3; ctx.stroke();
+    });
+    if (opts.labels !== false) {
+      const at = (x, y) => [cx + (x - 200) * k, cy + (y - 200) * k];
+      ctx.textAlign = 'center';
+      CIRCLES.forEach((c) => {
+        const L = circleLabel(c.key, radii[c.key], LABEL_CANVAS, opts.counts !== false);
+        ctx.fillStyle = t.ink;
+        ctx.font = font(800, Math.round(L.f * k));
+        L.lines.forEach((l, i) => ctx.fillText(l, ...at(L.cx, L.baselines[i])));
+        if (opts.counts !== false) {
+          ctx.fillStyle = t.muted;
+          ctx.font = font(600, Math.round(L.nf * k));
+          ctx.fillText(`${inCircle(c.key).length} 項`, ...at(L.cx, L.countY));
+        }
+      });
+    }
+    ctx.textAlign = 'center';
+    ctx.fillStyle = t.ink;
+    ctx.font = font(900, Math.round(30 * k));
+    ctx.fillText('IKIGAI', cx, cy + 10 * k);
+    ctx.textAlign = 'left';
+  }
+
+  function pill(ctx, t, x, y, text, color, size = 30) {
+    ctx.font = font(700, size);
+    const w = ctx.measureText(text).width + size * 1.3;
+    const h = size * 1.75;
+    roundRect(ctx, x, y, w, h, h / 2);
+    ctx.fillStyle = color ? `${color}2e` : t.panel;
+    ctx.fill();
+    ctx.strokeStyle = color || t.line;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = t.ink;
+    ctx.fillText(text, x + size * 0.65, y + h * 0.66);
+    return w;
+  }
+  function panel(ctx, t, x, y, w, h) {
+    roundRect(ctx, x, y, w, h, 28);
+    ctx.fillStyle = t.panel;
+    ctx.fill();
+    ctx.strokeStyle = t.line;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // 1. Personality type
+  function cardType(t, W, H) {
+    const a = archetype();
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '人格類型');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 40);
+    ctx.fillStyle = t.muted;
+    ctx.font = font(600, 32);
+    ctx.fillText(`${owner()} IKIGAI 人格類型`, 80, y);
+    y += story ? 130 : 112;
+    ctx.fillStyle = t.ink;
+    ctx.font = font(900, a.name.length > 6 ? 92 : 112);
+    ctx.fillText(a.name, 76, y);
+    y += 58;
+    ctx.fillStyle = t.muted;
+    ctx.font = font(700, 28);
+    ctx.fillText(a.en.split('').join(String.fromCharCode(8202)), 82, y);
+    y += story ? 80 : 66;
+    ctx.fillStyle = t.ink;
+    ctx.font = font(500, 40);
+    y = drawText(ctx, a.tagline, 80, y, W - 160, 56, 2);
+    const vSize = story ? 640 : 330;
+    const vy = y + (story ? 60 : 6) + vSize / 2;
+    drawVenn(ctx, t, W / 2, vy, vSize, radiiFrom(countWeights()), { labels: story, counts: false });
+    y = vy + vSize / 2 + (story ? 90 : 26);
+    let x = 80;
+    a.strengths.forEach((s, i) => { x += pill(ctx, t, x, y, s, t.c[KEYS[i]], 30) + 16; });
+    y += story ? 90 : 76;
+    const ph = Math.min(150, bottom - y);
+    if (ph > 90) {
+      panel(ctx, t, 80, y, W - 160, ph);
+      ctx.fillStyle = t.muted; ctx.font = font(700, 26);
+      ctx.fillText('給你的一句話', 116, y + 50);
+      ctx.fillStyle = t.ink; ctx.font = font(600, 32);
+      drawText(ctx, a.advice, 116, y + 100, W - 232, 44, ph > 130 ? 2 : 1);
+    }
+    return cv;
+  }
+
+  // 2. IKIGAI map
+  function cardMap(t, W, H) {
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '四圈地圖');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.ink; ctx.font = font(900, 76);
+    ctx.fillText(`${owner()} IKIGAI`, 76, y);
+    y += 54;
+    ctx.fillStyle = t.muted; ctx.font = font(500, 30);
+    ctx.fillText(CIRCLES.map((c) => `${c.short} ${inCircle(c.key).length}`).join('　'), 80, y);
+    // Labels sit inside the circles, so the diagram can fill the width; drawn circles span about 83% of vSize.
+    const vSize = story ? 960 : 640;
+    const vy = y + 40 + vSize * 0.415;
+    drawVenn(ctx, t, W / 2, vy, vSize, radiiFrom(countWeights()));
+    y = vy + vSize * 0.415 + 50;
+    const center = state.items.filter((it) => hasAll(it, KEYS)).map((it) => it.text);
+    const near = state.items.filter((it) => circlesOf(it).length === 3).map((it) => it.text);
+    const ph = Math.min(story ? 260 : 170, bottom - y);
+    if (ph > 100) {
+      panel(ctx, t, 80, y, W - 160, ph);
+      ctx.fillStyle = t.muted; ctx.font = font(700, 26);
+      ctx.fillText(center.length ? 'IKIGAI 中心' : '最接近中心', 116, y + 50);
+      ctx.fillStyle = t.ink; ctx.font = font(800, 38);
+      drawText(ctx, (center.length ? center : near.length ? near : topItems(3)).join('、') || '還在探索中', 116, y + 104, W - 232, 52, story ? 3 : 1);
+    }
+    return cv;
+  }
+
+  // 3. Talents and careers
+  function cardCareers(t, W, H) {
+    const ins = careerInsights();
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '職涯建議');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.ink; ctx.font = font(900, 72);
+    ctx.fillText('我的天賦與職涯', 76, y);
+    y += 56;
+    ctx.fillStyle = t.muted; ctx.font = font(500, 30);
+    ctx.fillText(`天賦關鍵字：${topItems(3).join('・') || '—'}`, 80, y);
+    y += story ? 80 : 50;
+    const careers = ins.careers.slice(0, story ? 4 : 3);
+    const rowH = story ? 150 : 128;
+    careers.forEach((c, i) => {
+      panel(ctx, t, 80, y, W - 160, rowH - 18);
+      ctx.fillStyle = t.muted; ctx.font = font(800, 30);
+      ctx.fillText(`0${i + 1}`, 112, y + 66);
+      ctx.fillStyle = t.ink; ctx.font = font(800, 42);
+      ctx.fillText(wrapLines(ctx, c.name, 520, 1)[0], 180, y + 70);
+      let cx = W - 112;
+      CIRCLES.slice().reverse().forEach((cc) => {
+        const on = c.circles.includes(cc.key);
+        ctx.beginPath(); ctx.arc(cx, y + 56, 13, 0, Math.PI * 2);
+        ctx.fillStyle = on ? t.c[cc.key] : t.line; ctx.fill();
+        cx -= 36;
+      });
+      y += rowH;
+    });
+    if (!careers.length) {
+      ctx.fillStyle = t.ink; ctx.font = font(600, 36);
+      y = drawText(ctx, '寫得更具體一點，就能看到建議職業。', 80, y + 40, W - 160, 50, 2);
+    }
+    y += story ? 40 : 14;
+    if (ins.skills.length && y < bottom - 120) {
+      ctx.fillStyle = t.muted; ctx.font = font(700, 28);
+      ctx.fillText('接下來要加強', 80, y + 30);
+      y += 56;
+      let x = 80;
+      ins.skills.slice(0, 4).forEach((s) => {
+        ctx.font = font(700, 28);
+        const w = ctx.measureText(s.name).width + 36;
+        if (x + w > W - 80) { x = 80; y += 66; }
+        if (y > bottom - 50) return;
+        x += pill(ctx, t, x, y, s.name, t.c.paid, 28) + 14;
+      });
+      y += 80;
+    }
+    if (ins.paths.length && y < bottom - 80) {
+      ctx.fillStyle = t.muted; ctx.font = font(700, 28);
+      ctx.fillText('可以往哪個方向走', 80, y + 10);
+      y += 30;
+      ins.paths.slice(0, 3).forEach((p) => {
+        if (y > bottom - 50) return;
+        ctx.fillStyle = t.muted; ctx.font = font(700, 26);
+        ctx.fillText(p.title, 80, y + 38);
+        ctx.fillStyle = t.ink; ctx.font = font(800, 32);
+        ctx.fillText(p.career.name, 250, y + 38);
+        y += 56;
+      });
+      y += 20;
+    }
+    if (story && y < bottom - 170) {
+      panel(ctx, t, 80, y, W - 160, 150);
+      ctx.fillStyle = t.muted; ctx.font = font(700, 26);
+      ctx.fillText(`最需要補強：${ins.weakest.short}`, 116, y + 50);
+      ctx.fillStyle = t.ink; ctx.font = font(600, 30);
+      drawText(ctx, GAP_ADVICE[ins.weakest.key], 116, y + 98, W - 232, 40, 2);
+    }
+    return cv;
+  }
+
+  // 4. 30-day challenge
+  function cardChallenge(t, W, H) {
+    const ins = careerInsights();
+    const dir = mainDir();
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '30 天挑戰');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.ink; ctx.font = font(900, 80);
+    ctx.fillText('我的 30 天挑戰', 76, y);
+    y += 60;
+    ctx.fillStyle = t.muted; ctx.font = font(600, 32);
+    y = drawText(ctx, `目標方向：${dir ? dir.title : (ins.careers[0] ? ins.careers[0].name : archetype().name)}`, 80, y, W - 160, 44, 1);
+    y += story ? 60 : 30;
+    const want = story ? 6 : 4;
+    const seen = new Set();
+    const list = [];
+    const add = (text, done = false) => {
+      if (list.length >= want || !text || seen.has(text)) return;
+      seen.add(text);
+      list.push({ text, done });
+    };
+    // 30-day actions first, then the rest of the plan, the staged plan and general first steps.
+    state.plan.actions.filter((a) => a.h === 'd30').forEach((a) => add(a.text, a.done));
+    state.plan.actions.filter((a) => a.h !== 'd30').forEach((a) => add(a.text, a.done));
+    ins.timeline.forEach((st) => add(st.what.replace(/^[^：]+：/, '')));
+    ['訪談 2 位正在做這件事的人', '每天花 30 分鐘練習一項能力', '完成一個可以展示的小作品', '把成果分享給 3 個朋友', '整理作品集並更新履歷', '回顧一個月的進度並調整'].forEach((x) => add(x));
+    const rowH = story ? 170 : 132;
+    list.forEach((s, i) => {
+      if (y + rowH > bottom + 10) return;
+      panel(ctx, t, 80, y, W - 160, rowH - 18);
+      const bx = 112;
+      const by = y + (rowH - 18) / 2 - 22;
+      roundRect(ctx, bx, by, 44, 44, 12);
+      ctx.strokeStyle = s.done ? t.c.need : t.muted; ctx.lineWidth = 4; ctx.stroke();
+      if (s.done) {
+        ctx.strokeStyle = t.c.need; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.moveTo(bx + 10, by + 23); ctx.lineTo(bx + 19, by + 32); ctx.lineTo(bx + 35, by + 13); ctx.stroke();
+      }
+      ctx.fillStyle = t.muted; ctx.font = font(700, 24);
+      ctx.fillText(`DAY ${[1, 7, 14, 21, 28, 30][i] || 30}`, 186, y + 46);
+      ctx.fillStyle = s.done ? t.muted : t.ink; ctx.font = font(700, 34);
+      ctx.fillText(wrapLines(ctx, s.text, W - 330, 1)[0], 186, y + 90);
+      y += rowH;
+    });
+    if (y < bottom - 60) {
+      ctx.fillStyle = t.ink; ctx.font = font(800, 34);
+      ctx.fillText('一起挑戰？掃描 QR Code 開始 →', 80, Math.min(bottom - 10, y + 56));
+    }
+    return cv;
+  }
+
+  // 5. Four overlaps
+  function cardPairs(t, W, H) {
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '四個交集');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.ink; ctx.font = font(900, 76);
+    ctx.fillText('我的四個交集', 76, y);
+    y += story ? 80 : 50;
+    const gap = 24;
+    const bw = (W - 160 - gap) / 2;
+    const bh = Math.min(story ? 560 : 440, (bottom - y - gap) / 2);
+    PAIRS.slice(0, 4).forEach((p, i) => {
+      const x = 80 + (i % 2) * (bw + gap);
+      const yy = y + Math.floor(i / 2) * (bh + gap);
+      panel(ctx, t, x, yy, bw, bh);
+      ctx.fillStyle = t.c[p.keys[0]];
+      roundRect(ctx, x + 30, yy + 36, 10, 74, 5); ctx.fill();
+      ctx.fillStyle = t.ink; ctx.font = font(900, 46);
+      ctx.fillText(p.short, x + 58, yy + 82);
+      ctx.fillStyle = t.muted; ctx.font = font(600, 24);
+      ctx.fillText(`${BY_KEY[p.keys[0]].short} × ${BY_KEY[p.keys[1]].short}`, x + 58, yy + 118);
+      const items = state.items.filter((it) => hasAll(it, p.keys)).map((it) => it.text);
+      ctx.fillStyle = t.ink; ctx.font = font(600, 32);
+      drawText(ctx, items.join('、') || '—', x + 36, yy + 182, bw - 72, 46, Math.max(1, Math.floor((bh - 200) / 46)));
+    });
+    return cv;
+  }
+
+  // 6. Career plan
+  function cardPlan(t, W, H) {
+    const dir = mainDir();
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '生涯計畫');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.muted; ctx.font = font(600, 30);
+    ctx.fillText(`${owner()}生涯計畫`, 80, y);
+    y += 82;
+    ctx.fillStyle = t.ink; ctx.font = font(900, 64);
+    y = drawText(ctx, dir.title, 76, y, W - 160, 78, 2) + 10;
+    CIRCLES.forEach((c, i) => {
+      const x = 80 + i * 232;
+      ctx.fillStyle = t.muted; ctx.font = font(600, 24);
+      ctx.fillText(`${c.short} ${dir.s[c.key]}/5`, x, y + 20);
+      roundRect(ctx, x, y + 36, 200, 14, 7); ctx.fillStyle = t.line; ctx.fill();
+      roundRect(ctx, x, y + 36, 200 * (dir.s[c.key] / 5), 14, 7); ctx.fillStyle = t.c[c.key]; ctx.fill();
+    });
+    y += story ? 130 : 100;
+    HORIZONS.forEach((h) => {
+      const goal = state.plan.goals[h.key];
+      if (!goal || y > bottom - 100) return;
+      panel(ctx, t, 80, y, W - 160, story ? 150 : 116);
+      ctx.fillStyle = t.muted; ctx.font = font(800, 26);
+      ctx.fillText(h.label, 112, y + 48);
+      ctx.fillStyle = t.ink; ctx.font = font(600, 32);
+      drawText(ctx, goal, 112, y + 92, W - 224, 42, story ? 2 : 1);
+      y += story ? 168 : 132;
+    });
+    const done = state.plan.actions.filter((a) => a.done).length;
+    if (state.plan.actions.length && y < bottom - 60) {
+      ctx.fillStyle = t.ink; ctx.font = font(800, 32);
+      ctx.fillText(`行動進度 ${done}/${state.plan.actions.length}`, 80, y + 40);
+      roundRect(ctx, 80, y + 64, W - 160, 18, 9); ctx.fillStyle = t.line; ctx.fill();
+      roundRect(ctx, 80, y + 64, Math.max(18, (W - 160) * (done / state.plan.actions.length)), 18, 9); ctx.fillStyle = t.c.need; ctx.fill();
+    }
+    return cv;
+  }
+
+  // 7. Ability ranking
+  function cardRank(t, W, H) {
+    const a = analysis();
+    const { cv, ctx, top, bottom } = cardFrame(t, W, H, '能力排名');
+    const story = H > 1500;
+    let y = top + (story ? 90 : 50);
+    ctx.fillStyle = t.ink; ctx.font = font(900, 72);
+    ctx.fillText('我的能力排名', 76, y);
+    y += story ? 70 : 40;
+    // Score ring in the four circle colours.
+    const R = story ? 120 : 100;
+    const rx = 80 + R;
+    const ry = y + R + 10;
+    ctx.lineWidth = story ? 26 : 22;
+    ctx.strokeStyle = t.line;
+    ctx.beginPath(); ctx.arc(rx, ry, R, 0, Math.PI * 2); ctx.stroke();
+    const span = (Math.PI * 2 * a.index) / 100;
+    KEYS.forEach((k, i) => {
+      const from = -Math.PI / 2 + (span * i) / 4;
+      ctx.strokeStyle = t.c[k];
+      ctx.beginPath(); ctx.arc(rx, ry, R, from, from + span / 4 + 0.01); ctx.stroke();
+    });
+    ctx.textAlign = 'center';
+    ctx.fillStyle = t.ink; ctx.font = font(900, story ? 84 : 70);
+    ctx.fillText(String(a.index), rx, ry + (story ? 22 : 18));
+    ctx.fillStyle = t.muted; ctx.font = font(600, 22);
+    ctx.fillText('契合指數', rx, ry + (story ? 62 : 52));
+    ctx.textAlign = 'left';
+    const tx = rx + R + 50;
+    ctx.fillStyle = t.ink; ctx.font = font(800, story ? 42 : 38);
+    ctx.fillText(a.level, tx, ry - 20);
+    ctx.fillStyle = t.muted; ctx.font = font(500, 28);
+    drawText(ctx, `四圈平衡 ${a.balance}・跨圈項目 ${a.crossPct}%`, tx, ry + 30, W - tx - 80, 38, 1);
+    y = ry + R + (story ? 80 : 56);
+    const bar = (label, pct, val, color, rank) => {
+      ctx.fillStyle = t.muted; ctx.font = font(800, 24);
+      ctx.fillText(rank, 80, y + 30);
+      ctx.fillStyle = t.ink; ctx.font = font(700, 32);
+      ctx.fillText(wrapLines(ctx, label, 300, 1)[0], 130, y + 32);
+      const bx = 450;
+      const bw = W - 80 - bx - 110;
+      roundRect(ctx, bx, y + 10, bw, 22, 11); ctx.fillStyle = t.line; ctx.fill();
+      roundRect(ctx, bx, y + 10, Math.max(22, (bw * pct) / 100), 22, 11); ctx.fillStyle = color; ctx.fill();
+      ctx.textAlign = 'right'; ctx.fillStyle = t.ink; ctx.font = font(800, 30);
+      ctx.fillText(val, W - 80, y + 33);
+      ctx.textAlign = 'left';
+      y += story ? 64 : 54;
+    };
+    ctx.fillStyle = t.muted; ctx.font = font(700, 28);
+    ctx.fillText('能力 TOP', 80, y); y += 24;
+    a.abilities.filter((x) => x.score).slice(0, story ? 5 : 4).forEach((x, i) => bar(x.name, x.score, String(x.score), t.c.good, `0${i + 1}`));
+    if (a.careers.length && y < bottom - 140) {
+      y += story ? 50 : 40;
+      ctx.fillStyle = t.muted; ctx.font = font(700, 28);
+      ctx.fillText('最適合的職業', 80, y); y += 24;
+      a.careers.slice(0, story ? 4 : 3).forEach((c, i) => { if (y < bottom - 50) bar(c.name, c.match, `${c.match}%`, t.c.need, `0${i + 1}`); });
+    }
+    if (story && a.strong[0] && y < bottom - 170) {
+      y += 30;
+      panel(ctx, t, 80, y, W - 160, 150);
+      ctx.fillStyle = t.muted; ctx.font = font(700, 26);
+      ctx.fillText(`最強項：${a.strong[0].name}`, 116, y + 50);
+      ctx.fillStyle = t.ink; ctx.font = font(600, 30);
+      drawText(ctx, a.strong[0].use, 116, y + 98, W - 232, 40, 2);
+    }
+    return cv;
+  }
+
+  const CARD_LIST = [
+    { key: 'type', label: '人格類型', draw: cardType },
+    { key: 'map', label: '四圈地圖', draw: cardMap },
+    { key: 'rank', label: '能力排名', draw: cardRank },
+    { key: 'careers', label: '天賦與職涯', draw: cardCareers },
+    { key: 'challenge', label: '30 天挑戰', draw: cardChallenge },
+    { key: 'pairs', label: '四個交集', draw: cardPairs },
+    { key: 'plan', label: '生涯計畫', draw: cardPlan, needsPlan: true },
+  ];
+
+  const toBlob = (cv) => new Promise((resolve) => cv.toBlob(resolve, 'image/png'));
+  let lastCards = [];
+  async function makeCards() {
+    const btn = $('makeCards');
+    btn.disabled = true;
+    btn.textContent = '產生中…';
+    logEvent('產生字卡', `${THEMES[cardTheme].label}・${FORMATS[cardFormat].label}`);
+    save(true);
+    cardUrls.forEach((u) => URL.revokeObjectURL(u));
+    cardUrls = [];
+    const t = THEMES[cardTheme];
+    const { w, h } = FORMATS[cardFormat];
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const list = CARD_LIST.filter((c) => !c.needsPlan || mainDir());
+      lastCards = [];
+      for (const c of list) {
+        // eslint-disable-next-line no-await-in-loop
+        const blob = await toBlob(c.draw(t, w, h));
+        const url = URL.createObjectURL(blob);
+        cardUrls.push(url);
+        lastCards.push({ ...c, blob, url });
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      const grid = $('cardsGrid');
+      grid.className = `cards-grid ${cardFormat}`;
+      grid.innerHTML = lastCards.map((c, i) => `
+        <div class="card-prev">
+          <img src="${c.url}" alt="${c.label}字卡預覽">
+          <div class="row"><span class="cap">${c.label}</span>
+            <button class="btn ghost small" type="button" data-dl="${i}">下載</button>
+            ${navigator.canShare ? `<button class="btn ghost small" type="button" data-share="${i}">分享</button>` : ''}
+          </div>
+        </div>`).join('');
+      grid.querySelectorAll('[data-dl]').forEach((b) => b.addEventListener('click', () => {
+        const c = lastCards[b.dataset.dl];
+        download(c.blob, `ikigai-${c.key}-${cardFormat}.png`);
+      }));
+      grid.querySelectorAll('[data-share]').forEach((b) => b.addEventListener('click', () => shareFile(lastCards[b.dataset.share])));
+      $('dlAll').hidden = false;
+      btn.textContent = '重新產生字卡';
+    } catch (err) {
+      toast('字卡產生失敗，請再試一次');
+      btn.textContent = '產生字卡';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  async function downloadAll() {
+    for (const c of lastCards) {
+      download(c.blob, `ikigai-${c.key}-${cardFormat}.png`);
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  }
+  function download(blob, filename) {
+    logEvent('下載檔案', filename);
+    save(true);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    toast(`已下載 ${filename}`);
+  }
+  async function shareFile(card) {
+    const file = new File([card.blob], `ikigai-${card.key}.png`, { type: 'image/png' });
+    logEvent('分享字卡', card.label);
+    save(true);
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: `${owner()} IKIGAI`, text: inviteText() }); } catch (e) { /* cancelled */ }
+    } else {
+      download(card.blob, file.name);
+    }
+  }
+
+  // ---------- share link ----------
+  const toB64url = (bytes) => {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  };
+  const fromB64url = (s) => {
+    const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(bin, (ch) => ch.charCodeAt(0));
+  };
+  async function encodeShare(obj) {
+    const bytes = new TextEncoder().encode(JSON.stringify(obj));
+    if (!window.CompressionStream) return `j${toB64url(bytes)}`;
+    const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return `z${toB64url(new Uint8Array(await new Response(stream).arrayBuffer()))}`;
+  }
+  async function decodeShare(code) {
+    const bytes = fromB64url(code.slice(1));
+    if (code[0] === 'j') return JSON.parse(new TextDecoder().decode(bytes));
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return JSON.parse(await new Response(stream).text());
+  }
+  // Compact form: items as [text, circle bitmask], plan as arrays.
+  function packShare(includeAi, includePlan) {
+    const pack = { v: 1, r: state.rid, n: state.name, i: state.items.map((it) => [it.text, KEYS.reduce((m, k, b) => m | (it.c[k] ? 1 << b : 0), 0)]) };
+    if (state.note) pack.t = state.note;
+    if (includeAi && state.ai) pack.a = state.ai;
+    const dir = mainDir();
+    if (includePlan && dir) {
+      pack.p = {
+        d: state.plan.dirs.map((d) => [d.title, ...KEYS.map((k) => d.s[k])]),
+        m: state.plan.dirs.indexOf(dir),
+        g: HORIZONS.map((h) => state.plan.goals[h.key]),
+        x: state.plan.actions.map((a) => [a.text, HORIZONS.findIndex((h) => h.key === a.h), a.done ? 1 : 0]),
+      };
+    }
+    return pack;
+  }
+  function unpackShare(pack) {
+    const data = {
+      rid: pack.r,
+      name: pack.n,
+      note: pack.t,
+      ai: pack.a,
+      items: (pack.i || []).map(([text, mask]) => ({ text, c: Object.fromEntries(KEYS.map((k, b) => [k, Boolean(mask & (1 << b))])) })),
+      plan: null,
+    };
+    if (pack.p) {
+      const dirs = (pack.p.d || []).map(([title, ...nums], i) => ({ id: `d${i}`, title, s: Object.fromEntries(KEYS.map((k, j) => [k, nums[j]])) }));
+      data.plan = {
+        dirs,
+        main: dirs[pack.p.m]?.id,
+        goals: Object.fromEntries(HORIZONS.map((h, i) => [h.key, (pack.p.g || [])[i]])),
+        actions: (pack.p.x || []).map(([text, h, done]) => ({ text, h: HORIZONS[h]?.key, done: Boolean(done) })),
+      };
+    }
+    return sanitize(data);
+  }
+  async function makeLink() {
+    logEvent('產生分享連結');
+    state.name = $('shareName').value.trim().slice(0, 20);
+    save(true);
+    const code = await encodeShare(packShare($('shareAi').checked, $('sharePlan').checked));
+    const url = `${location.origin}${location.pathname}?ref=${state.rid}&src=share#s=${code}`;
+    $('linkBox').innerHTML = `
+      <div class="link-row"><label class="sr-only" for="shareUrl">分享連結</label><input type="text" id="shareUrl" readonly value="${esc(url)}">
+      <button class="btn" type="button" id="copyLink">複製</button>${navigator.share ? '<button class="btn ghost" type="button" id="shareLink">分享</button>' : ''}</div>
+      <p class="fine">連結長度 ${url.length} 字元。${url.length > 2000 ? '連結很長，有些聊天軟體可能會截斷；可以取消「包含深度解析」縮短。' : ''}</p>`;
+    $('shareUrl').addEventListener('focus', (e) => e.target.select());
+    $('copyLink').addEventListener('click', () => copy(url, '已複製分享連結'));
+    if ($('shareLink')) $('shareLink').addEventListener('click', () => navigator.share({ title: `${owner()} IKIGAI`, url }).catch(() => {}));
+  }
+
+  // ---------- shared (read-only) view ----------
+  function planReadHtml() {
+    const dir = mainDir();
+    if (!dir) return '';
+    const done = state.plan.actions.filter((a) => a.done).length;
+    return `
+      <div class="card plan-read">
+        <h2>生涯規劃</h2>
+        <div class="dirs">${state.plan.dirs.map((d) => `
+          <div class="dir${d.id === dir.id ? ' main' : ''}">
+            <div class="dir-head"><b style="flex:1">${esc(d.title)}</b>${d.id === dir.id ? '<span class="badge">主要方向</span>' : ''}</div>
+            <div class="dir-body"><div class="mini">${venn({ radii: radiiFrom(d.s), counts: false, compact: true })}</div>
+              <div class="sliders">${CIRCLES.map((c) => `<div class="slider" style="--c:${c.color}"><span>${c.short}</span><span class="track" style="height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden"><b style="display:block;height:100%;width:${d.s[c.key] * 20}%;background:${c.color}"></b></span><output>${d.s[c.key]}</output></div>`).join('')}</div></div>
+            <div class="fit"><span>契合度</span><span class="track"><b style="width:${(fitOf(d) / 20) * 100}%"></b></span><b>${fitOf(d)}/20</b></div>
+          </div>`).join('')}</div>
+        ${HORIZONS.some((h) => state.plan.goals[h.key]) ? `<h3>目標</h3><div class="goals">${HORIZONS.map((h) => (state.plan.goals[h.key] ? `<div class="goal-box"><b>${h.label}</b>${esc(state.plan.goals[h.key])}</div>` : '')).join('')}</div>` : ''}
+        ${state.plan.actions.length ? `<h3>行動清單（完成 ${done}/${state.plan.actions.length}）</h3>${HORIZONS.map((h) => {
+          const list = state.plan.actions.filter((a) => a.h === h.key);
+          return list.length ? `<div class="horizon"><h4>${h.label}內</h4>${list.map((a) => `<div class="act${a.done ? ' done' : ''}"><input type="checkbox" disabled ${a.done ? 'checked' : ''} aria-label="${a.done ? '已完成' : '未完成'}"><label>${esc(a.text)}</label></div>`).join('')}</div>` : '';
+        }).join('')}` : ''}
+      </div>`;
+  }
+
+  function renderShareView() {
+    $('view').innerHTML = `
+      <section class="view fwd">
+        <div class="banner"><p>這是${state.name ? `「${esc(state.name)}」` : '朋友'}分享的 IKIGAI 結果（唯讀）。</p><button class="btn" type="button" id="ownBtn">做我自己的 IKIGAI</button></div>
+        <div class="card">
+          <h2>${esc(owner())} IKIGAI</h2>
+          ${resultSummaryHtml(true)}
+        </div>
+        ${analysisCardHtml()}
+        ${careerCardHtml(true)}
+        ${roadmapCardHtml(true)}
+        ${planReadHtml()}
+        ${state.ai ? `<div class="card"><h2>深度解析</h2><div class="ai-out">${mdToHtml(state.ai)}</div></div>` : ''}
+        ${shareCardHtml(true)}
+      </section>`;
+    countUp($('view'));
+    animateResult = false;
+    growBars($('view'));
+    bindVennFilter();
+    bindShareCard();
+    $('ownBtn').addEventListener('click', leaveShare);
+  }
+  function leaveShare() {
+    const sharer = state.rid;
+    shareMode = false;
+    history.replaceState(null, '', location.pathname);
+    state = load();
+    applyReferral(sharer, 'share');
+    filter = null;
+    lastStep = 'result';
+    render();
+    window.scrollTo(0, 0);
+  }
+  async function enterShare() {
+    const code = location.hash.slice(3);
+    try {
+      state = unpackShare(await decodeShare(code));
+      if (!state.items.length) throw new Error('empty');
+      shareMode = true;
+      animateResult = true;
+      filter = null;
+      render();
+    } catch (err) {
+      shareMode = false;
+      state = load();
+      render();
+      toast('分享連結無法開啟，可能是複製不完整');
+    }
+  }
+
+  // ---------- PDF report ----------
+  function printReport() {
+    if (unlocked()) logEvent('下載完整版報告');
+    logEvent('匯出 PDF 報告');
+    save(true);
+    const dir = mainDir();
+    const listRow = (c) => `<tr><th><span class="dot" style="--c:${c.color}"></span>${c.label}</th><td>${inCircle(c.key).map((it) => esc(it.text)).join('、') || '—'}</td></tr>`;
+    const regions = [];
+    const center = state.items.filter((it) => hasAll(it, KEYS));
+    if (center.length) regions.push(['IKIGAI 中心', center]);
+    TRIPLES.forEach((t) => {
+      const keys = KEYS.filter((k) => k !== t.missing);
+      const items = state.items.filter((it) => exact(it, keys));
+      if (items.length) regions.push([`差一圈：缺「${BY_KEY[t.missing].short}」`, items]);
+    });
+    PAIRS.slice(0, 4).forEach((p) => {
+      const items = state.items.filter((it) => hasAll(it, p.keys));
+      regions.push([p.name, items]);
+    });
+    const stat = (n, label) => `<div><b>${n}</b>${label}</div>`;
+    $('report').innerHTML = `
+      <h1>${esc(owner())} IKIGAI</h1>
+      <p class="meta">${today()} · 熱愛、擅長、世界需要、可以獲得報酬</p>
+      <div class="r-top">
+        <div>${venn({ counts: true })}</div>
+        <div>
+          <div class="r-stats">${stat(center.length, 'IKIGAI 中心')}${stat(state.items.filter((it) => circlesOf(it).length === 3).length, '差一圈')}${stat(state.items.filter((it) => circlesOf(it).length > 1).length, '跨圈項目')}</div>
+          <table>${CIRCLES.map((c) => `<tr><th><span class="dot" style="--c:${c.color}"></span>${c.short}</th><td>${inCircle(c.key).length} 項</td></tr>`).join('')}</table>
+        </div>
+      </div>
+      <section><h2>四個圈</h2><table>${CIRCLES.map(listRow).join('')}</table>${state.note ? `<p>補充說明：${esc(state.note)}</p>` : ''}</section>
+      <section><h2>交集</h2><table>${regions.map(([name, items]) => `<tr><th>${name}</th><td>${items.map((it) => esc(it.text)).join('、') || '—'}</td></tr>`).join('')}</table></section>
+      ${analysisReportHtml()}
+      ${careerReportHtml()}
+      ${unlocked() ? careerAdvancedHtml() : ''}
+      ${dir ? `<section><h2>生涯規劃</h2>
+        <table>${state.plan.dirs.map((d) => `<tr><th>${d.id === dir.id ? '主要方向' : '其他方向'}</th><td><b>${esc(d.title)}</b>　契合度 ${fitOf(d)}/20（${CIRCLES.map((c) => `${c.short} ${d.s[c.key]}`).join('、')}）</td></tr>`).join('')}
+        ${HORIZONS.map((h) => (state.plan.goals[h.key] ? `<tr><th>${h.label}目標</th><td>${esc(state.plan.goals[h.key])}</td></tr>` : '')).join('')}</table>
+        ${state.plan.actions.length ? `<h3>行動清單</h3><table>${HORIZONS.map((h) => state.plan.actions.filter((a) => a.h === h.key).map((a) => `<tr><th>${h.label}</th><td>${a.done ? '☑' : '☐'} ${esc(a.text)}</td></tr>`).join('')).join('')}</table>` : ''}
+      </section>` : ''}
+      ${state.ai ? `<section class="ai"><h2>深度解析</h2>${mdToHtml(state.ai)}</section>` : ''}
+      <p class="foot">IKIGAI 生き甲斐 · 用四個圈找出人生方向</p>`;
+    setTimeout(() => window.print(), 50);
+  }
+
+  // ---------- AI ----------
+  const apiBase = () => '/ikigai';
+  const payload = () => ({ ...Object.fromEntries(KEYS.map((k) => [k, inCircle(k).map((it) => it.text)])), note: state.note });
+
+  // Visitors see a plain sentence; the short code tells the site owner what happened (see docs/IKIGAI-WEB.zh-TW.md).
+  const CLIENT_SAFE = ['invalid_input', 'too_many_requests', 'flagged'];
+  const busyMessage = (code) => `目前無法完成，請稍後再試。（代碼 ${code}）`;
+  async function postJson(path, body) {
+    let res;
+    try {
+      res = await fetch(`${apiBase()}/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    } catch (err) {
+      throw new Error('連不到伺服器，請檢查網路後再試');
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(CLIENT_SAFE.includes(data.code) && data.error ? data.error : busyMessage(data.code || res.status));
+    return data;
+  }
+
+  const AI_STEPS = ['整理四個圈…', '尋找交集…', '思考可能的方向…', '寫下 30 天行動…'];
+  async function runAi() {
+    logEvent('深度解析');
+    aiBusy = true;
+    aiError = null;
+    refreshAi();
+    let i = 0;
+    if ($('aiStatus')) $('aiStatus').textContent = AI_STEPS[0];
+    const ticker = setInterval(() => { i = (i + 1) % AI_STEPS.length; if ($('aiStatus')) $('aiStatus').textContent = AI_STEPS[i]; }, 3500);
+    try {
+      const data = await postJson('analyze', payload());
+      state.ai = data.text;
+      save();
+      toast('深度解析完成');
+      logEvent('深度解析完成');
+    } catch (err) {
+      aiError = err.message || '目前無法完成，請稍後再試';
+      logEvent('深度解析失敗', aiError);
+    } finally {
+      clearInterval(ticker);
+      aiBusy = false;
+      if (state.step === 'result') { refreshAi(); renderProgress(); }
+    }
+  }
+
+  async function runPlan() {
+    const dir = mainDir();
+    if (!dir) return;
+    planBusy = true;
+    logEvent('產生建議計畫', dir.title);
+    planError = null;
+    refreshPlanBlock();
+    try {
+      const data = await postJson('plan', { ...payload(), direction: dir.title });
+      let filled = 0;
+      HORIZONS.forEach((h) => {
+        if (!state.plan.goals[h.key].trim() && data.goals?.[h.key]) { state.plan.goals[h.key] = data.goals[h.key]; filled += 1; }
+      });
+      const added = (data.actions || []).filter((a) => addAction(a.text, a.horizon)).length;
+      save();
+      toast(`已填入 ${filled} 個目標、加入 ${added} 項行動`);
+    } catch (err) {
+      planError = err.message || '目前無法完成，請稍後再試';
+    } finally {
+      planBusy = false;
+      if (state.step === 'plan') renderPlan();
+    }
+  }
+
+  async function copy(text, okMsg) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(okMsg);
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+      ta.remove();
+      toast(ok ? okMsg : '無法存取剪貼簿，請改用「匯出 JSON」');
+    }
+  }
+
+  function asText() {
+    const lines = [`${owner()} IKIGAI`, ''];
+    CIRCLES.forEach((c) => lines.push(`【${c.label}】${inCircle(c.key).map((it) => it.text).join('、') || '（未填）'}`));
+    lines.push('');
+    PAIRS.slice(0, 4).forEach((p) => lines.push(`${p.name}：${state.items.filter((it) => hasAll(it, p.keys)).map((it) => it.text).join('、') || '—'}`));
+    lines.push(`IKIGAI 中心：${state.items.filter((it) => hasAll(it, KEYS)).map((it) => it.text).join('、') || '—'}`);
+    if (state.note) lines.push('', `補充：${state.note}`);
+    lines.push(...careerText());
+    const dir = mainDir();
+    if (dir) {
+      lines.push('', `— 生涯規劃 —`, `主要方向：${dir.title}（契合度 ${fitOf(dir)}/20）`);
+      HORIZONS.forEach((h) => { if (state.plan.goals[h.key]) lines.push(`${h.label}目標：${state.plan.goals[h.key]}`); });
+      state.plan.actions.forEach((a) => lines.push(`${a.done ? '☑' : '☐'} [${HORIZONS.find((h) => h.key === a.h).label}] ${a.text}`));
+    }
+    if (state.ai) lines.push('', '— 深度解析 —', state.ai);
+    return lines.join('\n');
+  }
+  function exportJson() {
+    download(new Blob([JSON.stringify({ version: 2, ...state }, null, 2)], { type: 'application/json' }), `ikigai-${new Date().toISOString().slice(0, 10)}.json`);
+  }
+  $('importFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const next = sanitize(JSON.parse(await file.text()));
+      if (!next.items.length) throw new Error('empty');
+      state = next;
+      state.step = 'result';
+      filter = null;
+      animateResult = true;
+      save();
+      render();
+      toast(`已匯入 ${state.items.length} 項`);
+    } catch (err) {
+      toast('檔案格式不正確，請選擇從這裡匯出的 JSON');
+    }
+  });
+
+  // ---------- render ----------
+  function render(opts = {}) {
+    renderProgress();
+    renderNav();
+    if (shareMode) renderShareView();
+    else if (state.step === 'intro') renderIntro();
+    else if (KEYS.includes(state.step)) renderCircle(state.step, opts.focusInput);
+    else if (state.step === 'match') renderMatch();
+    else if ((state.step === 'result' || state.step === 'plan') && (editingProfile || (!state.profile.consent && !state.isSample))) renderProfileForm();
+    else if (state.step === 'plan') renderPlan();
+    else renderResult();
+    lastStep = state.step;
+  }
+
+  // Delegated events that survive re-renders.
+  $('progress').addEventListener('click', (e) => { const b = e.target.closest('[data-step]'); if (b) go(b.dataset.step); });
+  $('navInner').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.go) go(b.dataset.go);
+    if (b.dataset.scroll) $(b.dataset.scroll)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  });
+  $('home').addEventListener('click', () => (shareMode ? leaveShare() : go('intro')));
+  $('view').addEventListener('click', (e) => {
+    const t = e.target.closest('button');
+    if (!t) return;
+    if (t.dataset.remove) { removeFromCircle(t.dataset.remove, t.dataset.key); render(); return; }
+    if (t.dataset.chip) { const r = addItem(state.step, t.dataset.chip); save(); if (r === 'full') toast('每個圈最多 20 項'); render(); return; }
+    if (t.dataset.mf) { matchFilter = t.dataset.mf; renderMatch(); return; }
+    if (t.dataset.sugg) {
+      const it = state.items.find((x) => x.id === t.dataset.sugg);
+      if (it) addDirection(it.text, Object.fromEntries(KEYS.map((k) => [k, it.c[k] ? 4 : 2])));
+      return;
+    }
+    if (t.dataset.csugg) {
+      const c = careerInsights().careers.filter((x) => !state.plan.dirs.some((d) => d.title === x.name))[Number(t.dataset.csugg)];
+      if (c) addDirection(c.name, Object.fromEntries(KEYS.map((k) => [k, c.circles.includes(k) ? 4 : 2])));
+      return;
+    }
+    if (t.dataset.main) { state.plan.main = t.dataset.main; save(); renderPlan(); return; }
+    if (t.dataset.deldir) {
+      const before = JSON.parse(JSON.stringify(state.plan));
+      const d = state.plan.dirs.find((x) => x.id === t.dataset.deldir);
+      state.plan.dirs = state.plan.dirs.filter((x) => x.id !== t.dataset.deldir);
+      if (state.plan.main === t.dataset.deldir) state.plan.main = state.plan.dirs[0]?.id || null;
+      save();
+      renderPlan();
+      toast(`已刪除方向「${d ? d.title : ''}」`, { label: '復原', run: () => { state.plan = before; save(); renderPlan(); } });
+      return;
+    }
+    if (t.dataset.delact) {
+      state.plan.actions = state.plan.actions.filter((a) => a.id !== t.dataset.delact);
+      save();
+      refreshActions();
+      return;
+    }
+    if (t.classList.contains('toggle')) {
+      const it = state.items.find((x) => x.id === t.dataset.id);
+      if (!it) return;
+      const on = !it.c[t.dataset.key];
+      if (!on && circlesOf(it).length === 1) { toast('每一項至少要屬於一個圈；不需要的話，回到該圈刪除'); return; }
+      it.c[t.dataset.key] = on;
+      state.ai = '';
+      save();
+      t.setAttribute('aria-pressed', String(on));
+      t.closest('.item').querySelectorAll('.dots i').forEach((d, i) => d.classList.toggle('on', it.c[KEYS[i]]));
+      renderProgress();
+      renderNav();
+    }
+  });
+  $('view').addEventListener('change', (e) => {
+    const cb = e.target.closest('input[data-act]');
+    if (!cb) return;
+    const a = state.plan.actions.find((x) => x.id === cb.dataset.act);
+    if (!a) return;
+    a.done = cb.checked;
+    save();
+    refreshActions();
+    if (a.done && state.plan.actions.every((x) => x.done)) toast('全部行動都完成了！');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (shareMode || e.target.matches('input, textarea, select')) return;
+    if (e.key === 'ArrowRight' && state.step !== 'plan' && state.step !== 'intro') go(nextOf(state.step));
+    if (e.key === 'ArrowLeft' && state.step !== 'intro') go(prevOf(state.step));
+  });
+  window.addEventListener('hashchange', () => { if (location.hash.startsWith('#s=')) enterShare(); });
+
+  fetch(`${apiBase()}/status`).then((r) => r.json()).then((d) => {
+    aiAvailable = Boolean(d.ai);
+    if (shareMode || aiBusy || planBusy) return;
+    if (state.step === 'result') refreshAi();
+    if (state.step === 'plan') refreshPlanBlock();
+  }).catch(() => {});
+
+  // Remember who invited this visitor (first invite wins), then tidy the address bar.
+  function applyReferral(ref, src) {
+    if (!ref || !/^[a-z0-9]{12,40}$/.test(ref) || ref === state.rid || state.referredBy) return;
+    state.referredBy = ref;
+    state.source = String(src || 'link').slice(0, 20);
+    logEvent('透過推薦進入', state.source);
+    save(true);
+  }
+  const incoming = new URLSearchParams(location.search);
+  const incomingRef = incoming.get('ref');
+  const incomingSrc = incoming.get('src');
+  if (incomingRef) {
+    if (!location.hash.startsWith('#s=')) applyReferral(incomingRef, incomingSrc);
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
+
+  if (location.hash.startsWith('#s=')) enterShare();
+  else render();
+})();
+</script>
+</body>
+</html>

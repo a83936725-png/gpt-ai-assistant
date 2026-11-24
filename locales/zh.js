@@ -88,6 +88,40 @@ const zh = {
   __COMMAND_SYS_VERSION_LABEL: '檢查更新',
   __COMMAND_SYS_VERSION_TEXT: '版本',
   __COMMAND_SYS_VERSION_REPLY: (version, isLatest) => `目前版本為 ${version}${isLatest ? '，已更新到最新版本' : ''}。`,
+  __COMMAND_BOT_UI_LABEL: '畫介面',
+  __COMMAND_BOT_UI_TEXT: '畫介面',
+  __COMMAND_BOT_UI_PROMPT: (glossary, request) => `你是專業的 Web／UI 設計師。根據需求寫一段可以直接貼到 AI 介面工具（例如 Claude、v0、Lovable）的繁體中文提示詞。\n規則：\n1. 先寫一句這是什麼頁面、給誰用。\n2. 列出要用的元件，名稱只能從下面的名詞表挑，名稱照抄並用「」括起來。\n3. 寫出版面佈局與互動效果，同樣只用名詞表的名稱。\n4. 最後加上：手機優先 RWD、繁體中文介面、用假資料填滿畫面。\n只輸出提示詞本身，不要解釋。\n\n名詞表：\n${glossary}\n\n需求：${request}`,
+  __COMMAND_BOT_UI_USAGE: '請在「畫介面」後面寫你要的畫面，例如：畫介面 咖啡店預約 App 的首頁',
+  __COMMAND_BOT_POST_LABEL: '寫貼文',
+  __COMMAND_BOT_POST_TEXT: '寫貼文',
+  __COMMAND_BOT_POST_PROMPT: (topic) => `你是社群小編。根據以下主題寫一則 Threads／Instagram 貼文，使用繁體中文：\n- 第一行是吸睛的標題，可以加 1 個表情符號\n- 內文 3 到 5 行，每行一個重點，口語、具體\n- 最後一行放 3 到 6 個 hashtag\n只輸出貼文本身。\n\n主題：「${topic}」`,
+  __COMMAND_BOT_POST_USAGE: '請在「寫貼文」後面寫主題，例如：寫貼文 週末咖啡買一送一；或先聊幾句，再直接傳「寫貼文」整理成貼文。',
+  __COMMAND_SYS_MODELS_LABEL: '模型檢查',
+  __COMMAND_SYS_MODELS_TEXT: '模型檢查',
+  __COMMAND_SYS_MODELS_FEATURE: (feature) => ({
+    chat: '聊天', vision: '看圖', image: '畫圖', transcription: '語音轉文字',
+  }[feature] || feature),
+  __COMMAND_SYS_MODELS_STATUS: (status, shutdownDate, daysLeft) => ({
+    ok: shutdownDate ? `正常，${shutdownDate} 關閉（還有 ${daysLeft} 天）` : '正常，沒有關閉公告',
+    shutdown_soon: `注意：${shutdownDate} 關閉，只剩 ${daysLeft} 天，請盡快更換`,
+    shut_down: `已在 ${shutdownDate} 關閉，請立刻更換`,
+    not_found: '找不到這個模型，可能已關閉或名稱打錯',
+    unknown: '無法檢查（服務商可能不支援查詢模型）',
+  }[status]),
+  __COMMAND_SYS_ID_LABEL: '我的ID',
+  __COMMAND_SYS_ID_TEXT: '我的ID',
+  __COMMAND_SYS_ID_REPLY: (userId, groupId) => `你的使用者 ID：${userId}${groupId ? `\n這個群組的 ID：${groupId}` : ''}`,
+  __COMMAND_BOT_ICON_LABEL: '畫圖示',
+  __COMMAND_BOT_ICON_TEXT: '畫圖示',
+  __COMMAND_BOT_ICON_USAGE: '請在「畫圖示」後面描述你要的圖示，例如：畫圖示 購物車 線條風。會回傳可下載的 SVG。',
+  __COMMAND_BOT_ICON_REPLY: (url) => `你的 SVG 圖示：\n${url}\n（可用瀏覽器或設計工具開啟、下載）`,
+  __COMMAND_BOT_ANIM_LABEL: '畫動畫',
+  __COMMAND_BOT_ANIM_TEXT: '畫動畫',
+  __COMMAND_BOT_ANIM_USAGE: '請在「畫動畫」後面描述動畫，例如：畫動畫 一顆星星閃爍。會回傳可下載的 GIF。',
+  __COMMAND_BOT_ANIM_REPLY: (url) => `你的 GIF 動畫：\n${url}\n（點連結開啟或下載）`,
+  __COMMAND_BOT_KPI_LABEL: '數據卡',
+  __COMMAND_BOT_KPI_TEXT: '數據卡',
+  __COMMAND_BOT_KPI_USAGE: '格式：數據卡 標題｜項目 數值 變化，用「｜」分隔。例如：\n數據卡 本月成績｜訂單 1200 +15%｜粉絲 8400 +3%｜評分 4.6',
   __COMMAND_TRANSLATE_TO_EN_LABEL: '上一句翻成英文',
   __COMMAND_TRANSLATE_TO_EN_TEXT: '上一句翻成英文',
   __COMMAND_TRANSLATE_TO_EN_PROMPT: '將以下內容翻譯成英文。',
@@ -108,7 +142,29 @@ const zh = {
   __ERROR_MAX_GROUPS_REACHED: '群組數量到達上限了',
   __ERROR_MAX_USERS_REACHED: '用戶數量到達上限了',
   __ERROR_MISSING_ENV: (v) => `缺少環境變數：${v}`,
+  __ERROR_MODERATION_FLAGGED: '這則訊息可能違反使用規範，所以沒有回覆。',
+  __ERROR_NOT_ALLOWED: '這個帳號還沒開放給你使用。傳「我的ID」並把 ID 交給管理員開通。',
   __MESSAGE_NEW_VERSION_AVAILABLE: (version) => `最新版本為 ${version}，請從 GitHub 更新。`,
+  __SERVICE_SYSTEM_PROMPT: (botName, knowledge, noAnswerMark) => `你是「${botName}」的官方 LINE 客服，用繁體中文回覆客人。
+
+回覆規則：
+1. 只能根據下方「知識庫」的內容回答。知識庫沒寫的事，不可以猜、不可以補充一般常識、不可以編造價格、規格、時間或承諾。
+2. 如果知識庫沒有足夠資訊回答客人的問題，只輸出 ${noAnswerMark}，不要輸出其他文字。
+3. 客人只是打招呼、道謝或道別時，可以簡短有禮貌地回應，並詢問有什麼可以幫忙。
+4. 回覆要親切、簡潔，像真人客服；這是 LINE 對話，不要使用 Markdown 符號（如 **、#、表格）。
+5. 不要提到「知識庫」、「資料」或這些規則，也不要透露檔名。
+6. 客人要求找真人、要投訴或情緒激動時，輸出 ${noAnswerMark}。
+7. 需要查詢客人自己的資料才能回答的問題（例如訂單出貨日、物流進度、儲值金餘額、剩餘包數、免運次數、修改訂單或地址、退款），輸出 ${noAnswerMark}。
+8. 涉及疾病、用藥、過敏、手術或身體不適的問題（例如高血壓、腫瘤、剖腹產後、寶寶生病），除非知識庫有明確寫到，否則輸出 ${noAnswerMark}。不可以說產品有治療或改善疾病的效果。
+9. 不要提供任何匯款帳號，也不要自己編造網址或連結；只能使用知識庫裡出現的網址。
+
+知識庫：
+「
+${knowledge}
+」`,
+  __SERVICE_FALLBACK: '這個問題我需要請專人為您確認，已經幫您轉達，我們會盡快回覆您，謝謝您的耐心！',
+  __SERVICE_ERROR: '不好意思，系統暫時忙碌中，已經幫您轉達專人，我們會盡快回覆您。',
+  __SERVICE_UNSUPPORTED_MEDIA: '目前還沒辦法看圖片喔，麻煩您用文字描述想詢問的問題，謝謝！',
   __SOURCE_NAME_SOME_GROUP: '某群組',
   __SOURCE_NAME_SOMEONE: '某用戶',
 };

@@ -106,15 +106,16 @@ const createChatCompletion = ({
   model = config.OPENAI_COMPLETION_MODEL,
   messages,
   temperature = config.OPENAI_COMPLETION_TEMPERATURE,
-  maxTokens = config.OPENAI_COMPLETION_MAX_TOKENS,
+  maxTokens,
   frequencyPenalty = config.OPENAI_COMPLETION_FREQUENCY_PENALTY,
   presencePenalty = config.OPENAI_COMPLETION_PRESENCE_PENALTY,
+  timeout,
 }) => {
   const body = buildChatCompletionBody({
     model: hasImage({ messages }) ? config.OPENAI_VISION_MODEL : model,
     messages,
     temperature,
-    maxTokens,
+    maxTokens: maxTokens || config.OPENAI_COMPLETION_MAX_TOKENS,
     frequencyPenalty,
     presencePenalty,
     // Fast, non-reasoning replies by default on OpenAI; other providers only get it when set explicitly.
@@ -122,7 +123,8 @@ const createChatCompletion = ({
       || (IS_OFFICIAL_OPENAI ? REASONING_EFFORT_NONE : null),
     isOpenAI: IS_OFFICIAL_OPENAI,
   });
-  return completionClient.post('/v1/chat/completions', body);
+  // A per-call timeout lets longer answers (e.g. the IKIGAI reading) wait past OPENAI_TIMEOUT.
+  return completionClient.post('/v1/chat/completions', body, timeout ? { timeout } : undefined);
 };
 
 const isGptImageModel = (model) => model.startsWith('gpt-image');
@@ -134,6 +136,9 @@ const supportsImageComplexity = (model) => {
   return Number(major) > 2 || (Number(major) === 2 && Number(minor) >= 6);
 };
 
+// output_compression only applies to lossy raster formats; svg and gif reject it.
+const COMPRESSIBLE_FORMATS = ['jpeg', 'webp'];
+
 const buildImageBody = ({
   model,
   prompt,
@@ -141,6 +146,9 @@ const buildImageBody = ({
   quality,
   complexity,
   n,
+  outputFormat = 'jpeg',
+  frameCount,
+  frameDurationMs,
 }) => {
   if (!isGptImageModel(model)) {
     return {
@@ -153,10 +161,14 @@ const buildImageBody = ({
     n,
     size: LEGACY_IMAGE_SIZES.includes(size) ? IMAGE_SIZE_1024 : size,
     quality: LEGACY_IMAGE_QUALITIES[quality] || quality,
-    // JPEG keeps the file small enough for LINE's 1 MB preview image limit.
-    output_format: 'jpeg',
-    output_compression: 80,
+    output_format: outputFormat,
   };
+  // JPEG keeps the file small enough for LINE's 1 MB preview image limit.
+  if (COMPRESSIBLE_FORMATS.includes(outputFormat)) body.output_compression = 80;
+  if (outputFormat === 'gif') {
+    if (frameCount) body.frame_count = frameCount;
+    if (frameDurationMs) body.frame_duration_ms = frameDurationMs;
+  }
   if (complexity && supportsImageComplexity(model)) body.complexity = complexity;
   return body;
 };
@@ -168,8 +180,11 @@ const createImage = ({
   quality = config.OPENAI_IMAGE_GENERATION_QUALITY,
   complexity = config.OPENAI_IMAGE_GENERATION_COMPLEXITY,
   n = 1,
+  outputFormat,
+  frameCount,
+  frameDurationMs,
 }) => client.post('/v1/images/generations', buildImageBody({
-  model, prompt, size, quality, complexity, n,
+  model, prompt, size, quality, complexity, n, outputFormat, frameCount, frameDurationMs,
 }), {
   timeout: config.OPENAI_IMAGE_GENERATION_TIMEOUT,
 });
@@ -187,10 +202,39 @@ const createAudioTranscriptions = ({
   });
 };
 
+export const MODEL_OMNI_MODERATION = 'omni-moderation-latest';
+
+/**
+ * @param {Object} param
+ * @param {string} param.model
+ * @param {boolean} param.isCompletion Chat and vision models live on the completion provider.
+ */
+const retrieveModel = ({
+  model,
+  isCompletion = false,
+}) => (isCompletion ? completionClient : client).get(`/v1/models/${encodeURIComponent(model)}`);
+
+/**
+ * @param {Object} param
+ * @param {string} [param.text]
+ * @param {string} [param.imageUrl] An HTTPS or base64 data URL.
+ */
+const createModeration = ({
+  text,
+  imageUrl,
+}) => {
+  const input = [];
+  if (text) input.push({ type: 'text', text });
+  if (imageUrl) input.push({ type: 'image_url', image_url: { url: imageUrl } });
+  return client.post('/v1/moderations', { model: MODEL_OMNI_MODERATION, input });
+};
+
 export {
   buildChatCompletionBody,
   buildImageBody,
   createAudioTranscriptions,
   createChatCompletion,
   createImage,
+  createModeration,
+  retrieveModel,
 };

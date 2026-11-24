@@ -1,12 +1,15 @@
 import express from 'express';
 import path from 'path';
 import { handleEvents, printPrompts } from '../app/index.js';
+import { exportKnowledge } from '../app/knowledge/index.js';
 import config from '../config/index.js';
 import { validateLineSignature } from '../middleware/index.js';
 import storage from '../storage/index.js';
 import { fetchVersion, getVersion } from '../utils/index.js';
 import { getStoredImage, setPublicOrigin } from '../utils/upload-image.js';
 import { createMomRouter } from '../mom-api/index.js';
+import instagram from '../instagram/index.js';
+import ikigai, { sendPage, servesHome } from '../web/ikigai.js';
 
 const app = express();
 
@@ -32,13 +35,30 @@ app.use('/mom-app', (req, res, next) => {
 });
 app.use('/mom-app', express.static(path.join(process.cwd(), 'mom-app')));
 
+// The customer service knowledge base, for the staff Q&A page on the expo SOP site. It holds only
+// what the bot already tells customers, so any site may read it.
+app.get('/knowledge.json', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json(exportKnowledge());
+});
+
 app.use(express.json({
   verify: (req, res, buf) => {
     req.rawBody = buf.toString();
   },
 }));
 
+app.use('/ikigai', ikigai);
+
+// Instagram comment-to-DM auto reply (see docs/INSTAGRAM-AUTOREPLY.zh-TW.md).
+app.use('/instagram', instagram);
+
 app.get('/', async (req, res) => {
+  if (servesHome(req)) {
+    sendPage(req, res);
+    return;
+  }
   if (config.APP_URL) {
     res.redirect(config.APP_URL);
     return;

@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>IKIGAI 後台</title>
+<style>
+  /* Layout: a dense admin list with a detail panel; the four circle colours mark circle data. */
+  :root {
+    --bg: #f4f4f2; --surface: #ffffff; --surface-2: #efeeea; --text: #1d1c1a; --muted: #67625a; --border: #e1ded7;
+    --accent: #1d1c1a; --accent-text: #fff; --love: #dc4f67; --good: #dd9324; --need: #23988b; --paid: #4f63d6;
+    --danger: #b3261e; --ok: #1f7a4f; --radius: 12px; color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416; --surface: #1d1d21; --surface-2: #26262b; --text: #f0eee9; --muted: #a29d94; --border: #34343a;
+      --accent: #f0eee9; --accent-text: #141416; --love: #f27c90; --good: #f2b552; --need: #4ec6b7; --paid: #8796f3;
+      --danger: #f2b8b5; --ok: #7fd3a6; color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 18px; margin: 0 0 8px; }
+  h3 { font-size: 14px; margin: 16px 0 6px; color: var(--muted); letter-spacing: .04em; }
+  .top { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 10px; padding: 8px 14px; cursor: pointer; border: 1.5px solid var(--accent); background: var(--accent); color: var(--accent-text); }
+  .btn.ghost { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn.danger { background: transparent; color: var(--danger); border-color: var(--border); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  input[type="password"], input[type="search"] { font: inherit; color: var(--text); background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 9px 12px; min-width: 0; }
+  :focus-visible { outline: 2px solid var(--paid); outline-offset: 2px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .login { max-width: 380px; margin: 12vh auto 0; display: grid; gap: 12px; }
+  .msg { font-size: 14px; color: var(--muted); }
+  .msg.error { color: var(--danger); }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .ref { font-size: 13px; white-space: nowrap; }
+  .board { margin-bottom: 14px; }
+  .board ol { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+  .board li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .board li:last-child { border-bottom: 0; }
+  .board .rank { font-weight: 800; color: var(--muted); text-align: center; }
+  .board .who b { display: block; }
+  .board .who span { font-size: 13px; color: var(--muted); }
+  .board .n { font-weight: 800; color: var(--ok); white-space: nowrap; }
+  .ref b { color: var(--ok); }
+  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .stat b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 13px; color: var(--muted); }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .tools input { flex: 1 1 240px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 14px; align-items: start; }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 12.5px; color: var(--muted); font-weight: 600; white-space: nowrap; position: sticky; top: 0; background: var(--surface); }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover, tbody tr[aria-selected="true"] { background: var(--surface-2); }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  .pill { display: inline-block; font-size: 12px; border-radius: 999px; padding: 1px 8px; background: var(--surface-2); white-space: nowrap; }
+  .pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .detail { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+  .kv { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; overflow-wrap: anywhere; }
+  .circles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .circle { border-left: 4px solid var(--c); padding: 4px 10px; background: var(--bg); border-radius: 0 8px 8px 0; }
+  .circle b { font-size: 13px; }
+  .circle p { margin: 2px 0 0; font-size: 14px; }
+  ul.plain { margin: 0; padding-left: 18px; font-size: 14px; }
+  .events { font-size: 13px; max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .events div { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 8px; padding: 5px 10px; border-bottom: 1px solid var(--border); }
+  .events div:last-child { border-bottom: 0; }
+  .events time { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ai { font-size: 14px; white-space: pre-wrap; background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+  .empty { color: var(--muted); padding: 30px; text-align: center; }
+  .confirm { display: inline-flex; gap: 8px; align-items: center; color: var(--danger); font-size: 14px; flex-wrap: wrap; }
+  [hidden] { display: none !important; }
+  .mail-card { margin-bottom: 14px; }
+  .mail-head { display: flex; gap: 10px; align-items: center; }
+  .mail-head h2 { margin: 0; font-size: 17px; }
+  .pill.warn { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--text); }
+  .steps { margin: 10px 0 14px; padding-left: 20px; font-size: 14px; display: grid; gap: 4px; }
+  .steps a { color: var(--paid); }
+  .mail-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; margin-top: 8px; }
+  #testForm { grid-template-columns: minmax(0, 1fr) auto; max-width: 520px; }
+  .mail-form label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+  .mail-form input { font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+  #mailMsg.err { color: var(--danger); } #mailMsg.ok { color: var(--ok); }
+  @media (max-width: 760px) { .mail-form, #testForm { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="card login" id="loginView">
+    <h1>IKIGAI 後台</h1>
+    <p class="msg">請輸入後台密碼。</p>
+    <form id="loginForm">
+      <label for="pw" class="msg">密碼</label>
+      <input type="password" id="pw" autocomplete="current-password" style="width:100%;margin:6px 0 12px">
+      <button class="btn" type="submit">登入</button>
+    </form>
+    <p class="msg error" id="loginMsg" role="alert"></p>
+  </section>
+
+  <section id="appView" hidden>
+    <div class="top">
+      <h1>IKIGAI 客戶紀錄</h1>
+      <div class="tools" style="margin:0">
+        <button class="btn ghost" type="button" id="mailToggle">寄信設定</button>
+        <button class="btn ghost" type="button" id="refresh">重新整理</button>
+        <button class="btn" type="button" id="export">匯出 CSV</button>
+        <button class="btn ghost" type="button" id="logout">登出</button>
+      </div>
+    </div>
+    <section class="card mail-card" id="mailCard" hidden>
+      <div class="mail-head"><h2>寄信設定</h2><span class="pill" id="mailState">檢查中…</span></div>
+      <p class="msg" id="mailInfo"></p>
+      <ol class="steps">
+        <li>打開 <a href="https://myaccount.google.com/signinoptions/twosv" target="_blank" rel="noopener">兩步驟驗證</a>，確認已開啟。</li>
+        <li>打開 <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">應用程式密碼</a>，名稱輸入「IKIGAI」，按「建立」，複製畫面上的 16 個字母。</li>
+        <li>貼到下面，按「儲存並驗證」。成功後再寄一封測試信給自己。</li>
+      </ol>
+      <form id="mailForm" class="mail-form" autocomplete="off">
+        <label>Gmail 地址<input type="email" id="mUser" placeholder="you@gmail.com" required></label>
+        <label>應用程式密碼<input type="password" id="mPass" placeholder="16 個字母，有空格也沒關係" required autocomplete="new-password"></label>
+        <label>寄件人名稱<input type="text" id="mName" maxlength="40" placeholder="IKIGAI 生涯羅盤"></label>
+        <div class="row"><button class="btn" type="submit" id="mSave">儲存並驗證</button></div>
+      </form>
+      <form id="testForm" class="mail-form">
+        <label>測試信寄到<input type="email" id="mTo" placeholder="你的 Email" required></label>
+        <div class="row"><button class="btn ghost" type="submit" id="mTest">寄測試信</button></div>
+      </form>
+      <p class="msg" id="mailMsg" role="status"></p>
+    </section>
+    <div class="stats" id="stats"></div>
+    <section class="card board" id="board" hidden></section>
+    <div class="tools">
+      <label for="q" class="msg" hidden>搜尋</label>
+      <input type="search" id="q" placeholder="搜尋姓名、電話、Email、職業、項目">
+      <span class="msg" id="status" role="status"></span>
+    </div>
+    <div class="layout">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>更新時間</th><th>姓名</th><th>聯絡方式</th><th>進度</th><th>契合指數</th><th>IKIGAI 中心</th><th>主要方向</th><th>推薦</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <aside class="card detail" id="detail"><p class="empty">點選左邊任一位客戶，查看完整資料。</p></aside>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const CIRCLES = [['love', '熱愛', 'var(--love)'], ['good', '擅長', 'var(--good)'], ['need', '世界需要', 'var(--need)'], ['paid', '報酬', 'var(--paid)']];
+  const HORIZONS = { d30: '30 天', d90: '90 天', y1: '1 年' };
+  const fmt = (ms) => (ms ? new Date(ms).toLocaleString('zh-TW', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
+  let password = '';
+  let rows = [];
+  let selected = null;
+  try { password = sessionStorage.getItem('ikigai-admin') || ''; } catch (e) { /* storage unavailable */ }
+
+  async function api(path, opts = {}) {
+    const res = await fetch(`/ikigai/admin/api/${path}`, { ...opts, headers: { 'x-admin-password': password, ...(opts.headers || {}) } });
+    if (res.status === 401) { logout('密碼不正確，請重新登入。'); throw new Error('unauthorized'); }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `伺服器錯誤（${res.status}）`);
+    }
+    return res;
+  }
+
+  function logout(message) {
+    password = '';
+    try { sessionStorage.removeItem('ikigai-admin'); } catch (e) { /* ignore */ }
+    $('appView').hidden = true;
+    $('loginView').hidden = false;
+    $('loginMsg').textContent = message || '';
+  }
+
+  async function load() {
+    $('status').textContent = '載入中…';
+    try {
+      const data = await (await api('records')).json();
+      rows = data.records;
+      $('loginView').hidden = true;
+      $('appView').hidden = false;
+      $('status').textContent = data.storage === 'memory' ? '注意：尚未設定資料儲存空間，資料只暫存在伺服器記憶體。' : `共 ${rows.length} 位客戶`;
+      renderStats();
+      renderRows();
+      loadMail();
+    } catch (err) {
+      if (err.message !== 'unauthorized') {
+        $('loginView').hidden = false;
+        $('loginMsg').textContent = err.message;
+        $('status').textContent = '';
+      }
+    }
+  }
+
+  function renderStats() {
+    const week = Date.now() - 7 * 864e5;
+    const stats = [
+      [rows.length, '客戶總數'],
+      [rows.filter((r) => r.startedAt >= week).length, '近 7 天新增'],
+      [rows.filter((r) => r.mainDirection).length, '已選生涯方向'],
+      [rows.filter((r) => r.referredBy).length, '透過推薦進入'],
+    ];
+    $('stats').innerHTML = stats.map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
+    const top = rows.filter((r) => r.referrals > 0).sort((a, b) => b.referrals - a.referrals || b.updatedAt - a.updatedAt).slice(0, 10);
+    $('board').hidden = !top.length;
+    $('board').innerHTML = `<h2>推薦排行榜</h2><p class="msg">帶來最多朋友完成測驗的客戶，可以作為送禮或回饋的名單。</p>
+      <ol>${top.map((r, i) => `<li data-id="${esc(r.id)}"><span class="rank">${i + 1}</span><span class="who"><b>${esc(r.name)}</b><span>${esc([r.contact, r.email].filter(Boolean).join(' · '))}</span></span><span class="n">帶來 ${r.referrals} 位</span></li>`).join('')}</ol>`;
+    $('board').querySelectorAll('li[data-id]').forEach((li) => li.addEventListener('click', () => showDetail(li.dataset.id)));
+  }
+
+  function renderRows() {
+    const q = $('q').value.trim().toLowerCase();
+    const list = rows.filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q));
+    $('rows').innerHTML = list.map((r) => `
+      <tr data-id="${esc(r.id)}" aria-selected="${r.id === selected}" tabindex="0">
+        <td class="num">${fmt(r.updatedAt)}</td>
+        <td><b>${esc(r.name)}</b>${r.mailedAt ? ' <span class="pill ok">已寄報告</span>' : ''}</td>
+        <td>${esc(r.contact)}${r.contact && r.email ? '<br>' : ''}${esc(r.email)}</td>
+        <td><span class="pill${r.step === '生涯規劃' ? ' ok' : ''}">${esc(r.step)}</span></td>
+        <td class="num">${r.fitIndex ?? '—'}${r.topAbilities && r.topAbilities.length ? `<br><span class="msg" style="font-size:12px">${esc(r.topAbilities.join('、'))}</span>` : ''}</td>
+        <td>${esc(r.center.join('、')) || '—'}</td>
+        <td>${esc(r.mainDirection) || '—'}</td>
+        <td class="ref">${r.referrals ? `<b>帶來 ${r.referrals} 位</b>` : ''}${r.referrals && r.referrerName ? '<br>' : ''}${r.referrerName ? `由 ${esc(r.referrerName)} 推薦` : (r.referredBy ? '由他人推薦' : '')}${!r.referrals && !r.referredBy ? '—' : ''}</td>
+      </tr>`).join('') || `<tr><td colspan="8" class="empty">${rows.length ? '沒有符合的客戶。' : '還沒有客戶資料。客戶在網站留下基本資料後，就會出現在這裡。'}</td></tr>`;
+  }
+
+  async function showDetail(id) {
+    selected = id;
+    renderRows();
+    $('detail').innerHTML = '<p class="empty">載入中…</p>';
+    try {
+      const { record: r, summary: s, mail } = await (await api(`records/${encodeURIComponent(id)}`)).json();
+      const inCircle = (k) => r.items.filter((it) => it.c[k]).map((it) => it.text);
+      const main = r.plan.dirs.find((d) => d.main) || r.plan.dirs[0];
+      $('detail').innerHTML = `
+        <h2>${esc(r.profile.name)}</h2>
+        <dl class="kv">
+          <dt>手機／LINE</dt><dd>${esc(r.profile.contact) || '—'}</dd>
+          <dt>Email</dt><dd>${esc(r.profile.email) || '—'}</dd>
+          <dt>同意時間</dt><dd>${fmt(r.profile.consentAt)}</dd>
+          <dt>報告寄送</dt><dd>${mail ? `已寄 ${mail.count} 次，最後 ${fmt(mail.lastSentAt)}` : '尚未寄送'}</dd>
+          <dt>開始時間</dt><dd>${fmt(r.startedAt)}</dd>
+          <dt>最後更新</dt><dd>${fmt(r.updatedAt)}</dd>
+          <dt>目前步驟</dt><dd>${esc(s.step)}</dd>
+          <dt>推薦人</dt><dd>${s.referrerName ? esc(s.referrerName) : (r.referredBy ? '（已刪除的客戶）' : '—')}${r.source ? ` <span class="msg">（${esc({ card: '字卡 QR Code', invite: '邀請連結', share: '分享頁' }[r.source] || r.source)}）</span>` : ''}</dd>
+          <dt>帶來人數</dt><dd>${(rows.find((x) => x.id === r.id) || {}).referrals || 0} 位</dd>
+          <dt>地區</dt><dd>${esc(s.location) || '—'}</dd>
+          <dt>裝置</dt><dd style="font-size:12.5px;color:var(--muted)">${esc(s.device) || '—'}</dd>
+        </dl>
+        <h3>四個圈</h3>
+        <div class="circles">${CIRCLES.map(([k, l, c]) => `<div class="circle" style="--c:${c}"><b>${l}（${inCircle(k).length}）</b><p>${esc(inCircle(k).join('、')) || '—'}</p></div>`).join('')}</div>
+        <h3>IKIGAI 中心</h3><p style="margin:0">${esc(s.center.join('、')) || '—'}</p>
+        ${r.note ? `<h3>補充說明</h3><p style="margin:0">${esc(r.note)}</p>` : ''}
+        ${r.insights.analysis ? `<h3>能力分析</h3>
+        <p style="margin:0">IKIGAI 契合指數 <b>${r.insights.analysis.index}</b>／100（${esc(r.insights.analysis.level)}）　四圈平衡度 ${r.insights.analysis.balance}</p>
+        ${r.insights.analysis.abilities.length ? `<p style="margin:6px 0 0">能力排名：${r.insights.analysis.abilities.map((x, i) => `${i + 1}. ${esc(x.name)} ${x.score}`).join('　')}</p>` : ''}
+        ${r.insights.analysis.careers.length ? `<p style="margin:6px 0 0">職業契合度：${r.insights.analysis.careers.map((x, i) => `${i + 1}. ${esc(x.name)} ${x.match}%`).join('　')}</p>` : ''}
+        ${r.insights.analysis.roadmap.length ? `<ul class="plain">${r.insights.analysis.roadmap.map((st) => `<li><b>${esc(st.title)}</b>（${esc(st.when)}）${esc(st.goal)}</li>`).join('')}</ul>` : ''}` : ''}
+        <h3>職涯建議</h3>
+        ${r.insights.careers.length ? `<ul class="plain">${r.insights.careers.map((c) => `<li>${esc(c.name)} <span class="msg">（${c.circles.map((k) => CIRCLES.find((x) => x[0] === k)[1]).join('、')}）</span></li>`).join('')}</ul>` : '<p class="msg">—</p>'}
+        ${r.insights.paths.length ? `<p style="margin:6px 0 0">${r.insights.paths.map((p) => `<span class="pill">${esc(p.title)}</span> ${esc(p.career)}`).join('　')}</p>` : ''}
+        ${r.insights.skills.length ? `<p style="margin:6px 0 0">需要加強：${esc(r.insights.skills.join('、'))}</p>` : ''}
+        <h3>生涯規劃</h3>
+        ${r.plan.dirs.length ? `<ul class="plain">${r.plan.dirs.map((d) => `<li>${d === main ? '<b>主要：</b>' : ''}${esc(d.title)} <span class="msg">（${CIRCLES.map(([k, l]) => `${l} ${d.s[k]}`).join('、')}）</span></li>`).join('')}</ul>` : '<p class="msg">尚未選擇方向</p>'}
+        ${Object.entries(HORIZONS).some(([h]) => r.plan.goals[h]) ? `<ul class="plain">${Object.entries(HORIZONS).map(([h, l]) => (r.plan.goals[h] ? `<li>${l}目標：${esc(r.plan.goals[h])}</li>` : '')).join('')}</ul>` : ''}
+        ${r.plan.actions.length ? `<p style="margin:6px 0 2px">行動清單（完成 ${s.actionsDone}/${s.actionsTotal}）</p><ul class="plain">${r.plan.actions.map((a) => `<li>${a.done ? '☑' : '☐'} [${HORIZONS[a.h]}] ${esc(a.text)}</li>`).join('')}</ul>` : ''}
+        ${r.ai ? `<h3>深度解析</h3><div class="ai">${esc(r.ai)}</div>` : ''}
+        <h3>操作紀錄（${r.events.length}）</h3>
+        <div class="events">${r.events.slice().reverse().map((e) => `<div><time>${fmt(e.t)}</time><span>${esc(e.type)}${e.detail ? `：${esc(e.detail)}` : ''}</span></div>`).join('') || '<div><span class="msg">沒有紀錄</span></div>'}</div>
+        <h3>資料管理</h3>
+        <span id="delWrap"><button class="btn danger" type="button" id="del">刪除這位客戶的資料</button></span>`;
+      $('del').addEventListener('click', () => {
+        $('delWrap').innerHTML = '<span class="confirm">確定永久刪除？<button class="btn danger" type="button" id="delYes">刪除</button><button class="btn ghost" type="button" id="delNo">取消</button></span>';
+        $('delNo').addEventListener('click', () => showDetail(id));
+        $('delYes').addEventListener('click', async () => {
+          try {
+            await api(`records/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            rows = rows.filter((x) => x.id !== id);
+            selected = null;
+            $('detail').innerHTML = '<p class="empty">已刪除。</p>';
+            renderStats();
+            renderRows();
+          } catch (err) { $('delWrap').textContent = err.message; }
+        });
+      });
+    } catch (err) {
+      if (err.message !== 'unauthorized') $('detail').innerHTML = `<p class="msg error">${esc(err.message)}</p>`;
+    }
+  }
+
+  $('loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    password = $('pw').value;
+    try { sessionStorage.setItem('ikigai-admin', password); } catch (err) { /* ignore */ }
+    $('loginMsg').textContent = '';
+    load();
+  });
+  $('logout').addEventListener('click', () => logout());
+  $('refresh').addEventListener('click', load);
+  $('q').addEventListener('input', renderRows);
+  $('rows').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) showDetail(tr.dataset.id); });
+  $('rows').addEventListener('keydown', (e) => { const tr = e.target.closest('tr[data-id]'); if (tr && e.key === 'Enter') showDetail(tr.dataset.id); });
+  $('export').addEventListener('click', async () => {
+    try {
+      const blob = await (await api('export.csv')).blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `ikigai-clients-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    } catch (err) { if (err.message !== 'unauthorized') $('status').textContent = err.message; }
+  });
+
+  // ---------- sending account ----------
+  const SOURCES = { env: '已開啟（Vercel 環境變數）', resend: '已開啟（Resend）', admin: '已開啟（Gmail）', test: '已開啟（測試）' };
+  function mailMsg(text, kind) { $('mailMsg').textContent = text; $('mailMsg').className = `msg ${kind || ''}`; }
+  async function loadMail() {
+    try {
+      const m = await (await api('mail-settings')).json();
+      $('mailState').textContent = SOURCES[m.source] || '尚未開啟';
+      $('mailState').className = `pill ${m.source ? 'ok' : 'warn'}`;
+      $('mailInfo').textContent = m.source === 'admin'
+        ? `目前用 ${m.user} 寄出完整報告${m.updatedAt ? `（${new Date(m.updatedAt).toLocaleString('zh-TW')} 設定）` : ''}。要換帳號，重新填寫即可。`
+        : m.source ? '目前由伺服器設定寄信。' : '還沒設定寄信帳號，客戶填完不會收到 Email 報告。照下面 3 步設定：';
+      if (m.user && !$('mUser').value) $('mUser').value = m.user;
+      if (m.name && !$('mName').value) $('mName').value = m.name;
+      if (!$('mTo').value) $('mTo').value = m.user || '';
+      if (!m.source) $('mailCard').hidden = false;
+    } catch (err) { if (err.message !== 'unauthorized') mailMsg(err.message, 'err'); }
+  }
+  $('mailToggle').addEventListener('click', () => { $('mailCard').hidden = !$('mailCard').hidden; if (!$('mailCard').hidden) loadMail(); });
+  $('mailForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('mSave').disabled = true;
+    mailMsg('正在用這組帳號密碼登入 Gmail 驗證…');
+    try {
+      await api('mail-settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user: $('mUser').value, pass: $('mPass').value, name: $('mName').value }) });
+      $('mPass').value = '';
+      if (!$('mTo').value) $('mTo').value = $('mUser').value;
+      mailMsg('驗證成功，已儲存。客戶填完就會收到完整報告。可以先寄一封測試信給自己。', 'ok');
+      loadMail();
+    } catch (err) { if (err.message !== 'unauthorized') mailMsg(err.message, 'err'); }
+    $('mSave').disabled = false;
+  });
+  $('testForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('mTest').disabled = true;
+    mailMsg('寄送中…');
+    try {
+      await api('mail-test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: $('mTo').value }) });
+      mailMsg(`測試信已寄到 ${$('mTo').value}，請到信箱查看（也看一下垃圾郵件）。`, 'ok');
+    } catch (err) { if (err.message !== 'unauthorized') mailMsg(err.message, 'err'); }
+    $('mTest').disabled = false;
+  });
+
+  if (password) load();
+})();
+</script>
+</body>
+</html>

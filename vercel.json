@@ -7,7 +7,14 @@
   ],
   "functions": {
     "api/**/*": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "{knowledge,web}/**"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/instagram/cron",
+      "schedule": "0 13 * * *"
+    }
+  ]
 }

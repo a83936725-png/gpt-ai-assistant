@@ -2284,6 +2284,136 @@
   }
   $('#share-card').addEventListener('click', () => openShare());
 
+  // ---------- interaction: confetti, a light buzz, tilting cards, a sliding tab highlight, mouse-drag rows
+  const CONFETTI = ['#ff7a1a', '#1463ff', '#16915a', '#f6c453', '#ff5fa2', '#7c4dff'];
+  function burst(from, pieces = 16) {
+    if (REDUCED || !from) return;
+    const r = from.getBoundingClientRect();
+    const host = from.closest?.('dialog[open]') || document.body;
+    const hr = host === document.body ? { left: 0, top: 0 } : host.getBoundingClientRect();
+    const wrap = document.createElement('div');
+    wrap.className = 'burst';
+    wrap.style.left = `${r.left + r.width / 2 - hr.left}px`;
+    wrap.style.top = `${r.top + Math.min(r.height / 2, 60) - hr.top}px`;
+    for (let i = 0; i < pieces; i += 1) {
+      const a = (i / pieces) * Math.PI * 2 + Math.random() * 0.5;
+      const d = 36 + Math.random() * (pieces > 20 ? 90 : 50);
+      const bit = document.createElement('i');
+      bit.style.setProperty('--x', `${Math.cos(a) * d}px`);
+      bit.style.setProperty('--y', `${Math.sin(a) * d - 24}px`);
+      bit.style.setProperty('--r', `${Math.round(Math.random() * 540 - 270)}deg`);
+      bit.style.background = CONFETTI[i % CONFETTI.length];
+      wrap.appendChild(bit);
+    }
+    host.appendChild(wrap);
+    setTimeout(() => wrap.remove(), 1100);
+  }
+  const buzz = () => { try { if (!REDUCED) navigator.vibrate?.(10); } catch { /* not supported */ } };
+  // Tapping the big medal in a badge sheet spins it again.
+  document.addEventListener('click', (e) => {
+    const m = e.target.closest('.badge-hero .medal');
+    if (!m) return;
+    m.classList.remove('again');
+    m.getBoundingClientRect();
+    m.classList.add('again');
+    if (!m.classList.contains('locked')) burst(m, 18);
+  });
+  // Travel cards lean toward the mouse (or the finger while pressed) and catch the light.
+  function tilt(card, e) {
+    const r = card.getBoundingClientRect();
+    const px = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    const py = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    card.style.setProperty('--ry', `${(px - 0.5) * 16}deg`);
+    card.style.setProperty('--rx', `${(0.5 - py) * 12}deg`);
+    card.style.setProperty('--gx', `${px * 100}%`);
+    card.style.setProperty('--gy', `${py * 100}%`);
+    card.classList.add('tilting');
+  }
+  function untilt(card) {
+    card.classList.remove('tilting');
+    card.style.removeProperty('--rx'); card.style.removeProperty('--ry');
+  }
+  if (!REDUCED) {
+    document.addEventListener('pointermove', (e) => {
+      const card = e.target.closest?.('.pcard');
+      if (card && (e.pointerType !== 'touch' || card.classList.contains('pressed'))) tilt(card, e);
+    }, { passive: true });
+    document.addEventListener('pointerdown', (e) => {
+      const card = e.target.closest?.('.pcard');
+      if (card && e.pointerType === 'touch') { card.classList.add('pressed'); tilt(card, e); }
+    }, { passive: true });
+    ['pointerup', 'pointercancel'].forEach((t) => document.addEventListener(t, () => $$('.pcard.pressed').forEach((c) => { c.classList.remove('pressed'); untilt(c); }), { passive: true }));
+    document.addEventListener('pointerout', (e) => {
+      const card = e.target.closest?.('.pcard');
+      if (card && e.pointerType !== 'touch' && !card.contains(e.relatedTarget)) untilt(card);
+    }, { passive: true });
+  }
+  // The tab highlight slides from tab to tab.
+  const ink = document.createElement('span');
+  ink.className = 'tab-ink';
+  $('.tabs').prepend(ink);
+  function moveInk() {
+    const on = $('.tabs button.on');
+    if (!on) return;
+    ink.style.left = `${on.offsetLeft}px`;
+    ink.style.top = `${on.offsetTop}px`;
+    ink.style.width = `${on.offsetWidth}px`;
+    ink.style.height = `${on.offsetHeight}px`;
+  }
+  new MutationObserver(moveInk).observe($('.tabs'), { attributes: true, subtree: true, attributeFilter: ['class'] });
+  window.addEventListener('resize', moveInk);
+  setTimeout(moveInk, 60);
+  // With a mouse, sideways rows (day timeline, travel cards, photo rows) can be dragged, and keep gliding.
+  function dragScroll(row) {
+    if (row.dataset.drag) return;
+    row.dataset.drag = '1';
+    row.classList.add('drag-scroll');
+    let start = null;
+    let v = 0;
+    let lastX = 0;
+    let lastT = 0;
+    row.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      start = { x: e.clientX, left: row.scrollLeft, moved: false };
+      lastX = e.clientX; lastT = performance.now(); v = 0;
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!start) return;
+      const dx = e.clientX - start.x;
+      if (!start.moved && Math.abs(dx) < 6) return;
+      if (!start.moved) { start.moved = true; row.classList.add('dragging'); }
+      row.scrollLeft = start.left - dx;
+      const now = performance.now();
+      v = (e.clientX - lastX) / Math.max(1, now - lastT);
+      lastX = e.clientX; lastT = now;
+    });
+    window.addEventListener('pointerup', () => {
+      if (!start) return;
+      const { moved } = start;
+      start = null;
+      if (!moved) return;
+      // A drag is not a click on the card under the mouse.
+      row.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); }, { capture: true, once: true });
+      setTimeout(() => row.classList.remove('dragging'), 0);
+      let speed = v * 16;
+      const glide = () => {
+        if (REDUCED || Math.abs(speed) < 0.5) return;
+        row.scrollLeft -= speed;
+        speed *= 0.92;
+        requestAnimationFrame(glide);
+      };
+      requestAnimationFrame(glide);
+    });
+  }
+  const dragRows = () => $$('.day-strip, .pcards, .gallery, .cards.scroll, .mc-strip').forEach(dragScroll);
+  let dragPending = false;
+  new MutationObserver(() => {
+    if (dragPending) return;
+    dragPending = true;
+    requestAnimationFrame(() => { dragPending = false; dragRows(); });
+  }).observe(document.body, { childList: true, subtree: true });
+  dragRows();
+
   // ---------- photos (Wikipedia REST API; falls back to the designed gradient when blocked)
   const photoCache = store.get('photos', {});
   const photoPending = {};
@@ -3431,6 +3561,7 @@
       <div class="seg">${['all', ...CONFIG.years].map((y) => `<button data-badge="${key}" data-by="${y}" class="${String(year) === String(y) ? 'on' : ''}">${y === 'all' ? '2025–2026' : y}</button>`).join('')}</div>
       ${badgeEvidence(b, s)}
       ${st.ok ? '' : `<section><h3>怎麼解鎖</h3>${badgeNext(b, s)}</section>`}`, { sheet: 'tall' });
+    if (st.ok) setTimeout(() => burst($('#modal .badge-hero .medal'), 22), 650);
   }
   let wallYear = 'all';
   const badgeWallHtml = (year) => {
@@ -3461,7 +3592,10 @@
     save();
     $$('[data-log-box]').forEach((box) => { if (box.dataset.logBox === `${t.id}:${kind}`) box.outerHTML = logHtml(t, kind); });
     renderReview(); renderBadgeWall(); renderCards(); renderTrips();
+    const btn = $$('[data-log]').find((b) => b.dataset.log === id && b.dataset.kind === kind && b.dataset.name === name);
+    if (on && btn) { btn.classList.add('just'); burst(btn); buzz(); }
     const fresh = BADGES.filter((b) => unlockedKeys().includes(b.key) && !before.includes(b.key));
+    if (fresh.length) setTimeout(() => burst(btn || document.body, 34), 250);
     if (fresh.length) toast(`解鎖徽章：${fresh.map((b) => b.name).join('、')}！`);
     else if (on) toast(kind === 'food' ? `記下了：吃了${name}` : `記下了：做了${name}`);
   }
@@ -3490,6 +3624,7 @@
       <div class="pcard-inner">
         <div class="pcard-face pcard-front">
           <div class="ph ${ph ? '' : 'ph-missing'}">${imgHtml(ph, t.city)}</div>
+          <span class="pcard-shine" aria-hidden="true"></span>
           <div class="pcard-top">${flag(c.code)}<span>${esc(c.name)}</span><span class="spacer"></span><span class="pcard-no">No.${pad(tripNo(t))}</span></div>
           <span class="pcard-stamp"><b>${tripYear(t)}</b><small>TRAVEL</small></span>
           <div class="pcard-bottom">
@@ -3691,6 +3826,7 @@
 
   // ---------- render all
   function renderAll() {
+    setTimeout(moveInk, 0);
     renderInstall(); renderOnline();
     document.title = CONFIG.brand;
     $$('[data-brand]').forEach((n) => { n.textContent = CONFIG.brand; });

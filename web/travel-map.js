@@ -134,7 +134,7 @@ void main() {
       g.append('g').selectAll('path').data(data.features).join('path')
         .attr('class', (f) => `tm-land ${data.visits.get(f.id) || ''} ${f.id === data.home.n ? 'home' : ''} ${st.sel && st.sel.id === f.id ? 'sel' : ''}`)
         .attr('d', path)
-        .on('click', (e, f) => hooks.onCountry(f.id));
+        .on('click', (e, f) => { ripple(e); hooks.onCountry(f.id); });
       g.append('path').attr('class', 'tm-border').attr('d', path(data.borders));
       const arcs = g.append('g');
       data.arcs.forEach(([a, b, cls]) => arcs.append('path').attr('class', `tm-arc ${cls}`).attr('d', path({ type: 'LineString', coordinates: [a, b] })));
@@ -258,7 +258,7 @@ void main() {
         const ll = st.gproj.invert([x, y]);
         if (!ll || Math.hypot(x - st.w / 2, y - midY()) > baseR() * st.k) return;
         const f = st.data.features.find((ft) => d3.geoContains(ft, ll));
-        if (f) hooks.onCountry(f.id);
+        if (f) { ripple(e); hooks.onCountry(f.id); }
       });
     }
     const syncGlobe = () => st.gproj.scale(baseR() * st.k).translate([st.w / 2, midY()]).rotate(st.rot);
@@ -515,6 +515,15 @@ void main() {
     let spinSettle = 0;
     let bubbleAt = 0;
     let onScreen = true;
+    function ripple(e) {
+      if (REDUCED) return;
+      const [x, y] = d3.pointer(e, box);
+      const node = document.createElement('span');
+      node.className = 'tm-ripple';
+      node.style.translate = `${x}px ${y}px`;
+      box.appendChild(node);
+      setTimeout(() => node.remove(), 800);
+    }
     function touched(e) {
       lastTouch = performance.now();
       if (e?.target && bubble.contains(e.target)) return; // pressing the bubble opens it, so keep it

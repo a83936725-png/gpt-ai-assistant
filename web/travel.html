@@ -947,6 +947,51 @@ button.badge:hover .medal { translate: 0 -3px; }
 .flag-tile .fl { box-shadow: 0 2px 8px rgba(16,24,40,.14); border-radius: 6px; }
 .budget-row input, .budget-row input.input { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: none; }
 .budget-row input:focus { border-bottom-color: var(--brand); outline: none; }
+/* interaction: things answer the finger */
+.btn, button.chip, .quick button, .flag-btn, .badge, .mc-sight, .ph-card, .log-item, .heart-btn, .link-btn, .day-card, .ms-item, .tabs button { transition: scale .16s cubic-bezier(.2,.8,.2,1); }
+.btn:active, button.chip:active, .quick button:active, .flag-btn:active, button.badge:active, .mc-sight:active, button.ph-card:active, .log-item:active, .heart-btn:active, .day-card:active, .ms-item:active, .tabs button:active { scale: .95; }
+.heart-btn[aria-pressed="true"] { animation: heart .5s cubic-bezier(.2,1.6,.4,1); }
+@keyframes heart { 0% { scale: .6; } 60% { scale: 1.35; } 100% { scale: 1; } }
+/* confetti */
+.burst { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 300; pointer-events: none; }
+dialog .burst { position: absolute; }
+.burst i { position: absolute; left: -4px; top: -3px; width: 8px; height: 6px; border-radius: 2px; animation: burst .95s cubic-bezier(.15,.8,.3,1) forwards; }
+.burst i:nth-child(3n) { border-radius: 50%; width: 6px; }
+@keyframes burst { 0% { transform: translate(0, 0) rotate(0) scale(1); opacity: 1; } 75% { opacity: 1; } 100% { transform: translate(var(--x), calc(var(--y) + 26px)) rotate(var(--r)) scale(.7); opacity: 0; } }
+.log-item.just .log-check { animation: check-pop .55s cubic-bezier(.2,1.6,.4,1); }
+.log-item.just .ph img { animation: photo-pop .55s cubic-bezier(.2,1.4,.4,1); }
+@keyframes check-pop { 0% { scale: .3; } 60% { scale: 1.4; } 100% { scale: 1; } }
+@keyframes photo-pop { 0% { scale: 1; } 40% { scale: 1.08; } 100% { scale: 1; } }
+/* badge medal: spins in, and spins again when tapped */
+.badge-hero .medal { animation: medal-in .9s cubic-bezier(.2,1.25,.3,1) backwards; cursor: pointer; }
+.badge-hero .medal.again { animation: medal-spin .8s cubic-bezier(.2,1.1,.3,1); }
+@keyframes medal-in { 0% { transform: perspective(400px) rotateY(-260deg) scale(.4); opacity: 0; } 100% { transform: perspective(400px) rotateY(0) scale(1); opacity: 1; } }
+@keyframes medal-spin { 0% { transform: perspective(400px) rotateY(0); } 100% { transform: perspective(400px) rotateY(360deg); } }
+/* travel cards tilt toward the pointer and catch the light */
+.pcard-inner { transform: rotateX(var(--rx, 0deg)) rotateY(calc(var(--ry, 0deg) + var(--flip, 0deg))); }
+.pcard.flipped { --flip: 180deg; }
+.pcard.flipped .pcard-inner { transform: rotateX(var(--rx, 0deg)) rotateY(calc(var(--ry, 0deg) + var(--flip, 0deg))); }
+.pcard.tilting .pcard-inner { transition: transform .12s ease-out; }
+.pcard-shine { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 30%), rgba(255,255,255,.32), rgba(255,255,255,0) 55%); mix-blend-mode: soft-light; }
+.pcard.tilting .pcard-shine { opacity: 1; }
+/* a tap on the map ripples out from the finger */
+.tm-ripple { position: absolute; left: 0; top: 0; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; border: 2px solid #fff; pointer-events: none; z-index: 5; animation: tm-ripple .75s ease-out forwards; }
+@keyframes tm-ripple { 0% { scale: .4; opacity: .95; } 100% { scale: 6; opacity: 0; } }
+/* the tab highlight slides to the tab you pick */
+.tabs { position: relative; }
+.tabs button.on { background: transparent; }
+.tab-ink { position: absolute; z-index: 0; border-radius: 10px; background: color-mix(in srgb, var(--brand) 12%, transparent); pointer-events: none; transition: left .38s cubic-bezier(.2,1.2,.3,1), width .38s cubic-bezier(.2,1.2,.3,1), top .2s; }
+.tabs button { position: relative; z-index: 1; }
+/* rows that scroll sideways can be dragged with a mouse */
+.drag-scroll { cursor: grab; }
+.drag-scroll.dragging { cursor: grabbing; scroll-snap-type: none !important; user-select: none; }
+.drag-scroll.dragging * { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .burst, .tm-ripple { display: none; }
+  .badge-hero .medal, .badge-hero .medal.again, .log-item.just .log-check, .log-item.just .ph img, .heart-btn[aria-pressed="true"] { animation: none; }
+  .tab-ink { transition: none; }
+}
 </style>
 </head>
 <body>

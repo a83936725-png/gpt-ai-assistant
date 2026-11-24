@@ -248,6 +248,7 @@
       months,
       checkins: list.flatMap((t) => (t.checkins || []).map((c) => ({ ...c, city: t.city, tripId: t.id }))),
       photos: LIB.filter((p) => list.some((t) => t.id === p.tripId)).length, // eslint-disable-line no-use-before-define
+      quests: questsIn(past).filter((q) => q.complete).length,
     };
   }
 
@@ -295,6 +296,25 @@
     await PDB?.put(p).catch(() => {});
     save();
   };
+
+  // What you choose to show when sharing: the sight, the date, your name.
+  const priv = () => ({
+    place: true, date: true, name: true, ...(settings.privacy || {}),
+  });
+  // City check-in quests: each place's must-see spots; checking in at them fills that city's card.
+  const plainName = (n) => String(n || '').replace(/（.*?）|\(.*?\)/g, '').trim();
+  function questOf(dest) {
+    const d = DEST[dest];
+    if (!d || !d.spots.length) return null;
+    const spots = d.spots.slice(0, 5).map((sp) => sp.name);
+    const cs = trips.filter((x) => x.dest === dest).flatMap((x) => x.checkins || []);
+    const done = spots.filter((name) => cs.some((c) => plainName(c.place) === plainName(name)));
+    return {
+      dest: d, spots, done, total: spots.length, complete: done.length >= spots.length,
+    };
+  }
+  function questsIn(list) { return [...new Set(list.filter((t) => t.dest).map((t) => t.dest))].map(questOf).filter(Boolean); }
+  const questCard = (q) => `<div class="quest ${q.complete ? 'done' : ''}"><div class="quest-head"><b>${esc(q.dest.name)}打卡任務</b><span>${q.done.length} / ${q.total}</span></div><div class="usage"><div style="width:${(q.done.length / q.total) * 100}%;background:${q.complete ? '#c8a03a' : 'var(--brand)'}"></div></div><div class="quest-spots">${q.spots.map((name) => `<span class="${q.done.includes(name) ? 'ok' : ''}">${q.done.includes(name) ? '✓ ' : ''}${esc(name)}</span>`).join('')}</div></div>`;
 
   // ---------- badges: 30 of them; each opens the trips, food and sights that earned it
   const SEASONS = ['冬', '冬', '春', '春', '春', '夏', '夏', '夏', '秋', '秋', '秋', '冬'];
@@ -351,6 +371,7 @@
     { key: 'checkin10', group: 'social', color: VIOLET, name: '打卡達人', desc: '打卡 10 次', kind: 'checkin', progress: (s) => [s.checkins.length, 10] },
     { key: 'stamps5', group: 'social', color: BLUE, name: '印章收藏家', desc: '在 5 座城市打卡', kind: 'checkin', progress: (s) => [new Set(s.checkins.map((c) => c.city)).size, 5] },
     { key: 'photo30', group: 'social', color: TEAL, name: '旅行攝影師', desc: '照片庫收藏 30 張旅行照片', kind: 'photo', progress: (s) => [s.photos, 30] },
+    { key: 'quest1', group: 'social', color: GOLD, name: '城市制霸', desc: '完成一座城市的打卡任務', kind: 'quest', progress: (s) => [s.quests, 1] },
     { key: 'share3', group: 'social', color: GOLD, name: '分享家', desc: '分享 3 次旅行圖卡或打卡', kind: 'share', progress: () => [Number(settings.shares) || 0, 3] },
   ];
   const BADGE_GROUPS = { milestone: '里程碑', element: '旅行元素', style: '旅行方式', social: '打卡與分享' };
@@ -389,6 +410,7 @@
     checkin10: `<g transform="translate(-2.5 0)">${PICS.passport}</g><g transform="rotate(-12 17 16)"><circle cx="17" cy="16" r="4.6" fill="rgba(255,255,255,.88)" stroke="#c8102e" stroke-width=".9"/><circle cx="17" cy="16" r="3.3" fill="none" stroke="#c8102e" stroke-width=".4"/><path d="M15 16h4" stroke="#c8102e" stroke-width="1"/></g><g transform="rotate(14 17 5.5)"><rect x="13" y="3" width="8" height="5" rx="1" fill="rgba(255,255,255,.88)" stroke="#1d4fd8" stroke-width=".8"/><path d="M15 5.5h4" stroke="#1d4fd8" stroke-width=".9"/></g>`,
     stamps5: '<g fill="rgba(255,255,255,.75)" stroke-width=".9"><circle cx="6.5" cy="6.5" r="4" stroke="#c8102e"/><circle cx="17.5" cy="6.5" r="4" stroke="#1d4fd8"/><circle cx="12" cy="12.2" r="4" stroke="#0b7a5a"/><circle cx="6.5" cy="17.8" r="4" stroke="#7b2cbf"/><circle cx="17.5" cy="17.8" r="4" stroke="#b85c00"/></g><g stroke-width="1" stroke-linecap="round"><path d="M4.8 6.5h3.4" stroke="#c8102e"/><path d="M15.8 6.5h3.4" stroke="#1d4fd8"/><path d="M10.3 12.2h3.4" stroke="#0b7a5a"/><path d="M4.8 17.8h3.4" stroke="#7b2cbf"/><path d="M15.8 17.8h3.4" stroke="#b85c00"/></g>',
     photo30: '<g transform="rotate(-14 12 12)"><rect x="5" y="4.5" width="13" height="15.5" rx="1" fill="#fff" stroke="#d9dde5" stroke-width=".4"/><rect x="6.2" y="5.7" width="10.6" height="10" fill="#ffd6a5"/></g><g transform="rotate(9 12 12)"><rect x="5" y="4.5" width="13" height="15.5" rx="1" fill="#fff" stroke="#d9dde5" stroke-width=".4"/><rect x="6.2" y="5.7" width="10.6" height="10" fill="#b9e3c6"/></g><rect x="5.5" y="4" width="13" height="16" rx="1" fill="#fff" stroke="#d9dde5" stroke-width=".4"/><rect x="6.7" y="5.2" width="10.6" height="10.4" fill="url(#g-sea)"/><path d="M6.7 15.6l3.6-4 2.4 2.4 2-2 2.6 3.6z" fill="url(#g-grass)"/><circle cx="14.6" cy="7.9" r="1.2" fill="url(#g-sun)"/><path d="M8.2 17.9h4.4" stroke="#9aa3b5" stroke-width=".6" stroke-linecap="round"/>',
+    quest1: `<g transform="translate(-.5 1.5) scale(.92)">${PICS.city}</g><circle cx="18.5" cy="5.5" r="4.2" fill="url(#g-coin)" stroke="#a87710" stroke-width=".4"/><path d="M18.5 3.1l.7 1.45 1.6.22-1.16 1.12.28 1.6-1.42-.75-1.42.75.28-1.6-1.16-1.12 1.6-.22z" fill="#fff"/>`,
     share3: '<path d="M2.5 19.8c2.2-.4 3.8-1.6 5.4-3.2" fill="none" stroke="#1463ff" stroke-width=".9" stroke-dasharray="1.2 1" stroke-linecap="round"/><path d="M3 11.2L21.2 3.8l-4.6 16.4-4.3-5.5z" fill="#fff" stroke="#9aa8c0" stroke-width=".5" stroke-linejoin="round"/><path d="M12.3 14.7L21.2 3.8 9.4 13.1z" fill="#dfe6f3"/><path d="M9.4 13.1l.5 5.8 2.4-4.2z" fill="#c4cfe2"/>',
   };
   const BADGE_LINES = {
@@ -427,6 +449,7 @@
     stamps5: '五座城市的印章，蓋滿你的護照。',
     photo30: '你看見的風景，值得被好好收藏。',
     share3: '把喜歡的地方分享出去，世界就更近一點。',
+    quest1: '一座城市的必去景點，你一個不漏地走完了。',
   };
   const badgePic = (b) => {
     if (b.tag) return pic(b.tag);
@@ -1085,6 +1108,7 @@
         onTrip: (id) => openTrip(id),
         onDest: (id) => openDest(id),
         onSight: (code, i) => openSight(code, i),
+        onCheckin: (ref) => { const [tripId, id] = ref.split(':'); openCheckinView(tripId, id); },
         describeSight: (code, i) => {
           const x = sightsOf(code)[i];
           const f = flightInfo(code);
@@ -1098,6 +1122,7 @@
       if (!store.get('tipSeen', false)) setTimeout(() => $('#map-tip').classList.add('show'), REDUCED ? 0 : 2200);
     }
     worldMap.setData(mapData());
+    worldMap.setCheckins(checkinPins());
     renderLegend(visitMap(settings.year));
     renderMapMode();
   }
@@ -1228,6 +1253,7 @@
       ${t.note ? `<p>${esc(t.note)}</p>` : ''}
       ${CULTURE[c.code] ? `<section><h3>我吃了什麼</h3>${logHtml(t, 'food')}</section><section><h3>我做了什麼</h3>${logHtml(t, 'culture')}</section>` : ''}
       <section><h3>打卡印章 ${(t.checkins || []).length} 個</h3>${(t.checkins || []).length ? `<div class="stamp-row">${allCheckins([t]).map(stampHtml).join('')}</div>` : '<p class="small muted">還沒在這趟打卡，現在補打卡也可以。</p>'}
+        ${questOf(t.dest) ? questCard(questOf(t.dest)) : ''}
         <div class="row"><button class="btn primary" data-checkin="${t.id}">在 ${esc(t.city)} 打卡</button><button class="btn" data-share-trip="${t.id}">做成分享圖</button></div></section>
       ${d ? spotsHtml(d) : ''}
       <div class="actions">
@@ -1705,14 +1731,16 @@
   }
   function openCheckout() {
     const total = sum(cart, (k) => planPrice(k.key, k.plan, k.qty));
+    const cd = couponDiscount(total);
     const pays = [['card', '信用卡'], ['apple', 'Apple Pay'], ['line', 'LINE Pay']];
     openModal('結帳', `
       <div class="grid" style="gap:8px">${cart.map((k) => `<div class="row small"><span>${target(k.key).icon} ${esc(planLabel(k.key, k.plan))} × ${k.qty}</span><span class="spacer"></span><b>NT$${fmt(planPrice(k.key, k.plan, k.qty))}</b></div>`).join('')}</div>
+      ${cd ? `<label class="coupon-row"><input type="checkbox" id="co-coupon" checked><span class="grow"><b>分享回饋・eSIM 9 折</b><small>${esc(cd.k.code)}・${md(cd.k.until)} 前有效</small></span><b>−NT$${fmt(cd.off)}</b></label>` : ''}
       <div class="field"><label for="co-email">接收 eSIM 的 Email</label><input class="input" id="co-email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(user?.email || '')}"></div>
       <div class="field"><label>付款方式</label><div class="pay-grid">${pays.map(([k, l], i) => `<label class="pay"><input type="radio" name="pay" value="${k}" ${i === (IS_IOS ? 1 : 0) ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div></div>
       <label class="row small"><input type="checkbox" id="co-agree" checked> 我已確認手機支援 eSIM，並同意使用條款</label>
       <p class="notice">示範結帳：不會真的扣款。正式購買請到 <a href="${CONFIG.esimUrl}" target="_blank" rel="noopener">官網</a>。</p>
-      <div class="sheet-bar"><div><small class="muted">應付金額</small><div class="price">NT$${fmt(total)}</div></div><span class="spacer"></span><button class="btn primary" data-pay>確認付款（示範）</button></div>`, { sheet: true });
+      <div class="sheet-bar"><div><small class="muted">應付金額</small><div class="price" id="co-total" data-total="${total}" data-off="${cd ? cd.off : 0}">NT$${fmt(total - (cd ? cd.off : 0))}</div></div><span class="spacer"></span><button class="btn primary" data-pay>確認付款（示範）</button></div>`, { sheet: true });
   }
   function pay() {
     const email = $('#co-email').value.trim();
@@ -1721,8 +1749,14 @@
     user.email = email;
     const btn = $('[data-pay]');
     btn.disabled = true; btn.textContent = '付款處理中…';
+    const cd = $('#co-coupon')?.checked ? couponDiscount(sum(cart, (k) => planPrice(k.key, k.plan, k.qty))) : null;
     setTimeout(() => {
       const made = cart.map((k) => makeOrder({ key: k.key, plan: k.plan, qty: k.qty, tripIds: k.tripIds }));
+      if (cd && made[0]) {
+        made[0].discount = cd.off;
+        made[0].price = Math.max(0, made[0].price - cd.off);
+        cd.k.used = made[0].orderNo;
+      }
       orders.push(...made);
       cart = [];
       save();
@@ -4011,6 +4045,10 @@
       const ps = LIB.filter((p) => s.list.some((t) => t.id === p.tripId)).sort(byTaken);
       return `<section><h3>照片庫裡 ${ps.length} 張旅行照片</h3><div class="lib-grid">${ps.slice(0, 12).map((p) => `<button class="lib-ph" data-lib-photo="${p.id}"><img src="${libSrc(p)}" alt="" loading="lazy"></button>`).join('')}</div></section>`;
     }
+    if (b.kind === 'quest') {
+      const qs = questsIn(s.past);
+      return `<section><h3>打卡任務</h3>${qs.length ? `<div class="quest-row">${qs.map(questCard).join('')}</div>` : '<p class="small muted">去過的城市都有必去景點清單，在那些景點打卡就會累積。</p>'}</section>`;
+    }
     if (b.kind === 'share') return `<section><h3>已經分享 ${shareCount()} 次</h3><p class="small muted">分享打卡明信片、限時動態、足跡地圖或徽章卡都算，傳 LINE、發 IG 或存圖片都可以。</p></section>`;
     if (b.kind === 'country') {
       const ns = [...s.countries].filter((n) => !b.region || country(n).region === b.region);
@@ -4051,6 +4089,7 @@
     if (b.kind === 'checkin') return '<p class="small muted">旅途中拍一張、選地點，就會蓋上一個印章；去過的旅行也可以補打卡。</p><button class="btn primary" data-checkin>現在打卡</button>';
     if (b.kind === 'photo') return '<p class="small muted">把手機裡的旅行照片加進來，會依拍攝日期自動放進每一趟旅行。</p><label class="btn primary"><input type="file" accept="image/*" multiple hidden data-lib-add>加入照片</label>';
     if (b.kind === 'share') return '<button class="btn primary" data-share-year="all">分享我的足跡地圖</button>';
+    if (b.kind === 'quest') return '<p class="small muted">挑一座去過的城市，把它的必去景點都打卡，就完成那座城市的任務；打卡時有「任務」標籤的就是。</p><button class="btn primary" data-checkin>現在打卡</button>';
     const seen = new Set(trips.map((t) => t.dest));
     const destCards = (list) => (list.length ? `<div class="gallery">${list.slice(0, 6).map((d) => `<button class="ph-card city" data-dest="${d.id}"><div class="ph ${destPhoto(d.id) ? '' : 'ph-missing'}">${imgHtml(destPhoto(d.id), d.name)}</div><figcaption><b>${flag(d.c)} ${esc(d.name)}</b><small class="muted">${flightInfo(d.c)?.text || ''}</small></figcaption></button>`).join('')}</div>` : '');
     const inRegion = (d) => COUNTRIES[d.c]?.region;
@@ -4408,8 +4447,9 @@
     if (!grid) return;
     const cs = allCheckins();
     $('#lib-count').textContent = `${cs.length} 個打卡・${LIB.length} 張照片`;
+    const quests = questsIn(trips.filter((t) => !isUpcoming(t))).sort((x, y) => (y.done.length > 0) - (x.done.length > 0) || x.complete - y.complete).slice(0, 8);
     $('#stamp-row').innerHTML = cs.length
-      ? `<div class="stamp-row">${cs.slice(0, 24).map(stampHtml).join('')}<button class="stamp-chip add" data-checkin><b>＋</b><small>蓋新的章</small></button></div>`
+      ? `<div class="stamp-row">${cs.slice(0, 24).map(stampHtml).join('')}<button class="stamp-chip add" data-checkin><b>＋</b><small>蓋新的章</small></button></div>${quests.length ? `<div class="quest-row">${quests.map(questCard).join('')}</div>` : ''}`
       : '<button class="stamp-invite" data-checkin><span class="stamp-chip ghost"><small>CHECK-IN</small><b>第一個章</b><small>等你來蓋</small></span><span><b>在旅途中打卡</b><small>拍一張、選地點，就蓋上一個印章，做成明信片分享出去</small></span></button><button class="link-btn" data-ci-sample>先看打卡明信片長什麼樣子 →</button>';
     const withPhotos = sortTrips(trips.filter((t) => LIB.some((p) => p.tripId === t.id))).reverse();
     const loose = LIB.filter((p) => !trips.some((t) => t.id === p.tripId)).length;
@@ -4475,9 +4515,14 @@
     // Nearest first: to where you are (GPS or the photo's location), otherwise to the trip's city.
     const from = ci.lat != null ? ci : t;
     const near = from.lat != null ? [...list.filter((p) => p.lat != null).sort((a, b) => haversine(from, a) - haversine(from, b)), ...list.filter((p) => p.lat == null)] : list;
-    return [{ name: t.city, key: '' }, ...near.slice(0, 9)];
+    const quest = questOf(t.dest);
+    const questSpots = quest ? quest.spots.map((name) => ({
+      name, key: '', quest: true, done: quest.done.includes(name),
+    })) : [];
+    const seen = new Set([plainName(t.city), ...questSpots.map((q) => plainName(q.name))]);
+    return [{ name: t.city, key: '' }, ...questSpots, ...near.filter((p) => !seen.has(plainName(p.name))).slice(0, 8)];
   }
-  const ciPlacesHtml = (t) => checkinPlaces(t).map((p) => `<button class="chip ${ci.place === p.name ? 'on' : ''}" data-ci-place="${esc(p.name)}" data-ci-key="${esc(p.key)}">${esc(p.name)}</button>`).join('');
+  const ciPlacesHtml = (t) => checkinPlaces(t).map((p) => `<button class="chip ${ci.place === p.name ? 'on' : ''}" data-ci-place="${esc(p.name)}" data-ci-key="${esc(p.key)}">${esc(p.name)}${p.quest ? `<i class="q-tag ${p.done ? 'ok' : ''}">${p.done ? '已蓋' : '任務'}</i>` : ''}</button>`).join('');
   const ciPhotoHtml = () => {
     const src = ci.preview || (ci.photoId ? libSrc(LIB.find((p) => p.id === ci.photoId) || {}, 'full') : '');
     return `${src ? `<img src="${src}" alt="打卡照片">` : `<div class="ci-empty">${pic('camera')}<b>拍一張，或從相簿選</b><small>沒有照片也能打卡，明信片會用這個地方的風景照</small></div>`}
@@ -4487,13 +4532,15 @@
     if (!trips.length) { toast('先記錄一趟旅行，就能在旅途中打卡'); openTripForm(); return; }
     const t = trips.find((x) => x.id === opts.tripId) || checkinTrip();
     ci = {
-      tripId: t.id, place: opts.place || '', key: opts.key || '', lat: null, lng: null, mood: '', caption: '', file: null, preview: '', photoId: opts.photoId || '',
+      tripId: t.id, place: opts.place || '', key: opts.key || '', lat: null, lng: null, mood: '', caption: '', file: null, preview: '', photoId: opts.photoId || '', group: opts.group || '', with: new Set(),
     };
+    const g = ci.group ? groupOf(ci.group) : null;
     openModal('打卡', `
       <div class="ci-pv-box">${ciPreviewHtml()}</div>
       <div class="ci-photo-btns"><label class="btn primary"><input type="file" accept="image/*" capture="environment" hidden data-ci-file>拍照</label><label class="btn"><input type="file" accept="image/*" hidden data-ci-file>從相簿選</label></div>
       <div class="field"><label>在哪裡</label><div class="row ci-places" id="ci-places">${ciPlacesHtml(t)}</div>
         <div class="row" style="margin-top:8px"><input class="input grow" id="ci-place" maxlength="40" placeholder="或自己輸入，例如：一蘭拉麵 本店" value="${esc(ci.place)}"><button class="btn" data-ci-gps>${pic('gps')}附近</button></div></div>
+      ${g ? `<div class="field"><label>跟誰一起（${esc(g.invite.c)}揪團）</label><div class="row" id="ci-with">${groupNames(g).map((n) => `<button class="chip" data-ci-with="${esc(n)}">${esc(n)}</button>`).join('') || '<span class="small muted">團員報名後會出現在這裡</span>'}</div></div>` : ''}
       <div class="field"><label>心情</label><div class="row">${MOODS.map((m) => `<button class="chip" data-ci-mood="${m}">${m}</button>`).join('')}</div></div>
       <div class="field"><label for="ci-caption">說一句話</label><input class="input" id="ci-caption" maxlength="60" placeholder="例如：排了 40 分鐘，值得"></div>
       <div class="field"><label for="ci-trip">哪一趟旅行</label><select class="input" id="ci-trip">${sortTrips(trips).reverse().map((x) => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.city)}・${x.start.slice(0, 7).replace('-', '.')}${isOngoing(x) ? '（旅行中）' : ''}</option>`).join('')}</select></div>
@@ -4534,7 +4581,7 @@
     const ongoing = isOngoing(t);
     const date = ongoing ? TODAY : ([ci.taken, LIB.find((p) => p.id === ci.photoId)?.taken].find((d) => d && d >= t.start && d <= t.end) || t.start);
     const c = {
-      id: `ci-${uid()}`, date, place, key: typed && typed !== ci.place ? '' : ci.key, lat: ci.lat, lng: ci.lng, mood: ci.mood, caption: $('#ci-caption')?.value.trim() || '', photo: '',
+      id: `ci-${uid()}`, date, place, key: typed && typed !== ci.place ? '' : ci.key, lat: ci.lat, lng: ci.lng, mood: ci.mood, caption: $('#ci-caption')?.value.trim() || '', photo: '', with: [...ci.with], group: ci.group,
     };
     if (ci.file) {
       const [rec] = await addPhotos([ci.file], { tripId: t.id, checkinId: c.id, caption: c.caption, quiet: true });
@@ -4546,13 +4593,16 @@
     const before = unlockedKeys();
     t.checkins = [...(t.checkins || []), c];
     save();
-    renderLibrary(); renderBadgeWall(); renderReview();
+    renderLibrary(); renderBadgeWall(); renderReview(); drawMap();
+    if (c.group) sendGroupCheckin(c.group, c);
     const fresh = unlockedKeys().filter((k) => !before.includes(k));
     showCheckinDone(t, c, fresh);
   }
   const ciPhotoSrc = (t, c) => {
     const p = c?.photo && LIB.find((x) => x.id === c.photo);
     if (p) return libSrc(p, 'full');
+    const local = spotPhoto(t.dest, c?.place)?.src;
+    if (local) return local;
     const [code, i] = (c?.key || '').split(':');
     const x = code ? sightsOf(code)[Number(i)] : null;
     return x?.img ? thumbAt(x.img.src, 960) : destPhoto(t.dest)?.src || '';
@@ -4567,15 +4617,18 @@
     return `<button class="ci-next" data-badge="${b.x.key}">${medal(b.x, false, '', { pct: b.st.pct })}<span><small>下一枚徽章</small><b>${what}，解鎖「${esc(b.x.name)}」</b></span></button>`;
   }
   function showCheckinDone(t, c, fresh) {
+    const quest = questOf(t.dest);
     const here = (t.checkins || []).length;
     const total = allCheckins().length;
     openModal('打卡完成', `
       <div class="ci-done">
         <figure class="ci-shot">${ciPhotoSrc(t, c) ? `<img src="${esc(ciPhotoSrc(t, c))}" alt="" referrerpolicy="no-referrer">` : ''}${stampBig(t, c)}</figure>
         <h2 class="serif">蓋好章了</h2>
-        <p class="muted">${esc(c.place)}・這是你在 ${esc(t.city)} 的第 ${here} 個印章，護照裡一共 ${total} 個。</p>
+        <p class="muted">${esc(c.place)}・這是你在 ${esc(t.city)} 的第 ${here} 個印章，護照裡一共 ${total} 個。${c.with?.length ? `和 ${esc(c.with.join('、'))} 一起。` : ''}</p>
+        ${quest && quest.spots.some((n) => plainName(n) === plainName(c.place)) ? `<div class="quest-done ${quest.complete ? 'complete' : ''}">${quest.complete ? `<b class="serif">完成${esc(quest.dest.name)}打卡任務！</b>` : ''}${questCard(quest)}</div>` : ''}
         ${fresh.map((key) => { const b = BADGES.find((x) => x.key === key); return `<button class="ci-next got" data-badge="${key}">${medal(b, true)}<span><small>解鎖新徽章</small><b>${esc(b.name)}</b><em>${esc(BADGE_LINES[key] || '')}</em></span></button>`; }).join('') || socialNext()}
-        <div class="actions two"><button class="btn primary" data-share-ci="${t.id}:${c.id}">分享這張明信片</button><button class="btn" data-checkin="${t.id}">再打一個卡</button></div>
+        ${couponEligible() ? '<p class="coupon-tease">分享這張明信片，送你 eSIM 9 折券</p>' : ''}
+        <div class="actions two"><button class="btn primary" data-share-ci="${t.id}:${c.id}">${c.with?.length ? '分享全員到齊明信片' : '分享這張明信片'}</button><button class="btn" data-checkin="${t.id}">再打一個卡</button></div>
       </div>`);
     buzz();
     setTimeout(() => burst($('#modal .ci-stamp'), fresh.length ? 28 : 16), 420);
@@ -4601,6 +4654,11 @@
     save(); renderBadgeWall();
     const fresh = unlockedKeys().filter((k) => !before.includes(k));
     if (fresh.length) setTimeout(() => toast(`解鎖新徽章「${BADGES.find((b) => b.key === fresh[0]).name}」`), 900);
+    // Sharing earns a 9 折 eSIM coupon, once every 30 days.
+    if (['checkin', 'photo', 'group', 'badge', 'year'].includes(studio.ctx?.kind)) {
+      const k = grantCoupon();
+      if (k) setTimeout(() => toast(`謝謝分享！送你 eSIM 9 折券 ${k.code}（${md(k.until)} 前有效），結帳自動折抵`), fresh.length ? 3200 : 900);
+    }
   }
   const tag = (s) => `#${String(s || '').replace(/[\s・·,，、()（）.。!！?？/]/g, '')}`;
   const ctxCheckin = (ctx) => {
@@ -4646,7 +4704,7 @@
       const { t, c } = ctxCheckin(ctx);
       if (!t) return brand;
       if (ctx.kind === 'sample') return brand;
-      const where = c?.place && c.place !== t.city ? `${c.place}（${t.city}）` : t.city;
+      const where = priv().place && c?.place && c.place !== t.city ? `${c.place}（${t.city}）` : t.city;
       return `在 ${where} 打卡${c?.mood ? `｜${c.mood}` : ''}${c?.caption ? `\n「${c.caption}」` : ''}\n${tag(t.city)} ${tag(`${country(t.n).name}旅行`)} ${brand}`;
     }
     const s = stats(ctx.year || 'all');
@@ -4658,13 +4716,15 @@
     if (ctx.kind === 'badge') {
       const b = BADGES.find((x) => x.key === ctx.key);
       const at = badgeUnlocked(b, stats('all').list);
-      return `${base}#badge=${b64url({ f: user?.name || '', k: b.key, d: at?.end || '', c: at?.city || '' })}`;
+      return `${base}#badge=${b64url({
+        f: priv().name ? user?.name || '' : '', k: b.key, d: priv().date ? at?.end || '' : '', c: at?.city || '',
+      })}`;
     }
     if (ctx.kind === 'checkin' || ctx.kind === 'photo') {
       const { t, c } = ctxCheckin(ctx);
       if (t) {
         return `${base}#checkin=${b64url({
-          f: user?.name || '', c: t.city, n: t.n, s: t.dest || '', p: c?.place || t.city, k: c?.key || '', d: c?.date || t.start, m: c?.mood || '', t: (c?.caption || '').slice(0, 80),
+          f: priv().name ? user?.name || '' : '', c: t.city, n: t.n, s: t.dest || '', p: priv().place ? c?.place || t.city : t.city, k: priv().place ? c?.key || '' : '', d: priv().date ? c?.date || t.start : '', m: c?.mood || '', t: (c?.caption || '').slice(0, 80),
         })}`;
       }
     }
@@ -4689,7 +4749,7 @@
   async function studioData(ctx, tpl) {
     if (tpl === 'invite' || tpl === 'inviteStory') return groupCardData(groupOf(ctx.gid));
     const { brand } = CONFIG;
-    const name = user?.name || '';
+    const name = priv().name ? user?.name || '' : '';
     const year = ctx.year || 'all';
     const range = year === 'all' ? CONFIG.years.join('–') : String(year);
     if (tpl === 'postcard' || tpl === 'story') {
@@ -4699,8 +4759,9 @@
       const sight = code ? sightsOf(code)[Number(i)] : null;
       const cs = allCheckins().slice().reverse();
       return {
-        photo: p ? libSrc(p, 'full') : '', fallbackPhoto: sight?.img ? thumbAt(sight.img.src, 1280) : destPhoto(t.dest)?.src || '', city: t.city, place: c?.place && c.place !== t.city ? c.place : '',
-        country: country(t.n).name, flag: flagSrc(country(t.n).code), date: (c?.date || p?.taken || t.start).replace(/-/g, '.'), caption: c?.caption || p?.caption || '', mood: c?.mood || '',
+        photo: p ? libSrc(p, 'full') : '', fallbackPhoto: spotPhoto(t.dest, c?.place)?.src || (sight?.img ? thumbAt(sight.img.src, 1280) : destPhoto(t.dest)?.src || ''), city: t.city, place: priv().place && c?.place && c.place !== t.city ? c.place : '',
+        country: country(t.n).name, flag: flagSrc(country(t.n).code), date: priv().date ? (c?.date || p?.taken || t.start).replace(/-/g, '.') : '',
+        caption: [c?.with?.length ? `和${c.with.join('、')}一起` : '', c?.caption || p?.caption || ''].filter(Boolean).join('，'), mood: c?.mood || '',
         name, brand, count: c ? cs.findIndex((x) => x.id === c.id) + 1 : 0, ink: c ? inkOf(c.id) : '#c8102e',
       };
     }
@@ -4710,8 +4771,8 @@
       // Check-ins first, then an entry stamp for every trip without one, so the page fills up like a real passport.
       const stamped = new Set(cs.map((c) => c.trip.id));
       const stamps = [
-        ...cs.map((c) => ({ city: c.place && [...c.place].length <= 5 ? c.place : c.trip.city, country: country(c.trip.n).name, date: (c.date || '').replace(/-/g, '.') })),
-        ...list.filter((t) => !isUpcoming(t) && !stamped.has(t.id)).map((t) => ({ city: t.city, country: country(t.n).name, date: t.start.replace(/-/g, '.') })),
+        ...cs.map((c) => ({ city: priv().place && c.place && [...c.place].length <= 5 ? c.place : c.trip.city, country: country(c.trip.n).name, date: priv().date ? (c.date || '').replace(/-/g, '.') : '' })),
+        ...list.filter((t) => !isUpcoming(t) && !stamped.has(t.id)).map((t) => ({ city: t.city, country: country(t.n).name, date: priv().date ? t.start.replace(/-/g, '.') : '' })),
       ];
       return {
         title: '入境紀錄', subtitle: `${name ? `${name}・` : ''}${range}`, stamps, summary: `${cs.length ? `${cs.length} 個打卡・` : ''}${list.filter((t) => !isUpcoming(t)).length} 趟旅行・${new Set(list.filter((t) => !isUpcoming(t)).map((t) => t.n)).size} 個國家`, brand,
@@ -4751,6 +4812,8 @@
       <div class="studio">
         <div class="studio-preview" id="studio-preview"><span class="studio-wait">製作中…</span></div>
         <div class="seg seg-full" id="studio-tpl" role="tablist" aria-label="圖片樣式">${shareTemplates(ctx).map(([k, l]) => `<button data-tpl="${k}" class="${k === studio.tpl ? 'on' : ''}">${l}</button>`).join('')}</div>
+        ${['checkin', 'photo', 'year', 'badge'].includes(ctx.kind) ? `<div class="studio-priv"><b class="small">顯示</b>${[['place', '景點名稱'], ['date', '日期'], ['name', '我的名字']].filter(([k]) => ctx.kind === 'checkin' || ctx.kind === 'photo' || k !== 'place').map(([k, l]) => `<label class="chip ${priv()[k] ? 'on' : ''}"><input type="checkbox" data-priv="${k}" ${priv()[k] ? 'checked' : ''} hidden>${l}</label>`).join('')}<small class="muted">分享出去的圖片不含照片的定位資料</small></div>` : ''}
+        ${['checkin', 'photo', 'group', 'badge', 'year'].includes(ctx.kind) && couponEligible() ? '<p class="coupon-tease">分享後送你 eSIM 9 折券（每 30 天一張）</p>' : ''}
         ${ctx.kind === 'sample' ? '<div class="studio-sample"><p class="muted">這是範例。打卡後，你的照片、地點、心情和日期會做成這樣的明信片與限時動態，蓋上那座城市的印章。</p><button class="btn primary" data-checkin>我也來打卡</button></div>' : `<div class="share-targets">${TARGETS.filter(([k]) => k !== 'native' || navigator.share).map(([k, l, bg], i) => `<button data-st="${k}" style="--d:${i * 35}ms"><span class="st-mark" style="background:${bg}">${TARGET_MARK[k]}</span>${l}</button>`).join('')}</div>
         <div class="field"><label for="studio-text">貼文文字（分享時會一起帶上，也可以自己改）</label><textarea class="input" id="studio-text" rows="3">${esc(shareText(ctx))}</textarea></div>
         <p class="small muted">${ctx.kind === 'group' ? '傳到 LINE 群組最快：朋友點連結會看到日期、每人費用、景點與每天的行程，按 +1 就報名，名單會即時更新。' : '分享到 IG、LINE 或 Facebook 都算一次分享，分享 3 次會解鎖「分享家」徽章。朋友點連結會看到你的打卡，也能開始記錄自己的旅行。'}</p>`}
@@ -4850,7 +4913,7 @@
     const { code } = country(d.n);
     const [sc, si] = d.k.split(':');
     const sight = sc ? sightsOf(sc)[Number(si)] : null;
-    const photo = sight?.img ? thumbAt(sight.img.src, 960) : (d.s && destPhoto(d.s)?.src) || '';
+    const photo = (d.s && spotPhoto(d.s, d.p)?.src) || (sight?.img ? thumbAt(sight.img.src, 960) : (d.s && destPhoto(d.s)?.src) || '');
     const fake = { id: `${d.c}${d.d}`, place: d.p, date: d.d };
     openModal(`${esc(d.f || '朋友')}的打卡`, `
       <div class="ci-done shared">
@@ -5064,7 +5127,7 @@
     if (!CONFIG.groups || !g.invite.g) return g;
     try {
       const r = await groupApi('GET', `/${g.invite.g}`);
-      g.members = r.members; g.closed = r.closed;
+      g.members = r.members; g.closed = r.closed; g.checkins = r.checkins || g.checkins || [];
       if (groupOf(g.id)) saveGroups();
     } catch { /* show what we have */ }
     return g;
@@ -5104,6 +5167,9 @@
         <div class="inv-people">${people.map((m, i) => `<span class="inv-person ${m.host ? 'host' : ''}" style="--i:${i}"><i style="background:${INKS[i % INKS.length]}">${esc([...(m.name || '?')][0])}</i><b>${esc(m.name)}</b><small>${m.host ? '發起人' : esc(m.msg || (m.opts?.length && inv.o.length > 1 ? m.opts.map((k) => md(inv.o[k][0])).join('、') : '要去'))}</small></span>`).join('')}${Array.from({ length: Math.min(need, 5) }, (_, i) => `<span class="inv-person empty" style="--i:${people.length + i}"><i>＋</i><b>等你</b></span>`).join('')}</div>
         ${host && !CONFIG.groups ? '<p class="small muted">朋友報名會用 LINE 傳訊息給你。</p>' : ''}
       </section>
+      <section class="inv-wall"><div class="row"><h3>團體打卡牆${(g.checkins || []).length ? ` ${(g.checkins || []).length}` : ''}</h3><span class="spacer"></span>${host || joined ? `<button class="btn sm primary" data-group-ci="${g.id}">團體打卡</button>` : ''}</div>
+        ${(g.checkins || []).length ? `<div class="stamp-row">${(g.checkins || []).slice().reverse().map((c, i) => `<span class="stamp-chip" style="--ink:${INKS[i % INKS.length]};--rot:${((i * 37) % 17) - 8}deg"><small>${esc(c.name)}</small><b>${esc([...c.place].slice(0, 6).join(''))}</b><small>${esc((c.date || '').slice(5).replace('-', '/'))}${c.with?.length ? `・${c.with.length + 1} 人` : ''}</small></span>`).join('')}</div>` : '<p class="small muted">出發後在景點按「團體打卡」，選跟誰一起，大家的印章都會蓋在這面牆上。</p>'}
+      </section>
       ${inv.o.length > 1 || !host ? `<section><h3>${datesTitle}</h3><div class="inv-opts">${inv.o.map((o, i) => `<button class="inv-opt ${invPick.has(i) ? 'on' : ''} ${i === best && votes[i] ? 'top' : ''}" data-inv-opt="${i}" ${host ? 'disabled' : ''}><b>${optText(o)}</b><small>${HOLIDAYS[o[0]] || HOLIDAYS[addDays(o[0], 1)] ? `${HOLIDAYS[o[0]] || HOLIDAYS[addDays(o[0], 1)]}連假・` : ''}${votes[i]} 人可以</small></button>`).join('')}</div></section>` : ''}
       <section><h3>會去的地方</h3><div class="gallery">${inviteSpots(inv).map((sp) => `<figure class="ph-card"><div class="ph ${sp.photo ? '' : 'ph-missing'}">${sp.photo ? `<img src="${esc(sp.photo)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</div><figcaption><b>${esc(sp.name)}</b></figcaption></figure>`).join('')}</div></section>
       ${inv.pl?.length ? `<section><h3>行程（${inv.pl.length} 天）</h3><ol class="inv-plan">${inv.pl.map((day, i) => `<li><b>Day ${i + 1}${inv.o.length === 1 ? `・${md(addDays(inv.o[0][0], i))}` : ''}</b><span>${day.map(esc).join('・') || '自由活動'}</span></li>`).join('')}</ol></section>` : ''}
@@ -5136,7 +5202,7 @@
         const r = await groupApi('POST', `/${g.invite.g}/join`, {
           who: whoAmI(), name, opts, msg,
         });
-        g.members = r.members; g.closed = r.closed;
+        g.members = r.members; g.closed = r.closed; g.checkins = r.checkins || g.checkins || [];
       } catch (err) { button.disabled = false; toast(err.message); return; }
     } else {
       // Without the group server, the sign-up goes to the organiser as a message.
@@ -5228,7 +5294,8 @@
     if (!t || !ci) return '';
     const typed = $('#ci-place')?.value.trim();
     const place = typed || ci.place || t.city;
-    const caption = $('#ci-caption')?.value.trim() || '';
+    const together = ci.with?.size ? `和${[...ci.with].join('、')}一起` : '';
+    const caption = [together, $('#ci-caption')?.value.trim() || ''].filter(Boolean).join('，');
     const date = isOngoing(t) ? TODAY : ([ci.taken, LIB.find((p) => p.id === ci.photoId)?.taken].find((x) => x && x >= t.start && x <= t.end) || t.start);
     const own = ci.preview || (ci.photoId ? libSrc(LIB.find((p) => p.id === ci.photoId) || {}, 'full') : '');
     const [code, i] = (ci.key || '').split(':');
@@ -5252,6 +5319,20 @@
     const im = box.querySelector('.ci-pv-photo img');
     im?.addEventListener('error', () => { if (im.dataset.fallback && !im.src.endsWith(im.dataset.fallback)) im.src = im.dataset.fallback; else im.remove(); }, { once: true });
   }
+  document.addEventListener('change', (e) => {
+    const field = e.target;
+    if (field.dataset?.priv) {
+      settings.privacy = { ...priv(), [field.dataset.priv]: field.checked };
+      save();
+      field.closest('label')?.classList.toggle('on', field.checked);
+      if ($('#studio-text')) $('#studio-text').value = shareText(studio.ctx);
+      renderStudio();
+    }
+    if (field.id === 'co-coupon') {
+      const box = $('#co-total');
+      box.textContent = `NT$${fmt(Number(box.dataset.total) - (field.checked ? Number(box.dataset.off) : 0))}`;
+    }
+  });
   document.addEventListener('input', (e) => {
     const { id } = e.target;
     if (id === 'ci-place' || id === 'ci-caption') ciPreview();
@@ -5284,6 +5365,131 @@
       price: inv.p ? `NT$${fmt(inv.p)}` : '一起討論', sub: [`${inv.days} 天`, f?.text, `名額 ${inv.t} 人`].filter(Boolean).join('・'),
       spots: inviteSpots(inv).slice(0, 3), need: need ? `還差 ${need} 人` : '人數到齊', message: inv.m, cta: inv.dl ? `${md(inv.dl)} 前點連結喊 +1` : '點連結喊 +1', brand: CONFIG.brand,
     };
+  }
+
+  // ---------- 回憶: what you were doing on this day in earlier years (three days either side)
+  function memoryToday() {
+    const year = Number(TODAY.slice(0, 4));
+    const near = (date) => {
+      if (!date || Number(date.slice(0, 4)) >= year) return null;
+      const gap = Math.abs(daysBetween(TODAY, `${year}${date.slice(4)}`) - 1);
+      return gap <= 3 ? { years: year - Number(date.slice(0, 4)), gap } : null;
+    };
+    const cs = allCheckins().map((c) => ({ c, m: near(c.date) })).filter((x) => x.m)
+      .sort((a, b) => a.m.gap - b.m.gap || Number(Boolean(b.c.photo)) - Number(Boolean(a.c.photo)));
+    if (cs.length) {
+      const { c, m } = cs[0];
+      return {
+        kind: 'checkin', t: c.trip, c, years: m.years, exact: m.gap === 0,
+      };
+    }
+    const hit = sortTrips(trips).find((t) => {
+      if (Number(t.start.slice(0, 4)) >= year) return false;
+      const s = `${year}${t.start.slice(4)}`;
+      const e = addDays(s, daysBetween(t.start, t.end) - 1);
+      return s <= addDays(TODAY, 3) && e >= addDays(TODAY, -3);
+    });
+    return hit ? {
+      kind: 'trip', t: hit, years: year - Number(hit.start.slice(0, 4)), exact: false,
+    } : null;
+  }
+  function renderMemory() {
+    const box = $('#memory');
+    if (!box) return;
+    const m = memoryToday();
+    if (!m || store.get('memoryHidden', '') === TODAY) { box.innerHTML = ''; return; }
+    const { t } = m;
+    const own = tripPhotos(t.id).slice(-1)[0];
+    let photo = own ? libSrc(own, 'full') : destPhoto(t.dest)?.src || '';
+    if (m.kind === 'checkin') photo = ciPhotoSrc(t, m.c);
+    const when = `${m.years} 年前的${m.exact ? '今天' : '這幾天'}`;
+    const title = m.kind === 'checkin' ? `你在${m.c.place}` : `你在${t.city}`;
+    let line = `${md(t.start)}–${md(t.end)}・${daysBetween(t.start, t.end)} 天${tripPhotos(t.id).length ? `・${tripPhotos(t.id).length} 張照片` : ''}`;
+    if (m.kind === 'checkin') line = m.c.caption ? `「${m.c.caption}」` : `${t.city}・${(m.c.date || '').replace(/-/g, '.')}`;
+    const ref = m.kind === 'checkin' ? `${t.id}:${m.c.id}` : t.id;
+    box.innerHTML = `<section class="memory">
+      <button class="memory-ph" data-memory-open="${ref}" aria-label="打開這段回憶">${photo ? `<img src="${esc(photo)}" alt="" referrerpolicy="no-referrer">` : ''}<span class="memory-years">${m.years}<small>年前</small></span></button>
+      <div class="memory-text"><span class="kicker plain">${when}</span><b class="serif">${esc(title)}</b><span class="muted small">${esc(line)}</span>
+        <div class="row"><button class="btn sm primary" data-memory-share="${ref}">分享這段回憶</button><button class="btn sm" data-memory-notify>${settings.memoryNotify ? '回憶提醒已開啟' : '每天提醒我'}</button><button class="link-btn" data-memory-hide>今天先不看</button></div></div>
+    </section>`;
+  }
+  async function toggleMemoryNotify() {
+    if (settings.memoryNotify) { settings.memoryNotify = false; save(); renderMemory(); toast('已關閉回憶提醒'); return; }
+    if (!('Notification' in window)) { toast('這個瀏覽器不支援通知，加到主畫面後再試試'); return; }
+    const p = await Notification.requestPermission().catch(() => 'denied');
+    if (p !== 'granted') { toast('要在瀏覽器允許通知，才能收到回憶提醒'); return; }
+    settings.memoryNotify = true; save(); renderMemory();
+    toast('好了，之後打開 App 時有回憶就會通知你');
+    notifyMemory(true);
+  }
+  function notifyMemory(force) {
+    if (!settings.memoryNotify || !('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!force && store.get('memoryNotified', '') === TODAY) return;
+    const m = memoryToday();
+    if (!m) return;
+    store.set('memoryNotified', TODAY);
+    const title = `${m.years} 年前的${m.exact ? '今天' : '這幾天'}`;
+    const body = m.kind === 'checkin' ? `你在${m.c.place}打卡${m.c.caption ? `：「${m.c.caption}」` : ''}` : `你在${m.t.city}旅行，回去看看當時的照片吧`;
+    const opts = { body, icon: 'travel-icons/icon-192.png', tag: 'travel-memory' };
+    Promise.resolve(navigator.serviceWorker?.getRegistration?.())
+      .then((reg) => (reg ? reg.showNotification(title, opts) : new Notification(title, opts))).catch(() => {});
+  }
+
+  // ---------- 分享回饋: sharing a check-in, an invitation, a badge or your footprints earns a 9 折 eSIM coupon,
+  // at most one every 30 days. This is the demo shop: before taking real payments, issue and check codes on the server.
+  function couponNow() { return (settings.coupons || []).find((k) => !k.used && k.until >= TODAY); }
+  function couponEligible() { return !(settings.coupons || []).some((k) => k.at > addDays(TODAY, -30)); }
+  function couponDiscount(total) {
+    const k = couponNow();
+    return k && total > 0 ? { k, off: Math.min(300, Math.round((total * k.pct) / 100)) } : null;
+  }
+  function grantCoupon() {
+    if (!couponEligible()) return null;
+    const k = {
+      code: `SHARE${Math.random().toString(36).slice(2, 6).toUpperCase()}`, pct: 10, at: TODAY, until: addDays(TODAY, 60), used: '',
+    };
+    settings.coupons = [...(settings.coupons || []), k];
+    save();
+    renderCoupon();
+    return k;
+  }
+  function renderCoupon() {
+    const box = $('#coupon-box');
+    if (!box) return;
+    const k = couponNow();
+    box.innerHTML = k ? `<div class="coupon"><span class="coupon-pct">9<small>折</small></span><div><b>分享回饋券・eSIM 9 折</b><small>${esc(k.code)}・${md(k.until)} 前有效・結帳自動折抵，最多 NT$300</small></div><button class="btn sm" data-goto="esim">去挑 eSIM</button></div>` : '';
+  }
+
+  // ---------- 團體打卡: who was with you, and the group's shared stamp wall
+  function groupNames(g) {
+    const me = store.get('nick', '') || user?.name || '';
+    return [g.invite.h, ...(g.members || []).map((m) => m.name)].filter((n) => n && n !== me);
+  }
+  function groupTripOf(g) {
+    return trips.find((t) => t.city === g.invite.c && g.invite.o.some((o) => o[0] === t.start));
+  }
+  function sendGroupCheckin(groupId, c) {
+    const g = groupOf(groupId);
+    if (!g || !CONFIG.groups || !g.invite.g) return;
+    groupApi('POST', `/${g.invite.g}/checkin`, {
+      who: whoAmI(), key: g.role === 'host' ? g.key : undefined, cid: c.id, place: c.place, date: c.date, caption: c.caption, mood: c.mood, with: c.with || [],
+    }).then((r) => { g.checkins = r.checkins; saveGroups(); }).catch(() => {});
+  }
+
+  // ---------- your check-ins on the 3D globe and the flat map
+  function checkinPins() {
+    return allCheckins(tripsIn(settings.year)).map((c) => {
+      const t = c.trip;
+      const [code, i] = (c.key || '').split(':');
+      const sight = code ? sightsOf(code)[Number(i)] : null;
+      const lat = c.lat ?? sight?.lat ?? t.lat;
+      const lng = c.lng ?? sight?.lng ?? t.lng;
+      if (lat == null || lng == null) return null;
+      const p = c.photo && LIB.find((x) => x.id === c.photo);
+      return {
+        id: c.id, ref: `${t.id}:${c.id}`, name: c.place, lat, lng, ink: inkOf(c.id), photo: p ? libSrc(p) : (spotPhoto(t.dest, c.place)?.src || destPhoto(t.dest)?.src || ''),
+      };
+    }).filter(Boolean);
   }
 
   // ---------- the check-in button that follows you on 首頁 and 足跡
@@ -5375,6 +5581,23 @@
     }
     if (ds.ciMood) { ci.mood = ci.mood === ds.ciMood ? '' : ds.ciMood; $$('[data-ci-mood]').forEach((b) => b.classList.toggle('on', b.dataset.ciMood === ci.mood)); ciPreview(); return; }
     if ('ciSample' in ds) { openStudio({ kind: 'sample' }); return; }
+    if (ds.ciWith) {
+      if (ci.with.has(ds.ciWith)) ci.with.delete(ds.ciWith); else ci.with.add(ds.ciWith);
+      t.classList.toggle('on', ci.with.has(ds.ciWith));
+      ciPreview();
+      return;
+    }
+    if (ds.groupCi) {
+      const g = groupOf(ds.groupCi);
+      const trip = g && groupTripOf(g);
+      if (!trip) { toast('先按「成團！加到行程表」或「加到我的行程表」，才能在這趟打卡'); return; }
+      openCheckin({ tripId: trip.id, group: g.id });
+      return;
+    }
+    if (ds.memoryOpen) { const [tripId, id] = ds.memoryOpen.split(':'); if (id) openCheckinView(tripId, id); else openTrip(tripId); return; }
+    if (ds.memoryShare) { const [tripId, id] = ds.memoryShare.split(':'); openStudio({ kind: 'checkin', tripId, checkinId: id }); return; }
+    if ('memoryNotify' in ds) { toggleMemoryNotify(); return; }
+    if ('memoryHide' in ds) { store.set('memoryHidden', TODAY); renderMemory(); return; }
     if (ds.groupDest) { openGroupForm({ dest: ds.groupDest }); return; }
     if (ds.groupTrip) { openGroupForm({ tripId: ds.groupTrip }); return; }
     if ('groupNew' in ds) { openGroupForm(); return; }
@@ -5554,7 +5777,7 @@
     document.title = CONFIG.brand;
     $$('[data-brand]').forEach((n) => { n.textContent = CONFIG.brand; });
     $$('#year-seg button').forEach((b) => b.classList.toggle('on', b.dataset.year === settings.year));
-    renderCover(); renderHero(); renderStats(); renderMapRecs(); renderReview(); renderRecs(); renderEsim(); renderTrips(); renderCards(); renderBadgeWall(); renderQuickArt(); renderLibrary(); renderFab(); renderGroups();
+    renderCover(); renderHero(); renderStats(); renderMapRecs(); renderReview(); renderRecs(); renderEsim(); renderTrips(); renderCards(); renderBadgeWall(); renderQuickArt(); renderLibrary(); renderFab(); renderGroups(); renderMemory(); renderCoupon();
     if (currentTab === 'plan') renderPlanner();
     drawMap();
     animateIn($(`[data-view="${currentTab}"]`));
@@ -5578,12 +5801,21 @@
   const sharedPost = readSharedPost();
   const sharedJoin = readSharedJoin();
   $('#ci-fab .ci-fab-art').innerHTML = pic('camera');
-  window.addEventListener('hashchange', () => { const g = readGift(); if (g) { pendingGift = g; if (user) openGift(g); } });
+  window.addEventListener('hashchange', () => {
+    const g = readGift();
+    if (g) { pendingGift = g; if (user) openGift(g); }
+    // A 揪團 invitation or a friend's check-in opened while the page is already open.
+    const join = readSharedJoin();
+    if (join) { openSharedJoin(join); return; }
+    const post = readSharedPost();
+    if (post) { window.history.replaceState(null, '', window.location.pathname); openSharedPost(post); }
+  });
   Promise.all([loadConfig(), loadPhotos(), loadLibrary()]).finally(() => {
     if (user) showApp(); else showLogin();
     if (sharedAlbum) openAlbum(sharedAlbum.year, sharedAlbum);
     if (sharedPost) openSharedPost(sharedPost);
     if (sharedJoin) openSharedJoin(sharedJoin);
+    if (user) setTimeout(() => notifyMemory(), 1500);
     if (groups.some((g) => g.invite.g)) Promise.all(groups.map(refreshGroup)).then(renderGroups);
     // Inside the LINE app, coming back from LINE login, or on a later visit: sign in without another tap.
     if (CONFIG.liff && !sharedAlbum) {

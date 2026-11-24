@@ -90,6 +90,38 @@
   const dot = (k) => `<i class="dot" style="background:${(TAG_COLORS[k] || ['var(--brand)'])[0]}"></i>`;
   const tagChip = (k, extra = '') => `<span class="chip tag">${dot(k)}${(ELEMENTS[k] || { label: k }).label}${extra}</span>`;
 
+  // ---------- small realistic pictures for the travel elements, starting points and filters.
+  // Gradients are defined once in <svg class="art-defs"> in travel.html; each picture moves while its chip is picked.
+  const STEAM = '<g class="steam"><path d="M8 9.5c-1.2-1.4 1.2-2.4 0-4"/><path d="M12 9c-1.2-1.4 1.2-2.4 0-4"/><path d="M16 9.5c-1.2-1.4 1.2-2.4 0-4"/></g>';
+  const PICS = {
+    food: `${STEAM}<ellipse cx="12" cy="12.5" rx="8.5" ry="2" fill="url(#g-broth)"/><path d="M6 12.6c1-.8 2 .8 3 0s2 .8 3 0 2 .8 3 0 2 .8 3 0" fill="none" stroke="#fff1c2" stroke-width=".9"/><path d="M9.6 12.4L19.6 3.2M11 12.8L21.4 4.2" stroke="#8a5a2b" stroke-width="1.1" stroke-linecap="round"/><path d="M3.5 12.5h17a8.5 8 0 0 1-17 0z" fill="url(#g-bowl)"/><path d="M4.6 15.3h14.8" stroke="rgba(255,255,255,.55)" stroke-width=".8" stroke-dasharray="1.4 1"/><path d="M5.8 14.6c.9 2.4 2.6 4 4.8 4.8" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1" stroke-linecap="round"/><rect x="9" y="20.2" width="6" height="1.5" rx=".6" fill="#8e1b16"/>`,
+    culture: '<path d="M6.1 9.6h2l.4 10.8H5.7z" fill="url(#g-torii-h)"/><path d="M15.9 9.6h2l.4 10.8h-2.8z" fill="url(#g-torii-h)"/><rect x="3.6" y="8.2" width="16.8" height="1.5" fill="url(#g-torii)"/><rect x="11.2" y="9.5" width="1.6" height="2" fill="url(#g-torii)"/><rect x="3.8" y="11.3" width="16.4" height="1.6" rx=".3" fill="url(#g-torii)"/><path d="M1.8 5c3.2 1 6.6 1.4 10.2 1.4S19 6 22.2 5l-.7 2.3c-3 .8-6.1 1.1-9.5 1.1s-6.5-.3-9.5-1.1z" fill="#262626"/><rect x="5.1" y="20" width="3.8" height="1.8" rx=".4" fill="#262626"/><rect x="15.1" y="20" width="3.8" height="1.8" rx=".4" fill="#262626"/><path class="petal" d="M19.5 2.5c1 .1 1.5.9 1.1 1.5-.5.6-1.4.5-1.7-.2z" fill="#ffa8c2"/>',
+    nature: '<circle cx="18" cy="6.2" r="2.8" fill="url(#g-sun)"/><path d="M10.5 21.5L16.8 10l6.7 11.5z" fill="#7488ab"/><path d="M16.8 10l6.7 11.5h-4z" fill="rgba(20,30,60,.2)"/><path d="M.5 21.5L9.5 5.5l9 16z" fill="url(#g-mtn)"/><path d="M9.5 5.5l9 16h-6.2z" fill="rgba(20,30,60,.22)"/><path d="M9.5 5.5l3 5.4-1.5-.9-1.5 1.3-1.4-1.3-1.6.9z" fill="url(#g-snowcap)"/><g class="cloud" fill="#fff"><ellipse cx="8" cy="9.4" rx="3" ry="1.2"/><ellipse cx="9.2" cy="8.6" rx="1.8" ry="1.3"/></g><path d="M0 21.2c4-2.6 8-3 12-1.7s8 1.2 12-.3V23H0z" fill="url(#g-grass)"/>',
+    island: '<rect x=".5" y="16" width="23" height="6.5" rx="3" fill="url(#g-sea)"/><path class="wave" d="M-6 19.8q1.5-1 3 0t3 0 3 0 3 0 3 0 3 0 3 0 3 0 3 0 3 0 3 0" fill="none" stroke="rgba(255,255,255,.75)" stroke-width=".8"/><ellipse cx="10.5" cy="16.8" rx="7.5" ry="2.4" fill="url(#g-sand)"/><path d="M10.4 16.4c.4-3.6 1.6-6.8 3.8-9.4l.9.6c-1.9 2.6-3 5.5-3.3 8.8z" fill="url(#g-trunk)"/><g class="fronds" fill="url(#g-leaf)"><path d="M14.6 7.2C12.2 5.6 9.6 5.8 8 7.6c2.2-.6 4.4-.3 6.6-.4z"/><path d="M14.6 7.2c-.6-2.6-2.6-4-5-3.8 2 .9 3.6 2.2 5 3.8z"/><path d="M14.6 7.2c1.2-2.4 3.6-3.2 6-2.4-2.2.2-4.2 1-6 2.4z"/><path d="M14.6 7.2c2.6-.8 5-.1 6.4 2-2.1-.9-4.2-1.4-6.4-2z"/><circle cx="14.2" cy="7.8" r=".8" fill="#6b4320"/><circle cx="15.2" cy="8" r=".7" fill="#7a4b22"/></g>',
+    city: '<rect x="1.5" y="10" width="5" height="11.5" fill="url(#g-bldg2)"/><rect x="15" y="7.5" width="5" height="14" fill="url(#g-bldg2)"/><path d="M9.5 1v2.5" stroke="#56688f" stroke-width=".7"/><path d="M6 21.5V5.5l3.5-2 3.5 2v16z" fill="url(#g-bldg)"/><rect x="12.5" y="12" width="4.5" height="9.5" fill="url(#g-bldg)"/><rect x="18.8" y="14" width="4.2" height="7.5" fill="url(#g-bldg)"/><g class="wins" fill="#ffd76a"><rect x="7.2" y="7.5" width=".9" height="1"/><rect x="10.6" y="7.5" width=".9" height="1"/><rect x="8.9" y="10" width=".9" height="1"/><rect x="7.2" y="12.5" width=".9" height="1"/><rect x="10.6" y="12.5" width=".9" height="1"/><rect x="8.9" y="15" width=".9" height="1"/><rect x="10.6" y="17.5" width=".9" height="1"/><rect x="7.2" y="17.5" width=".9" height="1"/><rect x="13.5" y="13.5" width=".9" height="1"/><rect x="15.4" y="15.8" width=".9" height="1"/><rect x="13.5" y="18" width=".9" height="1"/><rect x="2.8" y="12" width=".9" height="1"/><rect x="4.6" y="14.5" width=".9" height="1"/><rect x="2.8" y="17" width=".9" height="1"/><rect x="16.3" y="9.5" width=".9" height="1"/><rect x="20" y="16" width=".9" height="1"/><rect x="21.6" y="18.4" width=".9" height="1"/></g><rect x=".5" y="21.3" width="23" height="1.2" rx=".6" fill="#3a4866"/>',
+    shopping: '<g class="bag"><path d="M4.5 8.5h15l-1 13H5.5z" fill="url(#g-bag)"/><path d="M16 8.5h3.5l-1 13h-3.1z" fill="rgba(0,0,0,.14)"/><rect x="4.5" y="8.5" width="15" height="1.2" fill="rgba(255,255,255,.28)"/><path d="M8.5 10.8V6.5a3.5 3.5 0 0 1 7 0v4.3" fill="none" stroke="#9e244d" stroke-width="1.3" stroke-linecap="round"/><circle cx="8.5" cy="10.8" r=".7" fill="#7d1c3e"/><circle cx="15.5" cy="10.8" r=".7" fill="#7d1c3e"/><path d="M12 13.3l.9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2-1.45-1.4 2-.3z" fill="rgba(255,255,255,.9)"/></g>',
+    onsen: `${STEAM}<path d="M3 12.5h18l-1.5 9H4.5z" fill="url(#g-wood)"/><path d="M3.5 15.3h17M4.1 18.8h15.8" stroke="#6b3f16" stroke-width=".8"/><path d="M7.5 12.5l.6 9M12 12.5v9M16.5 12.5l-.6 9" stroke="rgba(90,50,15,.35)" stroke-width=".5"/><ellipse cx="12" cy="12.5" rx="9" ry="1.9" fill="url(#g-water)" stroke="#9a6430" stroke-width=".8"/><ellipse class="ripple" cx="12" cy="12.5" rx="3" ry=".6" fill="none" stroke="rgba(255,255,255,.85)" stroke-width=".5"/>`,
+    snow: '<g class="flakes" fill="#9fb8e3"><circle cx="4" cy="3" r=".8"/><circle cx="10" cy="5" r=".7"/><circle cx="16" cy="2.5" r=".9"/><circle cx="20.5" cy="6" r=".7"/><circle cx="7" cy="9" r=".6"/><circle cx="14" cy="8.5" r=".7"/></g><path d="M0 22.5c2.5-6 7.5-9.5 12.5-9.5S21.5 16 24 19.5v3z" fill="url(#g-snowhill)" stroke="#b6c7e3" stroke-width=".5"/><path d="M9.8 12.8l2.6 5.4H7.2zM9.8 15.6l3.9 6.2H5.9z" fill="url(#g-pine)"/><path d="M9.8 12.8l1 2.1c-.6-.25-1.4-.25-2 0z" fill="#fff"/><rect x="9.3" y="21.8" width="1" height="1.2" fill="#6b4320"/><path d="M17.6 14.6l1.8 3.6h-3.6zM17.6 16.4l2.6 4.2h-5.2z" fill="url(#g-pine)"/><path d="M17.6 14.6l.7 1.4c-.45-.2-.95-.2-1.4 0z" fill="#fff"/><rect x="17.2" y="20.6" width=".8" height="1" fill="#6b4320"/>',
+    family: '<path d="M12 10.5l-4.6 11.2M12 10.5l4.6 11.2" stroke="#3b5b94" stroke-width="1.2" stroke-linecap="round"/><rect x="5" y="21.2" width="14" height="1.3" rx=".65" fill="#3b5b94"/><g class="wheel"><circle cx="12" cy="10.5" r="7.6" fill="none" stroke="#5b7db8" stroke-width="1"/><circle cx="12" cy="10.5" r="5" fill="none" stroke="#a9bde0" stroke-width=".5"/><path d="M12 2.9v15.2M4.4 10.5h15.2M6.6 5.1l10.8 10.8M17.4 5.1L6.6 15.9" stroke="#a9bde0" stroke-width=".5"/><circle cx="12" cy="2.9" r="1.4" fill="#ff6b6b"/><circle cx="17.4" cy="5.1" r="1.4" fill="#ffd43b"/><circle cx="19.6" cy="10.5" r="1.4" fill="#51cf66"/><circle cx="17.4" cy="15.9" r="1.4" fill="#339af0"/><circle cx="12" cy="18.1" r="1.4" fill="#cc5de8"/><circle cx="6.6" cy="15.9" r="1.4" fill="#ff922b"/><circle cx="4.4" cy="10.5" r="1.4" fill="#20c997"/><circle cx="6.6" cy="5.1" r="1.4" fill="#f06595"/></g><circle cx="12" cy="10.5" r="1.3" fill="#2f4a7a"/>',
+    night: '<circle cx="14" cy="8.2" r="7.5" fill="url(#g-moonglow)"/><path d="M14.5 2.6A6.2 6.2 0 1 0 20.2 12.9A7 7 0 0 1 14.5 2.6z" fill="url(#g-moon)"/><g class="stars" fill="#ffcf3a"><path d="M4.5 3.5l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5z"/><path d="M21 2l.4 1 1 .4-1 .4-.4 1-.4-1-1-.4 1-.4z"/><path d="M7.5 9.6l.35.9.9.35-.9.35-.35.9-.35-.9-.9-.35.9-.35z"/></g><path d="M1 22.5V17h2.5v-2h2v3H8v-5h3v9.5h1.5V15h2.5v2h2v-3.5h2.5V18H21v-1.5h2v6z" fill="url(#g-night)"/><g fill="#ffd76a"><rect x="9" y="15" width=".8" height=".8"/><rect x="9" y="17.5" width=".8" height=".8"/><rect x="13.3" y="17" width=".8" height=".8"/><rect x="18.2" y="15.5" width=".8" height=".8"/><rect x="3.3" y="18.5" width=".8" height=".8"/></g>',
+    art: '<path d="M12 3C6.5 3 2.5 6.8 2.5 11.6c0 4.7 3.9 8.4 8.6 8.4 1.6 0 2.4-.9 2.4-2s-.8-1.6-.8-2.6c0-1 .8-1.6 1.9-1.6h2.2c2.9 0 5.2-2.1 5.2-5C22 5.9 17.6 3 12 3z" fill="url(#g-wood)"/><ellipse cx="7.6" cy="15" rx="1.4" ry="1.1" fill="rgba(80,45,15,.5)"/><circle cx="6.6" cy="10" r="1.6" fill="#e03131"/><circle cx="10.5" cy="6.6" r="1.6" fill="#1c7ed6"/><circle cx="15.5" cy="6.8" r="1.6" fill="#fab005"/><circle cx="18.6" cy="10.4" r="1.5" fill="#2f9e44"/><g fill="rgba(255,255,255,.6)"><circle cx="6.1" cy="9.5" r=".45"/><circle cx="10" cy="6.1" r=".45"/><circle cx="15" cy="6.3" r=".45"/><circle cx="18.1" cy="9.9" r=".45"/></g><g class="brush"><path d="M12.6 22.4l6.6-8.6 1.2 1-6.1 8.8z" fill="#8a5a2b"/><path d="M19.2 13.8l1.2-1.5 1.2 1-1.2 1.5z" fill="#c0c7d2"/><path d="M20.4 12.3c.2-1.2 1-2.2 2.3-2.6.1 1.3-.3 2.6-1.1 3.6z" fill="#e03131"/></g>',
+    adventure: '<path d="M10 5L9 3M10 5l1-2" stroke="#7a4b22" stroke-width=".7" stroke-linecap="round"/><path d="M2 21.2L10 5l8 16.2z" fill="url(#g-tent)"/><path d="M10 5l8 16.2h-5z" fill="rgba(0,0,0,.16)"/><path d="M10 11.5l-3.2 9.7h6.4z" fill="#6e2a05"/><path d="M10 11.5l3.2 9.7h-1.8z" fill="#ff9f43"/><path d="M.8 21.6h22.4" stroke="#5c940d" stroke-width="1.4" stroke-linecap="round"/><path d="M17.6 21.6l4.6-1.5M17.6 20.1l4.6 1.5" stroke="#6b3f16" stroke-width="1.1" stroke-linecap="round"/><path class="flame" d="M19.9 20.4c-1.7-.5-2-2.4-.7-3.9.1 1 .7 1.4 1 1.2-.4-1.4.3-2.7 1.5-3.3-.3 1.4.9 2.3 1 3.5.2 1.5-.9 2.5-2.8 2.5z" fill="url(#g-fire)"/>',
+    gps: '<ellipse class="pulse" cx="12" cy="20.6" rx="5.5" ry="1.8" fill="none" stroke="#e03131" stroke-width=".8"/><ellipse cx="12" cy="20.6" rx="2.2" ry=".8" fill="rgba(0,0,0,.28)"/><g class="pin"><path d="M12 20.3c-.5 0-6.5-6.2-6.5-10.8a6.5 6.5 0 0 1 13 0c0 4.6-6 10.8-6.5 10.8z" fill="url(#g-pin)"/><circle cx="12" cy="9.5" r="2.4" fill="#fff"/><path d="M8.2 7.6a4.4 4.4 0 0 1 2.8-2.7" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1" stroke-linecap="round"/></g>',
+    home: '<g class="smoke" fill="#c3cad6"><circle cx="16.8" cy="3.2" r="1"/><circle cx="17.8" cy="1.6" r=".8"/></g><rect x="15.6" y="4.4" width="2.4" height="4.4" fill="#8a3a22"/><path d="M4.5 11.6L12 5.4l7.5 6.2V21h-15z" fill="url(#g-wall)"/><path d="M1.8 12.2L12 3.6l10.2 8.6-1.3 1.4L12 6.1l-8.9 7.5z" fill="url(#g-roof)"/><rect x="10" y="14.6" width="4" height="6.4" rx=".6" fill="#8a5a2b"/><circle cx="13.1" cy="18" r=".35" fill="#ffd76a"/><g class="lamp" fill="#ffd76a"><rect x="5.9" y="13" width="2.8" height="2.8" rx=".3"/><rect x="15.3" y="13" width="2.8" height="2.8" rx=".3"/></g><path d="M7.3 13v2.8M5.9 14.4h2.8M16.7 13v2.8M15.3 14.4h2.8" stroke="#fff" stroke-width=".4"/><rect x="2.5" y="20.6" width="19" height="1.5" rx=".75" fill="url(#g-grass)"/>',
+    plane: '<g transform="rotate(-18 12 12)"><g class="jet"><path class="trail" d="M-4 12.7h6" stroke="rgba(140,160,195,.7)" stroke-width=".9" stroke-dasharray="1.2 1" stroke-linecap="round"/><path d="M10.4 12L7.6 5.4h1.8l5.6 6.6z" fill="#c4cfdf" stroke="#8d9bb3" stroke-width=".35"/><path d="M2.8 12.7c0-.7.6-1.3 1.4-1.3h15c1.8 0 3.4.6 3.4 1.3S21 14 19.2 14h-15c-.8 0-1.4-.6-1.4-1.3z" fill="url(#g-plane)" stroke="#8d9bb3" stroke-width=".35"/><path d="M4.4 11.6L2.9 7.6h1.6l2.9 4z" fill="#1463ff"/><path d="M12.2 12.4h6" stroke="#5c6f91" stroke-width=".6" stroke-dasharray=".6 .7"/><path d="M20 12.2h1.5" stroke="#34425e" stroke-width=".7" stroke-linecap="round"/><path d="M10.4 13.3l-2.8 6.6h1.8l5.6-6.6z" fill="url(#g-plane)" stroke="#8d9bb3" stroke-width=".35"/><path d="M4.6 13.8l-1.5 2.3h1.5l2.4-2.3z" fill="#1046c4"/></g></g>',
+    ticket: '<g transform="rotate(-12 12 12)"><path d="M2.5 7.5h13v9h-13v-3a1.5 1.5 0 0 0 0-3z" fill="url(#g-ticket)"/><path d="M5 10.6h7.5M5 13.2h5" stroke="rgba(255,255,255,.9)" stroke-width="1.1" stroke-linecap="round"/><g class="stub"><path d="M15.5 7.5h6v3a1.5 1.5 0 0 0 0 3v3h-6z" fill="url(#g-ticket2)"/><path d="M18.5 10.4l.5 1 1.1.15-.8.75.2 1.1-1-.5-1 .5.2-1.1-.8-.75 1.1-.15z" fill="rgba(255,255,255,.9)"/></g><path d="M15.5 7.9v8.2" stroke="rgba(255,255,255,.85)" stroke-width=".7" stroke-dasharray="1 .8"/></g>',
+    coins: '<path d="M5 19v1.6a6 2.2 0 0 0 12 0V19" fill="url(#g-coin-edge)"/><ellipse cx="11" cy="19" rx="6" ry="2.2" fill="url(#g-coin)"/><path d="M5 16.6v1.6a6 2.2 0 0 0 12 0v-1.6" fill="url(#g-coin-edge)"/><ellipse cx="11" cy="16.6" rx="6" ry="2.2" fill="url(#g-coin)"/><path d="M5 14.2v1.6a6 2.2 0 0 0 12 0v-1.6" fill="url(#g-coin-edge)"/><ellipse cx="11" cy="14.2" rx="6" ry="2.2" fill="url(#g-coin)"/><path d="M15 20.6v1.2a4.2 1.6 0 0 0 8.4 0v-1.2" fill="url(#g-coin-edge)"/><ellipse cx="19.2" cy="20.6" rx="4.2" ry="1.6" fill="url(#g-coin)"/><g class="drop"><path d="M5 11.8v1.6a6 2.2 0 0 0 12 0v-1.6" fill="url(#g-coin-edge)"/><ellipse cx="11" cy="11.8" rx="6" ry="2.2" fill="url(#g-coin)"/><ellipse cx="11" cy="11.8" rx="4.2" ry="1.4" fill="none" stroke="rgba(150,100,0,.5)" stroke-width=".5"/><path d="M11 10.9v1.8" stroke="rgba(150,100,0,.6)" stroke-width=".7" stroke-linecap="round"/></g>',
+    passport: '<path d="M5 2.5h12.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H5z" fill="url(#g-passport)"/><path d="M5 2.5h1.4v19H5z" fill="rgba(0,0,0,.25)"/><circle cx="12.4" cy="10" r="3.2" fill="none" stroke="#e8c56a" stroke-width=".7"/><path d="M9.2 10h6.4M12.4 6.8c-1.6 1.8-1.6 4.6 0 6.4M12.4 6.8c1.6 1.8 1.6 4.6 0 6.4" fill="none" stroke="#e8c56a" stroke-width=".5"/><path d="M9.5 16h5.8M10.3 17.6h4.2" stroke="#e8c56a" stroke-width=".6" stroke-linecap="round"/>',
+  };
+  const pic = (k) => (PICS[k] ? `<svg class="ea ea-${k}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${PICS[k]}</svg>` : '');
+  const elArt = (k) => pic(k) || dot(k);
+  const originArt = (o) => {
+    if (o.key === 'home') return pic('home');
+    if (o.next) return pic('plane');
+    if (o.code) return `<span class="wave-flag">${flag(o.code)}</span>`;
+    return pic('gps');
+  };
+
   let world = null;
   let planTripId = null;
   const country = (n) => NUM[n] || (N2CODE[n] ? {
@@ -729,6 +761,7 @@
 
   // ---------- tabs (with smooth view transitions)
   let currentTab = 'map';
+  let popChip = ''; // the chip just tapped in 探索, so it pops after the list re-renders
   function go(tab) {
     if (document.documentElement.classList.contains('map-open')) setMapFull(false);
     if (tab === currentTab) return;
@@ -1067,7 +1100,9 @@
     const next = upcomingTrips()[0];
     if (next) opts.push({ key: `trip:${next.id}`, label: `下一站 ${next.city}`, lat: next.lat, lng: next.lng, name: next.city, next: true });
     sortTrips(trips.filter((t) => t.end < TODAY)).reverse().slice(0, 4).forEach((t) => {
-      opts.push({ key: `trip:${t.id}`, label: `去過・${t.city}`, lat: t.lat, lng: t.lng, name: t.city });
+      opts.push({
+        key: `trip:${t.id}`, label: `去過・${t.city}`, lat: t.lat, lng: t.lng, name: t.city, code: country(t.n).code,
+      });
     });
     const extra = recState.origin && !opts.find((o) => o.key === recState.origin.key) ? [recState.origin] : [];
     return [...opts, ...extra];
@@ -1175,8 +1210,9 @@
   function renderRecs() {
     if (!recState.origin) recState.origin = defaultOrigin();
     const opts = originOptions();
-    $('#origin-chips').innerHTML = opts.map((o) => `<button class="chip ${recState.origin?.key === o.key ? 'on' : ''}" data-origin="${esc(o.key)}">${esc(o.label)}</button>`).join('');
-    $('#tag-chips').innerHTML = Object.entries(ELEMENTS).map(([k, v]) => `<button class="chip ${recState.tags.includes(k) ? 'on' : ''}" data-tag="${k}">${dot(k)}${v.label}</button>`).join('');
+    $('#origin-chips').innerHTML = opts.map((o) => `<button class="chip el ${recState.origin?.key === o.key ? 'on' : ''}" data-origin="${esc(o.key)}">${originArt(o)}${esc(o.label)}</button>`).join('');
+    $('#tag-chips').innerHTML = Object.entries(ELEMENTS).map(([k, v]) => `<button class="chip el ${recState.tags.includes(k) ? 'on' : ''}" data-tag="${k}">${elArt(k)}${v.label}</button>`).join('');
+    if (popChip) { $(popChip)?.classList.add('just'); popChip = ''; }
     const list = recState.origin?.lat != null ? recommend(recState.origin) : [];
     $('#recs-count').textContent = list.length ? `從 ${recState.origin.name} 出發・${list.length} 個推薦` : '';
     $('#recs').innerHTML = list.length ? list.map(travelCard).join('') : '<div class="card muted">沒有符合條件的推薦，試著放寬篩選條件。</div>';
@@ -1190,13 +1226,24 @@
     $('#map-recs').innerHTML = list.map(travelCard).join('');
   }
   (function initRecControls() {
+    $$('[data-art]').forEach((n) => { n.innerHTML = pic(n.dataset.art) + (n.dataset.art === 'passport' ? '<b class="stamp">新</b>' : ''); });
+    const calNum = () => { $('.cal-num').textContent = recState.month; };
+    // Changing a filter plays its picture once: the calendar flips, the plane takes off, the ticket tears, a coin drops.
+    const playSel = (sel) => {
+      const art = sel.parentElement.querySelector('.sel-art');
+      if (!art) return;
+      art.classList.remove('go');
+      art.getBoundingClientRect();
+      art.classList.add('go');
+    };
     $('#rec-month').innerHTML = Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1} 月</option>`).join('');
     $('#rec-month').value = recState.month;
-    $('#rec-month').addEventListener('change', (e) => { recState.month = Number(e.target.value); renderRecs(); });
-    $('#rec-hours').addEventListener('change', (e) => { recState.hours = Number(e.target.value); renderRecs(); });
-    $('#rec-fee').addEventListener('change', (e) => { recState.fee = e.target.value; renderRecs(); });
+    calNum();
+    $('#rec-month').addEventListener('change', (e) => { recState.month = Number(e.target.value); calNum(); playSel(e.target); renderRecs(); });
+    $('#rec-hours').addEventListener('change', (e) => { recState.hours = Number(e.target.value); playSel(e.target); renderRecs(); });
+    $('#rec-fee').addEventListener('change', (e) => { recState.fee = e.target.value; playSel(e.target); renderRecs(); });
     $('#rec-new').addEventListener('change', (e) => { recState.unvisited = e.target.checked; renderRecs(); });
-    $('#rec-budget').addEventListener('change', (e) => { recState.budget = Number(e.target.value); renderRecs(); });
+    $('#rec-budget').addEventListener('change', (e) => { recState.budget = Number(e.target.value); playSel(e.target); renderRecs(); });
   }());
   function setOrigin(key) {
     if (key === 'gps') {
@@ -2039,7 +2086,7 @@
       </div>
       <div class="row"><div class="field" style="flex:1"><label for="f-start">出發</label><input type="date" class="input" id="f-start" value="${t.start}"></div>
         <div class="field" style="flex:1"><label for="f-end">回程</label><input type="date" class="input" id="f-end" value="${t.end}"></div></div>
-      <div class="field"><label>旅行元素</label><div class="row" id="f-tags">${Object.entries(ELEMENTS).map(([k, v]) => `<button type="button" class="chip ${t.tags.includes(k) ? 'on' : ''}" data-ftag="${k}">${dot(k)}${v.label}</button>`).join('')}</div></div>
+      <div class="field"><label>旅行元素</label><div class="row" id="f-tags">${Object.entries(ELEMENTS).map(([k, v]) => `<button type="button" class="chip el ${t.tags.includes(k) ? 'on' : ''}" data-ftag="${k}">${elArt(k)}${v.label}</button>`).join('')}</div></div>
       <div class="row"><div class="field" style="flex:1"><label for="f-gb">eSIM 用量（GB，選填）</label><input type="number" min="0" step="0.1" class="input" id="f-gb" value="${t.gb ?? ''}"></div></div>
       <div class="field"><label for="f-note">備註</label><textarea class="input" id="f-note" rows="2" maxlength="200">${esc(t.note)}</textarea></div>
       <div class="actions"><button class="btn primary" id="f-save">儲存</button>${id ? '<button class="btn" id="f-del" style="color:var(--danger)">刪除</button>' : ''}</div>`);
@@ -3118,7 +3165,7 @@
       <div class="row"><div class="field"><label>天數</label><span class="stepper"><button data-rdays="-1" aria-label="少一天">－</button><b>${rnd.days} 天</b><button data-rdays="1" aria-label="多一天">＋</button></span></div>
         <div class="field"><label for="rnd-month">出發月份</label><select class="input" id="rnd-month" style="width:auto">${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${rnd.month === i + 1 ? 'selected' : ''}>${i + 1} 月</option>`).join('')}</select></div>
         <label class="row small" style="margin-top:20px"><input type="checkbox" id="rnd-fresh" ${rnd.fresh ? 'checked' : ''}> 只去沒去過的</label></div>
-      <div class="field"><label>想要的元素（可不選）</label><div class="row">${Object.entries(ELEMENTS).slice(0, 8).map(([k, v]) => `<button class="chip ${rnd.tags.includes(k) ? 'on' : ''}" data-rtag="${k}">${dot(k)}${v.label}</button>`).join('')}</div></div>
+      <div class="field"><label>想要的元素（可不選）</label><div class="row">${Object.entries(ELEMENTS).slice(0, 8).map(([k, v]) => `<button class="chip el ${rnd.tags.includes(k) ? 'on' : ''}" data-rtag="${k}">${elArt(k)}${v.label}</button>`).join('')}</div></div>
       <div class="slot" id="slot">${result ? randomResult(result) : `<div class="slot-empty"><div class="slot-deck" aria-hidden="true">${list.slice().sort(() => Math.random() - 0.5).slice(0, 3).map((d) => `<span>${imgHtml(destPhoto(d.id), '')}</span>`).join('')}</div><b>從 ${list.length} 個符合條件的地點抽一個</b><small class="muted">改上面的預算、天數或月份，範圍會跟著變</small></div>`}</div>
       <div class="sheet-bar"><span class="small muted">${list.length ? `${list.length} 個地點符合` : '沒有符合的地點，放寬預算或天數試試'}</span><span class="spacer"></span><button class="btn primary" data-rspin ${list.length ? '' : 'disabled'}>${result ? '再抽一次' : '抽一個'}</button></div>`;
     $('#rnd-month').addEventListener('change', (e) => { rnd.month = Number(e.target.value); renderRandom(); });
@@ -3873,8 +3920,8 @@
     if (ds.show) { const d = DEST[ds.show]; showOnMap(d.lng, d.lat); return; }
     if (ds.near) { const tr = trips.find((x) => x.id === ds.near); if (tr) nearFrom(tr.lat, tr.lng, tr.city, `trip:${tr.id}`); return; }
     if (ds.dest) { const d = DEST[ds.dest]; nearFrom(d.lat, d.lng, d.name, `dest:${d.id}`); return; }
-    if (ds.origin) { setOrigin(ds.origin); return; }
-    if (ds.tag) { recState.tags = recState.tags.includes(ds.tag) ? recState.tags.filter((x) => x !== ds.tag) : [...recState.tags, ds.tag]; renderRecs(); return; }
+    if (ds.origin) { popChip = `[data-origin="${CSS.escape(ds.origin)}"]`; setOrigin(ds.origin); return; }
+    if (ds.tag) { popChip = `[data-tag="${ds.tag}"]`; recState.tags = recState.tags.includes(ds.tag) ? recState.tags.filter((x) => x !== ds.tag) : [...recState.tags, ds.tag]; renderRecs(); return; }
     if (ds.region) { esimRegion = ds.region; $('#esim-search').value = ''; renderEsim(); return; }
     if ('esimNear' in ds) { esimNear = !esimNear; renderEsim(); return; }
     if (ds.openPlan) { if (modal.open) modal.close(); openPlanner(ds.openPlan, ds.day != null ? Number(ds.day) : null); return; }

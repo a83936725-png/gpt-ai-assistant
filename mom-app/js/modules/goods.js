@@ -312,7 +312,7 @@
       const g = group(c, items);
       if (g) el.append(g);
     });
-    if (!shown) el.append(ui.empty('🛍️', '這個條件下沒有項目，換個篩選看看。'));
+    if (!shown) el.append(ui.empty('goods', '這個條件下沒有項目，換個篩選看看。'));
   }
 
   function summaryCard() {

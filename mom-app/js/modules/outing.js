@@ -688,12 +688,12 @@
     el.append(h('div', { class: 'section-title' }, h('span', null, `接下來（${up.length}）`),
       h('button', { type: 'button', class: 'ot-add', onclick: () => planSheet() }, '＋ 新增計畫')));
     if (!all.length) {
-      el.append(ui.empty('📅', '還沒有週末計畫。在 HHZ.TW 等活動網站看到想去的活動，按「分享 → 複製連結」，回來貼在上面就能存起來；也可以按「＋ 新增計畫」自己輸入。',
+      el.append(ui.empty('outing', '還沒有週末計畫。在 HHZ.TW 等活動網站看到想去的活動，按「分享 → 複製連結」，回來貼在上面就能存起來；也可以按「＋ 新增計畫」自己輸入。',
         h('div', { class: 'row gap wrap ot-empty-actions' },
           h('button', { type: 'button', class: 'btn btn-primary', onclick: () => planSheet() }, '＋ 新增計畫'),
           h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => setSection('find') }, '去找活動'))));
     } else if (!up.length) {
-      el.append(ui.empty('🔍', anyFilter ? '沒有符合篩選條件的計畫，試試取消幾個條件。' : '接下來沒有計畫，到「找活動與設施」逛逛吧！'));
+      el.append(ui.empty('search', anyFilter ? '沒有符合篩選條件的計畫，試試取消幾個條件。' : '接下來沒有計畫，到「找活動與設施」逛逛吧！'));
     } else {
       el.append(h('div', { class: 'ot-plans' }, up.map((p) => planCard(p, now))));
     }

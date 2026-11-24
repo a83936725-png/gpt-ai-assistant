@@ -4,7 +4,8 @@
 // in five sizes: 12 / 13.5 / 15 / 17 / 20, form fields 16, big numbers and headlines 24 up, badge digits 11 and under);
 // share cards drawn flat (no gradient, no bubbles) with the moment's drawing; and a calmer 好孕島 (no season button,
 // no drifting particles, a tip that changes only when tapped, no 稱號). 0.9.5: every 首頁 card carries its drawing,
-// and the empty 接下來 / 最新紀錄 and the 分享時刻 prompt too. Light, dark and a small phone; accessibility.
+// and the empty 接下來 / 最新紀錄 and the 分享時刻 prompt too. 0.9.6: every empty page shows a drawing (紀錄, 搜尋,
+// 胎動, 宮縮, 產檢日記 had 小滴 with an emoji). Light, dark and a small phone; accessibility.
 // Usage: cd mom-app && python3 -m http.server 8080   then   BASE=http://localhost:8080/ node tests/pics.playwright.cjs
 //        AXE_PATH=<axe.min.js> for the accessibility checks
 const { chromium } = require('playwright');
@@ -111,14 +112,24 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   const how = await S(P, () => { const c = document.querySelector('.gb-how'); return c ? { pic: !!c.querySelector('img.pic'), steps: [...c.querySelectorAll('.gb-steps li')].map((x) => x.textContent) } : null; });
   ok('團購 怎麼揪團: its drawing and four short steps', how && how.pic && how.steps.length === 4 && how.steps.every((x) => x.length <= 12), JSON.stringify(how));
 
-  /* ---------- empty pages: the feature's drawing (小滴 stays for the everyday ones) ---------- */
+  /* ---------- empty pages: always a drawing (0.9.6: 小滴 with an emoji is on no empty page any more) ---------- */
   await S(P, () => { App.store.update((s) => { s.milk = []; }); }); // the 母乳庫存 is a list of bags
   await go(P, '#/milk', 1000);
   pp = await pics(P);
   ok('母乳庫存 with nothing in it: its drawing, not 小滴 with an emoji', pp.some((x) => x.name === 'milk') && await S(P, () => !document.querySelector('#view .empty .md')), JSON.stringify(pp));
   await S(P, () => { App.store.update((s) => { s.logs = s.logs.filter((l) => new Date(l.start) < new Date(Date.now() - 864e5 * 3)); }); });
   await go(P, '#/log', 1000);
-  ok('紀錄 with nothing today: 小滴 still holds up 🌙 (an everyday page keeps her)', await S(P, () => !!document.querySelector('#view .empty .md')));
+  pp = await pics(P);
+  ok('紀錄 with nothing today: the 紀錄 drawing (it was 小滴 holding up 🌙)', pp.some((x) => x.name === 'records' && x.w === 256) && await S(P, () => !document.querySelector('#view .md')), JSON.stringify(pp));
+  await go(P, '#/search', 900);
+  await P.fill('#sr-input', 'ㄅㄆㄇ亂打xyz'); await P.waitForTimeout(900);
+  pp = await pics(P);
+  ok('搜尋 with no answer: the 搜尋 drawing (it was 小滴 thinking), and the ways to ask again', pp.some((x) => x.name === 'search') && await S(P, () => !document.querySelector('.sr-empty .md') && /找不到/.test(document.querySelector('.sr-empty').innerText)), JSON.stringify(pp));
+  await S(P, () => { App.store.update((s) => { s.profile.stage = 'preg'; s.profile.lmp = Core.dateKey(Core.addDays(new Date(), -200)); s.preg = { ...(s.preg || {}), kicks: [], contractions: [], diary: [] }; }); App.refresh(); });
+  const emptyOf = async (hash) => { await go(P, hash, 1000); return (await pics(P)).map((x) => x.name); };
+  const kick = await emptyOf('#/kick'); const con = await emptyOf('#/contraction'); const dia = await emptyOf('#/diary');
+  ok('懷孕: 胎動, 宮縮 and 產檢日記 with nothing yet each show their drawing, and no 小滴', kick.includes('kick') && con.includes('contraction') && dia.includes('prenatal') && await S(P, () => !document.querySelector('#view .md')), JSON.stringify({ kick, con, dia }));
+  await S(P, () => { App.store.update((s) => { s.profile.stage = 'baby'; }); App.refresh(); });
 
   /* ---------- the type scale on more screens, a small phone in the dark ---------- */
   const Q = await mk({ scheme: 'dark', width: 320, height: 640 });

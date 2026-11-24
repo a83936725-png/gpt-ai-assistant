@@ -4,20 +4,11 @@
 /* ---------- 小滴 ---------- */
 .md { position: relative; display: inline-flex; align-items: flex-end; justify-content: center; line-height: 0; flex: none; }
 .md svg { display: block; overflow: visible; }
-.md-badge {
-  position: absolute; right: -14px; top: -4px; width: 30px; height: 30px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; font-size: var(--fs-lg); line-height: 1;
-  background: var(--c-surface); box-shadow: 0 2px 8px rgba(90, 40, 115, .18); border: 1px solid var(--c-border);
-}
 /* in dark mode she is a lighter purple with a soft rim, so she still stands out */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .md { --md-a: #dcb9f3; --md-b: #a774cc; --md-c: #7e4aa4; --md-arm: #9a63c2; --md-line: #e3c9f5; --md-q: #d8b6f0; }
 }
 :root[data-theme="dark"] .md { --md-a: #dcb9f3; --md-b: #a774cc; --md-c: #7e4aa4; --md-arm: #9a63c2; --md-line: #e3c9f5; --md-q: #d8b6f0; }
-
-/* empty pages: 小滴 with the page's emoji in a bubble */
-.empty .md { margin: 0 auto 8px; }
-.empty .md + p { margin-top: 0; }
 
 /* 歡迎: she waves next to the app name */
 .ob-brand .ob-md { margin-left: 2px; align-self: flex-end; }
@@ -103,6 +94,3 @@
 @keyframes qbBubble { 0%, 100% { transform: scale(.6); } 50% { transform: scale(1.25); } }
 @keyframes qbYay { 0% { transform: none; } 30% { transform: translateY(-14%) scale(.95, 1.07); } 62% { transform: translateY(0) scale(1.07, .93); } 100% { transform: none; } }
 @keyframes qbNom { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5%); } }
-
-/* 搜尋 with no answer, 產檢日記 with no page yet */
-.sr-md, .dy-md { margin-bottom: 6px; }

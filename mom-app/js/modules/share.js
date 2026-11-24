@@ -786,7 +786,7 @@
       // 家族週報 has its own screen (the week, a line for the family, LINE)
       const weekly = App.weekly && App.weekly.kindNow() ? h('button', { class: 'inv-card inv-weekly', onclick: () => App.navigate('weekly') },
         h('span', { class: 'inv-card-emoji' }, '📮'), h('span', { class: 'bold small' }, '家族週報'), h('span', { class: 'tiny muted' }, '每週一張，傳到家族群組')) : null;
-      if (!list.length && !weekly) el.append(ui.empty('🖼️', '開始記錄後，這裡會出現孕週卡、寶寶成長卡、里程碑卡等可以分享的卡片。'));
+      if (!list.length && !weekly) el.append(ui.empty('moments', '開始記錄後，這裡會出現孕週卡、寶寶成長卡、里程碑卡等可以分享的卡片。'));
       else {
         el.append(h('div', { class: 'inv-cards' }, weekly, list.map((c) => h('button', { class: 'inv-card', onclick: () => open({ kind: c.kind, text: c.text, campaign: c.campaign, path: c.path }) },
           h('span', { class: 'inv-card-emoji' }, c.spec.emoji), h('span', { class: 'bold small' }, c.label), h('span', { class: 'tiny muted' }, c.spec.title)))));

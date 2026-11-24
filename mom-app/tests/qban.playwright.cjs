@@ -1,4 +1,5 @@
-// Q 版小東西 (js/modules/qban.js, css/qban.css): 小滴 the brand drop on empty pages, the welcome screen, late at night,
+// Q 版小東西 (js/modules/qban.js, css/qban.css): 小滴 the brand drop on the welcome screen, late at night (empty pages show
+// the app's drawings since 0.9.6),
 // in search with no answer, at big moments and on 新手任務 done; the Q版 baby on 首頁 (awake, asleep, feeding, a party
 // hat in the week of 滿月, a hop after a one-tap record), its outfit and accessory in 編輯寶寶, in the baby lists and
 // the 健康 header; Q版 drawings on share cards (成長卡, 家族週報) and the 貼紙 in the 分享工作室, which never use a photo.
@@ -125,14 +126,14 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
 
   /* ---------- empty pages, search, the cheer, 新手任務 done ---------- */
   await setup(P, { days: 50 }); await go(P, 'log', 900);
-  const em = await S(P, () => { const e = document.querySelector('#view .empty'); const m = e && e.querySelector('.md'); return { mood: m && m.dataset.mood, badge: m && m.querySelector('.md-badge').textContent, text: e && e.querySelector('p').textContent }; });
-  ok('紀錄 with nothing today: a sleepy 小滴 holding up 🌙, and the words', em.mood === 'sleepy' && em.badge === '🌙' && /今天還沒有紀錄/.test(em.text), JSON.stringify(em));
-  await axe(P, '紀錄 empty page with 小滴');
+  const em = await S(P, () => { const e = document.querySelector('#view .empty'); const i = e && e.querySelector('img.pic'); return { pic: i && (i.src.match(/thumbs\/([a-z-]+)\.webp$/) || [])[1], md: !!(e && e.querySelector('.md')), text: e && e.querySelector('p').textContent }; });
+  ok('紀錄 with nothing today: the 紀錄 drawing and the words (0.9.6: no 小滴 on empty pages)', em.pic === 'records' && !em.md && /今天還沒有紀錄/.test(em.text), JSON.stringify(em));
+  await axe(P, '紀錄 empty page');
   await go(P, 'milk', 900);
   ok('母乳庫存 empty: its own drawing (0.9.4: features with a drawing show it instead of 小滴 with an emoji)', await S(P, () => { const e = document.querySelector('#view .empty.has-pic'); const i = e && e.querySelector('img.pic'); return !!i && /thumbs\/milk\.webp$/.test(i.src) && i.alt === '' && !e.querySelector('.md'); }));
   await go(P, 'search', 800);
   await P.fill('#view input', 'ㄅㄆㄇ亂打xyz'); await P.waitForTimeout(900);
-  ok('搜尋 with no answer: 小滴 thinking', await S(P, () => !!document.querySelector('.sr-empty .md-think')));
+  ok('搜尋 with no answer: the 搜尋 drawing, not 小滴 thinking', await S(P, () => !!document.querySelector('.sr-empty img.pic[src$="search.webp"]') && !document.querySelector('.sr-empty .md')));
   await go(P, 'home', 800);
   await S(P, () => App.ui.celebrate({ big: true })); await P.waitForTimeout(700);
   const pop = await S(P, () => { const x = document.querySelector('.md-pop'); return x && { show: x.classList.contains('show'), say: x.querySelector('.md-pop-say').textContent, pe: getComputedStyle(x).pointerEvents, hidden: x.getAttribute('aria-hidden'), r: Math.round(innerWidth - x.getBoundingClientRect().right) }; });
@@ -202,18 +203,19 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
 
   /* ---------- dark, less motion, a small phone ---------- */
   const D = await mk({ scheme: 'dark' });
-  await setup(D, { days: 50 }); await go(D, 'log', 900);
-  const dk = await S(D, () => { const m = document.querySelector('#view .empty .md'); const cs = getComputedStyle(m); return { a: cs.getPropertyValue('--md-a').trim(), line: cs.getPropertyValue('--md-line').trim() }; });
+  // 小滴 on the welcome screen (empty pages have drawings since 0.9.6)
+  const dk = await S(D, () => { const m = document.querySelector('.ob-brand .md'); const cs = getComputedStyle(m); return { a: cs.getPropertyValue('--md-a').trim(), line: cs.getPropertyValue('--md-line').trim() }; });
   ok('dark: 小滴 is a lighter purple with a light rim (she still stands out)', dk.a === '#dcb9f3' && dk.line === '#e3c9f5', JSON.stringify(dk));
+  await setup(D, { days: 50 });
   await go(D, 'home', 800);
   ok('dark: the Q版 baby keeps its soft light circle', await S(D, () => /radial-gradient/.test(getComputedStyle(document.querySelector('.hero-avatar.qb')).backgroundImage)));
   await axe(D, '首頁 with the Q版 baby (dark)');
   await D.context().close();
   const R = await mk({ motion: 'reduce' });
+  const bob = await S(R, () => getComputedStyle(document.querySelector('.ob-brand .md svg')).animationName); // 小滴 waving on 歡迎
   await setup(R, { days: 50 }); await R.waitForTimeout(800);
   const rm = await S(R, () => ({ blink: getComputedStyle(document.querySelector('.qb-eyes')).animationName }));
-  await go(R, 'log', 900);
-  rm.bob = await S(R, () => getComputedStyle(document.querySelector('.empty .md svg')).animationName);
+  rm.bob = bob;
   ok('減少動態效果: nothing bobs or blinks', rm.blink === 'none' && rm.bob === 'none', JSON.stringify(rm));
   await S(R, () => App.ui.celebrate({ big: true })); await R.waitForTimeout(200);
   ok('…a big moment still shows 小滴 (just without the hop)', await S(R, () => { const x = document.querySelector('.md-pop'); return !!x && getComputedStyle(x).transitionDuration === '0s'; }));

@@ -174,7 +174,7 @@
         av ? null : h('button', { class: 'btn btn-soft', onclick: () => App.navigate('avatar') }, '🙂 我的角色')));
       if (!ps.length) {
         el.append(ui.card({ class: 'soft center' },
-          App.mascot ? App.mascot.el({ mood: 'happy', size: 60, badge: '🩺', cls: 'dy-md' }) : h('div', { class: 'empty-icon' }, '🩺'),
+          ui.pic('prenatal', 112, 'empty-pic'),
           h('p', null, '每次產檢完，放一張超音波照片、寫一句想對寶寶說的話，慢慢就是一本日記。'),
           h('p', { class: 'small muted' }, '在「產檢」標記完成時也可以順便加照片。')));
       }

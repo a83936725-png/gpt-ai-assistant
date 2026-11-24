@@ -747,7 +747,7 @@
       // history
       const list = [...store.state.preg.kicks].sort((a, b) => new Date(b.start) - new Date(a.start)).slice(0, 20);
       add(el, h('div', { class: 'section-title' }, '最近紀錄'));
-      if (!list.length) add(el, ui.empty('🫶', '還沒有胎動紀錄'));
+      if (!list.length) add(el, ui.empty('kick', '還沒有胎動紀錄'));
       else {
         add(el, h('div', { class: 'list' }, list.map((k) => {
           const dur = new Date(k.end) - new Date(k.start);
@@ -851,7 +851,7 @@
         recent.length ? h('button', {
           onclick: async () => { if (await ui.confirm('要清除所有宮縮紀錄嗎？', { danger: true, ok: '清除' })) { store.update((s0) => { s0.preg.contractions = []; }); paint(); } },
         }, '清除全部') : null));
-      if (!recent.length) add(el, ui.empty('⏱️', '還沒有宮縮紀錄'));
+      if (!recent.length) add(el, ui.empty('contraction', '還沒有宮縮紀錄'));
       else {
         const asc = st.sorted;
         add(el, h('div', { class: 'list pg-con-table' },

@@ -6,7 +6,7 @@
  *   App.ui.field(label, input, hint)
  *   App.ui.seg(options, value, onChange)   segmented control
  *   App.ui.stepper({value, step, min, max, unit, onChange})
- *   App.ui.empty(icon, text, action?)
+ *   App.ui.empty(icon, text, action?)   icon: a drawing's name (assets/thumbs) or an emoji
  */
 (function () {
   const App = window.App = window.App || {};
@@ -347,15 +347,11 @@
     class: `pic${cls ? ` ${cls}` : ''}`, src: `assets/thumbs/${name}.webp`, alt: '', width: size, height: size, decoding: 'async', draggable: 'false',
   }) : null);
 
-  // an empty page: the feature's drawing when it has one; otherwise 小滴 (js/modules/qban.js) holding up the page's emoji
-  // in a bubble, or just the emoji without her
-  const empty = (icon, text, action) => {
-    if (PICS.has(icon)) return h('div', { class: 'empty has-pic' }, pic(icon, 112, 'empty-pic'), h('p', null, text), action || null);
-    const M = window.App && window.App.mascot;
-    return h('div', { class: 'empty' },
-      M ? M.el({ mood: M.moodFor(icon), size: 64, badge: icon }) : h('div', { class: 'empty-icon' }, icon),
-      h('p', null, text), action || null);
-  };
+  // an empty page: the page's own drawing (0.9.6: every empty page has one; 小滴 stays for 歡迎, late at night, big
+  // moments and the stickers); a name that is not a drawing shows just as it is
+  const empty = (icon, text, action) => (PICS.has(icon)
+    ? h('div', { class: 'empty has-pic' }, pic(icon, 112, 'empty-pic'), h('p', null, text), action || null)
+    : h('div', { class: 'empty' }, h('div', { class: 'empty-icon', 'aria-hidden': 'true' }, icon), h('p', null, text), action || null));
 
   const card = (attrs, ...children) => h('section', { ...attrs, class: `card ${attrs?.class || ''}` }, ...children);
 

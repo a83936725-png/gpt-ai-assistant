@@ -489,7 +489,7 @@
         .filter((t) => store().inStage(t.stages))
         .sort((a, c) => (a.order ?? 50) - (c.order ?? 50));
       if (!tools.length) {
-        el.append(ui.empty('🧰', '這個階段的工具準備中。'));
+        el.append(ui.empty('starter', '這個階段的工具準備中。'));
         return;
       }
       const groups = [];

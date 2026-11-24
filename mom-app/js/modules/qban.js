@@ -1,14 +1,14 @@
 /* 易家做媽媽 — Q 版小東西.
- * 小滴: the brand's drop (易家「滴」雞精) drawn as a small Q版 friend with moods. She keeps people company on empty
- *   pages, on the welcome screen, in big celebrations and late at night. Always decorative (aria-hidden): the words
- *   next to her say what matters.
+ * 小滴: the brand's drop (易家「滴」雞精) drawn as a small Q版 friend with moods. She keeps people company on the
+ *   welcome screen, in big celebrations and late at night, and is a sticker for share cards (empty pages show the
+ *   app's drawings since 0.9.6). Always decorative (aria-hidden): the words next to her say what matters.
  * Q版寶寶: the baby as a big-head chibi on the 首頁 card: asleep while the sleep timer runs, smiling while feeding,
  *   blinking otherwise. 編輯寶寶 picks the outfit colour and one small accessory. A baby whose picture is the default
  *   👶 is drawn this way (the data keeps 👶, so plain text and older versions still show the emoji). The baby's skin
  *   and hair follow her own Q 版角色 when she has one.
  * Both are plain SVG drawings (never a photo), so share cards can use them as stickers.
- *   App.mascot.svg({mood, size, ground, plain})  .el({mood, size, badge, cls})  .dataUrl(opts)  .cheer({text, mood})
- *              .moodFor(icon)  .night()  .MOODS
+ *   App.mascot.svg({mood, size, ground, plain})  .el({mood, size, cls})  .dataUrl(opts)  .cheer({text, mood})
+ *              .night()  .MOODS
  *   App.qbaby.svg(baby, {state, size, ground, party})  .face(baby, {size, state, cls})  .icon(baby)  .isQ(baby)  .qOf(baby)
  *             .stateOf(baby)  .partyDay(baby)  .hop()  .dataUrl(baby, opts)  .WEARS  .ACCS
  *   In the week of 滿月, 百日 and 度晬 the baby wears a party hat; after a one-tap record on 首頁 it does a little hop. */
@@ -75,18 +75,14 @@
     if (m === 'love') o.push(`<g class="md-hearts">${heart(87, 34, 4.2, '#ff7fab')}${heart(13, 44, 3.2, '#ffb0cb')}</g>`);
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 112" width="${size}" height="${Math.round(size * 1.12)}" class="md-svg" aria-hidden="true" focusable="false">${o.join('')}</svg>`;
   }
-  // an element: <span class="md md-happy">svg [badge]</span>; the badge is the page's own emoji in a little bubble
-  function mascotEl({ mood = 'happy', size = 64, badge = null, cls = '' } = {}) {
+  // an element: <span class="md md-happy">svg</span>
+  function mascotEl({ mood = 'happy', size = 64, cls = '' } = {}) {
     const m = MOODS.includes(mood) ? mood : 'happy';
     const el = h('span', { class: `md md-${m}${cls ? ` ${cls}` : ''}`, 'aria-hidden': 'true', dataset: { mood: m } });
     el.innerHTML = mascotSvg({ mood: m, size });
-    if (badge) el.append(h('span', { class: 'md-badge' }, badge));
     return el;
   }
   const mascotUrl = (opts = {}) => toUrl(mascotSvg({ ...opts, plain: true }));
-  // which face fits an empty page, from its emoji
-  const EMPTY_MOOD = { '🌙': 'sleepy', '😴': 'sleepy', '💤': 'sleepy', '🔍': 'think', '🤔': 'think', '🫶': 'love', '💌': 'love', '⚠️': 'oops' };
-  const moodFor = (icon) => EMPTY_MOOD[icon] || 'happy';
   // sleepy late at night: from 22:00 until the sky starts to light up (follows the season's sunrise, see App.dayPhase)
   const night = (d = new Date()) => (App.dayPhase ? App.dayPhase(d) === 'late' : d.getHours() >= 22 || d.getHours() < 5);
   // a big moment: 小滴 hops up by the corner for a moment and cheers (the toast next to it carries the words)
@@ -103,7 +99,7 @@
     popT = setTimeout(() => { pop.classList.remove('show'); setTimeout(() => pop.remove(), 450); }, 2600);
     return pop;
   }
-  App.mascot = { svg: mascotSvg, el: mascotEl, dataUrl: mascotUrl, cheer, moodFor, night, MOODS };
+  App.mascot = { svg: mascotSvg, el: mascotEl, dataUrl: mascotUrl, cheer, night, MOODS };
 
   /* ================= Q版寶寶 (viewBox 0 0 100 100) ================= */
   const WEARS = [['yellow', '奶黃', '#ffd978'], ['pink', '粉紅', '#f7a8c4'], ['blue', '天藍', '#9fcaf2'], ['mint', '薄荷', '#9ddcbf'], ['lilac', '薰衣草', '#c9aaea']];

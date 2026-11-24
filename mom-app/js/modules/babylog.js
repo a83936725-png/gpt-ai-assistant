@@ -565,7 +565,7 @@
     if (filter === 'pump') el.append(pumpWeek(viewDay));
     const f = FILTERS.find((x) => x.value === filter);
     const shown = f.types ? logs.filter((l) => f.types.includes(l.type)) : logs;
-    if (!shown.length) el.append(ui.empty('🌙', isToday ? '今天還沒有紀錄，按右下角＋開始吧！' : '這天沒有紀錄'));
+    if (!shown.length) el.append(ui.empty('records', isToday ? '今天還沒有紀錄，按右下角＋開始吧！' : '這天沒有紀錄'));
     else el.append(h('div', { class: 'mt' }, App.babylog.timeline(shown, { showAgoFirst: isToday })));
 
     el.append(h('button', { class: 'fab', 'aria-label': '新增紀錄', html: ui.ICONS.plus, onclick: typePicker }));

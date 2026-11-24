@@ -308,13 +308,85 @@
     };
   };
 
-  // Badge emblem: the first character, or a short Latin word such as "eSIM".
-  const monogram = (name) => (/^[A-Za-z]/.test(name) ? name.match(/^[A-Za-z]+/)[0].slice(0, 4) : name.slice(0, 1));
-  const medal = (b, ok = true, size = '') => `<span class="medal ${size} ${ok ? '' : 'locked'} ${/^[A-Za-z]/.test(b.name) ? 'latin' : ''}" style="--m1:${b.color[0]};--m2:${b.color[1]}">${esc(monogram(b.name))}</span>`;
+  // Badge pictures and a line for each, so a badge feels like a keepsake rather than a letter.
+  const GLOBE = '<circle cx="12" cy="12" r="9" fill="url(#g-sea)"/><g clip-path="url(#g-globe-clip)" fill="url(#g-grass)"><path d="M6 7.5c1.5-1 3.2-.8 4 .4.6 1-.2 2 .8 2.8 1 .8.4 2.2-.8 2.4-1.4.2-1.6 1.6-2.8 1.4-1.4-.3-1.2-2-2.2-2.8-.7-.6-.4-2.6 1-4.2z"/><path d="M13.5 5.2c1.4-.2 3 .4 3.8 1.4-.8.4-1.8.2-2.2 1-.4.9.8 1.4.4 2.3-.5 1-2 .6-2.4-.4-.5-1.2-1.4-1.8-.6-3.2z"/><path d="M14 13c1.2-.6 2.8-.2 3.6.8.7.9.2 2.4-.6 3.3-.9 1-1.2 2.4-2.4 2.3-1-.1-.8-1.6-1.2-2.6-.5-1.3-.8-3.1.6-3.8z"/><path d="M3 15.5c1.5.2 2.6 1.3 3 2.8-1 .2-2.4-.4-3.2-1.4z"/></g><circle cx="12" cy="12" r="9" fill="url(#g-globe-shade)"/>';
+  const PIN = (x, y) => `<path transform="translate(${x} ${y})" d="M0-2.6c-.8 0-1.4.6-1.4 1.4C-1.4 0 0 1.2 0 1.2S1.4 0 1.4-1.2C1.4-2 .8-2.6 0-2.6z" fill="#e03131" stroke="#fff" stroke-width=".35"/>`;
+  const JET = '<path d="M21.5 11.2c.9 0 1.5.4 1.5.8s-.6.8-1.5.8h-5l-4.2 6h-2l2.4-6H8.6l-1.6 2H5.4l1-2.8-1-2.8h1.6l1.6 2h4.1L10.3 5.2h2l4.2 6z" fill="url(#g-plane)" stroke="#6d7d99" stroke-width=".45"/>';
+  const BANNER = (text) => `<path d="M3.5 17.4h17l-1.5 1.9 1.5 1.9h-17l1.5-1.9z" fill="#c92a2a"/><path d="M3.5 17.4h17" stroke="rgba(255,255,255,.35)" stroke-width=".4"/><text x="12" y="20.4" text-anchor="middle" font-size="3.3" font-weight="800" fill="#fff" font-family="system-ui,sans-serif">${text}</text>`;
+  const BADGE_PICS = {
+    first: `<circle cx="16.5" cy="7.5" r="4.2" fill="url(#g-sun)"/><path d="M2 20.5h20" stroke="#8e98aa" stroke-width="1.3" stroke-linecap="round"/><path d="M4 20.5h2.5M9 20.5h2.5M14 20.5h2.5" stroke="#fff" stroke-width=".5"/><g transform="translate(-.5 1.5) scale(.95)">${PICS.plane}</g>`,
+    c5: `<g transform="translate(1.4 .3) scale(.88)">${GLOBE}</g>${PIN(8, 7.5)}${PIN(14.5, 6.5)}${PIN(16.5, 12)}${PIN(9.5, 13)}${PIN(12.5, 9.8)}${BANNER('5 國')}`,
+    c10: `<g transform="translate(1.4 .3) scale(.88)">${GLOBE}</g>${PIN(7, 7)}${PIN(10, 5.5)}${PIN(14.5, 5.5)}${PIN(17, 9)}${PIN(16.5, 13)}${PIN(12.5, 9.5)}${PIN(9, 11)}${PIN(6, 12.5)}${PIN(12, 14)}${PIN(15, 15)}${BANNER('10 國')}`,
+    asia: '<circle cx="12" cy="11" r="8.5" fill="#ffe3c4"/><path d="M12 2v3" stroke="#7a2b12" stroke-width=".8"/><rect x="9.6" y="6.4" width="4.8" height="2.2" fill="#f6e7c8"/><rect x="8.8" y="10" width="6.4" height="2.4" fill="#f6e7c8"/><rect x="8" y="13.8" width="8" height="2.6" fill="#f6e7c8"/><rect x="7" y="17.6" width="10" height="3.2" fill="#f6e7c8"/><rect x="11" y="18.6" width="2" height="2.2" rx=".4" fill="#7a2b12"/><path d="M8 6.6c1.6.5 6.4.5 8 0l-1-1.5H9z" fill="#a8321b"/><path d="M6.8 10.2c2 .6 8.4.6 10.4 0l-1.2-1.7H8z" fill="#a8321b"/><path d="M5.6 14c2.4.7 10.4.7 12.8 0l-1.3-1.8H6.9z" fill="#a8321b"/><path d="M4.4 17.8c2.8.8 12.4.8 15.2 0l-1.4-1.8H5.8z" fill="#a8321b"/><rect x="3" y="20.6" width="18" height="1.3" rx=".65" fill="#b9a37a"/>',
+    europe: '<path d="M3 21v-7l3-2.6 3 2.6v7z" fill="#ecd6b2"/><path d="M2.3 14.3L6 11l3.7 3.3" fill="none" stroke="#b5532e" stroke-width="1.1" stroke-linejoin="round"/><path d="M15 21v-6h6.2v6z" fill="#f1dfbf"/><path d="M14.3 15.2h7.6l-1.3-2.1h-5z" fill="#b5532e"/><rect x="9" y="7" width="6" height="14" fill="url(#g-stonew)"/><path d="M8.4 7.3L12 1.4l3.6 5.9z" fill="#46607f"/><circle cx="12" cy="10.5" r="2.2" fill="#fff" stroke="#c9a24a" stroke-width=".7"/><path d="M12 10.5V9.1M12 10.5l1 .6" stroke="#333" stroke-width=".45" stroke-linecap="round"/><path d="M10.6 14.6a1.4 1.4 0 0 1 2.8 0V17.5h-2.8z" fill="#46607f"/><path d="M4.8 16.2h2.4v2.4H4.8zM16.5 16.6h1.6v1.8h-1.6zM18.8 16.6h1.6v1.8h-1.6z" fill="#7d93b3"/><rect x="2" y="21" width="20" height="1.3" rx=".65" fill="#9a8f80"/>',
+    world2: '<path d="M2 15c1.6-2.4 4.6-3 6.6-1.6 1.2.8 1.2 2.6 2.6 3 1 .3 1.2 1.6.2 2.2-2 1.2-5.2 1.2-7.4.2C2.5 18.2 1.2 16.4 2 15z" fill="url(#g-grass)"/><path d="M15 9.5c1.8-1.2 4.2-1 5.8.4 1.2 1 1.6 2.8.6 3.8-1 1-2.6.4-3.6 1.2-1 .8-2.4.6-3-.6-.7-1.4-1.4-3.6.2-4.8z" fill="url(#g-grass)"/><path d="M6 14.5C7 6 14 4 17.5 10" fill="none" stroke="#e03131" stroke-width=".9" stroke-dasharray="1.4 1.1" stroke-linecap="round"/><circle cx="6" cy="14.5" r="1.1" fill="#e03131"/><circle cx="17.5" cy="10" r="1.1" fill="#e03131"/><g transform="translate(12.2 5.6) rotate(8) scale(.42) translate(-14 -12)">JET</g>',
+    world3: `<g transform="translate(2.4 4.4) scale(.8)">${GLOBE}</g><path d="M8.3 6.6L9.1 2.6l2.1 2.1.8-2.8.8 2.8 2.1-2.1.8 4z" fill="url(#g-coin)" stroke="#a87710" stroke-width=".4" stroke-linejoin="round"/><circle cx="12" cy="1.9" r=".6" fill="#e03131"/>`,
+    eat10: `<g transform="translate(-.5 -2)">${STEAM}</g><ellipse cx="12" cy="13" rx="9" ry="2.2" fill="#f3dca6" stroke="#b88a3a" stroke-width=".7"/><g fill="url(#g-dumpling)" stroke="#d6c4a0" stroke-width=".35"><path d="M9 11.6c0-2 1.4-3.2 3-3.2s3 1.2 3 3.2c-1 .6-5 .6-6 0z"/><path d="M4.8 13.2c0-2.2 1.6-3.6 3.1-3.6s3.1 1.4 3.1 3.6c-1 .7-5.2.7-6.2 0z"/><path d="M13 13.2c0-2.2 1.6-3.6 3.1-3.6s3.1 1.4 3.1 3.6c-1 .7-5.2.7-6.2 0z"/></g><path d="M7.9 9.8v1.6M7.9 9.8l-.7 1.4M7.9 9.8l.7 1.4M16.1 9.8v1.6M16.1 9.8l-.7 1.4M16.1 9.8l.7 1.4" stroke="#d2bf98" stroke-width=".4"/><path d="M3 13.2h18v5.3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="url(#g-bamboo)"/><path d="M3 15.4h18M3 17.8h18" stroke="rgba(120,80,20,.45)" stroke-width=".6"/>`,
+    esim: '<g transform="rotate(-10 12 12)"><path d="M7 3h7.5L19 7.5V20a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 20V4.5A1.5 1.5 0 0 1 7 3z" fill="url(#g-simb)"/><rect x="8" y="10" width="8.5" height="7.5" rx="1.4" fill="url(#g-coin)"/><path d="M8 12.6h2.8v2.4H8M16.5 12.6h-2.8v2.4h2.8M10.8 10v7.5M13.7 10v7.5" fill="none" stroke="#8a6414" stroke-width=".45"/></g><path d="M18.4 4.6a3 3 0 0 1 2 2M18.8 2.2a5.6 5.6 0 0 1 3.9 3.9" fill="none" stroke="#1463ff" stroke-width=".9" stroke-linecap="round"/>',
+    km: '<path d="M3.5 19.5c3 0 3-5 6.5-5s3.5 3.5 7 1.5c2-1.2 2.2-4.4 3.2-6.4" fill="none" stroke="#1463ff" stroke-width="1" stroke-dasharray="1.3 1.1" stroke-linecap="round"/><circle cx="3.5" cy="19.5" r="1.5" fill="#e03131"/><circle cx="3.5" cy="19.5" r=".55" fill="#fff"/><g transform="translate(19.6 7.4) rotate(-62) scale(.5) translate(-14 -12)">JET</g>',
+    earth: `<g transform="translate(3 3) scale(.75)">${GLOBE}</g><ellipse cx="12" cy="12" rx="10.6" ry="4" fill="none" stroke="#e8a92a" stroke-width=".8" stroke-dasharray="1.2 .8" transform="rotate(-20 12 12)"/><g transform="translate(20.8 8.2) rotate(-95) scale(.42) translate(-14 -12)">${JET}</g>`,
+    long: '<circle cx="14.5" cy="9" r="7.5" fill="url(#g-moonglow)"/><path d="M15 2.8A6 6 0 1 0 21 12.3 6.8 6.8 0 0 1 15 2.8z" fill="url(#g-moon)"/><g fill="#ffcf3a"><path d="M4.5 4l.45 1.1 1.1.45-1.1.45-.45 1.1-.45-1.1-1.1-.45 1.1-.45z"/><path d="M20.5 18l.35.9.9.35-.9.35-.35.9-.35-.9-.9-.35.9-.35z"/><path d="M7 19l.3.7.7.3-.7.3-.3.7-.3-.7-.7-.3.7-.3z"/></g><g transform="translate(10.5 14) rotate(-12) scale(.62) translate(-14 -12)">JET</g>',
+    month: '<rect x="3.5" y="4" width="17" height="17" rx="2.5" fill="#fff" stroke="#d5dae3" stroke-width=".6"/><path d="M3.5 6.5A2.5 2.5 0 0 1 6 4h12a2.5 2.5 0 0 1 2.5 2.5V9h-17z" fill="url(#g-cal)"/><rect x="7.2" y="2.4" width="1.4" height="3.3" rx=".7" fill="#4a5262"/><rect x="15.4" y="2.4" width="1.4" height="3.3" rx=".7" fill="#4a5262"/><text x="12" y="18.7" text-anchor="middle" font-size="8.6" font-weight="900" fill="#1d2433" font-family="system-ui,sans-serif">30</text>',
+    weekend: '<path d="M10.6 3.6a1.4 1.4 0 0 1 2.8 0" fill="none" stroke="#7a2a06" stroke-width="1"/><path d="M7.5 8a4.5 4.5 0 0 1 9 0v12a1.5 1.5 0 0 1-1.5 1.5H9A1.5 1.5 0 0 1 7.5 20z" fill="url(#g-pack)"/><path d="M8.3 6.8a3.8 3.8 0 0 1 2.4-2.6" fill="none" stroke="rgba(255,255,255,.45)" stroke-width=".8" stroke-linecap="round"/><rect x="9" y="13.4" width="6" height="5.8" rx="1.4" fill="rgba(0,0,0,.16)"/><path d="M9.5 15.2h5" stroke="#ffe08a" stroke-width=".6"/><path d="M7.5 10.5h9" stroke="rgba(0,0,0,.18)" stroke-width=".7"/><path d="M19 3.6l-2.5 4.2h1.9l-1.7 3.8 3.8-4.9h-2l1.7-3.1z" fill="#ffd43b" stroke="#c99a06" stroke-width=".3" stroke-linejoin="round"/>',
+    slow: `<g transform="translate(-1 -1)">${STEAM}</g><ellipse cx="11.5" cy="20.8" rx="8" ry="1.6" fill="#f1ece4" stroke="#d6cfc3" stroke-width=".5"/><path d="M5 10.5h12v5a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5z" fill="url(#g-cup)" stroke="#d6cfc3" stroke-width=".4"/><path d="M17 11.8h1.3a2.3 2.3 0 0 1 0 4.6H17" fill="none" stroke="#e2dbcf" stroke-width="1.4"/><ellipse cx="11" cy="10.5" rx="6" ry="1.4" fill="#6b3b1d"/><path d="M11 11.3c-.9-.5-1.6-.9-1.6-1.4 0-.4.4-.6.8-.5.3 0 .6.2.8.5.2-.3.5-.5.8-.5.4 0 .8.2.8.5 0 .5-.7.9-1.6 1.4z" fill="#f3dcbc"/>`,
+    seasons: '<circle cx="7.5" cy="7.5" r="5" fill="#ffd9e4"/><g fill="#ff8fb1" transform="translate(7.5 7.5)"><circle cy="-1.7" r="1.3"/><circle cx="1.6" cy="-.5" r="1.3"/><circle cx="1" cy="1.4" r="1.3"/><circle cx="-1" cy="1.4" r="1.3"/><circle cx="-1.6" cy="-.5" r="1.3"/><circle r=".7" fill="#ffd43b"/></g><circle cx="16.5" cy="7.5" r="5" fill="#fff1b8"/><path d="M16.5 3.6v1.1M16.5 10.3v1.1M12.6 7.5h1.1M19.3 7.5h1.1M13.7 4.7l.8.8M18.5 9.5l.8.8M13.7 10.3l.8-.8M18.5 5.5l.8-.8" stroke="#f59f00" stroke-width=".7" stroke-linecap="round"/><circle cx="16.5" cy="7.5" r="2.2" fill="url(#g-sun)"/><circle cx="7.5" cy="16.5" r="5" fill="#ffe2c6"/><path d="M7.5 12.8l.9 1.9 1.6-.6-.5 1.9 1.7.4-1.4 1.2.4.8H8.1v1.4H6.9v-1.4H5l.4-.8-1.4-1.2 1.7-.4-.5-1.9 1.6.6z" fill="#e8590c"/><circle cx="16.5" cy="16.5" r="5" fill="#dbe9ff"/><path d="M16.5 13.3v6.4M13.7 14.9l5.6 3.2M13.7 18.1l5.6-3.2" stroke="#4c8bf5" stroke-width=".8" stroke-linecap="round"/>',
+    again: '<path d="M21 14A9.5 9.5 0 0 1 3 14" fill="none" stroke="#1463ff" stroke-width="1.1" stroke-linecap="round"/><path d="M3 11.8l1.7 3-3.3.1z" fill="#1463ff"/><path d="M12 18.5s-7-4.3-7-9.3A3.9 3.9 0 0 1 12 7a3.9 3.9 0 0 1 7 2.2c0 5-7 9.3-7 9.3z" fill="url(#g-pin)"/><path d="M7.4 8.7a2.3 2.3 0 0 1 2.2-1.8" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1" stroke-linecap="round"/>',
+    memory: '<g transform="rotate(-8 12 12)"><rect x="4" y="3.5" width="14" height="16.5" rx="1" fill="#fff" stroke="#d9dde5" stroke-width=".5"/><rect x="5.5" y="5" width="11" height="10" fill="url(#g-sea)"/><path d="M5.5 15l3.5-4 2.4 2.4 2-2 3.1 3.6z" fill="url(#g-grass)"/><circle cx="14" cy="7.6" r="1.3" fill="url(#g-sun)"/><path d="M7 17.6h5" stroke="#9aa3b5" stroke-width=".6" stroke-linecap="round"/></g><path d="M18.6 21s-2.8-1.7-2.8-3.6a1.5 1.5 0 0 1 2.8-.8 1.5 1.5 0 0 1 2.8.8c0 1.9-2.8 3.6-2.8 3.6z" fill="#ff5c7a"/><path d="M20.2 3.4l1.4 1.4-7 7-2 .6.6-2z" fill="#3b4a66"/><path d="M20.2 3.4l1.4 1.4.8-.8a1 1 0 0 0-1.4-1.4z" fill="#e8a92a"/>',
+  };
+  const BADGE_LINES = {
+    first: '那一天，你推開了世界的門。',
+    c5: '五個國家，五種不同的早晨。',
+    c10: '十個國家，十種說謝謝的方式。',
+    asia: '亞洲的巷弄，你已經走熟了。',
+    europe: '石板路和教堂鐘聲，歐洲記得你。',
+    world2: '跨過大洋，世界忽然變近了。',
+    world3: '三塊大陸上，都有你的腳印。',
+    food: '旅行的記憶，有一半是味道。',
+    culture: '在古老的地方，聽見時間的聲音。',
+    nature: '山和海，是最好的充電器。',
+    island: '赤腳、海風，什麼都不用想。',
+    city: '在陌生的街角，找到自己的步調。',
+    shopping: '行李箱的重量，是快樂的重量。',
+    onsen: '泡進熱水那一刻，疲憊都化開了。',
+    snow: '第一次踩進雪裡的聲音，還記得嗎？',
+    family: '一起看過的風景，會變成家裡的故事。',
+    night: '城市的燈亮起來，旅行才剛開始。',
+    art: '美的東西，會悄悄改變你看世界的方式。',
+    adventure: '心跳加速的那一刻，最像活著。',
+    eat10: '十道在地味道，一口一個回憶。',
+    esim: '一落地就上線，從來不迷路。',
+    km: '兩萬公里的天空，都是你的。',
+    earth: '你飛過的距離，已經繞地球一圈。',
+    long: '十個小時的夜航，換一個全新的世界。',
+    month: '一整個月在路上，家變成一種心情。',
+    weekend: '說走就走，週末也能去遠方。',
+    slow: '慢下來，才看得見當地人的日常。',
+    seasons: '春櫻、夏海、秋楓、冬雪，你都收藏了。',
+    again: '有些地方，去一次是不夠的。',
+    memory: '把旅行寫下來，它就不會被忘記。',
+  };
+  const badgePic = (b) => {
+    if (b.tag) return pic(b.tag);
+    const body = BADGE_PICS[b.key];
+    return body ? `<svg class="ea" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${body.replace(/JET/g, JET)}</svg>` : '';
+  };
+  // A medal: gold rim, enamel in the badge colour, its picture; locked ones are pewter with a progress ring.
+  const medal = (b, ok = true, size = '', opt = {}) => `<span class="medal ${size} ${ok ? '' : 'locked'}" style="--m1:${b.color[0]};--m2:${b.color[1]};--i:${opt.i || 0};--p:${opt.pct || 0}">${ok ? '<span class="medal-ribbon"></span>' : '<span class="medal-ring"></span>'}<span class="medal-disc"><span class="medal-face">${badgePic(b) || esc(b.name.slice(0, 1))}</span></span></span>`;
   const medalByName = (name, size = '') => medal(BADGES.find((b) => b.name === name) || { name, color: GOLD }, true, size);
-  const badgeTile = (b, s, year) => {
+  // The trip that unlocked a badge: the first one after which it was earned.
+  function badgeUnlocked(b, list) {
+    const past = list.filter((t) => !isUpcoming(t)).sort((p, q) => p.end.localeCompare(q.end));
+    for (let i = 1; i <= past.length; i += 1) {
+      if (badgeState(b, statsOf(past.slice(0, i))).ok) return past[i - 1];
+    }
+    return null;
+  }
+  const badgeTile = (b, s, year, i = 0) => {
     const st = badgeState(b, s);
-    return `<button class="badge ${st.ok ? '' : 'locked'}" data-badge="${b.key}" data-by="${year}">${medal(b, st.ok)}<span>${esc(b.name)}</span><small>${st.ok ? '已解鎖' : `${fmt(Math.min(st.v, st.goal))}/${fmt(st.goal)}`}</small></button>`;
+    const at = st.ok ? badgeUnlocked(b, s.list) : null;
+    let where = `${fmt(Math.min(st.v, st.goal))}/${fmt(st.goal)}`;
+    if (st.ok) where = at ? `${at.end.slice(0, 4)}・${esc(at.city)}` : '已解鎖';
+    return `<button class="badge ${st.ok ? '' : 'locked'}" data-badge="${b.key}" data-by="${year}">${medal(b, st.ok, '', { i, pct: st.pct })}<span>${esc(b.name)}</span><small class="medal-where">${where}</small></button>`;
   };
   const travelerType = (s) => {
     const top = s.topElements.slice(0, 2).map(([k]) => el(k).label);
@@ -3644,23 +3716,20 @@
     if (b.kind === 'season') return `<p class="small muted">還沒去的季節：${['春', '夏', '秋', '冬'].filter((se) => !s.past.some((t) => tripSeasons(t).has(se))).join('、')}</p><button class="btn primary" data-random>隨機出國</button>`;
     return '<button class="btn primary" data-random>隨機出國找靈感</button>';
   }
-  function badgeUnlocked(b, list) {
-    const past = list.filter((t) => !isUpcoming(t)).sort((p, q) => p.end.localeCompare(q.end));
-    for (let i = 1; i <= past.length; i += 1) {
-      if (badgeState(b, statsOf(past.slice(0, i))).ok) return past[i - 1].end;
-    }
-    return null;
-  }
   function openBadge(key, year = 'all') {
     const b = BADGES.find((x) => x.key === key);
     if (!b) return;
     const list = tripsIn(year);
     const s = statsOf(list);
     const st = badgeState(b, s);
-    const when = st.ok ? badgeUnlocked(b, list) : null;
+    const at = st.ok ? badgeUnlocked(b, list) : null;
+    const when = at?.end;
+    const atPhoto = at && destPhoto(at.dest);
     openModal(esc(b.name), `
-      <div class="badge-hero">${medal(b, st.ok, 'xl')}<div class="grow"><span class="kicker plain muted">${BADGE_GROUPS[b.group]}</span><h2 class="serif">${esc(b.name)}</h2><p class="muted" style="margin:2px 0 8px">${esc(b.desc)}</p>
+      <div class="badge-hero">${medal(b, st.ok, 'xl', { pct: st.pct })}<div class="grow"><span class="kicker plain muted">${BADGE_GROUPS[b.group]}</span><h2 class="serif">${esc(b.name)}</h2><p class="muted" style="margin:2px 0 8px">${esc(b.desc)}</p>
         ${st.ok ? `<span class="status active">已解鎖${when ? `・${when.replace(/-/g, '.')} 達成` : ''}</span>` : `<div class="progress"><i style="width:${st.pct}%;background:linear-gradient(90deg,${b.color[0]},${b.color[1]})"></i></div><small class="muted">${fmt(st.v)} / ${fmt(st.goal)}</small>`}</div></div>
+      ${BADGE_LINES[b.key] ? `<p class="badge-line">「${BADGE_LINES[b.key]}」</p>` : ''}
+      ${at ? `<figure class="unlock-photo">${atPhoto ? imgHtml(atPhoto, at.city) : ''}<figcaption>${flag(country(at.n).code)}在 ${esc(at.city)} 解鎖・${at.end.replace(/-/g, '.')}</figcaption></figure>` : ''}
       <div class="seg">${['all', ...CONFIG.years].map((y) => `<button data-badge="${key}" data-by="${y}" class="${String(year) === String(y) ? 'on' : ''}">${y === 'all' ? '2025–2026' : y}</button>`).join('')}</div>
       ${badgeEvidence(b, s)}
       ${st.ok ? '' : `<section><h3>怎麼解鎖</h3>${badgeNext(b, s)}</section>`}`, { sheet: 'tall' });
@@ -3669,7 +3738,7 @@
   let wallYear = 'all';
   const badgeWallHtml = (year) => {
     const s = stats(year);
-    return Object.entries(BADGE_GROUPS).map(([g, label]) => `<div class="wall-group"><h4>${label}</h4><div class="badges">${BADGES.filter((b) => b.group === g).map((b) => badgeTile(b, s, year)).join('')}</div></div>`).join('');
+    return Object.entries(BADGE_GROUPS).map(([g, label]) => `<div class="wall-group"><h4>${label}</h4><div class="badges">${BADGES.filter((b) => b.group === g).map((b, i) => badgeTile(b, s, year, i)).join('')}</div></div>`).join('');
   };
   function renderBadgeWall() {
     const s = stats(wallYear);

@@ -2880,6 +2880,251 @@
     t.plan.days.flat().filter((it) => it.fee).forEach((it) => list.push({ key: `tk-${it.id}`, text: `預訂門票：${it.name}（${ticketText(it)}）` }));
     return list;
   }
+  // ---------- 行程表 views: 時間軸 (drag-and-drop days), 表格 (one printable table) and 行事曆 (a month calendar of every trip)
+  const PLAN_VIEWS = [['timeline', '時間軸'], ['table', '表格'], ['calendar', '行事曆']];
+  let planView = store.get('planView', 'timeline');
+  let calMonth = '';
+  let calDay = '';
+  const KIND_LABEL = { spot: '景點', food: '美食', move: '交通' };
+  // Taiwan's public holidays and long weekends, to plan trips around. The official calendar has the final word.
+  const HOLIDAY_RANGES = [
+    ['2025-01-01', '2025-01-01', '元旦'], ['2025-01-25', '2025-02-02', '春節'], ['2025-02-28', '2025-03-02', '和平紀念日'], ['2025-04-03', '2025-04-06', '兒童節・清明'],
+    ['2025-05-01', '2025-05-01', '勞動節'], ['2025-05-30', '2025-06-01', '端午'], ['2025-09-27', '2025-09-29', '教師節'], ['2025-10-04', '2025-10-06', '中秋'],
+    ['2025-10-10', '2025-10-12', '國慶'], ['2025-10-24', '2025-10-26', '光復節'], ['2025-12-25', '2025-12-25', '行憲紀念日'],
+    ['2026-01-01', '2026-01-01', '元旦'], ['2026-02-14', '2026-02-22', '春節'], ['2026-02-27', '2026-03-01', '和平紀念日'], ['2026-04-03', '2026-04-06', '兒童節・清明'],
+    ['2026-05-01', '2026-05-03', '勞動節'], ['2026-06-19', '2026-06-21', '端午'], ['2026-09-25', '2026-09-28', '中秋・教師節'], ['2026-10-09', '2026-10-11', '國慶'],
+    ['2026-10-24', '2026-10-26', '光復節'], ['2026-12-25', '2026-12-27', '行憲紀念日'],
+  ];
+  const HOLIDAYS = {};
+  HOLIDAY_RANGES.forEach(([from, to, name]) => { for (let d = from; d <= to; d = addDays(d, 1)) HOLIDAYS[d] = name; });
+  const nextLongWeekend = () => HOLIDAY_RANGES.find(([from, to]) => to >= TODAY && daysBetween(from, to) >= 3);
+  const tripOn = (date) => sortTrips(trips).find((t) => t.start <= date && date <= t.end);
+  const tripColor = (t) => TAG_COLORS[t.tags[0]] || ['#1463ff', '#00b3a4'];
+  const noteOf = (it) => (it.kind === 'spot' && it.fee != null ? [it.memo, it.note] : [it.note]).filter(Boolean).join('・');
+  const feeOf = (it) => {
+    if (it.fee == null || it.kind !== 'spot') return '';
+    return it.fee === 0 ? '免費' : `${ticketText(it)}（約 NT$${fmt(toTwd(it))}）`;
+  };
+  const byTime = (a, b) => (a.time || '99:99').localeCompare(b.time || '99:99');
+  // A day's rows: its plan items in time order, with the check-ins made that day.
+  const dayRows = (t, i) => {
+    const date = addDays(t.start, i);
+    return [
+      ...t.plan.days[i].map((it) => ({ time: it.time, it })),
+      ...(t.checkins || []).filter((c) => c.date === date).map((c) => ({ time: '', c })),
+    ].sort(byTime);
+  };
+
+  // ---------- 表格
+  function planText(t) {
+    ensurePlan(t);
+    const lines = [`【${t.city} ${t.plan.days.length} 日行程】${md(t.start)}（${WEEK[parseDate(t.start).getDay()]}）– ${md(t.end)}（${WEEK[parseDate(t.end).getDay()]}）`];
+    t.plan.days.forEach((items, i) => {
+      lines.push('', `Day ${i + 1}・${dayLabel(t, i)}`);
+      const rows = dayRows(t, i);
+      if (!rows.length) lines.push('（自由活動）');
+      rows.forEach((r) => lines.push(r.it ? `${r.it.time || '　　 '} ${r.it.name}${feeOf(r.it) ? `｜門票 ${feeOf(r.it)}` : ''}${noteOf(r.it) ? `｜${noteOf(r.it)}` : ''}` : `打卡 ${r.c.place}${r.c.caption ? `「${r.c.caption}」` : ''}`));
+    });
+    lines.push('', `— 用 ${CONFIG.brand} 排的行程`);
+    return lines.join('\n');
+  }
+  function planTableHtml(t) {
+    const c = country(t.n);
+    const { tickets, total } = budgetOf(t);
+    const people = t.plan.budget.people || 1;
+    const order = ordersFor(t.id)[0];
+    const body = t.plan.days.map((items, i) => {
+      const rows = dayRows(t, i);
+      const cis = rows.filter((r) => r.c).length;
+      return `<tbody>
+        <tr class="pt-day"><th colspan="3"><span class="serif">Day ${i + 1}</span><span>${dayLabel(t, i)}</span>${HOLIDAYS[addDays(t.start, i)] ? `<em class="pt-hol">${HOLIDAYS[addDays(t.start, i)]}</em>` : ''}${cis ? `<em class="pt-ci-n">打卡 ${cis}</em>` : ''}</th></tr>
+        ${rows.map((r) => (r.it ? `<tr class="k-${r.it.kind}"><td class="pt-time">${esc(r.it.time || '—')}</td><td class="pt-name"><button class="pt-link" data-pt-open="${r.it.id}:${i}"><i class="pt-dot"></i>${esc(r.it.name)}</button><small class="pt-sub">${[KIND_LABEL[r.it.kind] || '行程', noteOf(r.it)].filter(Boolean).map(esc).join('・')}</small></td><td class="pt-fee">${esc(feeOf(r.it))}</td></tr>`
+    : `<tr class="pt-ci"><td class="pt-time"><span class="pt-stamp" style="--ink:${inkOf(r.c.id)}">打卡</span></td><td class="pt-name"><button class="pt-link" data-ci-open="${t.id}:${r.c.id}">${esc(r.c.place)}${r.c.mood ? `・${esc(r.c.mood)}` : ''}</button>${r.c.caption ? `<small class="pt-sub">「${esc(r.c.caption)}」</small>` : ''}</td><td class="pt-fee"></td></tr>`)).join('')
+  || '<tr class="pt-empty"><td></td><td colspan="2">自由活動</td></tr>'}
+      </tbody>`;
+    }).join('');
+    return `<div class="pt-sheet">
+      <header class="pt-head">
+        <div><span class="kicker plain muted">${flag(c.code)} ${esc(c.name)}・${t.plan.days.length} 天${tripFlight(t) ? `・${tripFlight(t).text}` : ''}</span>
+          <h2 class="serif">${esc(t.city)} 行程表</h2>
+          <p class="muted small">${t.start.replace(/-/g, '.')} – ${t.end.replace(/-/g, '.')}・${people} 人・eSIM ${order ? orderStatus(order)[1] : '尚未購買'}</p></div>
+        <div class="pt-actions"><button class="btn sm primary" data-ics="${t.id}">加入行事曆</button><button class="btn sm" data-pt-copy="${t.id}">複製文字</button><button class="btn sm" data-pt-csv="${t.id}">下載表格</button><button class="btn sm" data-pt-print>列印／存 PDF</button></div>
+      </header>
+      <div class="pt-scroll"><table class="plan-table">
+        <thead><tr><th class="pt-time">時間</th><th>行程・備註</th><th class="pt-fee">門票</th></tr></thead>
+        ${body}
+        <tfoot><tr><td colspan="2">門票合計${people > 1 ? `（${people} 人）` : ''}</td><td>NT$${fmt(tickets)}</td></tr><tr><td colspan="2">預算合計（含機票住宿與 eSIM）</td><td>NT$${fmt(total)}${people > 1 ? `<br>每人 NT$${fmt(total / people)}` : ''}</td></tr></tfoot>
+      </table></div>
+      <p class="small muted pt-foot">點行程名稱會回到時間軸編輯；門票為參考價，以官方公告為準。</p>
+    </div>`;
+  }
+  function planCsv(t) {
+    const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [['Day', '日期', '時間', '行程', '類型', '門票', '備註']];
+    t.plan.days.forEach((items, i) => dayRows(t, i).forEach((r) => rows.push(r.it
+      ? [i + 1, addDays(t.start, i), r.it.time, r.it.name, KIND_LABEL[r.it.kind] || '行程', feeOf(r.it), noteOf(r.it)]
+      : [i + 1, addDays(t.start, i), '', r.c.place, '打卡', '', r.c.caption || ''])));
+    return `\ufeff${rows.map((r) => r.map(q).join(',')).join('\r\n')}`;
+  }
+
+  // ---------- 加入行事曆: an .ics file (iPhone, Android, Outlook) and a Google Calendar link
+  const icsEsc = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/([,;])/g, '\\$1');
+  const icsDay = (d) => d.replace(/-/g, '');
+  const hhmm = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}${String(min % 60).padStart(2, '0')}`;
+  // Lines longer than 75 bytes are folded, counting Chinese characters as the 3 bytes they take.
+  const icsFold = (line) => {
+    const out = [];
+    let cur = '';
+    let bytes = 0;
+    [...line].forEach((ch) => {
+      const n = new TextEncoder().encode(ch).length;
+      if (bytes + n > 73) { out.push(cur); cur = ' '; bytes = 1; }
+      cur += ch; bytes += n;
+    });
+    out.push(cur);
+    return out.join('\r\n');
+  };
+  function tripIcs(t) {
+    ensurePlan(t);
+    const c = country(t.n);
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+    const ev = (uid2, start, end, summary, extra = []) => ['BEGIN:VEVENT', `UID:${uid2}@travel`, `DTSTAMP:${stamp}`, start, end, `SUMMARY:${icsEsc(summary)}`, ...extra, 'END:VEVENT'];
+    const events = [ev(t.id, `DTSTART;VALUE=DATE:${icsDay(t.start)}`, `DTEND;VALUE=DATE:${icsDay(addDays(t.end, 1))}`, `${t.city} 旅行`, [`LOCATION:${icsEsc(`${t.city}, ${c.name}`)}`, `DESCRIPTION:${icsEsc(planText(t))}`])];
+    t.plan.days.forEach((items, i) => {
+      const date = icsDay(addDays(t.start, i));
+      const timed = items.filter((it) => /^\d{1,2}:\d{2}$/.test(it.time)).sort(byTime);
+      timed.forEach((it, k) => {
+        const [h, m] = it.time.split(':').map(Number);
+        const from = Math.min(h * 60 + m, 23 * 60 + 30);
+        const next = timed[k + 1] ? timed[k + 1].time.split(':').map(Number) : null;
+        const nextMin = next ? next[0] * 60 + next[1] : 0;
+        const to = Math.min(nextMin > from ? Math.min(nextMin, from + 120) : from + 90, 23 * 60 + 59);
+        events.push(ev(it.id, `DTSTART:${date}T${hhmm(from)}00`, `DTEND:${date}T${hhmm(to)}00`, it.name, [
+          `LOCATION:${icsEsc(it.kind === 'move' ? t.city : `${spotTitle(it.name)} ${t.city}`)}`,
+          ...([feeOf(it) && `門票 ${feeOf(it)}`, noteOf(it)].filter(Boolean).length ? [`DESCRIPTION:${icsEsc([feeOf(it) && `門票 ${feeOf(it)}`, noteOf(it)].filter(Boolean).join('\n'))}`] : []),
+        ]));
+      });
+    });
+    if (t.start > TODAY) {
+      events.push(ev(`${t.id}-esim`, `DTSTART:${icsDay(addDays(t.start, -1))}T200000`, `DTEND:${icsDay(addDays(t.start, -1))}T201500`, `安裝 ${c.name} eSIM`, [
+        `DESCRIPTION:${icsEsc(`明天出發去 ${t.city}：在 Wi-Fi 下先把 eSIM 裝好，抵達後再開啟數據漫遊。`)}`, 'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', `DESCRIPTION:${icsEsc('安裝 eSIM')}`, 'END:VALARM',
+      ]));
+    }
+    return ['BEGIN:VCALENDAR', 'VERSION:2.0', `PRODID:-//${icsEsc(CONFIG.brand)}//Travel//ZH-TW`, 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:${icsEsc(`${t.city} 行程`)}`, ...events.flat(), 'END:VCALENDAR']
+      .map(icsFold).join('\r\n');
+  }
+  const calIcon = (date) => `<span class="cal-ico"><i>${parseDate(date).getMonth() + 1}月</i><b>${parseDate(date).getDate()}</b></span>`;
+  function openIcs(t) {
+    ensurePlan(t);
+    const c = country(t.n);
+    const timed = t.plan.days.flat().filter((it) => /^\d{1,2}:\d{2}$/.test(it.time)).length;
+    const google = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${t.city} 旅行`)}&dates=${icsDay(t.start)}/${icsDay(addDays(t.end, 1))}&details=${encodeURIComponent(planText(t).slice(0, 1400))}&location=${encodeURIComponent(`${t.city}, ${c.name}`)}`;
+    openModal('加入行事曆', `
+      <p class="muted" style="margin:0">把 ${esc(t.city)} 這趟放進手機的行事曆：整趟旅行一個全天事件，${timed} 個有時間的行程各一個事件${t.start > TODAY ? '，出發前一晚 8 點提醒你安裝 eSIM' : ''}。</p>
+      <div class="ics-options">
+        <button class="ics-opt" data-ics-dl="${t.id}"><span class="ics-ico">${calIcon(t.start)}</span><span><b>下載行事曆檔（.ics）</b><small>iPhone、Android、Outlook、Mac 行事曆：打開檔案就會加入</small></span></button>
+        <a class="ics-opt" href="${google}" target="_blank" rel="noopener"><span class="ics-ico g">G</span><span><b>加到 Google 日曆</b><small>整趟旅行一個事件，每天的行程寫在說明裡</small></span></a>
+      </div>`);
+  }
+
+  // ---------- 行事曆
+  function calendarHtml() {
+    const [y, m] = calMonth.split('-').map(Number);
+    const first = `${calMonth}-01`;
+    const days = new Date(y, m, 0).getDate();
+    const lead = parseDate(first).getDay();
+    const weeks = Math.ceil((lead + days) / 7);
+    const gridStart = addDays(first, -lead);
+    const items = {};
+    trips.forEach((t) => { if (!t.plan) return; t.plan.days.forEach((list, i) => { items[addDays(t.start, i)] = (items[addDays(t.start, i)] || 0) + list.length; }); });
+    const cis = {};
+    allCheckins().forEach((c) => { cis[c.date] = (cis[c.date] || 0) + 1; });
+    const pics = {};
+    LIB.slice().sort(byTaken).forEach((p) => { if (p.taken && !pics[p.taken]) pics[p.taken] = p; });
+    const rows = Array.from({ length: weeks }, (_, w) => {
+      const ws = addDays(gridStart, w * 7);
+      const we = addDays(ws, 6);
+      const lanes = [];
+      const bars = sortTrips(trips.filter((t) => t.start <= we && t.end >= ws)).map((t) => {
+        const s = t.start > ws ? t.start : ws;
+        const e = t.end < we ? t.end : we;
+        const col = daysBetween(ws, s);
+        const span = daysBetween(s, e);
+        let lane = lanes.findIndex((end) => end < col);
+        if (lane < 0) { lane = lanes.length; lanes.push(0); }
+        lanes[lane] = col + span - 1;
+        const [c1, c2] = tripColor(t);
+        const head = s === t.start;
+        return `<button class="cal-bar ${head ? 'head' : ''} ${e === t.end ? 'tail' : ''} ${t.end < TODAY ? 'past' : ''}" data-cal-trip="${t.id}" style="grid-column:${col}/span ${span};grid-row:${lane + 1};--c1:${c1};--c2:${c2}">${head || col === 1 ? `${flag(country(t.n).code)}<span>${esc(t.city)}</span>` : ''}</button>`;
+      }).join('');
+      const cells = Array.from({ length: 7 }, (__, d) => {
+        const date = addDays(ws, d);
+        const p = pics[date];
+        const cls = [date.slice(0, 7) !== calMonth && 'other', date === TODAY && 'today', date === calDay && 'sel', HOLIDAYS[date] && 'hol', (d === 0 || d === 6) && 'wkend', p && 'has-ph'].filter(Boolean).join(' ');
+        return `<button class="cal-cell ${cls}" data-cal-day="${date}" aria-label="${md(date)}${HOLIDAYS[date] ? ` ${HOLIDAYS[date]}` : ''}">${p ? `<img class="cal-ph" src="${libSrc(p)}" alt="" loading="lazy">` : ''}<span class="cal-n">${Number(date.slice(8))}</span>${HOLIDAYS[date] && (date === first || !HOLIDAYS[addDays(date, -1)] || d === 0) ? `<small class="cal-hol">${HOLIDAYS[date]}</small>` : ''}<span class="cal-marks">${items[date] ? `<i class="cal-dot" title="${items[date]} 個行程">${items[date]}</i>` : ''}${cis[date] ? '<i class="cal-ci" title="打卡"></i>' : ''}</span></button>`;
+      }).join('');
+      return `<div class="cal-week" style="--lanes:${Math.max(1, lanes.length)}"><div class="cal-cells">${cells}</div><div class="cal-bars">${bars}</div></div>`;
+    }).join('');
+    const nl = nextLongWeekend();
+    const monthTrips = sortTrips(trips.filter((t) => t.start.slice(0, 7) <= calMonth && t.end.slice(0, 7) >= calMonth));
+    return `<div class="calendar">
+      <div class="cal-top"><button class="icon-btn" data-cal-nav="-1" aria-label="上個月">‹</button><h2 class="serif">${y} 年 ${m} 月</h2><button class="icon-btn" data-cal-nav="1" aria-label="下個月">›</button><span class="spacer"></span><button class="btn sm" data-cal-today>今天</button></div>
+      ${nl ? `<button class="cal-next" data-cal-jump="${nl[0]}"><b>下一個連假</b><span>${nl[2]}・${md(nl[0])}–${md(nl[1])}（${daysBetween(nl[0], nl[1])} 天）</span><span class="spacer"></span><span class="link-btn">看這個月 →</span></button>` : ''}
+      <div class="cal-head">${[...WEEK].map((w, i) => `<span class="${i === 0 || i === 6 ? 'wkend' : ''}">${w}</span>`).join('')}</div>
+      <div class="cal-grid">${rows}</div>
+      <div class="cal-legend small muted"><span><i class="cal-dot">3</i>行程數</span><span><i class="cal-ci"></i>打卡</span><span><i class="cal-hol-key"></i>國定假日・連假</span><span>有照片的日子會顯示照片</span></div>
+      ${monthTrips.length ? `<div class="cal-month-trips">${monthTrips.map((t) => { const [c1, c2] = tripColor(t); return `<button class="cal-trip-row" data-cal-trip="${t.id}" style="--c1:${c1};--c2:${c2}"><i></i>${flag(country(t.n).code)}<b>${esc(t.city)}</b><span class="muted small">${md(t.start)}–${md(t.end)}・${daysBetween(t.start, t.end)} 天</span></button>`; }).join('')}</div>` : ''}
+      <div id="cal-agenda">${calAgendaHtml(calDay)}</div>
+      <p class="small muted">國定假日與連假依行政院人事行政總處公告，訂票前請再確認。</p>
+    </div>`;
+  }
+  function calAgendaHtml(date) {
+    if (!date) return '';
+    const t = tripOn(date);
+    const d = parseDate(date);
+    const head = `<div class="cal-ag-head">${calIcon(date)}<div><b>${d.getMonth() + 1} 月 ${d.getDate()} 日（${WEEK[d.getDay()]}）</b>${HOLIDAYS[date] ? `<span class="pt-hol">${HOLIDAYS[date]}</span>` : ''}${t ? `<div class="small muted">${flag(country(t.n).code)} ${esc(t.city)}・Day ${daysBetween(t.start, date)} / ${daysBetween(t.start, t.end)}</div>` : ''}</div></div>`;
+    const photos = LIB.filter((p) => p.taken === date).sort(byTaken).slice(0, 12);
+    const photoRow = photos.length ? `<div class="cal-ag-photos">${photos.map((p) => `<button class="lib-ph" data-lib-photo="${p.id}"><img src="${libSrc(p)}" alt="" loading="lazy"></button>`).join('')}</div>` : '';
+    if (!t) {
+      return `<div class="cal-agenda">${head}${photoRow}<p class="muted" style="margin:6px 0 10px">這天沒有旅行${HOLIDAYS[date] ? `，剛好是${HOLIDAYS[date]}連假，要不要出國走走？` : '。'}</p>
+        <div class="row"><button class="btn primary" data-trip-on="${date}">從這天開始一趟旅行</button><button class="btn" data-random>隨機出國找靈感</button></div></div>`;
+    }
+    ensurePlan(t);
+    const i = daysBetween(t.start, date) - 1;
+    const rows = dayRows(t, i);
+    return `<div class="cal-agenda">${head}
+      <ul class="cal-ag-list">${rows.map((r) => (r.it ? `<li class="k-${r.it.kind}"><time>${esc(r.it.time || '—')}</time><button class="pt-link" data-pt-open="${r.it.id}:${i}"><i class="pt-dot"></i>${esc(r.it.name)}</button>${feeOf(r.it) ? `<span class="chip ${r.it.fee === 0 ? 'free' : 'fee'}">${r.it.fee === 0 ? '免費' : esc(ticketText(r.it))}</span>` : ''}</li>`
+    : `<li class="pt-ci"><time><span class="pt-stamp" style="--ink:${inkOf(r.c.id)}">打卡</span></time><button class="pt-link" data-ci-open="${t.id}:${r.c.id}">${esc(r.c.place)}${r.c.caption ? `「${esc(r.c.caption)}」` : ''}</button></li>`)).join('') || '<li class="muted">這天還沒有安排，自由活動。</li>'}</ul>
+      ${photoRow}
+      <form class="add-item cal-add" data-cal-add="${t.id}:${i}"><input class="input" maxlength="40" placeholder="在這天新增行程，例如：19:00 晚餐 燒肉" aria-label="新增行程"><button class="btn sm">新增</button></form>
+      <div class="row"><button class="btn" data-plan-day="${t.id}:${i}">在時間軸編輯這天</button>${date <= TODAY ? `<button class="btn" data-checkin="${t.id}">打卡</button>` : ''}<button class="btn" data-ics="${t.id}">加入行事曆</button></div>
+    </div>`;
+  }
+  function renderPlanAlt(t) {
+    const box = $('#plan-alt');
+    if (planView === 'table') { box.innerHTML = planTableHtml(t); return; }
+    if (!calMonth) calMonth = (t && t.end >= TODAY && t.start > TODAY ? t.start : TODAY).slice(0, 7);
+    if (!calDay) {
+      calDay = `${calMonth}-01`;
+      if (TODAY.slice(0, 7) === calMonth) calDay = TODAY;
+      if (t && t.start.slice(0, 7) === calMonth) calDay = t.start;
+    }
+    box.innerHTML = calendarHtml();
+  }
+  function setCalDay(date) {
+    calDay = date;
+    $$('#plan-alt .cal-cell').forEach((c) => c.classList.toggle('sel', c.dataset.calDay === date));
+    $('#cal-agenda').innerHTML = calAgendaHtml(date);
+    if (!REDUCED) $('#cal-agenda .cal-agenda')?.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  }
+  // A day's check-in stamps and photos, under its plan on the 時間軸.
+  const dayMemHtml = (t, i) => {
+    const date = addDays(t.start, i);
+    const cs = (t.checkins || []).filter((c) => c.date === date);
+    const ps = LIB.filter((p) => p.tripId === t.id && p.taken === date).sort(byTaken).slice(0, 8);
+    if (!cs.length && !ps.length) return '';
+    return `<div class="day-mem">${cs.map((c) => `<button class="pt-stamp big" data-ci-open="${t.id}:${c.id}" style="--ink:${inkOf(c.id)}">${esc([...c.place].slice(0, 5).join(''))}</button>`).join('')}${ps.map((p) => `<button class="day-ph" data-lib-photo="${p.id}"><img src="${libSrc(p)}" alt="" loading="lazy"></button>`).join('')}</div>`;
+  };
   function renderPlanner() {
     sortables.forEach((s) => s.destroy());
     sortables = [];
@@ -2893,16 +3138,26 @@
     }
     ensurePlan(t);
     const switcher = sortTrips(trips).reverse().map((x) => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.city)}・${x.start}${isUpcoming(x) || isOngoing(x) ? '（即將出發）' : ''}</option>`).join('');
-    $('#plan-cover').innerHTML = `<div class="row" style="margin-bottom:12px"><h2>行程表</h2><span class="spacer"></span>
-      <select class="input" id="plan-switch" style="width:auto;max-width:60vw" aria-label="切換行程">${switcher}</select><button class="btn sm" data-edit="${t.id}">行程資訊</button></div>${coverHtml(t, true)}`;
-    applyPhoto($('#plan-cover .mag-cover'), $('#plan-cover .mag-cover').dataset.cover);
-    $('#plan-switch').addEventListener('change', (e) => { planTripId = e.target.value; openItems.clear(); renderPlanner(); });
+    $('#plan-cover').innerHTML = `<div class="row plan-top"><h2>行程表</h2><div class="seg plan-views" role="tablist" aria-label="檢視方式">${PLAN_VIEWS.map(([k, l]) => `<button data-plan-view="${k}" class="${planView === k ? 'on' : ''}" role="tab" aria-selected="${planView === k}">${l}</button>`).join('')}</div><span class="spacer"></span>
+      <select class="input" id="plan-switch" style="width:auto;max-width:60vw" aria-label="切換行程">${switcher}</select><button class="btn sm" data-edit="${t.id}">行程資訊</button></div>${planView === 'timeline' ? coverHtml(t, true) : ''}`;
+    if (planView === 'timeline') applyPhoto($('#plan-cover .mag-cover'), $('#plan-cover .mag-cover').dataset.cover);
+    $('#plan-switch').addEventListener('change', (e) => {
+      planTripId = e.target.value; openItems.clear();
+      const picked = trips.find((x) => x.id === planTripId);
+      if (picked) { calMonth = picked.start.slice(0, 7); calDay = picked.start; }
+      renderPlanner();
+    });
+    const alt = planView !== 'timeline';
+    $('#plan-view-main').hidden = alt;
+    $('#plan-alt').hidden = !alt;
+    if (alt) { renderPlanAlt(t); animateIn($('[data-view="plan"]')); return; }
 
     const empty = poolFor(t).length ? t.plan.days.filter((d) => !d.length).length : 0;
     $('#plan-days').innerHTML = `<div class="row" style="margin-bottom:12px"><span class="small muted">拖曳 ⋮⋮ 調整順序或移到別天；點名稱看照片、影片、地圖與訂票。</span><span class="spacer"></span>${empty ? `<button class="btn sm" data-fill="1">用景點庫補 ${empty} 個空白天</button>` : ''}</div>
       ${t.plan.days.map((items, i) => `<section class="day" id="day-${i}">
         <div class="day-head"><span class="dn serif">Day ${i + 1}</span><span class="date">${dayLabel(t, i)}</span><span class="spacer"></span><span class="small muted">${items.length} 項${sum(items, toTwd) ? `・<button class="tap-text" data-tickets="${t.id}">門票 ≈ NT$${fmt(sum(items, toTwd))} ›</button>` : ''}</span></div>
         <ul class="items" data-day="${i}">${items.map((it) => itemHtml(t, it, i)).join('')}</ul>
+        ${dayMemHtml(t, i)}
         <form class="add-item" data-add="${i}"><input class="input" maxlength="40" placeholder="新增行程，例如：午餐 一蘭拉麵" aria-label="Day ${i + 1} 新增行程"><button class="btn sm">新增</button></form>
       </section>`).join('')}`;
 
@@ -4606,6 +4861,25 @@
     addPhotos(e.dataTransfer.files);
   });
 
+  $('#plan-alt').addEventListener('submit', (e) => {
+    const form = e.target.closest('[data-cal-add]');
+    if (!form) return;
+    e.preventDefault();
+    const [id, day] = form.dataset.calAdd.split(':');
+    const x = trips.find((v) => v.id === id);
+    const text = form.querySelector('input').value.trim();
+    if (!x || !text) return;
+    ensurePlan(x);
+    const m = text.match(/^(\d{1,2})[:：](\d{2})\s*(.+)$/);
+    const item = m ? newItem(m[3], `${m[1].padStart(2, '0')}:${m[2]}`) : newItem(text, '');
+    x.plan.days[Number(day)].push(item);
+    x.plan.days[Number(day)].sort(byTime);
+    save(); renderCover();
+    renderPlanAlt(planTrip());
+    toast(`已加到 Day ${Number(day) + 1}`);
+  });
+  window.addEventListener('afterprint', () => document.documentElement.classList.remove('print-plan'));
+
   // ---------- the check-in button that follows you on 首頁 and 足跡
   function renderFab() {
     const fab = $('#ci-fab');
@@ -4617,6 +4891,66 @@
     const t = e.target.closest('button, li[data-trip], [data-trip]');
     if (!t) return;
     const ds = t.dataset;
+    if (ds.planView) { planView = ds.planView; store.set('planView', planView); renderPlanner(); return; }
+    if (ds.ptOpen) {
+      const [id, day] = ds.ptOpen.split(':');
+      modal.close();
+      planView = 'timeline'; store.set('planView', planView); openItems.add(id);
+      renderPlanner();
+      setTimeout(() => ($(`#plan-days [data-id="${id}"]`) || $(`#day-${day}`))?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'center' }), 60);
+      return;
+    }
+    if (ds.planDay) {
+      const [id, day] = ds.planDay.split(':');
+      planView = 'timeline'; store.set('planView', planView);
+      openPlanner(id, Number(day));
+      if (currentTab === 'plan') setTimeout(() => $(`#day-${day}`)?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }), 60);
+      return;
+    }
+    const planT = (id) => { const x = trips.find((v) => v.id === id); if (x) ensurePlan(x); return x; };
+    if (ds.ptCopy) {
+      const x = planT(ds.ptCopy);
+      if (x) navigator.clipboard?.writeText(planText(x)).then(() => toast('行程文字已複製，可以貼到 LINE 群組'), () => toast('這個瀏覽器不能自動複製'));
+      return;
+    }
+    if (ds.ptCsv) { const x = planT(ds.ptCsv); if (x) { saveFile(new File([planCsv(x)], `${x.city}-行程表.csv`, { type: 'text/csv' })); toast('已下載，可以用 Excel 或 Google 試算表打開'); } return; }
+    if ('ptPrint' in ds) { document.documentElement.classList.add('print-plan'); setTimeout(() => window.print(), 50); return; }
+    if (ds.ics) { const x = planT(ds.ics); if (x) openIcs(x); return; }
+    if (ds.icsDl) {
+      const x = planT(ds.icsDl);
+      if (x) { saveFile(new File([tripIcs(x)], `${x.city}-行程.ics`, { type: 'text/calendar' })); toast('已下載行事曆檔，打開它就會加入行事曆'); }
+      return;
+    }
+    if (ds.calNav) {
+      const [y, m] = calMonth.split('-').map(Number);
+      const d = new Date(y, m - 1 + Number(ds.calNav), 1);
+      calMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const inMonth = sortTrips(trips).find((x) => x.start.slice(0, 7) === calMonth);
+      calDay = inMonth ? inMonth.start : `${calMonth}-01`;
+      renderPlanAlt(planTrip());
+      return;
+    }
+    if ('calToday' in ds) { calMonth = TODAY.slice(0, 7); calDay = TODAY; renderPlanAlt(planTrip()); return; }
+    if (ds.calJump) { calMonth = ds.calJump.slice(0, 7); calDay = ds.calJump; renderPlanAlt(planTrip()); return; }
+    if (ds.calDay) {
+      if (ds.calDay.slice(0, 7) !== calMonth) { calMonth = ds.calDay.slice(0, 7); calDay = ds.calDay; renderPlanAlt(planTrip()); } else setCalDay(ds.calDay);
+      return;
+    }
+    if (ds.calTrip) {
+      const x = trips.find((v) => v.id === ds.calTrip);
+      if (!x) return;
+      planTripId = x.id;
+      if ($('#plan-switch')) $('#plan-switch').value = x.id;
+      const start = x.start.slice(0, 7) === calMonth ? x.start : `${calMonth}-01`;
+      setCalDay(start < x.start ? x.start : start);
+      return;
+    }
+    if (ds.tripOn) {
+      openTripForm();
+      const [from, to] = [$('#f-start'), $('#f-end')];
+      if (from && to) { from.value = ds.tripOn; to.value = addDays(ds.tripOn, 4); from.dispatchEvent(new Event('change', { bubbles: true })); }
+      return;
+    }
     if (ds.checkin !== undefined) { openCheckin({ tripId: ds.checkin || undefined }); return; }
     if (ds.ciSight) {
       const [code, i] = ds.ciSight.split(':');

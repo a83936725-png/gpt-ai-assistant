@@ -409,6 +409,11 @@ html:has(body.has-sheet), body.has-sheet { overscroll-behavior: none; }
 .empty.has-pic p { max-width: 30em; margin-inline: auto; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pic { filter: brightness(.88) saturate(.92); } }
 :root[data-theme="dark"] .pic { filter: brightness(.88) saturate(.92); }
+/* 首頁 (0.9.5): each card's drawing beside its title, or where its emoji was */
+.card-pic { border-radius: 12px; }
+.card-title > .card-pic { margin: -6px 2px -6px 0; }
+.home-empty { align-items: center; }
+.sh-moment-pic { width: 96px; height: 96px; border-radius: 22px; margin: 0 auto 10px; }
 /* a card that opens with its drawing: picture on the left, a few words on the right */
 .pic-intro { display: flex; align-items: flex-start; gap: 14px; }
 .pic-intro > .pic { margin-top: 2px; }

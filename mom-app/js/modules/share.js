@@ -641,7 +641,8 @@
     const sheet = ui.sheet({
       title: `${emoji} ${msg}`,
       body: h('div', { class: 'sh-moment' },
-        h('p', { class: 'small muted' }, '把這個時刻分享給家人朋友吧！分享卡已經幫你做好了。'),
+        ui.pic('moments', 96, 'sh-moment-pic'),
+        h('p', { class: 'small muted' }, '分享卡已經做好了，傳給家人朋友吧。'),
         h('button', { class: 'btn btn-primary btn-block', onclick: () => { sheet.close(); setTimeout(() => open(payload || { kind }), 240); } }, '📤 做成分享卡'),
         h('div', { class: 'row gap mt' },
           h('button', { class: 'btn btn-ghost grow', onclick: () => sheet.close() }, '這次先不要'),

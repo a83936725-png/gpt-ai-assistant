@@ -340,7 +340,9 @@
   const PICS = new Set(['benefits', 'brand', 'circle', 'confinement', 'contraction', 'cycle', 'family', 'fertility', 'goods', 'groupbuy', 'growth',
     'handoff', 'hospitalbag', 'island', 'journey', 'kick', 'milestones', 'milk', 'monitor', 'monthly', 'night', 'outing', 'postpartum',
     'pregnancy', 'pregweight', 'prenatal', 'prepcheck', 'prevention', 'push', 'recap', 'search', 'stage-baby', 'stage-preg', 'stage-prep',
-    'stats', 'wall', 'weekly']);
+    'stats', 'wall', 'weekly',
+    // 0.9.5, for 首頁: 新手任務, 邀請, 邀請禮, 加到主畫面, 備份, 分享時刻, 打招呼, 接下來, 最新紀錄
+    'starter', 'invite', 'gift', 'a2hs', 'backup', 'moments', 'wave', 'next', 'records']);
   const pic = (name, size = 64, cls = '') => (PICS.has(name) ? h('img', {
     class: `pic${cls ? ` ${cls}` : ''}`, src: `assets/thumbs/${name}.webp`, alt: '', width: size, height: size, decoding: 'async', draggable: 'false',
   }) : null);

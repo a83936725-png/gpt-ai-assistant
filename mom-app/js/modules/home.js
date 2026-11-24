@@ -211,7 +211,8 @@
     const diaper = P.diaper();
     if (!feed && !sleep && !diaper) {
       return ui.card({ class: 'next-card' }, h('div', { class: 'card-title' }, '接下來'),
-        h('p', { class: 'small muted' }, '開始記錄餵奶、睡眠、尿布後，這裡會預測寶寶下一次的需求。紀錄越多，預測越貼近寶寶的作息。'));
+        h('div', { class: 'pic-intro' }, ui.pic('next', 64),
+          h('p', { class: 'small muted' }, '記一次餵奶、睡眠或尿布，這裡就會算出下一次大約幾點；記得越多越準。')));
     }
     const rows = [];
     if (sleep && sleep.sleeping) {
@@ -269,6 +270,28 @@
     const d = C.diffDays(b.birthday, new Date());
     return d >= 0 && d < 30;
   }
+  /* 0.9.5: every card on 首頁 carries its drawing (assets/thumbs) — next to its title, or in place of the emoji a one-line
+   * card starts with — so each one is recognised before it is read. 島上的媽媽 keeps the other mom's Q版 face and the
+   * pregnancy week its fruit: those pictures say something the drawing can't. */
+  const CARD_PIC = {
+    'benefits-now': 'benefits', daily: 'brand', 'baby-health': 'prevention', journey: 'journey', postpartum: 'postpartum',
+    starter: 'starter', goods: 'goods', outing: 'outing', 'prep-cycle': 'cycle', weekly: 'weekly', groupbuy: 'groupbuy',
+    'circle-join': 'circle', circle: 'circle', gift: 'gift', invite: 'invite', wall: 'wall', 'wall-nudge': 'wall',
+    'island-new': 'island', 'island-progress': 'island',
+    'keep-safe': (slot) => (slot.querySelector('[data-keep="a2hs"]') ? 'a2hs' : 'backup'),
+  };
+  const LEAD_EMOJI = '.cc-home-e, .gift-home-ico, .isl-new-emoji, .isl-home-emoji, .inv-home-ico, .wall-home-e';
+  function cardPic(slot, id) {
+    const want = CARD_PIC[id];
+    const name = typeof want === 'function' ? want(slot) : want;
+    if (!name || slot.querySelector('img.pic')) return;
+    const lead = slot.querySelector(LEAD_EMOJI);
+    if (lead) { lead.replaceWith(ui.pic(name, 44, 'card-pic')); return; }
+    const title = slot.querySelector('.card-title');
+    if (title) { title.prepend(ui.pic(name, 36, 'card-pic')); return; }
+    const row = slot.querySelector('.card > .row');
+    if (row) row.prepend(ui.pic(name, 44, 'card-pic'));
+  }
   function moduleCards(el) {
     const calm = calmHome();
     const more = h('div', { class: 'home-more-cards', hidden: !foldOpen });
@@ -279,6 +302,7 @@
         const slot = h('div', { class: 'home-slot', dataset: { card: c.id } });
         try { c.render(slot); } catch (e) { console.error(c.id, e); }
         if (!slot.childNodes.length) return;
+        cardPic(slot, c.id);
         if (calm && c.order >= FOLD_FROM && !FOLD_KEEP.has(c.id) && slot.dataset.personal !== '1') more.append(slot); else el.append(slot);
       });
     if (!more.childNodes.length) return;
@@ -343,7 +367,7 @@
           const today = store.logsOn(new Date());
           el.append(h('div', { class: 'section-title' }, h('span', null, '最新紀錄'), h('a', { href: '#/log' }, today.length > 3 ? `今天共 ${today.length} 筆・看全部 ›` : '全部紀錄 ›')));
           if (today.length) el.append(App.babylog.timeline(today, { limit: 3 }));
-          else el.append(h('p', { class: 'small muted center' }, '今天還沒有紀錄。點卡片填完整資料，或按 ＋ 一鍵記錄。'));
+          else el.append(h('div', { class: 'card home-empty pic-intro' }, ui.pic('records', 56), h('p', { class: 'small muted' }, '今天還沒有紀錄。按上面的 ＋ 一鍵記錄，或點卡片填完整資料。')));
           el.append(h('div', { class: 'mt-lg' }));
         }
       }

@@ -3,7 +3,8 @@
 // 團購, 補助, 成長回顧, 月照, 通知, 每日提醒) and empty pages — decorative (alt="") and all loading; the type scale (text
 // in five sizes: 12 / 13.5 / 15 / 17 / 20, form fields 16, big numbers and headlines 24 up, badge digits 11 and under);
 // share cards drawn flat (no gradient, no bubbles) with the moment's drawing; and a calmer 好孕島 (no season button,
-// no drifting particles, a tip that changes only when tapped, no 稱號). Light, dark and a small phone; accessibility.
+// no drifting particles, a tip that changes only when tapped, no 稱號). 0.9.5: every 首頁 card carries its drawing,
+// and the empty 接下來 / 最新紀錄 and the 分享時刻 prompt too. Light, dark and a small phone; accessibility.
 // Usage: cd mom-app && python3 -m http.server 8080   then   BASE=http://localhost:8080/ node tests/pics.playwright.cjs
 //        AXE_PATH=<axe.min.js> for the accessibility checks
 const { chromium } = require('playwright');
@@ -165,6 +166,62 @@ const ok = (name, cond, info = '') => results.push({ name, pass: !!cond, info: S
   await P.click('.isl-cbtn:has-text("旅程")'); await P.waitForTimeout(700);
   const jr = await S(P, () => (document.querySelector('.isl-jr-top') || {}).innerText || '');
   ok('…旅程 shows the passport, not a 稱號', /我的護照/.test(jr) && !/稱號|島民|島主|探險家|傳說/.test(jr), jr.replace(/\s+/g, ' '));
+
+  /* ---------- 0.9.5 首頁: every card carries its drawing ---------- */
+  // a Sunday, after ten days of use: 家族週報, 邀請朋友 and 備份 join the everyday cards
+  const homeCards = (p) => S(p, () => [...document.querySelectorAll('#view .home-slot[data-card]')].filter((x) => x.dataset.card !== 'more').map((x) => {
+    const i = x.querySelector('img.pic'); return [x.dataset.card, i ? (i.src.match(/thumbs\/([a-z0-9-]+)\.webp$/) || [])[1] : '', i ? i.naturalWidth : 0];
+  }));
+  const H = await (async () => {
+    const c = await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-TW', timezoneId: 'Asia/Taipei' });
+    await c.clock.install({ time: new Date('2026-11-29T10:00:00+08:00') });
+    await c.addInitScript(() => { window.__noShareMoments = true; window.__noNightAuto = true; window.open = () => null; });
+    const p = await c.newPage(); p.on('pageerror', (e) => errs.push(e.message));
+    await p.goto(BASE); await p.waitForSelector('text=你現在是？', { timeout: 15000 });
+    await p.click('text=先看看範例資料'); await p.waitForTimeout(1500);
+    await p.evaluate(() => {
+      const ago = new Date(Date.now() - 10 * 864e5).toISOString();
+      App.isNight = () => false; App.applyTheme();
+      App.store.update((x) => { x.createdAt = ago; x.onboardedAt = ago; x.settings.lastBackupAt = null; });
+      App.navigate('home'); App.refresh();
+    });
+    await p.waitForTimeout(1500);
+    return p;
+  })();
+  let hc = await homeCards(H);
+  const want = { 'benefits-now': 'benefits', daily: 'brand', 'baby-health': 'prevention', 'island-progress': 'island', weekly: 'weekly', invite: 'invite', 'keep-safe': 'backup' };
+  const seen = Object.fromEntries(hc.map(([k, n]) => [k, n]));
+  ok('首頁 (育兒, a Sunday after ten days): every card has its drawing — 福利, 今日小任務, 健康追蹤, 好孕島, 家族週報, 邀請, 備份', Object.entries(want).every(([k, n]) => seen[k] === n) && hc.every(([, n, w]) => n && w === 256), JSON.stringify(hc));
+  const placed = await S(H, () => ({
+    title: !!document.querySelector('[data-card="benefits-now"] .card-title > img.pic'),
+    lead: !!document.querySelector('[data-card="invite"] .inv-home-ico') || !document.querySelector('[data-card="invite"] img.pic'),
+    weekly: !!document.querySelector('[data-card="weekly"] .card > .row > img.pic'),
+    island: !document.querySelector('[data-card="island-progress"] .isl-home-emoji'),
+  }));
+  ok('…beside the title, in place of the leading emoji (邀請 💌, 好孕島 💉), or at the start of a one-line card (家族週報)', placed.title && !placed.lead && placed.weekly && placed.island, JSON.stringify(placed));
+  await shot(H, 'home-cards');
+  await axe(H, '首頁 with the card drawings');
+  sz = await sizes(H);
+  ok('首頁: text only in the scale sizes', !offScale(sz).length, JSON.stringify(sz));
+  // pregnant, after a visit to the islands: 孕產路線圖, 常見好物, and the new island
+  await S(H, () => { App.store.update((x) => { x.profile.stage = 'preg'; x.profile.lmp = Core.dateKey(Core.addDays(new Date(), -150)); x.island = { ...(x.island || {}), seen: ['prep'] }; }); App.navigate('home'); App.refresh(); });
+  await H.waitForTimeout(1500);
+  hc = await homeCards(H);
+  const pg = Object.fromEntries(hc.map(([k, n]) => [k, n]));
+  ok('首頁 (懷孕): 孕產路線圖, 常見好物, a new island — each with its drawing; the week card keeps its fruit', pg.journey === 'journey' && pg.goods === 'goods' && pg['island-new'] === 'island' && pg['preg-week'] === '' && hc.filter(([k]) => k !== 'preg-week').every(([, n, w]) => n && w === 256), JSON.stringify(hc));
+  await H.context().close();
+  // a new mom: 接下來 and 最新紀錄 with nothing in them yet show a drawing and one line
+  const N = await mk();
+  await N.click('.ob-choice:has-text("育兒中")'); await N.click('text=完成，開始使用'); await N.waitForTimeout(1300);
+  const empty = await S(N, () => ({
+    next: (document.querySelector('.next-card img.pic') || {}).src || '', nextText: (document.querySelector('.next-card p') || {}).textContent || '',
+    rec: (document.querySelector('.home-empty img.pic') || {}).src || '', recText: (document.querySelector('.home-empty') || {}).textContent || '',
+  }));
+  ok('a new mom: 接下來 and 最新紀錄 with nothing yet — a drawing and one line each', /thumbs\/next\.webp$/.test(empty.next) && /thumbs\/records\.webp$/.test(empty.rec) && empty.nextText.length <= 40 && /今天還沒有紀錄/.test(empty.recText), JSON.stringify(empty));
+  await S(N, () => { window.__noShareMoments = false; App.share.moment('pics-test', { emoji: '🎉', msg: '寶寶滿月了！', kind: 'baby-age', force: true }); });
+  await N.waitForTimeout(700);
+  ok('…and the 分享時刻 prompt opens with its drawing', await S(N, () => !!document.querySelector('.sheet .sh-moment img.pic[src$="moments.webp"]')));
+  await N.context().close();
 
   ok('no page errors', !errs.length, errs.join(' | '));
   await b.close();

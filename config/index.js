@@ -101,6 +101,24 @@ const config = Object.freeze({
   SERPAPI_TIMEOUT: env.SERPAPI_TIMEOUT || env.APP_API_TIMEOUT,
   SERPAPI_API_KEY: env.SERPAPI_API_KEY || null,
   SERPAPI_LOCATION: env.SERPAPI_LOCATION || 'tw',
+  // One token per Instagram account: INSTAGRAM_ACCESS_TOKEN, INSTAGRAM_ACCESS_TOKEN_2, INSTAGRAM_ACCESS_TOKEN_3, …
+  INSTAGRAM_ACCESS_TOKENS: Object.keys(env)
+    .map((key) => key.match(/^INSTAGRAM_ACCESS_TOKEN(?:_(\d+))?$/))
+    .filter((match) => match && env[match[0]])
+    .map((match) => ({ key: match[0], slot: Number(match[1] || 1), token: String(env[match[0]]).trim() }))
+    .sort((a, b) => a.slot - b.slot),
+  INSTAGRAM_APP_ID: env.INSTAGRAM_APP_ID || null,
+  INSTAGRAM_APP_SECRET: env.INSTAGRAM_APP_SECRET || null,
+  INSTAGRAM_ADMIN_PASSWORD: env.INSTAGRAM_ADMIN_PASSWORD || env.IKIGAI_ADMIN_PASSWORD || null,
+  INSTAGRAM_VERIFY_TOKEN: env.INSTAGRAM_VERIFY_TOKEN || null,
+  INSTAGRAM_API_VERSION: env.INSTAGRAM_API_VERSION || 'v25.0',
+  INSTAGRAM_TIMEOUT: Number(env.INSTAGRAM_TIMEOUT) || 15000,
+  INSTAGRAM_NOTIFY_LINE_IDS: env.INSTAGRAM_NOTIFY_LINE_IDS ? String(env.INSTAGRAM_NOTIFY_LINE_IDS).split(',').map((id) => id.trim()).filter(Boolean) : [],
+  INSTAGRAM_DAILY_REPORT: env.INSTAGRAM_DAILY_REPORT === 'true' || false,
+  INSTAGRAM_BLOB_TOKEN: env.INSTAGRAM_BLOB_READ_WRITE_TOKEN || env.IKIGAI_BLOB_READ_WRITE_TOKEN || null,
+  INSTAGRAM_BRAND_NAME: env.INSTAGRAM_BRAND_NAME || '',
+  INSTAGRAM_CONTACT_EMAIL: env.INSTAGRAM_CONTACT_EMAIL || '',
+  CRON_SECRET: env.CRON_SECRET || null,
 });
 
 export default config;

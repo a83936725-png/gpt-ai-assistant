@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.22.0 (2026-11-22)
+## 4.23.0 (2026-11-24)
 
 ### New Features
 
@@ -66,6 +66,16 @@
 - Travel: group check-ins. In a 揪團 that is on your itinerary, 團體打卡 opens the check-in sheet with 跟誰一起 (the group's nicknames); the postcard reads 和 … 一起 and the share button becomes 分享全員到齊明信片, and every group member sees the stamp on the group's 團體打卡牆 (`POST /travel/api/groups/:id/checkin`)
 - Travel: memories. The home page shows what you were doing on this day in earlier years (a check-in or a trip within three days), with a photo, 分享這段回憶 and an optional daily reminder that notifies you when the app opens (browser notifications; scheduled pushes would need a push server)
 - Travel: privacy when sharing. The share studio has switches for the sight name, the date and your name, which apply to the image, the caption and the link; shared images carry no location data
+
+## 4.22.0 (2026-11-24)
+
+### New Features
+
+- Instagram comment-to-DM auto reply, a free replacement for ManyChat: a keyword comment on a Reel or post gets a public reply and a DM with a button; tapping it sends the link, or first asks the person to follow when the rule requires it
+- Several Instagram accounts at once: each webhook is answered with the token of the account it is for, rules can target one account or all of them, and any account can be paused on its own
+- An admin page at `/instagram/admin`: connect accounts with "log in with Instagram" (or a pasted token), which also subscribes them to webhooks; edit rules, the test list and the main switch; changes apply without a redeploy
+- `/instagram/status` checklist, plus the privacy policy and data deletion pages Meta needs before the app can go live
+- A daily Vercel Cron checks every account's token and webhook subscription, extends tokens every 7 days and sends a LINE alert when something breaks; `INSTAGRAM_DAILY_REPORT=true` sends a nightly report too. See the [guide (中文)](docs/INSTAGRAM-AUTOREPLY.zh-TW.md)
 
 ## 4.21.0 (2026-11-22)
 

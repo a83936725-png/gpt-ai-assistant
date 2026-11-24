@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>IG 自動回覆後台</title>
+<style>
+  :root {
+    --bg: #f5f4f1; --surface: #ffffff; --surface-2: #f0eee9; --text: #1d1c1a; --muted: #67625a; --border: #e2ded6;
+    --accent: #c13584; --accent-text: #ffffff; --ok: #1f7a4f; --warn: #a15c00; --danger: #b3261e; --radius: 12px; color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416; --surface: #1d1d21; --surface-2: #26262b; --text: #f0eee9; --muted: #a29d94; --border: #34343a;
+      --accent: #f06ab0; --accent-text: #141416; --ok: #7fd3a6; --warn: #f2b552; --danger: #f2b8b5; color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 20px 16px 120px; }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 17px; margin: 0 0 4px; }
+  .top { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .row-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 10px; padding: 8px 14px; cursor: pointer; border: 1.5px solid var(--accent); background: var(--accent); color: var(--accent-text); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .btn.ghost { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn.danger { background: transparent; color: var(--danger); border-color: var(--border); }
+  .btn.small { font-size: 13px; padding: 5px 10px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 2px 0 12px; }
+  .msg { border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px; border: 1px solid var(--border); background: var(--surface); }
+  .msg.ok { border-color: var(--ok); color: var(--ok); }
+  .msg.warn { border-color: var(--warn); color: var(--warn); }
+  .msg.error { border-color: var(--danger); color: var(--danger); }
+  .msg ul { margin: 4px 0 0; padding-left: 20px; }
+  .login { max-width: 380px; margin: 12vh auto 0; display: grid; gap: 12px; }
+  input[type="text"], input[type="password"], input[type="url"], textarea, select {
+    font: inherit; color: var(--text); background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 11px; width: 100%; min-width: 0;
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  label.field { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  label.field span.note { font-weight: 400; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .grid .full { grid-column: 1 / -1; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .account { border-top: 1px solid var(--border); padding: 12px 0; display: grid; gap: 6px; }
+  .account:first-of-type { border-top: 0; }
+  .account .name { font-weight: 700; font-size: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .badge { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 1px 9px; border: 1px solid var(--border); color: var(--muted); }
+  .badge.ok { color: var(--ok); border-color: var(--ok); }
+  .badge.warn { color: var(--warn); border-color: var(--warn); }
+  .badge.bad { color: var(--danger); border-color: var(--danger); }
+  .meta { font-size: 13px; color: var(--muted); }
+  .rule { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; background: var(--surface-2); }
+  .rule > summary { cursor: pointer; padding: 10px 12px; font-weight: 600; list-style: none; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .rule > summary::-webkit-details-marker { display: none; }
+  .rule > summary .sub { font-weight: 400; font-size: 13px; color: var(--muted); }
+  .rule .body { padding: 4px 12px 12px; display: grid; gap: 12px; }
+  .url { display: grid; gap: 4px; padding: 8px 0; border-top: 1px solid var(--border); }
+  .url:first-of-type { border-top: 0; }
+  .url code { font-size: 13px; word-break: break-all; background: var(--surface-2); border-radius: 6px; padding: 4px 8px; }
+  .url .line { display: flex; gap: 8px; align-items: center; }
+  .url .line code { flex: 1; }
+  .savebar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 10px 16px; }
+  .savebar .inner { max-width: 860px; margin: 0 auto; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+  .savebar .status { font-size: 13px; color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <form class="card login" id="login" hidden>
+    <h1>IG 自動回覆後台</h1>
+    <label class="field">後台密碼<input type="password" id="pw" autocomplete="current-password" required></label>
+    <button class="btn" type="submit">登入</button>
+    <p class="msg error" id="loginError" hidden></p>
+    <p class="hint">密碼是 Vercel 裡的 INSTAGRAM_ADMIN_PASSWORD（沒設定的話用 IKIGAI_ADMIN_PASSWORD）。</p>
+  </form>
+
+  <main id="app" hidden>
+    <div class="top">
+      <h1>IG 自動回覆後台</h1>
+      <div class="row-btns">
+        <button class="btn ghost small" id="reload" type="button">重新整理</button>
+        <button class="btn ghost small" id="logout" type="button">登出</button>
+      </div>
+    </div>
+    <div id="flash"></div>
+    <div id="warnings"></div>
+
+    <section class="card">
+      <h2>IG 帳號</h2>
+      <p class="hint">每個帳號都要先在 Meta 後台加為「Instagram 測試人員」，並用電腦瀏覽器到 instagram.com 接受邀請，才連結得上。</p>
+      <div id="accounts"></div>
+      <div class="row-btns" style="margin-top:10px">
+        <button class="btn" id="connect" type="button">＋ 用 Instagram 登入新增帳號</button>
+      </div>
+      <p class="hint" id="connectHint" hidden></p>
+      <details style="margin-top:10px">
+        <summary class="meta" style="cursor:pointer">或貼上權杖新增（從 Meta 後台「產生存取權杖」複製）</summary>
+        <div style="display:grid;gap:8px;margin-top:8px">
+          <textarea id="pasteToken" rows="3" placeholder="IGAA 開頭的一長串" autocomplete="off"></textarea>
+          <div><button class="btn small" id="addToken" type="button">新增這個帳號</button></div>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>開關與測試</h2>
+      <p class="hint">這兩項對所有帳號都有效。只想停某一個帳號，就在上面那個帳號按「暫停」。</p>
+      <div style="display:grid;gap:12px">
+        <label class="check"><input type="checkbox" id="enabled"> 總開關：自動回覆開著</label>
+        <label class="field">測試名單 <span class="note">填了帳號（逗號隔開，不含 @），就只有這些人留言會觸發；測試完清空 = 開放給所有人</span>
+          <input type="text" id="testUsernames" placeholder="例如 my_test_account" autocomplete="off">
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>規則</h2>
+      <p class="hint">由上往下比對，第一個符合的就用它。只限某篇或某帳號的規則放上面。</p>
+      <div id="rules"></div>
+      <button class="btn ghost" id="addRule" type="button">＋ 新增規則</button>
+    </section>
+
+    <section class="card">
+      <h2>Meta 後台要填的網址</h2>
+      <p class="hint">按「複製」再貼到 Meta 開發者後台。</p>
+      <div id="urls"></div>
+    </section>
+  </main>
+</div>
+
+<div class="savebar" id="savebar" hidden>
+  <div class="inner">
+    <span class="status" id="saveStatus">沒有未儲存的修改</span>
+    <button class="btn" id="save" type="button">儲存規則和開關</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmtDate = (t) => (t ? new Date(t).toLocaleDateString('zh-TW') : '');
+  const daysLeft = (t) => (t ? Math.floor((t - Date.now()) / 86400000) : null);
+  const KEY = 'ig-admin';
+  let password = '';
+  let state = null;
+  let dirty = false;
+
+  try { password = sessionStorage.getItem(KEY) || ''; } catch (e) { /* storage unavailable */ }
+
+  const api = async (path, opts = {}) => {
+    const res = await fetch(`/instagram/admin/api/${path}`, {
+      ...opts,
+      headers: { 'x-admin-password': password, ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...(opts.headers || {}) },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) { logout(data.error || '密碼不對'); throw new Error(data.error || '密碼不對'); }
+    if (!res.ok) throw new Error(data.error || `發生錯誤（${res.status}）`);
+    return data;
+  };
+
+  const flash = (text, kind = 'ok') => {
+    $('flash').innerHTML = text ? `<div class="msg ${kind}">${esc(text)}</div>` : '';
+    if (text) window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const setDirty = (value) => {
+    dirty = value;
+    $('saveStatus').textContent = value ? '有修改還沒儲存' : (state?.rulesUpdatedAt ? `上次儲存：${new Date(state.rulesUpdatedAt).toLocaleString('zh-TW')}` : '沒有未儲存的修改');
+  };
+
+  const sourceLabel = (a) => ({ login: '用 Instagram 登入連結', paste: '貼上權杖連結', env: `Vercel 的 ${a.envKey}` }[a.source] || a.source);
+
+  const renderWarnings = () => {
+    const items = [];
+    if (!state.canSave) items.push('還沒設定私人儲存空間（INSTAGRAM_BLOB_READ_WRITE_TOKEN 或 IKIGAI_BLOB_READ_WRITE_TOKEN）：可以看，但新增帳號、改規則都存不起來。');
+    if (!state.appSecretSet) items.push('還沒設定 INSTAGRAM_APP_SECRET（密碼②）：Meta 送來的通知都會被擋掉。');
+    if (!state.verifyTokenSet) items.push('還沒設定 INSTAGRAM_VERIFY_TOKEN（門鈴暗號③）：Meta 的 Webhook 驗證不會過。');
+    items.push(...state.problems);
+    $('warnings').innerHTML = items.length ? `<div class="msg warn"><b>要處理的事</b><ul>${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></div>` : '';
+  };
+
+  const renderAccounts = () => {
+    if (!state.accounts.length) {
+      $('accounts').innerHTML = '<p class="meta">還沒有連結任何 IG 帳號。</p>';
+    } else {
+      $('accounts').innerHTML = state.accounts.map((a) => {
+        const left = daysLeft(a.expiresAt);
+        const badges = [
+          a.ok ? '<span class="badge ok">正常</span>' : `<span class="badge bad">${a.expired ? '權杖失效' : '連不上'}</span>`,
+          a.paused ? '<span class="badge warn">暫停中</span>' : '',
+          a.ok && a.missing.length ? `<span class="badge warn">缺通知：${esc(a.missing.join('、'))}</span>` : '',
+          left !== null && left < 10 ? `<span class="badge bad">權杖剩 ${left} 天</span>` : '',
+        ].join('');
+        const meta = [
+          sourceLabel(a),
+          left !== null ? `權杖到 ${fmtDate(a.expiresAt)}（剩 ${left} 天，每週自動延長）` : '',
+          a.ok && Array.isArray(a.subscribed) && !a.missing.length ? '通知已訂閱' : '',
+          a.message ? `錯誤：${a.message}` : '',
+        ].filter(Boolean).map(esc).join(' ・ ');
+        const id = esc(a.userId || '');
+        return `<div class="account">
+          <div class="name">${a.username ? `@${esc(a.username)}` : esc(a.envKey ? `Vercel 的 ${a.envKey}` : '未知帳號')} ${badges}</div>
+          <div class="meta">${meta}</div>
+          ${a.userId ? `<div class="row-btns">
+            <button class="btn ghost small" data-act="pause" data-id="${id}" data-paused="${a.paused ? '0' : '1'}" type="button">${a.paused ? '恢復自動回覆' : '暫停這個帳號'}</button>
+            <button class="btn ghost small" data-act="subscribe" data-id="${id}" type="button">重新訂閱通知</button>
+            <button class="btn ghost small" data-act="refresh" data-id="${id}" type="button">延長權杖</button>
+            ${a.source !== 'env' ? `<button class="btn danger small" data-act="remove" data-id="${id}" data-name="${esc(a.username)}" type="button">移除</button>` : ''}
+          </div>` : ''}
+        </div>`;
+      }).join('');
+    }
+    $('connect').disabled = !state.loginReady || !state.canSave;
+    const hint = !state.loginReady ? '要用登入連結帳號，請先在 Vercel 設定 INSTAGRAM_APP_ID（Instagram 應用程式編號）和 INSTAGRAM_APP_SECRET。'
+      : (!state.canSave ? '要先設定私人儲存空間，連結的帳號才存得起來。' : '');
+    $('connectHint').hidden = !hint;
+    $('connectHint').textContent = hint;
+  };
+
+  const accountOptions = (current) => {
+    const names = state.accounts.map((a) => a.username).filter(Boolean);
+    if (current && !names.some((n) => n.toLowerCase() === current.toLowerCase())) names.push(current);
+    return [`<option value="">所有帳號</option>`, ...names.map((n) => `<option value="${esc(n)}"${current && n.toLowerCase() === current.toLowerCase() ? ' selected' : ''}>@${esc(n)}</option>`)].join('');
+  };
+
+  const lines = (list) => (list || []).join('\n');
+
+  const renderRules = () => {
+    const rules = state.rules;
+    $('rules').innerHTML = rules.length ? rules.map((r, i) => `
+      <details class="rule" data-index="${i}"${r._open ? ' open' : ''}>
+        <summary>#${i + 1} ${esc(r.id || '（沒有代號）')} <span class="sub">${r.account ? `@${esc(r.account)}` : '所有帳號'} ・ ${esc((r.keywords || []).join('、') || '沒有關鍵字')}</span></summary>
+        <div class="body">
+          <div class="grid">
+            <label class="field">代號 <span class="note">英數字，不要重複</span><input type="text" data-f="id" value="${esc(r.id)}" autocomplete="off"></label>
+            <label class="field">用在哪個帳號<select data-f="account">${accountOptions(r.account)}</select></label>
+            <label class="field full">關鍵字 <span class="note">一行一個；留言「包含」就觸發，不分大小寫</span><textarea data-f="keywords" rows="2">${esc(lines(r.keywords))}</textarea></label>
+            <label class="field full">只在這幾篇觸發 <span class="note">貼 Reels／貼文網址，一行一個；空白 = 所有貼文</span><textarea data-f="posts" rows="2" placeholder="https://www.instagram.com/reel/...">${esc(lines(r.posts))}</textarea></label>
+            <label class="field full">公開回覆 <span class="note">一行一句，隨機挑一句回在留言底下；空白 = 不公開回覆</span><textarea data-f="commentReplies" rows="3">${esc(lines(r.commentReplies))}</textarea></label>
+            <label class="field full">私訊第一則<textarea data-f="dmText" rows="2">${esc(r.dmText)}</textarea></label>
+            <label class="field">私訊按鈕文字 <span class="note">最多 20 字</span><input type="text" data-f="buttonTitle" value="${esc(r.buttonTitle)}" maxlength="20"></label>
+            <label class="check" style="align-self:end"><input type="checkbox" data-f="requireFollow"${r.requireFollow ? ' checked' : ''}> 要先追蹤才給連結</label>
+            <label class="field full">還沒追蹤時的提醒<textarea data-f="notFollowingText" rows="2">${esc(r.notFollowingText)}</textarea></label>
+            <label class="field full">送連結的文字<textarea data-f="linkText" rows="2">${esc(r.linkText)}</textarea></label>
+            <label class="field">連結按鈕文字 <span class="note">最多 20 字</span><input type="text" data-f="linkTitle" value="${esc(r.linkTitle)}" maxlength="20"></label>
+            <label class="field">連結網址<input type="url" data-f="link" value="${esc(r.link)}" placeholder="https://"></label>
+          </div>
+          <div class="row-btns">
+            <button class="btn ghost small" data-rule="up" type="button"${i === 0 ? ' disabled' : ''}>上移</button>
+            <button class="btn ghost small" data-rule="down" type="button"${i === rules.length - 1 ? ' disabled' : ''}>下移</button>
+            <button class="btn danger small" data-rule="delete" type="button">刪除這條規則</button>
+          </div>
+        </div>
+      </details>`).join('') : '<p class="meta">還沒有規則。</p>';
+  };
+
+  const renderUrls = () => {
+    const rows = [
+      ['Webhook 回呼網址（⑤）', state.urls.webhook, '「使用 Instagram 登入的 API 設定」→ 設定 Webhooks。驗證權杖填門鈴暗號③。'],
+      ['OAuth 重新導向網址', state.urls.redirect, '「設定 Instagram 商家登入」→ OAuth 重新導向 URI。用登入連結帳號才需要。'],
+      ['隱私政策網址', state.urls.privacy, '應用程式設定 → 基本資料。'],
+      ['資料刪除說明網址', state.urls.deletion, '應用程式設定 → 基本資料 → 使用者資料刪除。'],
+    ];
+    $('urls').innerHTML = rows.map(([label, url, note]) => `<div class="url"><b>${esc(label)}</b><div class="line"><code>${esc(url)}</code><button class="btn ghost small" data-copy="${esc(url)}" type="button">複製</button></div><span class="meta">${esc(note)}</span></div>`).join('')
+      + `<div class="url"><b>要訂閱的通知</b><span class="meta">${esc(state.webhookFields.join('、'))}（連結帳號時會自動幫每個帳號訂閱）</span></div>`;
+  };
+
+  const render = () => {
+    renderWarnings();
+    renderAccounts();
+    $('enabled').checked = state.settings.enabled !== false;
+    $('testUsernames').value = (state.settings.testUsernames || []).join(', ');
+    renderRules();
+    renderUrls();
+    $('save').disabled = !state.canSave;
+    setDirty(false);
+  };
+
+  const load = async () => {
+    try {
+      state = await api('state');
+      $('login').hidden = true;
+      $('app').hidden = false;
+      $('savebar').hidden = false;
+      render();
+    } catch (err) {
+      if ($('app').hidden) logout(err.message);
+      else flash(err.message, 'error');
+    }
+  };
+
+  function logout(reason) {
+    password = '';
+    try { sessionStorage.removeItem(KEY); } catch (e) { /* ignore */ }
+    $('app').hidden = true;
+    $('savebar').hidden = true;
+    $('login').hidden = false;
+    $('loginError').hidden = !reason;
+    $('loginError').textContent = reason || '';
+  }
+
+  // Rules: the form edits state.rules in place.
+  const listFields = ['keywords', 'posts', 'commentReplies'];
+  $('rules').addEventListener('input', (e) => {
+    const field = e.target.dataset.f;
+    const box = e.target.closest('.rule');
+    if (!field || !box) return;
+    const rule = state.rules[Number(box.dataset.index)];
+    if (e.target.type === 'checkbox') rule[field] = e.target.checked;
+    else if (listFields.includes(field)) rule[field] = e.target.value.split('\n').map((s) => s.trim()).filter(Boolean);
+    else rule[field] = e.target.value;
+    setDirty(true);
+  });
+  $('rules').addEventListener('change', (e) => {
+    if (e.target.dataset.f === 'account') {
+      state.rules[Number(e.target.closest('.rule').dataset.index)].account = e.target.value;
+      setDirty(true);
+    }
+  });
+  $('rules').addEventListener('click', (e) => {
+    const action = e.target.dataset.rule;
+    if (!action) return;
+    const i = Number(e.target.closest('.rule').dataset.index);
+    const rules = state.rules;
+    if (action === 'delete') {
+      if (!window.confirm(`刪除規則「${rules[i].id || i + 1}」？按「儲存」後才會生效。`)) return;
+      rules.splice(i, 1);
+    } else {
+      const j = action === 'up' ? i - 1 : i + 1;
+      [rules[i], rules[j]] = [rules[j], rules[i]];
+      rules[j]._open = true;
+    }
+    renderRules();
+    setDirty(true);
+  });
+  $('addRule').addEventListener('click', () => {
+    state.rules.push({
+      id: `rule${state.rules.length + 1}`, account: '', keywords: [], posts: [], commentReplies: ['已經私訊給你囉 📩', '連結傳到你的私訊了 💌'],
+      dmText: '謝謝你的留言！按下面的按鈕就能拿到連結 👇', buttonTitle: '給我連結', requireFollow: true,
+      notFollowingText: '你好像還沒追蹤我們 🥺 先追蹤，再按一次按鈕就能拿到連結囉！', linkText: '這是你的連結，請收下 🎁', linkTitle: '打開連結', link: '', _open: true,
+    });
+    renderRules();
+    setDirty(true);
+  });
+  ['enabled', 'testUsernames'].forEach((id) => $(id).addEventListener('input', () => setDirty(true)));
+
+  $('save').addEventListener('click', async () => {
+    $('save').disabled = true;
+    try {
+      const rules = state.rules.map(({ _open, ...rule }) => rule);
+      const settings = { enabled: $('enabled').checked, testUsernames: $('testUsernames').value.split(/[,，\s]+/).map((s) => s.replace(/^@/, '').trim()).filter(Boolean) };
+      const result = await api('rules', { method: 'PUT', body: JSON.stringify({ settings, rules }) });
+      await load();
+      flash(result.problems.length ? '已儲存，但有幾條規則要再看一下（見上方）。' : '已儲存，馬上生效。', result.problems.length ? 'warn' : 'ok');
+    } catch (err) {
+      flash(`儲存失敗：${err.message}`, 'error');
+    } finally {
+      $('save').disabled = !state?.canSave;
+    }
+  });
+
+  // Accounts
+  $('accounts').addEventListener('click', async (e) => {
+    const { act, id } = e.target.dataset;
+    if (!act) return;
+    if (dirty && !window.confirm('規則有修改還沒儲存，繼續的話會重新載入、修改會不見。要繼續嗎？')) return;
+    e.target.disabled = true;
+    try {
+      if (act === 'pause') {
+        await api(`accounts/${encodeURIComponent(id)}/pause`, { method: 'POST', body: JSON.stringify({ paused: e.target.dataset.paused === '1' }) });
+        flash(e.target.dataset.paused === '1' ? '已暫停這個帳號的自動回覆。' : '已恢復這個帳號的自動回覆。');
+      } else if (act === 'subscribe') {
+        await api(`accounts/${encodeURIComponent(id)}/subscribe`, { method: 'POST' });
+        flash('已重新訂閱通知。');
+      } else if (act === 'refresh') {
+        const r = await api(`accounts/${encodeURIComponent(id)}/refresh`, { method: 'POST' });
+        flash(r.expiresAt ? `權杖已延長到 ${fmtDate(r.expiresAt)}。` : '權杖已延長。');
+      } else if (act === 'remove') {
+        if (!window.confirm(`移除 @${e.target.dataset.name}？這個帳號會停止自動回覆。`)) { e.target.disabled = false; return; }
+        await api(`accounts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        flash('已移除。');
+      }
+      await load();
+    } catch (err) {
+      flash(err.message, 'error');
+      e.target.disabled = false;
+    }
+  });
+
+  $('connect').addEventListener('click', async () => {
+    if (dirty && !window.confirm('規則有修改還沒儲存，離開這頁的話修改會不見。要繼續嗎？')) return;
+    try {
+      const { url } = await api('connect', { method: 'POST' });
+      dirty = false;
+      window.location.href = url;
+    } catch (err) {
+      flash(err.message, 'error');
+    }
+  });
+
+  $('addToken').addEventListener('click', async () => {
+    const token = $('pasteToken').value.trim();
+    if (!token) return;
+    $('addToken').disabled = true;
+    try {
+      const r = await api('accounts', { method: 'POST', body: JSON.stringify({ token }) });
+      $('pasteToken').value = '';
+      await load();
+      flash(r.subscribed ? `已連結 @${r.username}，也訂閱好通知了。` : `已連結 @${r.username}，但訂閱通知失敗：${r.subscribeError}`, r.subscribed ? 'ok' : 'warn');
+    } catch (err) {
+      flash(err.message, 'error');
+    } finally {
+      $('addToken').disabled = false;
+    }
+  });
+
+  $('urls').addEventListener('click', async (e) => {
+    const value = e.target.dataset.copy;
+    if (!value) return;
+    try { await navigator.clipboard.writeText(value); e.target.textContent = '已複製'; } catch (err) { e.target.textContent = '請手動複製'; }
+    setTimeout(() => { e.target.textContent = '複製'; }, 1500);
+  });
+
+  $('login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    password = $('pw').value;
+    try { sessionStorage.setItem(KEY, password); } catch (err) { /* ignore */ }
+    $('loginError').hidden = true;
+    await load();
+  });
+
+  $('reload').addEventListener('click', () => {
+    if (dirty && !window.confirm('規則有修改還沒儲存，重新整理的話修改會不見。要繼續嗎？')) return;
+    load();
+  });
+  $('logout').addEventListener('click', () => logout());
+  window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  // Back from "log in with Instagram"
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('connected') || params.get('error')) {
+    window.history.replaceState(null, '', window.location.pathname);
+    if (params.get('error')) flash(params.get('error'), 'error');
+    else if (params.get('warning')) flash(params.get('warning'), 'warn');
+    else flash(`已連結 @${params.get('connected')}，也訂閱好通知了。`);
+  }
+
+  if (password) load(); else logout();
+})();
+</script>
+</body>
+</html>

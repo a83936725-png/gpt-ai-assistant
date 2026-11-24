@@ -375,7 +375,7 @@ void main() {
           node.dataset.pinSight = `${st.sel.code}:${x.i}`;
           node.style.setProperty('--d', `${order * 80}ms`);
           node.setAttribute('aria-label', x.name);
-          node.innerHTML = `<span class="tm-ph">${x.photo ? `<img src="${esc(x.photo)}" alt="" decoding="async" referrerpolicy="no-referrer">` : ''}</span><small>${esc(x.name)}</small>`;
+          node.innerHTML = `<span class="tm-ph">${x.photo ? `<img src="${esc(x.photo)}" alt="" referrerpolicy="no-referrer">` : ''}</span><small>${esc(x.name)}</small>`;
           pinLayer.appendChild(node);
         }
         node.classList.toggle('on', st.sel.active === x.i);
@@ -402,7 +402,7 @@ void main() {
           node.type = 'button';
           node.dataset.pin = c.trips.map((t) => t.id).join(',');
           node.setAttribute('aria-label', c.trips.length > 1 ? `${c.trips.length} 趟：${c.trips.map((t) => t.city).join('、')}` : `${lead.city} ${lead.date}`);
-          node.innerHTML = `<span class="tm-ph">${lead.photo ? `<img src="${esc(lead.photo)}" alt="" decoding="async" referrerpolicy="no-referrer">` : `<b>${esc(lead.city.slice(0, 1))}</b>`}</span>
+          node.innerHTML = `<span class="tm-ph">${lead.photo ? `<img src="${esc(lead.photo)}" alt="" referrerpolicy="no-referrer">` : `<b>${esc(lead.city.slice(0, 1))}</b>`}</span>
             ${lead.code ? `<img class="tm-flag" src="${esc(hooks.flagSrc(lead.code))}" alt="">` : ''}${c.trips.length > 1 ? `<b class="tm-n">${c.trips.length}</b>` : ''}`;
           pinLayer.appendChild(node);
         }
@@ -455,7 +455,7 @@ void main() {
           node.type = 'button';
           node.className = 'tm-rec';
           node.dataset.pinDest = r.id;
-          node.innerHTML = `<span class="tm-ph">${r.photo ? `<img src="${esc(r.photo)}" alt="" decoding="async" referrerpolicy="no-referrer">` : ''}</span><small>${esc(r.name)}</small>`;
+          node.innerHTML = `<span class="tm-ph">${r.photo ? `<img src="${esc(r.photo)}" alt="" referrerpolicy="no-referrer">` : ''}</span><small>${esc(r.name)}</small>`;
           pinLayer.appendChild(node);
           st.recs.push({ ...r, node });
         });

@@ -3063,7 +3063,7 @@
         <div class="field"><label for="rnd-month">出發月份</label><select class="input" id="rnd-month" style="width:auto">${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${rnd.month === i + 1 ? 'selected' : ''}>${i + 1} 月</option>`).join('')}</select></div>
         <label class="row small" style="margin-top:20px"><input type="checkbox" id="rnd-fresh" ${rnd.fresh ? 'checked' : ''}> 只去沒去過的</label></div>
       <div class="field"><label>想要的元素（可不選）</label><div class="row">${Object.entries(ELEMENTS).slice(0, 8).map(([k, v]) => `<button class="chip ${rnd.tags.includes(k) ? 'on' : ''}" data-rtag="${k}">${dot(k)}${v.label}</button>`).join('')}</div></div>
-      <div class="slot" id="slot">${result ? randomResult(result) : `<div class="slot-empty"><b>從 ${list.length} 個符合條件的地點抽一個</b><small class="muted">改上面的預算、天數或月份，範圍會跟著變</small></div>`}</div>
+      <div class="slot" id="slot">${result ? randomResult(result) : `<div class="slot-empty"><div class="slot-deck" aria-hidden="true">${list.slice().sort(() => Math.random() - 0.5).slice(0, 3).map((d) => `<span>${imgHtml(destPhoto(d.id), '')}</span>`).join('')}</div><b>從 ${list.length} 個符合條件的地點抽一個</b><small class="muted">改上面的預算、天數或月份，範圍會跟著變</small></div>`}</div>
       <div class="sheet-bar"><span class="small muted">${list.length ? `${list.length} 個地點符合` : '沒有符合的地點，放寬預算或天數試試'}</span><span class="spacer"></span><button class="btn primary" data-rspin ${list.length ? '' : 'disabled'}>${result ? '再抽一次' : '抽一個'}</button></div>`;
     $('#rnd-month').addEventListener('change', (e) => { rnd.month = Number(e.target.value); renderRandom(); });
     $('#rnd-fresh').addEventListener('change', (e) => { rnd.fresh = e.target.checked; rnd.result = null; renderRandom(); });

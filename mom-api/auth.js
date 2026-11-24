@@ -8,7 +8,10 @@ const scrypt = promisify(crypto.scrypt);
 // upgraded at the next successful login (needsRehash).
 const SCRYPT = { N: 16384, r: 8, p: 5 };
 const LEGACY = { N: 16384, r: 8, p: 1 };
-const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+const b64url = (buf) => Buffer.from(buf).toString('base64')
+  .replace(/=+$/, '')
+  .replace(/\+/g, '-')
+  .replace(/\//g, '_');
 const fromB64url = (s) => Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
 
 // constant-time compare that never throws (inputs may be attacker-controlled, any length / encoding)
@@ -28,7 +31,9 @@ export async function hashPassword(password) {
 
 export async function verifyPassword(password, stored) {
   const [alg, salt, hash] = String(stored || '').split('$');
-  const params = alg === 'scrypt5' ? SCRYPT : alg === 'scrypt' ? LEGACY : null;
+  let params = null;
+  if (alg === 'scrypt5') params = SCRYPT;
+  else if (alg === 'scrypt') params = LEGACY;
   if (!params || !salt || !hash) return false;
   const expected = fromB64url(hash);
   const actual = await scrypt(String(password), fromB64url(salt), expected.length, params);
@@ -80,6 +85,7 @@ export function normaliseAccount(raw) {
 
 // max counts characters as people see them (an emoji is one), so a cut never splits one in half
 export const cleanText = (s, max = 20) => Array.from(String(s || '')
+  // eslint-disable-next-line no-control-regex -- control characters are stripped on purpose
   .replace(/[\u0000-\u001f<>]/g, '')
   .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
   .trim()).slice(0, max).join('');
@@ -96,7 +102,7 @@ export function ipBucket(ip) {
   let a = String(ip || '').trim().toLowerCase();
   if (a.startsWith('::ffff:') && a.includes('.')) return a.slice(7); // IPv4 written as IPv6
   if (!a.includes(':')) return a;
-  a = a.split('%')[0];
+  [a] = a.split('%');
   const [head, tail = ''] = a.split('::');
   const h = head ? head.split(':') : [];
   const t = tail ? tail.split(':') : [];

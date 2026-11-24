@@ -2,6 +2,7 @@
  * - RedisRestStore: Vercel KV / Upstash Redis over REST (persistent, shared by all serverless instances)
  * - MemoryStore: in-process (local development and tests; resets on restart)
  * Keys are prefixed with "mom:" so they never collide with anything else in the same database. */
+/* eslint-disable max-classes-per-file -- the two interchangeable stores live side by side */
 import axios from 'axios';
 
 export class MemoryStore {

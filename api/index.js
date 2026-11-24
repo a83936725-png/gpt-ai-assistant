@@ -6,6 +6,7 @@ import { validateLineSignature } from '../middleware/index.js';
 import storage from '../storage/index.js';
 import { fetchVersion, getVersion } from '../utils/index.js';
 import { getStoredImage, setPublicOrigin } from '../utils/upload-image.js';
+import instagram from '../instagram/index.js';
 import ikigai, { sendPage, servesHome } from '../web/ikigai.js';
 
 const app = express();
@@ -36,6 +37,9 @@ app.use(express.json({
 }));
 
 app.use('/ikigai', ikigai);
+
+// Instagram comment-to-DM auto reply (see docs/INSTAGRAM-AUTOREPLY.zh-TW.md).
+app.use('/instagram', instagram);
 
 app.get('/', async (req, res) => {
   if (servesHome(req)) {

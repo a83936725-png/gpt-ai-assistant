@@ -360,3 +360,20 @@ test('揪團 refuses unknown groups, missing nicknames and bad invitations', asy
   expect((await group(`/${id}/join`, { who: 'w-friend-001', name: ' ' })).status).toBe(400);
   expect((await group(`/${id}/join`, { who: 'x', name: '小美' })).status).toBe(400);
 });
+
+test('揪團 check-ins: members and the organiser stamp places together, strangers cannot', async () => {
+  resetGroups();
+  const { id, key } = await (await group('', { invite: INVITE })).json();
+  await group(`/${id}/join`, { who: 'w-friend-001', name: '小美', opts: [0] });
+  expect((await group(`/${id}/checkin`, { who: 'w-stranger-01', place: '二條市場' })).status).toBe(403);
+  expect((await group(`/${id}/checkin`, { who: 'w-friend-001', place: '' })).status).toBe(400);
+  const one = await (await group(`/${id}/checkin`, {
+    who: 'w-friend-001', cid: 'ci-1', place: '二條市場', date: '2026-12-19', caption: '海膽好甜', with: ['小明'],
+  })).json();
+  expect(one.checkins).toEqual([expect.objectContaining({
+    name: '小美', place: '二條市場', date: '2026-12-19', caption: '海膽好甜', with: ['小明'],
+  })]);
+  expect(JSON.stringify(one)).not.toContain('w-friend-001');
+  const two = await (await group(`/${id}/checkin`, { key, cid: 'ci-2', place: '小樽運河' })).json();
+  expect(two.checkins.map((c) => c.name)).toEqual(['小美', '小明']);
+});

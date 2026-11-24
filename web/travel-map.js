@@ -58,7 +58,7 @@ void main() {
     bubble.type = 'button';
     bubble.className = 'tm-bubble';
     const st = {
-      mode: 'globe', data: null, w: 0, h: 0, settleTimer: 0, frame: 0, labels: [], clusters: [], recs: [], sights: [], sel: null, world: [], worldOn: true, worldNodes: [], focus: null, expanded: false, inset: 0,
+      mode: 'globe', data: null, w: 0, h: 0, settleTimer: 0, frame: 0, labels: [], clusters: [], recs: [], sights: [], sel: null, world: [], worldOn: true, worldNodes: [], checkins: [], ciNodes: [], focus: null, expanded: false, inset: 0,
       // flat
       svg: null, g: null, proj: null, zoom: null, t: d3.zoomIdentity, W0: 0, H0: 0, img: null, hiRes: false,
       // globe
@@ -336,6 +336,7 @@ void main() {
       st.recs.forEach((r) => placeEl(r.node, r.lng, r.lat));
       st.sights.forEach((x) => placeEl(x.node, x.lng, x.lat));
       st.worldNodes.forEach((x) => placeEl(x.node, x.lng, x.lat));
+      st.ciNodes.forEach((x) => placeEl(x.node, x.lng, x.lat));
       if (st.spot) {
         placeEl(bubble, st.spot.lng, st.spot.lat);
         if (!st.worldNodes.some((x) => x.key === st.spot.key)) { bubble.classList.remove('show'); st.spot = null; }
@@ -419,6 +420,37 @@ void main() {
         return { ...c, key, node };
       });
       keep.forEach((c) => c.node.remove());
+
+      // Check-ins: a small photo in a stamp ring where you stood. Next to a trip's own pin they wait until
+      // you zoom in, so the two never sit on top of each other.
+      const zoomed = (st.mode === 'flat' ? st.t.k : st.k) >= (st.mode === 'flat' ? 3 : 2);
+      const oldCi = new Map(st.ciNodes.map((x) => [x.key, x]));
+      st.ciNodes = [];
+      st.checkins.forEach((c) => {
+        const p = screen(c.lng, c.lat);
+        if (!inView(p, 0)) return;
+        const rect = [p[0] - 18, p[1] - 44, p[0] + 18, p[1] - 4];
+        if (overlaps(rect, taken) && !(zoomed && !overlaps(rect, st.ciNodes.map((x) => x.rect)))) return;
+        taken.push(rect);
+        const key = `${c.id}:${c.photo ? 1 : 0}`;
+        let node = oldCi.get(key)?.node;
+        oldCi.delete(key);
+        if (!node) {
+          node = document.createElement('button');
+          node.type = 'button';
+          node.className = 'tm-ci';
+          node.dataset.pinCi = c.ref;
+          node.style.setProperty('--d', `${Math.min(st.ciNodes.length, 12) * 60}ms`);
+          node.style.setProperty('--ink', c.ink || '#c8102e');
+          node.setAttribute('aria-label', `打卡：${c.name}`);
+          node.innerHTML = `<span class="tm-ph">${c.photo ? `<img src="${esc(c.photo)}" alt="" referrerpolicy="no-referrer">` : `<b>${esc([...c.name][0] || '')}</b>`}</span>`;
+          pinLayer.appendChild(node);
+        }
+        st.ciNodes.push({
+          ...c, key, node, rect,
+        });
+      });
+      oldCi.forEach((x) => x.node.remove());
 
       // Every country's famous sights as photo pins: each country's best-known one first, more as you zoom in,
       // never overlapping. Turning the globe brings other countries' photos into view.
@@ -568,6 +600,8 @@ void main() {
     if (!REDUCED) spinFrame = requestAnimationFrame(idleSpin);
 
     pinLayer.addEventListener('click', (e) => {
+      const ci = e.target.closest('.tm-ci');
+      if (ci) { hooks.onCheckin?.(ci.dataset.pinCi); return; }
       const pin = e.target.closest('.tm-pin');
       if (pin) {
         const ids = pin.dataset.pin.split(',');
@@ -597,7 +631,7 @@ void main() {
       cancelAnimationFrame(st.anim);
       pinLayer.innerHTML = `<span class="tm-home" title="出發：${esc(st.data.home.name)}"><i></i><small>${esc(st.data.home.name)}</small></span>`;
       st.homeNode = pinLayer.firstElementChild;
-      st.clusters = []; st.recs = [];
+      st.clusters = []; st.recs = []; st.ciNodes = [];
       if (st.focus) { pinLayer.appendChild(st.focus.node); }
       if (st.mode === 'flat') buildFlat(view); else buildGlobe();
       st.built = sizeKey();
@@ -637,6 +671,11 @@ void main() {
       // All countries' sights for the photo layer: [{ code, i, name, lng, lat, photo, rank }], best first.
       setWorldSights(list) {
         st.world = list || [];
+        settle();
+      },
+      // Your check-ins: [{ id, ref, name, lng, lat, photo, ink }].
+      setCheckins(list) {
+        st.checkins = list || [];
         settle();
       },
       setWorldPhotos(on) {

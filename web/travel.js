@@ -10,7 +10,7 @@ import {
   countPhotos, isJpeg, loadPhoto, PHOTO_ID, PHOTO_KINDS, PHOTO_MAX_COUNT, removePhoto, savePhoto,
 } from '../utils/travel-photos.js';
 import {
-  closeGroup, createGroup, GroupError, GROUP_ID, GROUP_MAX_BYTES, joinGroup, leaveGroup, readGroup,
+  closeGroup, createGroup, groupCheckin, GroupError, GROUP_ID, GROUP_MAX_BYTES, joinGroup, leaveGroup, readGroup,
 } from '../utils/travel-groups.js';
 
 // Resolved from the project root so it works on Vercel (see includeFiles in vercel.json), in Docker and in Jest.
@@ -315,6 +315,7 @@ router.post('/api/groups', groupRoute((req) => {
 router.get('/api/groups/:id', groupRoute((req) => readGroup(groupId(req))));
 router.post('/api/groups/:id/join', groupRoute((req) => joinGroup(groupId(req), req.body || {})));
 router.post('/api/groups/:id/leave', groupRoute((req) => leaveGroup(groupId(req), req.body?.who)));
+router.post('/api/groups/:id/checkin', groupRoute((req) => groupCheckin(groupId(req), req.body || {})));
 router.post('/api/groups/:id/close', groupRoute((req) => closeGroup(groupId(req), req.body?.key, req.body?.closed)));
 
 export { isRateLimited, resetRateLimit };

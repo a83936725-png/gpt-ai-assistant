@@ -12,6 +12,7 @@ const token = () => config.TRAVEL_BLOB_TOKEN;
 export const GROUP_ID = /^[a-z0-9]{10}$/;
 export const GROUP_MAX_MEMBERS = 60;
 export const GROUP_MAX_BYTES = 24 * 1024;
+export const GROUP_MAX_CHECKINS = 300;
 
 /** status 400 bad input, 403 not the organiser, 404 no such group, 409 closed or full */
 export class GroupError extends Error {
@@ -88,6 +89,11 @@ const view = (g) => ({
   })),
   closed: g.closed,
   createdAt: g.createdAt,
+  checkins: (g.checkins || []).map(({
+    name, place, date, caption, mood, with: together, at,
+  }) => ({
+    name, place, date, caption, mood, with: together, at,
+  })),
 });
 const find = async (id) => {
   if (!GROUP_ID.test(id || '')) throw new GroupError('找不到這個揪團', 404);
@@ -142,6 +148,32 @@ export const closeGroup = async (id, key, closed) => {
   const g = await find(id);
   if (hashKey(key) !== g.keyHash) throw new GroupError('只有發起人可以修改', 403);
   g.closed = Boolean(closed);
+  await store(id, g);
+  return view(g);
+};
+
+/** A group check-in: where someone in the group (or the organiser) stamped, and who was with them. */
+export const groupCheckin = async (id, body = {}) => {
+  const g = await find(id);
+  const who = typeof body.who === 'string' ? body.who : '';
+  const isHost = body.key && hashKey(body.key) === g.keyHash;
+  const member = g.members.find((m) => m.who === who);
+  if (!isHost && !member) throw new GroupError('先報名這個揪團，才能一起打卡', 403);
+  const place = str(body.place, 40);
+  if (!place) throw new GroupError('請填打卡地點', 400);
+  const checkins = (g.checkins || []).filter((c) => !(c.who === (isHost ? 'host' : who) && c.cid && c.cid === str(body.cid, 40)));
+  checkins.push({
+    who: isHost ? 'host' : who,
+    cid: str(body.cid, 40),
+    name: isHost ? g.invite.h || '發起人' : member.name,
+    place,
+    date: isDate(body.date) ? body.date : '',
+    caption: str(body.caption, 80),
+    mood: str(body.mood, 10),
+    with: (Array.isArray(body.with) ? body.with : []).slice(0, 20).map((x) => str(x, 20)).filter(Boolean),
+    at: Date.now(),
+  });
+  g.checkins = checkins.slice(-GROUP_MAX_CHECKINS);
   await store(id, g);
   return view(g);
 };

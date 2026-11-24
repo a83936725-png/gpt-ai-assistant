@@ -54,6 +54,9 @@ void main() {
     const pinLayer = box.querySelector('.tm-pins');
     const glow = box.querySelector('.tm-glow');
     const hintBox = box.querySelector('.tm-hint');
+    const bubble = document.createElement('button'); // the "推薦" bubble over a photo while the globe idles
+    bubble.type = 'button';
+    bubble.className = 'tm-bubble';
     const st = {
       mode: 'globe', data: null, w: 0, h: 0, settleTimer: 0, frame: 0, labels: [], clusters: [], recs: [], sights: [], sel: null, world: [], worldOn: true, worldNodes: [], focus: null, expanded: false, inset: 0,
       // flat
@@ -213,7 +216,7 @@ void main() {
         moved.push([performance.now(), dx, dy]);
       };
       st.zoom = d3.zoom().filter(gestures).scaleExtent([0.85, 9])
-        .on('start', (e) => { last = e.transform; lastMid = null; moved = []; cancelAnimationFrame(st.anim); })
+        .on('start', (e) => { last = e.transform; lastMid = null; moved = []; cancelAnimationFrame(st.anim); touched(e.sourceEvent); })
         .on('zoom', (e) => {
           const t = e.transform;
           const touches = e.sourceEvent?.touches;
@@ -323,7 +326,8 @@ void main() {
       const p = screen(lng, lat);
       const show = inView(p);
       node.classList.toggle('off', !show);
-      if (show) node.style.transform = `translate(${p[0].toFixed(1)}px,${p[1].toFixed(1)}px)`;
+      // The translate property (not transform), so a pin's pop-in or hover scale happens where it stands.
+      if (show) node.style.translate = `${p[0].toFixed(1)}px ${p[1].toFixed(1)}px`;
     }
     function place() {
       if (st.mode === 'globe') syncGlobe();
@@ -332,6 +336,10 @@ void main() {
       st.recs.forEach((r) => placeEl(r.node, r.lng, r.lat));
       st.sights.forEach((x) => placeEl(x.node, x.lng, x.lat));
       st.worldNodes.forEach((x) => placeEl(x.node, x.lng, x.lat));
+      if (st.spot) {
+        placeEl(bubble, st.spot.lng, st.spot.lat);
+        if (!st.worldNodes.some((x) => x.key === st.spot.key)) { bubble.classList.remove('show'); st.spot = null; }
+      }
       if (st.homeNode) placeEl(st.homeNode, st.data.home.lng, st.data.home.lat);
       if (st.focus) placeEl(st.focus.node, st.focus.lng, st.focus.lat);
     }
@@ -500,6 +508,55 @@ void main() {
       place();
     }
 
+    // ---------- when left alone, the globe turns slowly and recommends a sight now and then
+    let lastTouch = performance.now();
+    let spinFrame = 0;
+    let spinLast = 0;
+    let spinSettle = 0;
+    let bubbleAt = 0;
+    let onScreen = true;
+    function touched(e) {
+      lastTouch = performance.now();
+      if (e?.target && bubble.contains(e.target)) return; // pressing the bubble opens it, so keep it
+      bubble.classList.remove('show');
+      st.spot = null;
+    }
+    ['pointerdown', 'wheel', 'touchstart'].forEach((t) => box.addEventListener(t, touched, { passive: true }));
+    if ('IntersectionObserver' in global) {
+      new IntersectionObserver(([entry]) => { onScreen = entry.isIntersecting; }).observe(box);
+    }
+    function recommend() {
+      // A photo near the front of the globe, not the one shown last time.
+      const front = st.worldNodes.filter((x) => {
+        const p = screen(x.lng, x.lat);
+        return p && Math.abs(p[0] - st.w / 2) < st.w * 0.3 && p[1] > 70 && p[1] < midY() + baseR() * 0.6 && x.key !== st.spot?.key;
+      });
+      if (!front.length) return;
+      const x = front[Math.floor(Math.random() * front.length)];
+      st.spot = x;
+      const info = hooks.describeSight ? hooks.describeSight(x.code, x.i) : { title: x.name, sub: '' };
+      bubble.dataset.pinSight = x.key;
+      bubble.innerHTML = `<span class="tm-bubble-in"><small>推薦</small><b>${esc(info.title)}</b>${info.sub ? `<span>${esc(info.sub)}</span>` : ''}</span>`;
+      if (bubble.parentNode !== pinLayer) pinLayer.appendChild(bubble);
+      bubble.classList.remove('show');
+      bubble.getBoundingClientRect();
+      bubble.classList.add('show');
+      st.worldNodes.forEach((n) => n.node.classList.toggle('spot', n.key === x.key));
+    }
+    function idleSpin(now) {
+      spinFrame = requestAnimationFrame(idleSpin);
+      const idle = now - lastTouch > 6000 && st.mode === 'globe' && !st.sel && !st.expanded && onScreen && !document.hidden && st.data;
+      if (!idle) { spinLast = now; return; }
+      const dt = Math.min(64, now - spinLast);
+      spinLast = now;
+      st.rot = [st.rot[0] + dt * 0.004, st.rot[1]];
+      drawGlobe();
+      place();
+      if (now - spinSettle > 1200) { spinSettle = now; settle(); }
+      if (now - bubbleAt > 5200) { bubbleAt = now; recommend(); }
+    }
+    if (!REDUCED) spinFrame = requestAnimationFrame(idleSpin);
+
     pinLayer.addEventListener('click', (e) => {
       const pin = e.target.closest('.tm-pin');
       if (pin) {
@@ -509,7 +566,7 @@ void main() {
         hooks.onTrip(ids[0]);
         return;
       }
-      const sight = e.target.closest('.tm-sight');
+      const sight = e.target.closest('.tm-sight, .tm-bubble');
       if (sight) {
         const [code, i] = sight.dataset.pinSight.split(':');
         hooks.onSight(code, Number(i));
@@ -578,6 +635,7 @@ void main() {
       },
       // A tapped country: outline it and show its famous sights as photo pins ({ id, code, list, active }).
       showSights(sel) {
+        touched();
         if (sel && st.sel && st.sel.id === sel.id && sel.active == null) sel.active = st.sel.active;
         st.sel = sel;
         if (st.g) st.g.selectAll('.tm-land').classed('sel', (f) => Boolean(sel) && f.id === sel.id);
@@ -628,6 +686,7 @@ void main() {
         api.focus(lng, lat, Math.max(1.5, Math.min(12, 3600 / size)));
       },
       rotateTo(rot, k, ms = 1000) {
+        touched();
         cancelAnimationFrame(st.anim);
         const from = [...st.rot];
         const k0 = st.k;

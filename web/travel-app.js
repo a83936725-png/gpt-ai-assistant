@@ -906,6 +906,11 @@
         onTrip: (id) => openTrip(id),
         onDest: (id) => openDest(id),
         onSight: (code, i) => openSight(code, i),
+        describeSight: (code, i) => {
+          const x = sightsOf(code)[i];
+          const f = flightInfo(code);
+          return { title: x ? x.n : '', sub: [countryName(code), f ? f.text : ''].filter(Boolean).join('・') };
+        },
       });
       worldMap.setMode(settings.mapMode || 'globe');
       $('#map').append($('#map-country'), $('#map-tip'));

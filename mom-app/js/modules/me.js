@@ -684,7 +684,7 @@
           if (App.social.isReady() === false) {
             // a site without the member service (or offline): say so once, instead of three invitations that can't work
             return h('div', { class: 'list-item' }, h('span', { class: 'li-icon' }, '👭'),
-              h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '島上的媽媽・同週好孕圈・祝福牆'), h('div', { class: 'li-sub' }, '需要連上會員服務，目前連不到（離線，或這個網址還沒開放）')));
+              h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '島上的媽媽・同週好孕圈・祝福牆'), h('div', { class: 'li-sub' }, App.social.soon() ? '即將開放，敬請期待' : '需要連上會員服務，目前連不到（離線，或這個網址還沒開放）')));
           }
           return h('button', { class: 'list-item', onclick: () => App.social.openSettings() }, h('span', { class: 'li-icon' }, '👭'),
             h('div', { class: 'li-body' }, h('div', { class: 'li-title' }, '島上的媽媽'), h('div', { class: 'li-sub' }, so.on ? `已開啟・顯示為「${so.name || '匿名媽咪'}」` : '和同階段的媽媽互相揮手、送愛心（未開啟）')),
@@ -735,7 +735,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.9.6`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.9.7`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
         App.screens.privacy ? h('button', { class: 'btn btn-ghost btn-sm center-btn', onclick: () => App.navigate('privacy') }, '🔒 隱私權政策與使用條款') : null,
         // the web preview (no member service) can show the brand's dashboard with its sample numbers; never linked for moms

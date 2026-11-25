@@ -93,7 +93,7 @@
     }
   }
   async function join() {
-    if (!App.social || !(await App.social.api())) { ui.toast('目前連不到社群服務，請連上網路後再試'); return false; }
+    if (!App.social || !(await App.social.api())) { ui.toast(App.social && App.social.soon() ? '同週好孕圈即將開放，敬請期待' : '目前連不到社群服務，請連上網路後再試'); return false; }
     const co = cohort(); if (!co) return false;
     if (!soc().key) App.social.upd((x) => { x.key = Array.from(crypto.getRandomValues(new Uint8Array(24)), (v) => v.toString(36).padStart(2, '0')).join('').slice(0, 40); });
     upd((x, all) => {
@@ -198,7 +198,7 @@
           return;
         }
         if (App.social && App.social.isReady() === false) {
-          box.append(ui.card({ class: 'soft' }, h('div', { class: 'card-title' }, '同週好孕圈'), h('p', { class: 'small muted' }, '需要連上會員服務才能和其他媽媽一起投票；目前連不到，連上網路後再試試。')));
+          box.append(ui.card({ class: 'soft' }, h('div', { class: 'card-title' }, '同週好孕圈'), h('p', { class: 'small muted' }, App.social.soon() ? '同週好孕圈即將開放，敬請期待。' : '需要連上會員服務才能和其他媽媽一起投票；目前連不到，連上網路後再試試。')));
           return;
         }
         if (!circ().on) {

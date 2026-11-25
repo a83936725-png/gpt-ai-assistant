@@ -87,6 +87,10 @@ export function createMomRouter({
   const weak = !!env.MOM_AUTH_SECRET && env.MOM_AUTH_SECRET.length < 32;
   let secret = weak ? '' : env.MOM_AUTH_SECRET;
   const authOn = !(prodLike && !secret);
+  // On a production host without a shared database (KV / Upstash), every server copy keeps its own memory: a 祝福牆,
+  // a 好孕圈 vote or the online count made on one copy is missing on the next visit. Until the database is connected
+  // these are not offered (config.social false, no /stats); they come back by themselves once it is.
+  const memoryOnly = prodLike && store.kind === 'memory';
   if (!secret) {
     secret = crypto.randomBytes(32).toString('hex');
     if (env.NODE_ENV !== 'test') console.warn(`[mom-api] MOM_AUTH_SECRET is ${weak ? 'too short (needs 32+ characters) and is ignored' : 'not set'}; ${authOn ? 'sessions reset when the server restarts' : 'login is disabled until it is set'}.`);
@@ -225,7 +229,7 @@ export function createMomRouter({
   router.get('/config', (req, res) => res.json({
     providers: { password: authOn, line: lineOn },
     storage: store.kind,
-    social: true,
+    social: !memoryOnly,
     policy: POLICY_VERSION,
     verify: authOn ? verify.config() : { email: false, phone: false }, // which kinds of account confirm a code
     push: authOn && push ? push.publicKey() : null, // 手機通知: the VAPID public key
@@ -394,6 +398,7 @@ export function createMomRouter({
   }));
 
   router.get('/stats', wrap(async (req, res) => {
+    if (memoryOnly) { res.status(404).json({ error: 'not_available' }); return; } // counts that differ per server copy
     const t = now();
     if (!statsCache || t - statsCache.at > STATS_CACHE_MS) {
       const dayStart = Math.floor((t + TAIPEI_OFFSET_MS) / 86400e3) * 86400e3 - TAIPEI_OFFSET_MS; // 台灣時間今天 00:00

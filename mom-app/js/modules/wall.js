@@ -272,7 +272,7 @@
     (App.social ? App.social.api() : Promise.resolve(false)).then((ok) => {
       if (ok) return;
       submit.disabled = true;
-      available.append(h('p', { class: 'small muted center' }, '祝福牆需要連上會員服務，目前連不到；連上網路後再試試。'));
+      available.append(h('p', { class: 'small muted center' }, App.social && App.social.soon() ? '祝福牆即將開放，敬請期待。' : '祝福牆需要連上會員服務，目前連不到；連上網路後再試試。'));
     });
   }
 

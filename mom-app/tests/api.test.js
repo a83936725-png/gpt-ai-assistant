@@ -172,7 +172,8 @@ describe('member API', () => {
 
 describe('production safety', () => {
   test('without MOM_AUTH_SECRET in production, login is switched off (not half-working)', async () => {
-    const { server, base } = await serve(createMomRouter({ store: new MemoryStore(), env: { NODE_ENV: 'test', VERCEL: '1' } }));
+    const kv = new MemoryStore(); kv.kind = 'redis'; // with its database connected (without one, see 「the live site without a database」)
+    const { server, base } = await serve(createMomRouter({ store: kv, env: { NODE_ENV: 'test', VERCEL: '1' } }));
     expect((await api.get(`${base}/config`)).data.providers).toEqual({ password: false, line: false });
     expect((await api.post(`${base}/auth/register`, { consent: POLICY, account: 'p@example.com', password: 'password-1' })).status).toBe(503);
     expect((await api.get(`${base}/stats`)).status).toBe(200); // counts still work
@@ -391,5 +392,29 @@ describe('security hardening', () => {
     expect(await store.hit('t:x', 600)).toBe(1);
     expect(await store.hit('t:x', 600)).toBe(2);
     expect(redis.ttl.get('mom:rl:t:x')).toBe(600);
+  });
+});
+
+describe('the live site without a database (0.9.7)', () => {
+  test('on a production host with memory storage: no 祝福牆／好孕圈／online counts (they would differ per server copy)', async () => {
+    const { server, base } = await serve(createMomRouter({ store: new MemoryStore(), env: { VERCEL: '1' } }));
+    try {
+      const cfg = await api.get(`${base}/config`);
+      expect(cfg.status).toBe(200);
+      expect(cfg.data.storage).toBe('memory');
+      expect(cfg.data.social).toBe(false);
+      expect((await api.get(`${base}/stats`)).status).toBe(404);
+    } finally { server.close(); }
+  });
+  test('…with a database (KV / Upstash), or in local development, they are on', async () => {
+    const shared = new MemoryStore(); shared.kind = 'redis'; // stands in for KV / Upstash
+    const a = await serve(createMomRouter({ store: shared, env: { VERCEL: '1' } }));
+    const b = await serve(createMomRouter({ store: new MemoryStore(), env: {} }));
+    try {
+      expect((await api.get(`${a.base}/config`)).data.social).toBe(true);
+      expect((await api.get(`${a.base}/stats`)).status).toBe(200);
+      expect((await api.get(`${b.base}/config`)).data.social).toBe(true);
+      expect((await api.get(`${b.base}/stats`)).status).toBe(200);
+    } finally { a.server.close(); b.server.close(); }
   });
 });

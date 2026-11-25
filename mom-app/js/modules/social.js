@@ -30,9 +30,10 @@
   /* ---------------- API ---------------- */
   const call = (m, p, b) => App.account.call(m, p, b);
   let apiP = null; let apiOk = null;
+  let apiSoon = false; // the member service answered but says these are not open yet (the live site without a database)
   function api() {
     if (!apiP) {
-      apiP = call('GET', 'config').then((c) => !!(c && c.social)).catch(() => false).then((ok) => {
+      apiP = call('GET', 'config').then((c) => { apiSoon = !!c && !c.social; return !!(c && c.social); }).catch(() => false).then((ok) => {
         apiOk = ok; emit();
         if (ok && App.homeRefresh) App.homeRefresh();
         if (!ok && document.body.dataset.screen === 'me' && !document.body.classList.contains('has-sheet') && App.refresh) App.refresh(); // 我的 says it can't connect
@@ -175,7 +176,7 @@
     upd((x) => { const b = { ...(x.blocked || {}) }; delete b[nid]; x.blocked = b; });
   }
   async function join(name) {
-    if (!(await api())) { ui.toast('目前連不到社群服務，請連上網路後再試'); return false; }
+    if (!(await api())) { ui.toast(apiSoon ? '島上的媽媽即將開放，敬請期待' : '目前連不到社群服務，請連上網路後再試'); return false; }
     ensureKey();
     upd((x) => {
       x.on = true; x.name = (name || '').trim().slice(0, 10); x.joinedAt = x.joinedAt || new Date().toISOString();
@@ -281,7 +282,7 @@
   }
 
   function openResidents(islandId, { inbox: wantInbox = false } = {}) {
-    if (apiOk === false) { ui.toast('目前連不到社群服務，請稍後再試'); return; }
+    if (apiOk === false) { ui.toast(apiSoon ? '島上的媽媽即將開放，敬請期待' : '目前連不到社群服務，請稍後再試'); return; }
     const id = SERVER_ISLANDS.includes(islandId) ? islandId : myIsland();
     if (!soc().on) { openJoin(() => openResidents(id)); return; }
     const isl = islOf(id) || { name: '島上', emoji: '🏝️' };
@@ -324,7 +325,7 @@
     const draw = () => {
       body.innerHTML = '';
       const st = soc();
-      if (apiOk === false) body.append(h('p', { class: 'small soc-warn' }, '目前連不到社群服務（可能是網路不穩，或這個網址還沒開放會員服務），島上的媽媽暫時看不到。'));
+      if (apiOk === false) body.append(h('p', { class: 'small soc-warn' }, apiSoon ? '島上的媽媽即將開放，敬請期待。' : '目前連不到社群服務（可能是網路不穩，或這個網址還沒開放會員服務），島上的媽媽暫時看不到。'));
       if (!st.on) {
         body.append(h('p', { class: 'small muted' }, '目前沒有開啟，其他媽媽看不到你。'),
           h('button', { class: 'btn btn-primary btn-block', onclick: () => { sh.close(); openJoin(); } }, '👭 開啟島上的媽媽'));
@@ -427,7 +428,7 @@
   }
 
   App.social = {
-    api, isReady: () => apiOk, me: () => live.me, forgetAll, forIsland, subscribe, look, poll, mapOpened, mapChip, openResidents, openSettings, openJoin, unread, publicAv, chibi, soc, upd, call, REACT,
+    api, isReady: () => apiOk, soon: () => apiSoon, me: () => live.me, forgetAll, forIsland, subscribe, look, poll, mapOpened, mapChip, openResidents, openSettings, openJoin, unread, publicAv, chibi, soc, upd, call, REACT,
     people: () => live.people.slice(), react, // 夜奶陪伴: wave to a mom who is awake
   };
 }());

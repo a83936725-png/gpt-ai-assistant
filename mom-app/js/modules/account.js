@@ -38,10 +38,21 @@
   const noApiHere = (st) => st >= 400 && st < 500 && st !== 408 && st !== 429;
   const config = () => {
     if (!cfgP) {
-      cfgP = call('GET', 'config').catch((e) => { cfgWhy = e && noApiHere(e.status) ? 'none' : 'down'; return null; }).then((c) => { cfgNow = c; return c; });
+      cfgP = call('GET', 'config').catch((e) => { cfgWhy = e && noApiHere(e.status) ? 'none' : 'down'; return null; }).then((c) => {
+        cfgNow = c;
+        if (loginSoon()) {
+          document.querySelectorAll('.needs-login').forEach((e) => { e.hidden = true; }); // drawn before the answer came
+          if (document.body.dataset.screen === 'me') App.refresh(); // its account card
+        }
+        return c;
+      });
     }
     return cfgP;
   };
+  // 0.9.8: the site answers but nobody can log in yet (the server has no MOM_AUTH_SECRET): every 登入 button would end on
+  // 「會員服務即將開放」, so the welcome link is not shown, the 我的 card says 即將開放, and so do 家人共用紀錄 and 手機通知.
+  // A copy of the app with no member server at all (the web preview) is not this: cfgNow is null there.
+  const loginSoon = () => !!(cfgNow && cfgNow.providers && !cfgNow.providers.password && !cfgNow.providers.line);
   // 驗證碼: which kinds of account (Email / phone) the server can send a code to
   const kindOf = (account) => (/@/.test(String(account)) ? 'email' : 'phone');
   const canVerify = (cfg, kind) => !!(cfg && cfg.verify && cfg.verify[kind]);
@@ -644,13 +655,19 @@
             h('button', { class: 'link-btn small', onclick: exportMine }, '下載我的會員資料'),
             h('button', { class: 'link-btn small danger-text', onclick: () => deleteAccount(u) }, '刪除帳號')));
       }
+      if (loginSoon()) {
+        return ui.card({ class: 'acct-card soft acct-soon' },
+          h('div', { class: 'card-title' }, '會員服務即將開放'),
+          h('div', { class: 'small muted' }, '敬請期待。現在不用註冊，紀錄都存在這支手機。'),
+          App.livePill('acct-live'));
+      }
       return ui.card({ class: 'acct-card soft' },
         h('div', { class: 'row gap' },
           h('div', { class: 'grow' }, h('div', { class: 'card-title' }, '登入／註冊'), h('div', { class: 'small muted' }, '用 Email、手機或 LINE 登入・邀請好友的人數會記在你的帳號')),
           h('button', { class: 'btn btn-sm btn-primary', onclick: () => App.navigate('login') }, '登入')),
         App.livePill('acct-live'));
     },
-    logout, refreshMe, refreshSoon: () => maybeRefresh(), call, available: async () => !!(await config()), noService: () => cfgWhy === 'none', ensureConsent, exportMine,
+    logout, refreshMe, refreshSoon: () => maybeRefresh(), call, available: async () => !!(await config()), noService: () => cfgWhy === 'none', loginSoon, ensureConsent, exportMine,
     config,
     verifySheet,
     needVerify,

@@ -452,10 +452,11 @@
     const host = h('div', { class: 'fm' }); el.append(host);
     App.account.config().then(() => {
       if (!host.isConnected) return;
-      if (App.account.noService()) {
+      const soon = App.account.loginSoon(); // 0.9.8: the live site before login is switched on
+      if (App.account.noService() || soon) {
         host.append(ui.card({ class: 'fm-card' }, ui.pic('family', 96, 'fm-pic'), h('h2', { class: 'fm-h' }, '家人共用紀錄'),
           h('p', { class: 'small' }, '爸爸、阿嬤也能在自己的手機上記錄和查看寶寶的紀錄，加密同步。'),
-          h('p', { class: 'small muted fm-why', dataset: { why: 'no-server' } }, '這個網址還沒有開啟會員服務（例如網頁預覽版），正式上線後就能使用。現在可以先用「我的 → 匯出／匯入備份」和家人交換紀錄。')));
+          h('p', { class: 'small muted fm-why', dataset: { why: soon ? 'soon' : 'no-server' } }, `${soon ? '家人共用紀錄即將開放，敬請期待。' : '這個網址還沒有開啟會員服務（例如網頁預覽版），正式上線後就能使用。'}現在可以先用「我的 → 匯出／匯入備份」和家人交換紀錄。`)));
         return;
       }
       if (inv && !(fam() && fam().id === inv.fid)) { renderJoin(host, inv); return; }

@@ -20,7 +20,7 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
 
 (async () => {
   const b = await chromium.launch();
-  const mk = async ({ push = KEY, ua = null, perm = true, width = 390, height = 844, line = false } = {}) => {
+  const mk = async ({ push = KEY, ua = null, perm = true, width = 390, height = 844, line = false, api = true } = {}) => {
     const c = await b.newContext({ viewport: { width, height }, locale: 'zh-TW', timezoneId: 'Asia/Taipei', ...(ua ? { userAgent: ua } : {}) });
     await c.clock.install({ time: new Date(NOW) });
     await c.addInitScript((granted) => {
@@ -56,6 +56,7 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
       let body = null; try { body = req.postDataJSON(); } catch (e) { body = null; }
       calls.push({ path, body, auth: req.headers().authorization || '' });
       const json = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+      if (!api) return route.fulfill({ status: 404, contentType: 'text/html', body: 'Cannot GET' }); // a copy with no member server
       if (path === 'config') return json({ providers: { password: true, line: false }, storage: 'memory', social: true, policy: pol.v, verify: { email: false, phone: false }, push, lineNotify: line });
       if (path === 'me') return json({ user: { id: 'u1', nickname: '小美', provider: 'email', code: 'ABC123', consent: pol.v, verified: true, invite: {} } });
       if (path === 'stats') return json({ online: 3, registered: 10, todaySignups: 1, storage: 'memory' });
@@ -95,7 +96,13 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   const { p: Q } = await mk({ push: null });
   await login(Q); await go(Q, 'reminders');
   cd = await waitCard(Q);
-  ok('a site without the push key (the web preview): it says so', cd && cd.why === 'no-server' && /還沒有開啟推播通知/.test(cd.text), JSON.stringify(cd));
+  ok('the live site before its push key is in: 「手機通知即將開放」, no 預覽版 wording (0.9.8)', cd && cd.why === 'soon' && /手機通知即將開放/.test(cd.text) && !/預覽版|正式上線後/.test(cd.text) && !/登入／註冊/.test(cd.text), JSON.stringify(cd));
+  const { p: Q2 } = await mk({ push: null, ua: IPHONE });
+  await go(Q2, 'reminders'); cd = await waitCard(Q2);
+  ok('…an iPhone there is not sent to add the App to its home screen for it first', cd && cd.why === 'soon', JSON.stringify(cd));
+  const { p: Q3 } = await mk({ api: false });
+  await go(Q3, 'reminders'); cd = await waitCard(Q3);
+  ok('a copy with no member server at all (the web preview): it says so', cd && cd.why === 'no-server' && /還沒有開啟推播通知/.test(cd.text), JSON.stringify(cd));
   const { p: I } = await mk({ ua: IPHONE });
   await login(I); await go(I, 'reminders');
   cd = await waitCard(I);

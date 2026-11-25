@@ -4,7 +4,7 @@
 
 | 機制 | 內容 |
 |---|---|
-| 分享面板 | LINE、Instagram、Facebook、Threads、複製連結、系統分享；每個連結都帶**邀請碼**與 `utm_source`／`utm_campaign` |
+| 分享面板 | LINE、Instagram、Facebook、Threads、複製連結、系統分享；每個連結都帶**邀請碼**與 `utm_source`／`utm_campaign`；傳到 LINE 的連結另外帶 LINE 官方的 `openExternalBrowser=1`，朋友在 LINE 點開會用手機的 Safari／Chrome 打開（0.9.8，LINE 自己的瀏覽器不能加到主畫面，記的東西也會分開） |
 | 分享卡（1080×1920，IG 限時動態尺寸） | 孕週卡、寶寶成長卡、出生卡、滿月／百日／收涎／度晬、里程碑、滴雞精連續打卡、好孕島稱號、坐月子、本週重點、文章卡；卡片上有 LOGO、QR Code、邀請碼、hashtag |
 | IG 分享 | 手機：透過系統分享把圖片直接送到 IG（限時動態／貼文／私訊）；電腦：自動下載圖片＋複製文字，提示加「連結」貼紙 |
 | 關鍵時刻提醒 | 新孕週、寶寶出生、滿月／百日／4 個月收涎／1 歲度晬、產後滿月、新里程碑、打卡連續 7／14／30／60／100 天、好孕島新稱號、集滿 3 顆愛心 → 輕提示「做成分享卡」（每天最多一次，可「不要再提醒這類」） |
@@ -25,8 +25,8 @@
 ## 二、品牌端要做的（App 外）
 
 1. **IG 留言送連結**（參考 Reel 的 2,909 則留言）：品牌 IG 發「留言 +1 送你孕週卡／外出包清單」，用 Meta 官方自動私訊或合作工具回覆**帶邀請碼的連結**（`utm_source=instagram&utm_campaign=ig-comment`）。
-2. **LINE 官方帳號關鍵字回覆**：「做媽媽」「孕週」「外出包」→ 回 App 連結；把 `config.js` 的 `lineOaUrl` 填好，App 內「LINE 諮詢」鈕會導到官方帳號。
-3. **門市／產後護理之家**：桌卡放 App QR（用邀請頁的 QR，或 `utm_source=store`）。
+2. **LINE 官方帳號關鍵字回覆**：「做媽媽」「孕週」「外出包」→ 回 App 連結（網址後面加 `?openExternalBrowser=1`，例如 `https://ikigai-tw.vercel.app/mom-app/?openExternalBrowser=1`，在 LINE 點開才會用手機的瀏覽器打開）；把 `config.js` 的 `lineOaUrl` 填好，App 內「LINE 諮詢」鈕會導到官方帳號。
+3. **門市／產後護理之家**：桌卡放 App QR（用邀請頁的 QR，或 `utm_source=store`）。很多人用 LINE 掃 QR，網址一樣加 `openExternalBrowser=1`。
 4. **KOL／醫師合作**：每位合作對象一個專屬邀請碼，邀請頁的「成功邀請人數」就是成效。
 5. **獎勵兌現**：好孕點數 100 點顯示的優惠碼，到官網結帳使用；若要防止重複使用，建議用一次性序號（第二階段：由後端依帳號發放）。
 

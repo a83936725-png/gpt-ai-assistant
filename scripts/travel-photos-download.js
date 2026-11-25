@@ -1,0 +1,121 @@
+/* eslint-disable no-await-in-loop, no-restricted-syntax, no-console */
+/**
+ * Saves the photos listed in web/travel-photos.json into web/travel-photos/ as small WebP files,
+ * so the travel page shows them without loading anything from Wikimedia.
+ *
+ *   node scripts/travel-photos.js            # find the photos (Wikipedia)
+ *   node scripts/travel-photos-download.js   # save them locally (needs ffmpeg for WebP)
+ *
+ * Behind an HTTPS proxy, run it with NODE_USE_ENV_PROXY=1 so Node's fetch uses the proxy.
+ *
+ * Covers are saved 960px wide, attractions and food 500px. Files already saved are kept. Each entry
+ * keeps its author, license and Commons page, and `remote` holds the original address.
+ */
+import { spawnSync } from 'child_process';
+import { createHash } from 'crypto';
+import {
+  existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync,
+} from 'fs';
+import path from 'path';
+
+const ROOT = process.cwd();
+// TRAVEL_PHOTOS_LIST / TRAVEL_PHOTOS_DIR let a long download work in a staging copy.
+const LIST = process.env.TRAVEL_PHOTOS_LIST || path.join(ROOT, 'web', 'travel-photos.json');
+const DIR = process.env.TRAVEL_PHOTOS_DIR || path.join(ROOT, 'web', 'travel-photos');
+const HEADERS = { 'User-Agent': 'TravelPhotoManifest/1.0 (one-off build script; low volume)' };
+const HAS_FFMPEG = spawnSync('ffmpeg', ['-version']).status === 0;
+const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+// Wikimedia serves the same thumbnails from upload.wikimedia.org at standard widths.
+const rendition = (url, width) => url
+  .replace('://thumb.wikimedia.org/', '://upload.wikimedia.org/')
+  .replace(/\/\d+px-/, `/${width}px-`);
+
+class RateLimited extends Error {}
+
+const HAS_CURL = spawnSync('curl', ['--version']).status === 0;
+
+// One request: curl when installed (it honors HTTPS_PROXY and Wikimedia treats it better than Node's
+// fetch from the same machine), otherwise fetch. Returns { status, body, retryAfter }.
+const request = async (url) => {
+  if (HAS_CURL) {
+    const tmp = path.join(DIR, `download-${process.pid}.part`);
+    const out = spawnSync('curl', ['-s', '-m', '60', '-H', `User-Agent: ${HEADERS['User-Agent']}`, '-o', tmp, '-w', '%{http_code}', url], { encoding: 'utf8' });
+    const status = Number(out.stdout) || 0;
+    const body = status === 200 && existsSync(tmp) ? readFileSync(tmp) : null;
+    if (existsSync(tmp)) unlinkSync(tmp);
+    return { status, body, retryAfter: 60 };
+  }
+  const res = await fetch(url, { headers: HEADERS });
+  return { status: res.status, body: res.ok ? Buffer.from(await res.arrayBuffer()) : null, retryAfter: Number(res.headers.get('retry-after')) || 30 };
+};
+
+// Wikimedia answers 429 when a client asks too fast; wait, then try again.
+const fetchImage = async (url) => {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { status, body, retryAfter } = await request(url);
+    if (body) return body;
+    if (status !== 429 && status < 500 && status !== 0) throw new Error(`${status} for ${url}`);
+    const wait = Math.min(180, retryAfter);
+    console.log(`  Wikimedia asked to wait ${wait}s (status ${status})`);
+    await sleep(wait * 1000);
+  }
+  throw new RateLimited(`Still refused after waiting: ${url}`);
+};
+
+const main = async () => {
+  const data = JSON.parse(readFileSync(LIST, 'utf8'));
+  mkdirSync(DIR, { recursive: true });
+  const entries = Object.entries(data.photos);
+  const used = new Set();
+  let saved = 0;
+  let refusedInARow = 0;
+  const writeList = () => writeFileSync(LIST, `${JSON.stringify(data, null, 1)}\n`);
+  for (let i = 0; i < entries.length; i += 1) {
+    const [key, photo] = entries[i];
+    const remote = photo.remote || photo.src;
+    const width = key.startsWith('dest:') ? 960 : 500;
+    const base = createHash('sha1').update(`${photo.file}@${width}`).digest('hex').slice(0, 12);
+    const name = `${base}.${HAS_FFMPEG ? 'webp' : 'jpg'}`;
+    const target = path.join(DIR, name);
+    if (!existsSync(target)) {
+      try {
+        const buf = await fetchImage(rendition(remote, width));
+        if (HAS_FFMPEG) {
+          const tmp = path.join(DIR, `${base}.tmp`);
+          writeFileSync(tmp, buf);
+          const out = spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', tmp, '-vf', `scale='min(${width},iw)':-2`, '-quality', '70', '-f', 'webp', target]);
+          unlinkSync(tmp);
+          if (out.status !== 0) throw new Error(`ffmpeg: ${out.stderr}`);
+        } else writeFileSync(target, buf);
+        saved += 1;
+        await sleep(1000);
+        refusedInARow = 0;
+      } catch (err) {
+        console.log(`  skipped ${key}: ${err.message}`);
+        if (err instanceof RateLimited) refusedInARow += 1;
+      }
+    }
+    if (existsSync(target)) {
+      used.add(name);
+      data.photos[key] = { ...photo, remote, src: `travel-photos/${name}` };
+    }
+    if ((i + 1) % 10 === 0) { writeList(); console.log(`  ${i + 1}/${entries.length}`); }
+    if (refusedInARow >= 3) {
+      console.log('Wikimedia keeps refusing; stopping. Run this again later to continue where it left off.');
+      break;
+    }
+  }
+  // Remove files no longer listed (only after a complete run, so a stopped run keeps its progress).
+  if (refusedInARow < 3) {
+    const keep = new Set(Object.values(data.photos).map((p) => path.basename(p.src)));
+    readdirSync(DIR).filter((f) => !keep.has(f)).forEach((f) => unlinkSync(path.join(DIR, f)));
+  }
+  writeList();
+  console.log(`Saved ${saved} new photos; ${used.size} photos are now local in ${path.relative(ROOT, DIR)}`);
+};
+
+main().catch((err) => {
+  console.error(err.message);
+  process.exit(1);
+});

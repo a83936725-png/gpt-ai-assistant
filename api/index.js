@@ -10,6 +10,7 @@ import { getStoredImage, setPublicOrigin } from '../utils/upload-image.js';
 import { createMomRouter } from '../mom-api/index.js';
 import instagram from '../instagram/index.js';
 import ikigai, { sendPage, servesHome } from '../web/ikigai.js';
+import travel from '../web/travel.js';
 
 const app = express();
 
@@ -43,13 +44,16 @@ app.get('/knowledge.json', (req, res) => {
   res.json(exportKnowledge());
 });
 
+// 512kb: the travel page syncs a traveller's trips and itineraries in one request.
 app.use(express.json({
+  limit: '512kb',
   verify: (req, res, buf) => {
     req.rawBody = buf.toString();
   },
 }));
 
 app.use('/ikigai', ikigai);
+app.use('/travel', travel);
 
 // Instagram comment-to-DM auto reply (see docs/INSTAGRAM-AUTOREPLY.zh-TW.md).
 app.use('/instagram', instagram);

@@ -7,6 +7,39 @@ module.exports = {
   extends: 'airbnb',
   overrides: [
     {
+      // Service worker of the travel page.
+      files: ['web/travel-sw.js'],
+      env: { serviceworker: true, browser: true, node: false },
+      rules: { 'no-restricted-globals': 'off' },
+    },
+    {
+      // Browser scripts for the travel page (web/travel.html): d3 and topojson come from web/vendor/.
+      files: [
+        'web/travel-app.js',
+        'web/travel-data.js',
+        'web/travel-geo.js',
+        'web/travel-map.js',
+        'web/travel-photo-db.js',
+        'web/travel-studio.js',
+      ],
+      env: {
+        browser: true,
+        node: false,
+      },
+      globals: {
+        d3: 'readonly',
+        topojson: 'readonly',
+        Sortable: 'readonly',
+      },
+      rules: {
+        // Data tables and short UI handlers read better on one line.
+        'object-curly-newline': 'off',
+        'object-property-newline': 'off',
+        'newline-per-chained-call': 'off',
+        'no-use-before-define': ['error', { functions: false }],
+      },
+    },
+    {
       files: [
         'config/index.js',
       ],

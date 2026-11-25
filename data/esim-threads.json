@@ -1,0 +1,129 @@
+{
+  "account": "@esim_87cc",
+  "name": "eSIM稽查員_喜仔CC",
+  "collected": "2026-11-22",
+  "note": "只收錄未登入時看得到的公開內容（回覆分頁與主頁）。留言串需要登入才看得到；用 Threads「下載你的資訊」匯出後，執行 node scripts/threads-import.js <匯出資料夾> 可以補齊全部回覆。parent 標示 inferred 的提問是依主題推斷的對應貼文。",
+  "items": [
+    {
+      "id": "DgDUlL9kwZM",
+      "type": "reply",
+      "url": "https://www.threads.com/@esim_87cc/post/DgDUlL9kwZM",
+      "topic": "日本 eSIM",
+      "tags": ["日本", "Docomo", "KDDI", "實體 SIM"],
+      "question": "手機不支援 eSIM，去名古屋、高山、白川鄉要買 KDDI 還是 Docomo 的實體 SIM？（KDDI 5G 吃到飽 vs Docomo 20GB 後降速）",
+      "asker": "@walileggle",
+      "parent": "https://www.threads.com/@walileggle/post/DgCOUadkk-z",
+      "answer": "eSIM稽查員 來嚕！ 這家跟下面所有蝦皮連結基本上是同一家 Docomo給旅客用的真的不太好用 他會優先照顧本國人 下面另外推推你千人真實分享串 有eSIM 問題歡迎來主頁找我 （可以的話幫我追蹤一下嘛）   嘻嘻",
+      "insight": "日本 Docomo 旅客線路會優先照顧本國用戶，尖峰容易慢；建議選 KDDI 線路。"
+    },
+    {
+      "id": "DgDUXRUE2DF",
+      "type": "reply",
+      "url": "https://www.threads.com/@esim_87cc/post/DgDUXRUE2DF",
+      "topic": "歐洲 eSIM",
+      "tags": ["歐洲", "德國", "捷克", "葡萄牙", "多國方案"],
+      "question": "揪命吖 如果要去德國 捷克 葡萄牙 這三國 最推薦哪家esim呀 目前在看vodafone官網 還是DJB?",
+      "asker": "@isssmonaaaaa",
+      "parent": "https://www.threads.com/@isssmonaaaaa/post/DgDL-HzmMJg",
+      "parentInferred": true,
+      "answer": "eSIM稽查員 來嚕！ 二選一的話千萬不要DJB 另外推推你千人真實分享串 「歐C卡」 有eSIM 問題歡迎來主頁找我 （可以的話幫我追蹤一下嘛）   嘻嘻",
+      "insight": "跨多國歐洲行推薦「歐C卡」（歐洲多國方案）。"
+    },
+    {
+      "id": "DgDUOvqE-Yr",
+      "type": "reply",
+      "url": "https://www.threads.com/@esim_87cc/post/DgDUOvqE-Yr",
+      "topic": "連線問題",
+      "tags": ["測速", "很慢", "雙卡", "疑難排解"],
+      "question": "我快瘋了 esim測速速度都很快 但是實際使用幾乎跑不動 有沒有大神求解",
+      "asker": "@save_democracy0611",
+      "parent": "https://www.threads.com/@save_democracy0611/post/DgCRCtpEUpt",
+      "parentInferred": true,
+      "answer": "eSIM稽查員 來嚕！ 這題我專業的啦，把你右上角的訊號 台灣門號關掉保持一排 就好惹 有eSIM 問題歡迎來主頁找我 （可以的話幫我追蹤一下嘛）   嘻嘻",
+      "insight": "測速快、實際慢：把台灣門號關掉，只留旅遊 eSIM 一排訊號。"
+    },
+    {
+      "id": "DgDUGwkEyGl",
+      "type": "reply",
+      "url": "https://www.threads.com/@esim_87cc/post/DgDUGwkEyGl",
+      "topic": "顧客回饋",
+      "tags": ["CCESIM", "客服", "好評"],
+      "question": "不管怎樣先挺再說 今年飛十幾次全都用ccesim只有一個字 穩，而且清晨五點半還有客服回欸",
+      "asker": "@enhuo528",
+      "parent": "https://www.threads.com/@enhuo528/post/DgDSNo_j-5I",
+      "parentInferred": true,
+      "answer": "耶以，我們會當你最安心的線上旅伴",
+      "insight": "顧客好評：一年十幾次出國都穩定，清晨也有客服回覆。"
+    },
+    {
+      "id": "DHDTIPOTxiL",
+      "type": "post",
+      "url": "https://www.threads.com/@esim_87cc/post/DHDTIPOTxiL",
+      "date": "2025-03-11",
+      "topic": "客服",
+      "tags": ["諮詢", "出國上網"],
+      "text": "主頁目前有開放eSIM上網任何問題詢問… 1天限5位，有禮貌的優先回",
+      "stats": { "views": "38萬", "likes": 261, "comments": 468 },
+      "insight": "主頁開放 eSIM 問題諮詢；這篇有 468 則留言，是最大的問答來源（需登入或匯出才能收錄）。"
+    },
+    {
+      "id": "DHpfIxCT1P0",
+      "type": "post",
+      "url": "https://www.threads.com/@esim_87cc/post/DHpfIxCT1P0",
+      "date": "2025-03-25",
+      "topic": "客服",
+      "tags": ["LINE"],
+      "text": "https://page.line.me/137wkchb",
+      "insight": "LINE 官方帳號連結。"
+    },
+    {
+      "id": "DgDOer4k86r",
+      "type": "post",
+      "url": "https://www.threads.com/@esim_87cc/post/DgDOer4k86r",
+      "topic": "品牌說明",
+      "tags": ["定價", "售後", "KDDI", "吃到飽"],
+      "text": "我們的定價確實不是最便宜……售後：出國斷網、被降速到不能用，直接找我們補發、退款",
+      "partial": true,
+      "insight": "方案都實測；不把 3GB／5GB 用完降速的方案當吃到飽賣；日本方案用 KDDI 原生吃到飽；售後可補發或退款。"
+    },
+    {
+      "id": "DgDO8g2EwEy",
+      "type": "post",
+      "url": "https://www.threads.com/@esim_87cc/post/DgDO8g2EwEy",
+      "topic": "品牌說明",
+      "tags": ["定價", "品牌理念"],
+      "text": "我們深知良心是需要成本的，所以我們不追求最便宜。……完整說明會發在我們自己的版面，這裡之後不再多做回應。",
+      "partial": true
+    },
+    {
+      "id": "DfrRGgomWIZ",
+      "type": "post",
+      "url": "https://www.threads.com/@esim_87cc/post/DfrRGgomWIZ",
+      "date": "2026-11-13",
+      "topic": "選擇建議",
+      "tags": ["怎麼選", "品牌"],
+      "text": "eSIM 每年都在迭代 所以沒有什麼哪個一定都比較好啦~~ ……所以找信任的品牌還是比較重要喲",
+      "partial": true,
+      "insight": "沒有哪家永遠最好，找信任、售後完整的品牌比較重要。"
+    },
+    {
+      "id": "DgAP32mE62U",
+      "type": "post",
+      "url": "https://www.threads.com/@esim_87cc/post/DgAP32mE62U",
+      "topic": "同業比較",
+      "tags": ["轉移費", "補發費"],
+      "text": "有被DXB eSIM賺過什麼 100元轉移費或是補發費的 到底有多少人阿？ 怎麼感覺超級多",
+      "internal": true
+    },
+    {
+      "id": "DgDN-IWE-rh",
+      "type": "post",
+      "url": "https://www.threads.com/@esim_87cc/post/DgDN-IWE-rh",
+      "topic": "同業比較",
+      "tags": ["爭議"],
+      "text": "被直銷品牌發影片炎上，我們正面回覆了 結果 1 分鐘內被O-Go_Trip隱藏……附上證明，超級無言不嘻嘻",
+      "partial": true,
+      "internal": true
+    }
+  ]
+}

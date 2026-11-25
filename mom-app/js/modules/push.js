@@ -32,11 +32,15 @@
   }
   async function currentSub() { const r = await registration(); try { return r && r.pushManager ? await r.pushManager.getSubscription() : null; } catch (e) { return null; } }
 
-  // what this phone can do now: unsupported | ios-home | no-server | login | denied | off | on
+  // what this phone can do now: unsupported | ios-home | no-server | soon | login | denied | off | on
   async function status() {
+    const key = await serverKey();
+    // 0.9.8: the site answers but has no push key yet (the live site before its settings are in): say so first, so an
+    // iPhone is not sent to add the App to its home screen for something that is not open yet
+    if (!key && (await App.account.config())) return { why: 'soon' };
     if (!supported()) return { why: isIOS() && !standalone() ? 'ios-home' : 'unsupported' };
     if (isIOS() && !standalone()) return { why: 'ios-home' };
-    if (!(await serverKey())) return { why: 'no-server' };
+    if (!key) return { why: 'no-server' };
     if (!store.state.auth) return { why: 'login' };
     if (Notification.permission === 'denied') return { why: 'denied' };
     const p = prefs();
@@ -147,6 +151,7 @@
     unsupported: '這個瀏覽器不能收推播通知。可以改用手機的 Chrome，或 iPhone 把 App 加到主畫面。',
     'ios-home': 'iPhone 要先把 App 加到主畫面（Safari「分享」→「加入主畫面」），從主畫面打開後就能開啟通知（iOS 16.4 以上）。',
     'no-server': '這個網址還沒有開啟推播通知（例如網頁預覽版）。正式上線後就能使用。',
+    soon: '手機通知即將開放，敬請期待。',
     login: '登入會員後，就能在 App 關著的時候也收到團購進度和提醒。',
     denied: '通知被封鎖了：請到手機的「設定 → 通知」或瀏覽器的網站設定，允許這個 App 傳送通知，再回來開啟。',
   };

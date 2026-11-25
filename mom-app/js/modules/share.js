@@ -55,6 +55,9 @@
     const name = store.state.profile.momName;
     if (name && sh.privacy.showName) q.set('from', name);
     q.set('utm_source', channel); q.set('utm_medium', 'share'); q.set('utm_campaign', campaign);
+    // 0.9.8: a link sent in LINE opens in LINE's own browser, where 加入主畫面 is not offered and what she records stays
+    // apart from Safari / Chrome; LINE opens it in the phone's browser instead when the link asks (LINE's openExternalBrowser)
+    if (channel === 'line') q.set('openExternalBrowser', '1');
     const hp = params && Object.keys(params).length ? `?${encodeURIComponent(JSON.stringify(params))}` : '';
     return `${baseUrl()}?${q.toString()}#/${path}${hp}`;
   }

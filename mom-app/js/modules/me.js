@@ -539,7 +539,7 @@
           h('div', { class: 'ob-actions' },
             App.livePill ? App.livePill('ob-live') : null,
             h('button', { class: 'btn btn-ghost btn-block', onclick: () => { ob = { step: 0, stage: null }; seedDemo(); } }, '先看看範例資料'),
-            App.screens.login ? h('button', { class: 'link-btn ob-login', onclick: () => App.navigate('login') }, '已有帳號？登入／註冊') : null));
+            App.screens.login ? h('button', { class: 'link-btn ob-login needs-login', hidden: App.account.loginSoon(), onclick: () => App.navigate('login') }, '已有帳號？登入／註冊') : null));
         } else {
           const name = h('input', { placeholder: '怎麼稱呼你？（選填）', value: store.state.profile.momName || '' });
           const fields = h('div');
@@ -735,7 +735,7 @@
 
       el.append(h('section', { class: 'card flat mt-lg about' },
         h('img', { src: B().logoFull || B().logo, alt: '', class: 'about-logo' }),
-        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.9.7`),
+        h('p', { class: 'small center muted' }, `${B().appName || ''}・版本 0.9.8`),
         h('button', { class: 'btn btn-soft btn-sm center-btn', onclick: () => App.navigate('sources') }, '📚 資料來源（點擊可開啟）'),
         App.screens.privacy ? h('button', { class: 'btn btn-ghost btn-sm center-btn', onclick: () => App.navigate('privacy') }, '🔒 隱私權政策與使用條款') : null,
         // the web preview (no member service) can show the brand's dashboard with its sample numbers; never linked for moms

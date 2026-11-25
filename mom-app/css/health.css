@@ -1,0 +1,195 @@
+/* 健康 module: hub, growth, vaccines, checkups, milestones, stats, report, home card */
+
+/* ---------- chart tokens (dataviz reference palette, light + dark) ---------- */
+.viz, .viz-legend, .viz-table {
+  --viz-surface: var(--c-surface);
+  --viz-grid: var(--c-border);
+  --viz-axis: #d8cfd3;
+  --viz-text: var(--c-text-2);
+  --viz-text-strong: var(--c-text);
+  --viz-1: #2a78d6;  /* blue */
+  --viz-2: #eb6834;  /* orange */
+  --viz-5: #e87ba4;  /* magenta */
+  --viz-7: #6250d6;  /* violet — the baby's own line */
+  --viz-band-outer: rgba(111, 101, 118, .10);
+  --viz-band-inner: rgba(111, 101, 118, .17);
+  --viz-ref: #a79eac;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz,
+  :root:where(:not([data-theme="light"])) .viz-legend,
+  :root:where(:not([data-theme="light"])) .viz-table {
+    --viz-axis: #4a4050;
+    --viz-1: #3987e5;
+    --viz-2: #d95926;
+    --viz-5: #d55181;
+    --viz-7: #9085e9;
+    --viz-band-outer: rgba(185, 174, 191, .09);
+    --viz-band-inner: rgba(185, 174, 191, .16);
+    --viz-ref: #7d7383;
+  }
+}
+:root[data-theme="dark"] .viz,
+:root[data-theme="dark"] .viz-legend,
+:root[data-theme="dark"] .viz-table {
+  --viz-axis: #4a4050;
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-5: #d55181;
+  --viz-7: #9085e9;
+  --viz-band-outer: rgba(185, 174, 191, .09);
+  --viz-band-inner: rgba(185, 174, 191, .16);
+  --viz-ref: #7d7383;
+}
+
+.viz-wrap { position: relative; margin-top: 10px; }
+.viz-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.viz-grid { stroke: var(--viz-grid); stroke-width: 1; shape-rendering: crispEdges; }
+.viz-axis { stroke: var(--viz-axis); stroke-width: 1; shape-rendering: crispEdges; }
+.viz-tick { fill: var(--viz-text); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.viz-tick-strong { fill: var(--viz-text-strong); font-weight: 700; }
+.viz-value { fill: var(--viz-text-strong); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.viz-band-outer { fill: var(--viz-band-outer); }
+.viz-band-inner { fill: var(--viz-band-inner); }
+.viz-ref { fill: none; stroke: var(--viz-ref); stroke-width: 1; }
+.viz-today { stroke: var(--viz-axis); stroke-width: 1; }
+.viz-line { fill: none; stroke: var(--viz-7); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.viz-dot { fill: var(--viz-7); stroke: var(--viz-surface); stroke-width: 2; }
+.viz-bar { transition: opacity .12s; }
+.viz-hit { fill: transparent; cursor: pointer; outline: none; }
+.viz-hit:focus-visible { stroke: var(--c-primary); stroke-width: 1.5; }
+.viz-svg:has(.viz-hit:hover) .viz-bar { opacity: .85; }
+
+.viz-tip {
+  position: absolute; z-index: 5; pointer-events: none;
+  min-width: 96px; max-width: 220px;
+  padding: 8px 10px; border-radius: 10px;
+  background: var(--c-surface); color: var(--c-text);
+  border: 1px solid var(--c-border); box-shadow: var(--shadow-2);
+  font-size: var(--fs-xs); line-height: 1.4;
+  opacity: 0; transform: translateY(4px); transition: opacity .12s, transform .12s;
+}
+.viz-tip.show { opacity: 1; transform: none; }
+.viz-tip strong { display: block; font-size: var(--fs-md); font-variant-numeric: tabular-nums; }
+.viz-tip > span { color: var(--c-text-2); }
+.viz-tip-rows:empty { display: none; }
+.viz-tip-rows { margin-top: 4px; }
+.viz-tip-row { display: flex; align-items: center; gap: 6px; }
+.viz-tip-row b { font-variant-numeric: tabular-nums; }
+.viz-tip-row span { color: var(--c-text-2); }
+
+.viz-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: var(--fs-xs); color: var(--c-text-2); }
+.viz-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.viz-key-rect { width: 12px; height: 10px; border-radius: 3px; display: inline-block; }
+.viz-key-line { width: 14px; height: 2px; border-radius: 1px; display: inline-block; flex: none; }
+.viz-key-baby { background: var(--viz-7); height: 2px; position: relative; }
+.viz-key-baby::after { content: ""; position: absolute; left: 4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--viz-7); }
+.viz-key-ref { background: var(--viz-ref); height: 1px; }
+.viz-key-inner { background: var(--viz-band-inner); }
+.viz-key-outer { background: var(--viz-band-outer); border: 1px solid var(--viz-band-inner); }
+
+.viz-table { margin-top: 8px; font-size: var(--fs-sm); }
+.viz-table summary { cursor: pointer; color: var(--c-primary); font-weight: 600; padding: 4px 2px; font-size: var(--fs-sm); }
+.viz-table-scroll { overflow-x: auto; }
+.viz-table table, .report-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.viz-table th, .viz-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--c-border); white-space: nowrap; }
+.viz-table th { color: var(--c-text-2); font-weight: 600; font-size: var(--fs-xs); }
+
+/* ---------- hub ---------- */
+.health-stage { margin-top: 8px; }
+.health-avatar.pic { border-radius: 14px; }
+.health-avatar {
+  width: 46px; height: 46px; border-radius: 50%; flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: 26px;
+  background: var(--c-surface);
+}
+
+/* ---------- growth ---------- */
+.growth-summary { margin-top: 8px; }
+.growth-stat {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--c-border); background: var(--c-surface); text-align: left;
+}
+.growth-stat.active { border-color: var(--c-primary); box-shadow: 0 0 0 1px var(--c-primary) inset; }
+.growth-stat-label { font-size: var(--fs-xs); color: var(--c-text-2); font-weight: 600; }
+.growth-stat-value { font-size: var(--fs-xl); font-weight: 800; line-height: 1.15; }
+.growth-stat-value small { font-size: var(--fs-xs); font-weight: 500; color: var(--c-text-2); }
+.growth-stat-pct { font-size: var(--fs-xs); color: var(--c-primary); font-weight: 600; }
+
+/* ---------- vaccines / checkups ---------- */
+.vac-item .li-title { font-size: var(--fs-md); }
+.list-item.is-current { background: var(--c-warn-soft); }
+
+/* ---------- milestones ---------- */
+.ms-band { padding: 12px 14px; }
+.ms-band.is-current { border-color: var(--c-warn); }
+.ms-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  background: none; border: 0; padding: 2px 0 8px; text-align: left; min-height: 44px;
+}
+.ms-age { font-weight: 700; font-size: var(--fs-md); }
+.ms-chev { transition: transform .15s; color: var(--c-text-3); }
+.ms-chev.open { transform: rotate(90deg); }
+.ms-item { border-top: 1px solid var(--c-border); align-items: flex-start; cursor: pointer; }
+.ms-item:first-of-type { margin-top: 8px; }
+.ms-item input { margin-top: 2px; flex: none; }
+
+/* ---------- stats ---------- */
+.stats-filter { margin-top: 8px; }
+.stats-filter .seg { flex: 1; max-width: 260px; }
+.stat-tile { padding: 12px 14px; }
+.stat-tile + .stat-tile { margin-top: 0; }
+.stat-tile-value { font-size: 24px; font-weight: 700; line-height: 1.2; }
+.stat-tile-value small { font-size: var(--fs-xs); font-weight: 500; color: var(--c-text-2); }
+
+/* ---------- home card ---------- */
+.home-health .card-title { margin-bottom: 6px; }
+.hc-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 0; background: none; border: 0; border-top: 1px solid var(--c-border); text-align: left;
+}
+.hc-row:first-of-type { border-top: 0; }
+.hc-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; flex: none; color: var(--c-primary); }
+.hc-icon svg { width: 22px; height: 22px; }
+.hc-title { display: block; font-weight: 600; font-size: var(--fs-md); }
+.hc-sub { display: block; font-size: var(--fs-xs); color: var(--c-text-2); }
+
+/* ---------- report ---------- */
+.report { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); padding: 18px; }
+.report-head { display: flex; align-items: center; gap: 14px; padding-bottom: 12px; border-bottom: 2px solid var(--c-primary); }
+.report-head h2 { font-size: var(--fs-xl); color: var(--c-primary); }
+.report-logo { width: 72px; height: auto; flex: none; }
+.report-sec { margin-top: 18px; break-inside: avoid; }
+.report-sec h3 { font-size: var(--fs-md); margin-bottom: 8px; padding-left: 8px; border-left: 3px solid var(--c-accent); }
+.report-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.report-kpi { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: var(--c-surface-2); }
+.report-kpi strong { font-size: var(--fs-lg); }
+.report-table { font-size: var(--fs-xs); }
+.report-table th, .report-table td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--c-border); }
+.report-table th { color: var(--c-text-2); font-weight: 600; background: var(--c-surface-2); }
+/* 疫苗・劑次 wraps; 狀態 wraps only between words (自費・可補打 never becomes 自費・可補 / 打); 日期 stays on one line */
+.report-table-vac th, .report-table-vac td:nth-child(3) { white-space: nowrap; }
+.report-table-vac td:nth-child(2) { word-break: keep-all; }
+.card .viz-table { border-top: 1px solid var(--c-border); padding-top: 6px; margin-top: 10px; }
+.report-foot { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--c-border); font-size: var(--fs-xs); color: var(--c-text-3); }
+
+@media (max-width: 420px) {
+  .report { padding: 14px; }
+  .report-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-table { font-size: var(--fs-xs); }
+  .report-table th, .report-table td { padding: 5px 4px; }
+}
+
+@media print {
+  @page { margin: 14mm; }
+  body[data-screen="report"] { font-size: var(--fs-xs); }
+  .report { border: 0; padding: 0; border-radius: 0; background: #fff; color: #222; }
+  .report-head h2 { color: #5a2873; }
+  .report-head { border-bottom-color: #5a2873; }
+  .report-kpi { background: #f4eff2; }
+  .report-table th { background: #f4eff2; color: #555; }
+  .report-table th, .report-table td { border-bottom-color: #ddd; }
+  .report-kpis { grid-template-columns: repeat(4, 1fr); }
+  .report-sec { break-inside: avoid; }
+}

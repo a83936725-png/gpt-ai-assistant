@@ -8,7 +8,7 @@
   "functions": {
     "api/**/*": {
       "maxDuration": 60,
-      "includeFiles": "{knowledge,web}/**"
+      "includeFiles": "{knowledge,web,mom-app}/**"
     }
   },
   "crons": [

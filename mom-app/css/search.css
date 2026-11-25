@@ -1,0 +1,115 @@
+/* 問答搜尋 (search.js) — colours come from base.css tokens, so dark mode follows automatically. */
+
+/* ---------- search box (sticky under the app bar) ---------- */
+.sr-box {
+  position: sticky; top: calc(var(--appbar-h) + env(safe-area-inset-top)); z-index: 15;
+  margin: 0 -16px; padding: 6px 16px 10px;
+  background: var(--c-bg);
+}
+.sr-label {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+.sr-field { position: relative; display: flex; align-items: center; }
+.sr-ic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--c-text-3); display: inline-flex; pointer-events: none; }
+.sr-ic svg { width: 22px; height: 22px; }
+.sr-input {
+  width: 100%; min-height: 54px; padding: 12px 52px 12px 46px;
+  border-radius: 999px; border: 1.5px solid var(--c-border);
+  background: var(--c-surface); color: var(--c-text);
+  font-size: var(--fs-lg); line-height: 1.3; box-shadow: var(--shadow-1);
+  -webkit-appearance: none; appearance: none;
+}
+.sr-input::placeholder { color: var(--c-text-3); }
+.sr-input:focus { outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 3px var(--c-primary-soft); }
+.sr-input::-webkit-search-cancel-button, .sr-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+.sr-clear {
+  position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; color: var(--c-text-2);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.sr-clear[hidden] { display: none; }
+.sr-clear:active { background: var(--c-surface-2); }
+.sr-clear svg { width: 20px; height: 20px; }
+.sr-status { margin: 0 2px; font-size: var(--fs-xs); color: var(--c-text-2); min-height: 0; }
+.sr-status:empty { display: none; }
+
+/* ---------- chips, history ---------- */
+.sr-block .section-title { margin-top: 14px; }
+.sr-chip { min-height: 44px; padding: 0 16px; font-size: var(--fs-md); color: var(--c-text); }
+.sr-chip:active { background: var(--c-primary-soft); }
+.sr-clear-hist { min-height: 44px; min-width: 44px; padding: 0 6px; color: var(--c-primary) !important; font-weight: 600; }
+
+/* ---------- result groups ---------- */
+.sr-group { margin-bottom: 4px; }
+.sr-group-title { margin-top: 20px; }
+.sr-count { font-size: var(--fs-xs); font-weight: 500; color: var(--c-text-2); }
+.sr-item { min-height: 56px; color: inherit; font: inherit; cursor: pointer; }
+.sr-item .li-body { display: flex; flex-direction: column; gap: 2px; }
+.sr-title { display: block; line-height: 1.45; overflow-wrap: anywhere; }
+.sr-snip {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  line-height: 1.5; overflow-wrap: anywhere;
+}
+.sr-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; font-size: var(--fs-xs); color: var(--c-text-2); }
+.sr-chev { flex: none; }
+.sr-item .tag { flex: none; }
+.sr-more { margin-top: 8px; }
+.sr-hl {
+  background: color-mix(in srgb, var(--c-warn) 32%, transparent);
+  color: inherit; font-weight: 700; border-radius: 3px; padding: 0 1px;
+}
+
+/* ---------- urgent / crisis cards ---------- */
+.card.sr-urgent { background: var(--c-danger-soft); border-color: transparent; box-shadow: none; margin-top: 6px; }
+.card.sr-crisis { background: var(--c-primary-soft); border-color: transparent; box-shadow: none; margin-top: 6px; }
+.sr-urgent-title { font-weight: 800; font-size: var(--fs-lg); margin-bottom: 6px; }
+.sr-urgent .sr-urgent-title { color: var(--c-danger-ink); }
+.sr-crisis .sr-urgent-title { color: var(--c-primary); }
+.sr-urgent-list { margin: 0 0 10px; padding-left: 20px; font-size: var(--fs-sm); line-height: 1.6; }
+.sr-urgent-list li + li { margin-top: 4px; }
+.sr-urgent-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.sr-urgent-actions .btn { flex: 1 1 140px; }
+.sr-urgent-foot { margin: 10px 0 0; color: var(--c-text); }
+.sr-call { text-decoration: none; }
+
+/* ---------- empty state ---------- */
+.sr-empty { text-align: center; padding: 26px 8px 8px; color: var(--c-text-2); }
+.sr-empty .bold { color: var(--c-text); font-size: var(--fs-lg); overflow-wrap: anywhere; }
+.sr-empty-chips { justify-content: center; margin: 10px 0 16px; }
+.sr-empty-help { color: var(--c-text-2); line-height: 1.7; }
+
+/* ---------- FAQ answer sheet ---------- */
+.sr-faq-tags { margin: 2px 0 10px; }
+.sr-banner {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: var(--radius-sm); margin-bottom: 12px; font-size: var(--fs-sm);
+}
+.sr-banner p { margin: 2px 0 0; color: var(--c-text); }
+.sr-banner-urgent { background: var(--c-danger-soft); }
+.sr-banner-urgent strong { color: var(--c-danger-ink); }
+.sr-banner-soon { background: var(--c-warn-soft); }
+.sr-banner-soon strong { color: var(--c-warn-ink); }
+.sr-banner .btn-sm { min-height: 44px; }
+.sr-ans { margin: 0; padding: 0 0 0 20px; font-size: var(--fs-md); line-height: 1.75; }
+.sr-ans li + li { margin-top: 6px; }
+.sr-ans li::marker { color: var(--c-primary); }
+.sr-h { font-size: var(--fs-md); margin: 18px 0 8px; color: var(--c-text); }
+.sr-see .sr-item { min-height: 52px; }
+.sr-see .li-icon { width: 36px; height: 36px; font-size: var(--fs-lg); }
+.sr-fb {
+  margin-top: 18px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--c-surface-2);
+}
+.sr-fb-q { font-weight: 700; font-size: var(--fs-md); margin-bottom: 8px; }
+.sr-fb-row { display: flex; gap: 8px; }
+.sr-fb-btn { flex: 1; min-height: 44px; background: var(--c-surface); }
+.sr-fb-btn.active { background: var(--c-primary); color: var(--c-primary-ink); border-color: var(--c-primary); }
+.sr-fb-thanks { margin: 8px 0 0; }
+.sr-share { margin-top: 12px; }
+.sr-share .btn { min-height: 44px; }
+
+@media (max-width: 360px) {
+  .sr-input { font-size: 16px; padding-left: 42px; }
+  .sr-chip { padding: 0 12px; font-size: var(--fs-sm); }
+  .sr-item { gap: 10px; padding: 12px 10px; }
+  .sr-item .li-icon { width: 34px; height: 34px; font-size: var(--fs-lg); }
+}

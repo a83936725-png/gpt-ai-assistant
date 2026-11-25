@@ -1,0 +1,71 @@
+/* 易家做媽媽 — 寶寶月照 */
+.mo-intro .mo-intro-ico { font-size: 30px; line-height: 1; flex: none; }
+.mo-intro .mo-intro-pic { width: 52px; height: 52px; border-radius: 14px; }
+.mo-next { margin-top: 2px; }
+.mo-prog { height: 8px; border-radius: 999px; background: var(--c-surface-2); overflow: hidden; margin: 12px 0 6px; }
+.mo-prog > span { display: block; height: 100%; min-width: 8px; border-radius: inherit; background: linear-gradient(90deg, var(--c-primary), var(--c-accent)); }
+
+.mo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mo-grid-0 { grid-template-columns: minmax(0, 1fr); margin: 12px 0 4px; }
+.mo-tile { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; min-height: 44px; padding: 6px 6px 8px;
+  border: 1px solid var(--c-border); border-radius: 18px; background: var(--c-surface); color: var(--c-text); font: inherit; text-align: center; cursor: pointer; }
+.mo-thumb { position: relative; display: grid; place-items: center; aspect-ratio: 4 / 5; border-radius: 13px; overflow: hidden; background: var(--c-surface-2); }
+.mo-img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mo-img.gone { visibility: hidden; }
+.mo-ph { font-size: 24px; line-height: 1; color: var(--c-text-3); }
+.mo-tx { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.25; }
+.mo-tl { font-weight: 800; font-size: var(--fs-sm); }
+.mo-td { font-size: var(--fs-xs); color: var(--c-text-2); overflow-wrap: anywhere; }
+.mo-tile.is-done .mo-tl { color: var(--c-primary); }
+.mo-tile.is-now { border-color: var(--c-primary); box-shadow: 0 0 0 2px var(--c-primary-soft); }
+.mo-tile.is-now .mo-thumb { background: var(--c-primary-soft); }
+.mo-tile.is-now .mo-ph { color: var(--c-primary); font-size: 30px; font-weight: 700; }
+.mo-tile.is-now .mo-td { color: var(--c-primary); font-weight: 700; }
+.mo-tile.is-past .mo-ph { color: var(--c-text-2); }
+.mo-tile.is-future { background: var(--c-bg); border-style: dashed; }
+.mo-tile.is-future .mo-thumb { opacity: .55; } /* only the empty picture dims: the words stay readable */
+.mo-tile.is-future .mo-tl { color: var(--c-text-2); }
+.mo-tile.is-future.is-soon { background: var(--c-surface); border-color: var(--c-primary); }
+.mo-tile.is-future.is-soon .mo-thumb { opacity: 1; }
+.mo-wide { flex-direction: row; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; text-align: left; }
+.mo-wide .mo-thumb { flex: none; width: 64px; }
+.mo-wide .mo-tx { align-items: flex-start; }
+.mo-wide .mo-tl { font-size: var(--fs-md); }
+.mo-wide .mo-td { font-size: var(--fs-xs); }
+.mo-col-btn { margin-top: 14px; }
+
+/* the editor */
+.mo-ed { display: flex; flex-direction: column; gap: 8px; }
+.mo-when { margin: 0; }
+.mo-stage { display: grid; place-items: center; }
+.mo-cv { display: block; width: 100%; max-width: 340px; height: auto; aspect-ratio: 4 / 5; border-radius: 14px; background: #f4ece6;
+  box-shadow: 0 6px 20px rgba(40, 20, 50, .16); cursor: pointer; -webkit-user-select: none; user-select: none; }
+.mo-cv.can-drag { cursor: grab; touch-action: none; }
+.mo-cv.can-drag:active { cursor: grabbing; }
+.mo-cv:focus-visible { outline: 3px solid var(--c-primary); outline-offset: 3px; }
+.mo-cv-col { max-width: 360px; cursor: default; }
+.mo-hint, .mo-demo { margin: 0; }
+.mo-demo { color: var(--c-primary); font-weight: 700; }
+.mo-tools .btn { min-height: 48px; }
+.mo-zoom-row { display: flex; align-items: center; gap: 10px; }
+.mo-zoom { flex: 1; min-height: 44px; accent-color: var(--c-primary); }
+.mo-zoom:disabled { opacity: .45; }
+.mo-lbl { margin-top: 6px; }
+.mo-frames .chip { gap: 6px; }
+.mo-sw { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .14); flex: none; }
+.mo-ideas { margin-top: 2px; }
+.mo-ideas .chip { max-width: 100%; }
+.mo-safe { margin: 6px 0 0; }
+.mo-del { color: var(--c-danger-ink, var(--c-danger)); }
+.mo-count { margin: 0; }
+
+/* 首頁: the month-day line with its ✕ */
+.mo-home { display: flex; align-items: center; gap: 6px; margin: -4px 0 12px; }
+.mo-home .moment-line { flex: 1; min-width: 0; margin: 0; }
+.mo-home .moment-line strong { white-space: nowrap; }
+.mo-home-x { flex: none; }
+
+@media (max-width: 340px) {
+  .mo-grid { gap: 8px; }
+  .mo-tl { font-size: var(--fs-sm); }
+}

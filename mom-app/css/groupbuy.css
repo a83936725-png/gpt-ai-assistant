@@ -1,0 +1,168 @@
+/* 團購揪團 */
+.gb-hero p { margin: 6px 0 0; }
+.gb-card-top { align-items: flex-start; }
+.gb-emoji { font-size: 34px; line-height: 1; width: 52px; height: 52px; border-radius: 16px; background: var(--c-accent-soft); display: flex; align-items: center; justify-content: center; flex: none; }
+.gb-img { width: 52px; height: 52px; border-radius: 16px; object-fit: cover; flex: none; background: var(--c-surface-2); }
+.gb-card .card-title .tag, .gb-team .tag, .gb-home .tag, .gb-brand .tag { margin-left: 6px; vertical-align: middle; }
+.gb-price { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
+.gb-price-now { font-size: 24px; font-weight: 900; color: var(--c-accent-ink); }
+.gb-price-was { font-size: var(--fs-sm); color: var(--c-text-2); }
+.gb-meta { margin: 0 0 12px; }
+.gb-start { min-height: 48px; }
+.gb-mine { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 10px 12px; margin-top: 4px; border: 0; border-radius: 14px;
+  background: var(--c-primary-soft); color: var(--c-text); font: inherit; text-align: left; cursor: pointer; }
+.gb-mine .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gb-mine .chev { color: var(--c-text-2); font-size: var(--fs-xl); flex: none; }
+.gb-progress { display: grid; gap: 6px; margin-top: 10px; }
+.gb-count { font-size: var(--fs-lg); }
+.gb-actions { display: grid; gap: 10px; }
+.gb-actions p { margin: 0; }
+.gb-join, .gb-line { min-height: 52px; font-size: var(--fs-lg); }
+.gb-leave { justify-self: center; min-height: 40px; color: var(--c-text-2); }
+.gb-done { font-weight: 800; font-size: var(--fs-lg); color: var(--c-primary); }
+.gb-code-box { display: grid; gap: 4px; padding: 14px; border-radius: 16px; border: 2px dashed var(--c-primary); background: var(--c-primary-soft); text-align: center; }
+.gb-code-box p { margin: 6px 0 0; }
+.gb-code { font-size: 26px; font-weight: 900; letter-spacing: 3px; color: var(--c-primary); user-select: all; -webkit-user-select: all; word-break: break-all; }
+.gb-copy, .gb-shop { min-height: 44px; }
+.gb-home .bold { line-height: 1.35; }
+.gb-home-x { flex: none; }
+
+/* 怎麼揪團 as a vertical 步驟條 (components.css has the horizontal one) */
+.gb-steps { list-style: none; counter-reset: gbs; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 0; }
+.gb-steps li { counter-increment: gbs; position: relative; padding: 2px 0 14px 38px; min-height: 28px; }
+.gb-steps li::before {
+  content: counter(gbs); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--c-surface); color: var(--c-primary); box-shadow: inset 0 0 0 2px var(--c-primary); font-weight: 700; font-size: var(--fs-sm);
+}
+.gb-steps li:not(:last-child)::after { content: ''; position: absolute; left: 12px; top: 27px; bottom: -1px; width: 2px; border-radius: 1px; background: var(--c-primary); opacity: .35; }
+.gb-steps-now { margin-top: 14px; }
+.gb-steps-now .steps { margin-bottom: 0; }
+
+/* ---------- 好孕島 限時團購 tiles (js/modules/groupbuy.js: islandRail / syncRail / fitRail) ----------
+   A short column down the left side of the island map, like the signs at the edge of a game board. Each tile is a
+   little sticker: picture, a ribbon (限時・揪團中・等你・成團了), a badge (the discount, or how many so far) and a
+   countdown chip that ticks every second. Only as many tiles as fit above the 💜 chip and the island strip are shown;
+   with no room, or tucked away for the day, only the small 🛒 tab is left. The tiles keep their own light colours at
+   night too; every word on them is white on a dark colour (≥ 5:1). */
+.isl .gb-rail {
+  position: absolute; z-index: 2; left: 10px; top: 128px;
+  display: flex; flex-direction: column; align-items: center; gap: 22px;
+  pointer-events: none; /* the gaps between tiles let the map be dragged */
+}
+.gb-rail > * { pointer-events: auto; }
+.gb-rail[hidden], .gb-rail.none { display: none; }
+
+.gbr-tile { position: relative; display: block; width: 52px; height: 52px; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.gbr-tile[hidden] { display: none; }
+.gbr-pic {
+  display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 16px; overflow: hidden;
+  background: linear-gradient(150deg, #ffe6d8, #ffc4d1); border: 2.5px solid #fff;
+  box-shadow: 0 5px 14px rgba(70, 25, 90, .3), inset 0 -8px 14px rgba(255, 255, 255, .4);
+}
+.k-mine .gbr-pic { background: linear-gradient(150deg, #f1e3ff, #d2aef0); }
+.k-friend .gbr-pic { background: linear-gradient(150deg, #e0f7ee, #abe3cd); }
+.k-done .gbr-pic { background: linear-gradient(150deg, #fff3c4, #ffd47e); }
+.gbr-pic img { width: 100%; height: 100%; object-fit: cover; }
+.gbr-emoji { font-size: 28px; line-height: 1; filter: drop-shadow(0 2px 2px rgba(90, 40, 115, .2)); }
+.gbr-rib {
+  position: absolute; top: -9px; left: -10px; padding: 1px 6px; border-radius: 8px 8px 8px 3px; border: 1.5px solid #fff;
+  background: #c62f2a; color: #fff; font-size: 10.5px; font-weight: 900; line-height: 1.3; letter-spacing: .5px; white-space: nowrap;
+  transform: rotate(-12deg); box-shadow: 0 2px 5px rgba(120, 20, 20, .3);
+}
+.k-mine .gbr-rib { background: #6b3191; }
+.k-friend .gbr-rib { background: #1f7a55; }
+.k-done .gbr-rib { background: #8f5800; }
+/* the discount, or how many so far: the top right corner, clear of the ribbon */
+.gbr-badge {
+  position: absolute; top: -9px; right: -14px; min-width: 24px; padding: 1px 4px; border-radius: 999px; border: 1.5px solid #fff;
+  background: #c62f2a; color: #fff; font-size: 10.5px; font-weight: 800; line-height: 1.35; text-align: center; font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 4px rgba(120, 20, 20, .25);
+}
+.k-mine .gbr-badge, .k-friend .gbr-badge { background: #5a2873; }
+.gbr-chip {
+  position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%); padding: 2px 6px; border-radius: 999px; border: 1.5px solid #fff;
+  background: #3a1846; color: #fff; font-size: 11px; font-weight: 800; line-height: 1.3; white-space: nowrap; letter-spacing: .2px;
+  font-variant-numeric: tabular-nums; box-shadow: 0 2px 6px rgba(40, 10, 50, .3);
+}
+.gbr-chip.soon { background: #b3261e; } /* the last hour */
+.gbr-chip.gold { background: #8f5800; }
+/* ‹: tuck the column away for today (a 44 × 36 target around a small pill) */
+.gbr-tuck { width: 44px; height: 36px; margin-bottom: -16px; padding: 0; border: 0; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.gbr-tuck span { display: block; width: 32px; height: 20px; border-radius: 999px; background: rgba(58, 24, 70, .78); color: #fff; font-size: var(--fs-lg); font-weight: 800; line-height: 18px; text-align: center; }
+/* the 🛒 tab at the edge: tucked away, or no room for a tile */
+.gbr-tab {
+  position: relative; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  width: 36px; height: 58px; padding: 0 0 0 2px; border: 2px solid #fff; border-left: 0; border-radius: 0 16px 16px 0;
+  background: linear-gradient(150deg, #ffe6d8, #ffc4d1); box-shadow: 0 4px 12px rgba(70, 25, 90, .28); cursor: pointer;
+}
+.gbr-tab-ico { font-size: var(--fs-xl); line-height: 1; }
+.gbr-tab-n { min-width: 20px; padding: 0 5px; border-radius: 999px; background: #c62f2a; color: #fff; font-size: 11px; font-weight: 800; line-height: 1.45; }
+.gbr-dot { position: absolute; top: 5px; right: 4px; width: 10px; height: 10px; border-radius: 50%; background: #c62f2a; border: 1.5px solid #fff; }
+.isl .gb-rail.peek, .isl .gb-rail.tucked { left: 0; }
+.gb-rail.peek .gbr-tab, .gb-rail.tucked .gbr-tab { display: flex; }
+.gb-rail.peek .gbr-tuck, .gb-rail.tucked .gbr-tuck, .gb-rail.tucked .gbr-tile { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .gbr-tile:active .gbr-pic { transform: scale(.92); } /* 0.9.4: the tiles no longer bob, the last hour no longer pulses */
+  .gbr-tab:active { transform: scale(.94); }
+  .gb-live-dot { animation: gbLive 1.6s ease-in-out infinite; }
+  .gb-deal.focus { animation: gbFocus 1.6s ease-out 2; }
+}
+@keyframes gbLive { 0%, 100% { box-shadow: 0 0 0 3px rgba(198, 47, 42, .18); } 50% { box-shadow: 0 0 0 6px rgba(198, 47, 42, .06); } }
+@keyframes gbFocus { 0% { box-shadow: 0 0 0 0 rgba(238, 139, 111, .7); } 100% { box-shadow: 0 0 0 14px rgba(238, 139, 111, 0); } }
+
+/* ---------- 正在開團 (the group-buy page) ---------- */
+.gb-hero-top { display: flex; align-items: center; gap: 7px; color: var(--c-text-2); }
+.card-hero .gb-hero-top { color: inherit; opacity: .92; font-weight: 700; }
+.card-hero .gb-live-dot { background: #ff8a80; box-shadow: 0 0 0 3px rgba(255, 255, 255, .25); }
+.gb-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #c62f2a; box-shadow: 0 0 0 3px rgba(198, 47, 42, .18); flex: none; }
+.gb-sample-note { padding: 10px 12px; margin: 0 0 12px; border-radius: 14px; background: var(--c-warn-soft); color: var(--c-text); line-height: 1.5; }
+.gb-deal.focus { outline: 3px solid var(--c-accent); outline-offset: 2px; }
+.gb-deal-price { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gb-deal-price .gb-price { margin: 12px 0 4px; }
+.gb-save { padding: 3px 9px; border-radius: 999px; background: var(--c-danger-soft); color: var(--c-danger-ink); font-weight: 800; font-size: var(--fs-sm); white-space: nowrap; }
+.gb-deal-clock, .gb-team-clock { display: grid; gap: 6px; margin: 10px 0 10px; }
+.gb-team-clock { margin-bottom: 2px; }
+.gb-big { display: flex; flex-wrap: wrap; gap: 6px; }
+.gb-big-u { display: inline-flex; align-items: baseline; gap: 3px; padding: 7px 10px 6px; border-radius: 12px; background: #3a1846; color: #fff; }
+.gb-big-u b { min-width: 1.25em; font-size: var(--fs-xl); font-weight: 900; line-height: 1; text-align: center; font-variant-numeric: tabular-nums; }
+.gb-big-u i { font-style: normal; font-size: var(--fs-xs); opacity: .9; }
+.gb-big.soon .gb-big-u { background: #b3261e; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .gb-big-u { background: #5a2873; } }
+:root[data-theme="dark"] .gb-big-u { background: #5a2873; }
+.gb-stats { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 0 0 12px; color: var(--c-text-2); }
+.gb-sim { min-height: 48px; }
+
+/* 開一團: what she is starting, the three steps, the team name */
+.gb-open-head { align-items: flex-start; }
+.gb-open-head .gb-price { margin: 4px 0 0; }
+.gb-open-steps { list-style: none; margin: 2px 0; padding: 10px 6px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; border-radius: 16px; background: var(--c-primary-soft); text-align: center; }
+.gb-open-steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.gb-open-steps li:not(:last-child)::after { content: '›'; position: absolute; right: -6px; top: 6px; color: var(--c-primary); font-weight: 800; opacity: .6; }
+.gb-os-ico { font-size: var(--fs-xl); line-height: 1.15; }
+
+/* ---------- 即時團購: 正在揪的團 (other moms' public teams) and what just happened ---------- */
+.gb-open { display: grid; gap: 8px; margin: 0 0 12px; padding: 10px; border-radius: 16px; background: var(--c-surface-2); }
+.gb-open[hidden] { display: none; }
+.gb-open-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: var(--fs-sm); }
+.gb-open-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 10px; border-radius: 14px; background: var(--c-surface); border: 1px solid var(--c-border); }
+.gb-open-main { flex: 1; min-width: 0; display: grid; gap: 4px; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 44px; }
+.gb-open-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.gb-open-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gb-need1 { flex: none; padding: 1px 7px; border-radius: 999px; background: #c62f2a; color: #fff; font-size: var(--fs-xs); font-weight: 800; line-height: 1.45; }
+.gb-open-bar { display: block; height: 5px; border-radius: 3px; background: var(--c-border); overflow: hidden; }
+.gb-open-bar i { display: block; height: 100%; border-radius: 3px; background: var(--c-primary); }
+.gb-open-sub .num { font-variant-numeric: tabular-nums; }
+.gb-open-sub .soon { color: var(--c-danger-ink); font-weight: 700; }
+.gb-open-join { flex: none; min-height: 40px; min-width: 64px; }
+.gb-open-more { justify-self: center; min-height: 40px; }
+.gb-feed { display: flex; align-items: center; gap: 8px; min-height: 40px; margin: 0 0 12px; padding: 8px 12px; border-radius: 14px; background: var(--c-surface); border: 1px solid var(--c-border); }
+.gb-feed[hidden] { display: none; }
+.gb-feed-tag { display: inline-flex; align-items: center; gap: 5px; flex: none; font-size: var(--fs-xs); font-weight: 800; color: var(--c-danger-ink); }
+.gb-feed-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+/* 開一團 / her team: 公開這一團 */
+.gb-pub { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--c-surface-2); cursor: pointer; }
+.gb-pub input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; accent-color: var(--c-primary); }
+.gb-pub-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--c-surface-2); cursor: pointer; }
+.gb-pub-row .grow { display: grid; gap: 2px; }
+/* 好孕島: a group-buy with a team only 1 short */
+.gbr-rib.hot { background: #a3271f; }

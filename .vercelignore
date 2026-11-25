@@ -1,0 +1,5 @@
+# 易家做媽媽: tests, internal docs and notes are not deployed (only the web app itself is public)
+mom-app/tests
+mom-app/docs
+mom-app/README.md
+mom-app/.eslintrc.cjs

@@ -1,0 +1,208 @@
+/* 備孕 + 懷孕 module styles (prefix: pg-) */
+:root {
+  --pg-period: #d9577a;
+  --pg-period-soft: #fbe2e9;
+  --pg-fertile: #2f9479;
+  --pg-fertile-soft: #dcf1ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pg-period: #f08aa5;
+    --pg-period-soft: #43242f;
+    --pg-fertile: #5cc4a5;
+    --pg-fertile-soft: #1d3a32;
+  }
+}
+:root[data-theme="dark"] {
+  --pg-period: #f08aa5;
+  --pg-period-soft: #43242f;
+  --pg-fertile: #5cc4a5;
+  --pg-fertile-soft: #1d3a32;
+}
+
+.right { text-align: right; }
+.pg-danger-text { color: var(--c-danger-ink); }
+.pg-stat { background: var(--c-surface-2); border-radius: 12px; padding: 8px 10px; min-width: 0; }
+.pg-stat .bold { font-size: var(--fs-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-hero .pg-stat { background: rgba(255, 255, 255, .16); }
+
+/* tags */
+.tag.pg-tag-period { background: var(--pg-period-soft); color: var(--pg-period); }
+.tag.pg-tag-fertile { background: var(--pg-fertile-soft); color: var(--pg-fertile); }
+.pg-fertile-banner {
+  margin-top: 10px; padding: 8px 12px; border-radius: 12px;
+  background: var(--pg-fertile-soft); color: var(--pg-fertile); font-weight: 700; font-size: var(--fs-sm);
+}
+
+/* folic check-in */
+.pg-folic-dots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+.pg-dot-day { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pg-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px dashed var(--c-border); font-size: var(--fs-sm); font-weight: 700; color: var(--c-primary-ink);
+}
+.pg-dot-day.on .pg-dot { background: var(--c-primary); border: 2px solid var(--c-primary); }
+.pg-dot-day.today .pg-dot { border-style: solid; border-color: var(--c-primary); }
+.pg-dot-day.today .tiny { color: var(--c-primary); font-weight: 700; }
+
+/* calendar */
+.pg-cal-head { margin: -6px -6px 6px; }
+.pg-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+@media (max-width: 340px) { .pg-cal-grid { gap: 2px; } }
+.pg-cal-wd { text-align: center; font-size: var(--fs-xs); color: var(--c-text-3); padding: 2px 0 4px; }
+.pg-cal-day {
+  position: relative; aspect-ratio: 1; min-height: 38px;
+  border: 0; border-radius: 50%; background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--fs-sm); font-variant-numeric: tabular-nums; padding: 0;
+}
+.pg-cal-day:active { background: var(--c-surface-2); }
+.pg-cal-day.is-future { color: var(--c-text-2); }
+.pg-cal-day.is-fertile { background: var(--pg-fertile-soft); color: var(--pg-fertile); font-weight: 600; }
+.pg-cal-day.is-pred { box-shadow: inset 0 0 0 2px var(--pg-period); color: var(--pg-period); background: transparent; }
+.pg-cal-day.is-period { background: var(--pg-period); color: #fff; font-weight: 700; }
+.pg-cal-day.is-ovu { background: var(--pg-fertile); color: #fff; font-weight: 700; }
+.pg-cal-day.is-today::after {
+  content: ''; position: absolute; bottom: 3px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px;
+  border-radius: 50%; background: var(--c-primary);
+}
+.pg-cal-day.is-today { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+.pg-cal-day.is-period.is-today::after, .pg-cal-day.is-ovu.is-today::after { background: #fff; }
+.pg-cal-ovu { display: none; }
+.pg-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; margin-top: 12px; font-size: var(--fs-xs); color: var(--c-text-2); }
+.pg-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.pg-lg { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.pg-lg-period { background: var(--pg-period); }
+.pg-lg-pred { box-shadow: inset 0 0 0 2px var(--pg-period); }
+.pg-lg-fertile { background: var(--pg-fertile-soft); box-shadow: inset 0 0 0 1px var(--pg-fertile); }
+.pg-lg-ovu { background: var(--pg-fertile); }
+.li-icon.pg-li-period { background: var(--pg-period-soft); }
+
+/* home cycle card */
+.pg-home-cycle.fertile { border-color: var(--pg-fertile); }
+
+/* checklist */
+.pg-check { cursor: pointer; }
+.pg-check input { width: 22px; height: 22px; accent-color: var(--c-primary); flex: none; }
+.pg-check.done .li-title { color: var(--c-text-3); text-decoration: line-through; }
+
+/* pregnancy hero */
+.pg-hero-tri { font-size: var(--fs-xs); font-weight: 700; padding: 2px 10px; border-radius: 999px; background: rgba(255, 255, 255, .2); }
+.pg-hero-edit { background: rgba(255, 255, 255, .2); border: 0; color: inherit; border-radius: 999px; padding: 3px 12px; font-size: var(--fs-sm); }
+.pg-hero-week { font-size: 26px; font-weight: 800; margin-top: 8px; letter-spacing: .5px; }
+.pg-hero-emoji { font-size: 46px; line-height: 1; }
+.pg-hero-next { background: none; border: 0; color: inherit; font: inherit; font-weight: 700; padding: 6px 0; min-height: 36px; text-decoration: underline; text-underline-offset: 3px; }
+/* the week headline never wraps on a small phone (懷孕 28 週 3 / 天) */
+.pg-hero-week { font-size: clamp(20px, 6.8vw, 26px); white-space: nowrap; }
+.btn.pg-hero-btn { background: rgba(255, 255, 255, .2); color: inherit; padding: 0 11px; font-size: var(--fs-sm); gap: 3px; }
+.pg-next-visit .li-icon { background: var(--c-primary-soft); }
+
+/* week browser */
+.pg-week-title { font-size: var(--fs-lg); }
+.pg-slider { width: 100%; accent-color: var(--c-primary); margin: 8px 0 4px; }
+.pg-fruit { display: flex; align-items: center; gap: 16px; padding: 12px 4px; }
+.pg-fruit-emoji {
+  width: 84px; height: 84px; flex: none; border-radius: 50%;
+  background: var(--c-accent-soft); display: flex; align-items: center; justify-content: center; font-size: 46px;
+}
+.pg-fruit-name { font-size: var(--fs-xl); font-weight: 800; color: var(--c-primary); }
+.pg-week-info { display: grid; gap: 8px; }
+.pg-week-row { display: grid; grid-template-columns: 76px 1fr; gap: 8px; font-size: var(--fs-sm); padding: 10px 12px; border-radius: 12px; background: var(--c-surface-2); }
+.pg-week-k { font-weight: 700; color: var(--c-text-2); font-size: var(--fs-sm); }
+.pg-week-row.pg-tip { background: var(--c-primary-soft); }
+.pg-preview { min-height: 1.5em; }
+
+/* prenatal timeline */
+.pg-timeline { position: relative; margin-top: 14px; }
+.pg-timeline::before { content: ''; position: absolute; left: 19px; top: 18px; bottom: 18px; width: 2px; background: var(--c-border); }
+.pg-visit {
+  position: relative; display: flex; gap: 12px; width: 100%; text-align: left;
+  background: transparent; border: 0; padding: 8px 0;
+}
+.pg-visit-no {
+  position: relative; z-index: 1; flex: none; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--c-surface); border: 2px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--c-text-2);
+}
+.pg-visit.done .pg-visit-no { background: var(--c-ok); border-color: var(--c-ok); color: #fff; }
+.pg-visit.next .pg-visit-no { background: var(--c-primary); border-color: var(--c-primary); color: var(--c-primary-ink); }
+.pg-visit-body {
+  flex: 1; min-width: 0; background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm); padding: 10px 12px; box-shadow: var(--shadow-1);
+}
+.pg-visit.next .pg-visit-body { border-color: var(--c-primary); box-shadow: 0 0 0 1px var(--c-primary); }
+.pg-visit.done .pg-visit-body { opacity: .78; }
+.pg-items { margin: 6px 0 0; padding-left: 18px; color: var(--c-text-2); }
+.pg-items li + li { margin-top: 2px; }
+
+/* kick counter */
+.pg-kick-card { padding: 22px 16px; }
+.pg-kick-count { font-size: 56px; font-weight: 800; line-height: 1.1; color: var(--c-primary); }
+.pg-kick-count small { font-size: var(--fs-xl); color: var(--c-text-3); font-weight: 600; }
+.pg-kick-btn {
+  width: 168px; height: 168px; border-radius: 50%; border: 0; margin: 18px auto 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: radial-gradient(circle at 35% 30%, var(--c-primary-2), var(--c-primary));
+  color: var(--c-primary-ink); font-size: var(--fs-xl); font-weight: 800;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--c-primary) 40%, transparent);
+  transition: transform .08s;
+}
+.pg-kick-btn:active { transform: scale(.94); }
+.pg-kick-emoji { font-size: 44px; line-height: 1; }
+.pg-kick-emoji-lg { font-size: 56px; line-height: 1.2; }
+.pg-kick-card .row { justify-content: center; }
+
+/* contraction timer */
+.pg-con-card { padding: 20px 16px; }
+.pg-con-clock { font-size: 44px; font-weight: 800; line-height: 1.15; color: var(--c-text); min-height: 1.15em; }
+.pg-con-btn {
+  width: 168px; height: 168px; border-radius: 50%; border: 0; margin: 16px auto 4px; display: block;
+  background: var(--c-accent-ink); color: var(--c-surface); font-size: var(--fs-xl); font-weight: 800;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--c-accent) 40%, transparent);
+  transition: transform .08s;
+}
+.pg-con-btn.on { background: var(--c-primary); color: var(--c-primary-ink); animation: pg-pulse 1.6s ease-in-out infinite; }
+.pg-con-btn:active { transform: scale(.94); }
+@keyframes pg-pulse { 50% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--c-primary) 12%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .pg-con-btn.on { animation: none; } }
+.pg-con-table .pg-con-row { display: grid; grid-template-columns: repeat(3, 1fr); padding: 10px 14px; border-bottom: 1px solid var(--c-border); font-size: var(--fs-md); }
+.pg-con-table .pg-con-row:last-child { border-bottom: 0; }
+.pg-con-th { font-size: var(--fs-xs) !important; color: var(--c-text-3); font-weight: 600; background: var(--c-surface-2); }
+
+/* alerts */
+.card.pg-alert-danger { background: var(--c-danger-soft); border-color: transparent; box-shadow: none; }
+.card.pg-alert-danger .bold { color: var(--c-danger-ink); }
+.card.pg-alert-warn { background: var(--c-warn-soft); border-color: var(--c-warn); box-shadow: none; }
+.card.pg-alert-warn .bold { color: var(--c-warn-ink); }
+.card.pg-alert-danger p, .card.pg-alert-warn p { margin: 4px 0 0; color: var(--c-text); }
+
+/* weight chart */
+.pg-chart-card { padding: 12px 8px 8px; }
+.pg-chart-wrap { position: relative; }
+.pg-chart { width: 100%; height: auto; display: block; overflow: visible; }
+.pg-grid { stroke: var(--c-border); stroke-width: 1; }
+.pg-axis { stroke: var(--c-text-3); stroke-width: 1; }
+.pg-tick { fill: var(--c-text-3); font-size: var(--fs-xs); font-family: var(--font); }
+.pg-band { fill: var(--c-primary-soft); }
+.pg-band-edge { fill: none; stroke: var(--c-primary-2); stroke-width: 1; stroke-dasharray: 3 3; opacity: .6; }
+.pg-band-label { fill: var(--c-text-2); font-size: 11px; font-family: var(--font); }
+.pg-line { fill: none; stroke: var(--c-primary); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.pg-dot-mark { fill: var(--c-primary); stroke: var(--c-surface); stroke-width: 2; }
+.pg-hit { fill: transparent; cursor: pointer; }
+.pg-hit:focus { outline: none; }
+.pg-hit:focus-visible { stroke: var(--c-primary); stroke-width: 1.5; }
+.pg-tip-box {
+  position: absolute; transform: translate(-50%, calc(-100% - 12px)); pointer-events: none;
+  background: var(--c-text); color: var(--c-bg); font-size: var(--fs-xs); padding: 5px 10px; border-radius: 8px;
+  white-space: nowrap; opacity: 0; transition: opacity .12s;
+}
+.pg-tip-box.show { opacity: 1; }
+
+/* larger touch targets (UX pass) */
+.pg-hero-edit { min-height: 36px; min-width: 52px; }
+.pg-slider { height: 36px; }
+/* 待產包: when to pack; 月子中心 link */
+.pg-bag-steps { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.pg-bag-steps b { color: var(--c-primary); }
+.pg-cf-link { align-items: center; }

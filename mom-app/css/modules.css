@@ -1,0 +1,407 @@
+/* Styles for home / babylog / milk / brand / me / onboarding. */
+
+/* ---------- home ---------- */
+.greet { margin: 6px 2px 12px; gap: 10px; }
+.greet-hi { font-size: var(--fs-xl); font-weight: 800; }
+.home-slot + .home-slot, .home-slot { margin-top: 12px; }
+
+.baby-hero {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 12px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--c-primary-soft) 55%, var(--c-surface)); /* flat, no gradient */
+  border: 1px solid var(--c-border);
+}
+.hero-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; text-align: left; min-height: 56px; }
+.hero-avatar {
+  width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none;
+  border: 3px solid var(--c-surface); box-shadow: 0 3px 10px rgba(90, 40, 115, .16); background: var(--c-surface);
+}
+.hero-avatar.emoji { display: flex; align-items: center; justify-content: center; font-size: 32px; }
+.hero-text { display: flex; flex-direction: column; min-width: 0; }
+.hero-name { font-size: var(--fs-xl); font-weight: 800; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero-text > .tiny, .hero-sub, .hero-next { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero-sub { font-size: var(--fs-sm); color: var(--c-text-2); font-variant-numeric: tabular-nums; }
+.hero-next { font-size: var(--fs-sm); font-weight: 600; color: var(--c-primary); margin-top: 2px; font-variant-numeric: tabular-nums; }
+@media (max-width: 360px) {
+  .hero-stat { min-width: 48px; padding: 4px; }
+  .hero-avatar { width: 48px; height: 48px; }
+  .hero-main { gap: 9px; }
+  .hero-next { font-size: var(--fs-xs); } /* 「30 分後下一餐・08:09」 fits on a 320px phone */
+  .hero-avatar.emoji { font-size: 28px; }
+}
+.hero-stats { display: flex; gap: 6px; flex: none; }
+.hero-stat {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 56px; min-height: 52px; padding: 4px 6px; border-radius: 14px;
+  background: var(--c-surface); border: 1px solid var(--c-border); color: inherit; text-decoration: none;
+}
+.hero-stat b { font-size: var(--fs-lg); line-height: 1.2; }
+.hero-switch { position: absolute; top: -16px; right: 12px; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 999px; padding: 2px 12px; min-height: 36px; }
+.stage-pill {
+  flex: none; padding: 6px 12px; border-radius: 999px; font-size: var(--fs-sm); font-weight: 600; text-decoration: none;
+  background: var(--c-primary-soft); color: var(--c-primary); min-height: 38px; display: inline-flex; align-items: center;
+}
+
+.quick-row {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 10px; row-gap: 28px;
+  margin-bottom: 12px;
+}
+.quick-tile {
+  position: relative; border-radius: 20px; background: var(--c-surface); border: 1px solid var(--c-border);
+  padding-bottom: 22px;
+}
+.quick-tile.running { border-color: var(--tc); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc) 35%, transparent); }
+.qt-main {
+  width: 100%; background: none; border: 0; padding: 10px 6px 4px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+/* the record's own line icon in its colour (deepened so it reads in light and dark), no pastel disc behind it */
+.qt-ico {
+  width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  color: color-mix(in srgb, var(--tc) 72%, var(--c-text));
+}
+.qt-ico svg { width: 30px; height: 30px; }
+.lt-tinted { color: color-mix(in srgb, var(--tc) 72%, var(--c-text)); }
+.li-icon svg, .type-ico svg { width: 24px; height: 24px; }
+.qt-label { font-weight: 700; font-size: var(--fs-md); }
+.qt-sub { color: var(--c-text-2); min-height: 18px; }
+.qt-running { color: var(--tc); color: color-mix(in srgb, var(--tc) 65%, var(--c-text)); font-weight: 700; } /* readable in light and dark */
+/* the ＋ says what one tap does: ＋計時, ＋濕尿布, ＋120ml, ✓完成. One quiet style for all six (it used to be six
+   coloured pills): plum words on the card colour, a thin plum edge, a ring of the page colour to sit on the tile's edge */
+.qt-plus {
+  position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%);
+  min-width: 44px; height: 44px; border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--c-primary) 45%, var(--c-border));
+  background: var(--c-surface); color: var(--c-primary); font-size: var(--fs-sm); font-weight: 800; line-height: 1; white-space: nowrap;
+  display: flex; align-items: center; justify-content: center; gap: 1px; padding: 0 12px 0 9px;
+  box-shadow: 0 0 0 3px var(--c-bg);
+}
+.quick-tile.running .qt-plus { background: var(--c-primary); color: var(--c-primary-ink); border-color: transparent; }
+.qt-plus-sign { font-size: var(--fs-lg); }
+.time-chips { margin-top: 8px; gap: 6px; }
+.time-chips .chip { min-height: 40px; padding: 4px 10px; font-size: var(--fs-sm); }
+.tl-ago { margin-left: auto; font-size: var(--fs-xs); font-weight: 500; color: var(--c-text-3); white-space: nowrap; }
+.qt-plus:active { transform: translateX(-50%) scale(.92); }
+/* today's count: 「今天 3」 in small grey type in the corner (it looked like a red-dot notification before) */
+.qt-badge {
+  position: absolute; top: 7px; right: 10px;
+  font-size: var(--fs-xs); font-weight: 600; color: var(--c-text-2); font-variant-numeric: tabular-nums; line-height: 1.3;
+}
+.qt-badge::before { content: '今天 '; font-weight: 500; }
+.quick-row + .card { margin-top: 32px; }
+
+.active-timer {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px;
+  background: color-mix(in srgb, var(--tc) 14%, var(--c-surface)); border: 1px solid color-mix(in srgb, var(--tc) 40%, transparent);
+}
+.at-ico { font-size: 26px; }
+.small-num { font-size: var(--fs-xl); }
+.at-seg { width: 88px; }
+
+.next-card .card-title .tag { margin-left: auto; }
+.next-big { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.next-ico { color: var(--c-primary); display: flex; }
+.next-ico svg { width: 30px; height: 30px; }
+.next-line-ico { display: flex; color: var(--c-text-2); padding-top: 1px; }
+.next-line-ico svg { width: 18px; height: 18px; }
+.next-big .big-num { font-size: 26px; color: var(--c-primary); }
+.big-suffix { font-size: var(--fs-lg); font-weight: 600; margin-left: 2px; }
+/* text headlines (「可以準備哄睡了」) are wider than a countdown: a little smaller, and never leave one character alone on the second line */
+.next-big .big-num:not(.num) { font-size: var(--fs-xl); line-height: 1.25; text-wrap: balance; }
+.next-range { text-align: right; color: var(--c-text-2); line-height: 1.35; }
+.next-range b { color: var(--c-text); font-size: var(--fs-md); }
+.ww-bar { position: relative; height: 8px; border-radius: 4px; background: var(--c-surface-2); margin: 14px 0 6px; }
+.ww-window { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--c-ok); opacity: .75; }
+.ww-now { position: absolute; top: -4px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--c-accent); border: 3px solid var(--c-surface); }
+.next-lines { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--c-border); }
+.next-line { display: flex; gap: 8px; font-size: var(--fs-sm); padding: 3px 0; color: var(--c-text-2); }
+.next-line b { color: var(--c-accent-ink); }
+.today-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.today-chips .chip { font-size: var(--fs-sm); padding: 4px 10px; }
+
+/* ---------- timeline ---------- */
+.timeline { display: flex; flex-direction: column; gap: 8px; }
+.tl-item {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 10px 12px; border-radius: 16px; border: 1px solid var(--c-border); background: var(--c-surface);
+}
+.tl-item:active { background: var(--c-surface-2); }
+.tl-time { width: 52px; flex: none; font-weight: 700; font-size: var(--fs-lg); text-align: right; line-height: 1.2; }
+.tl-ico {
+  width: 40px; height: 40px; flex: none; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: color-mix(in srgb, var(--tc) 72%, var(--c-text)); background: color-mix(in srgb, var(--tc) 10%, transparent);
+}
+.tl-ico svg { width: 24px; height: 24px; }
+.tl-body { min-width: 0; flex: 1; }
+.tl-title { font-weight: 700; display: flex; gap: 6px; align-items: center; }
+.tl-sub { font-size: var(--fs-sm); color: var(--c-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- log tab ---------- */
+.datenav { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 10px; }
+.datenav-mid { text-align: center; }
+.datenav .icon-btn[disabled] { opacity: .25; }
+.sum-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.sum-chip { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 14px; background: var(--c-surface); border: 1px solid var(--c-border); text-align: center; }
+.sum-ico { display: flex; }
+.sum-ico svg { width: 24px; height: 24px; }
+.pump-day-ico { display: flex; }
+.pump-day-ico svg { width: 20px; height: 20px; }
+.daystrip-wrap { margin-top: 4px; }
+.daystrip { position: relative; height: 26px; border-radius: 8px; background: var(--c-surface-2); overflow: hidden; }
+.ds-sleep { position: absolute; top: 3px; bottom: 3px; border-radius: 4px; background: var(--t-sleep); opacity: .55; }
+.ds-tick { position: absolute; top: 5px; bottom: 5px; width: 3px; margin-left: -1px; border-radius: 2px; }
+.ds-now { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--c-accent); }
+.daystrip-axis { display: flex; justify-content: space-between; padding: 2px 2px 0; }
+/* screens with the floating ＋ button: room to scroll the last item out from under it */
+body:has(.fab) #view { padding-bottom: calc(var(--tabbar-h) + 96px + env(safe-area-inset-bottom)); }
+@media (min-width: 900px) { body:has(.fab) #view { padding-bottom: 110px; } }
+.fab {
+  position: fixed; right: max(18px, calc(50vw - var(--maxw) / 2 + 18px)); bottom: calc(var(--tabbar-h) + 18px + env(safe-area-inset-bottom));
+  width: 58px; height: 58px; border-radius: 50%; border: 0; z-index: 25;
+  background: var(--c-primary); color: var(--c-primary-ink); box-shadow: var(--shadow-2);
+  display: flex; align-items: center; justify-content: center;
+}
+.fab svg { width: 28px; height: 28px; stroke-width: 2.4; }
+.type-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding-bottom: 8px; }
+.type-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px;
+  border-radius: 16px; border: 1px solid var(--c-border); background: var(--c-surface); font-size: var(--fs-sm); font-weight: 600;
+}
+.type-ico { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: color-mix(in srgb, var(--tc) 72%, var(--c-text)); background: color-mix(in srgb, var(--tc) 10%, transparent); }
+.swatches { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.swatch { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; border-radius: 12px; border: 2px solid transparent; background: var(--c-surface); }
+.swatch.active { border-color: var(--c-primary); }
+.swatch-dot { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .12); }
+.warn-text { color: var(--c-danger-ink); }
+.poo-box { padding: 12px; margin-bottom: 14px; border-radius: 14px; background: var(--c-surface-2); }
+.poo-box .field:last-of-type { margin-bottom: 0; }
+
+/* ---------- milk ---------- */
+.stat-card { padding: 12px 6px; }
+.stat-card .big-num { font-size: 24px; color: var(--c-primary); }
+.milk-row { flex-wrap: wrap; }
+.milk-row .li-body .tag { margin-left: 6px; }
+.milk-row .li-body > .tag { margin: 4px 0 0; }
+.milk-actions { width: 100%; justify-content: flex-end; }
+.link-reset { background: none; border: 0; padding: 0; text-align: left; }
+ul.tight, ol.tight { margin: 6px 0; padding-left: 20px; }
+ul.tight li, ol.tight li { margin: 3px 0; }
+.keep-card p { text-wrap: pretty; }
+
+/* ---------- brand ---------- */
+.chicken-card { background: linear-gradient(160deg, var(--c-primary-soft), var(--c-surface) 70%); }
+.chicken-card.done { border-color: color-mix(in srgb, var(--c-primary) 35%, transparent); }
+.chicken-logo { width: 44px; height: 44px; object-fit: contain; flex: none; }
+.cd-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
+.cd-day { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--c-text-3); }
+.cd-dot { width: 30px; height: 30px; border-radius: 50%; background: var(--c-surface-2); display: flex; align-items: center; justify-content: center; font-size: var(--fs-md); }
+.cd-day.on .cd-dot { background: var(--c-primary); } /* a filled dot for a day she checked in (it held a 💜 before) */
+.cd-day.today .tiny { color: var(--c-primary); font-weight: 700; }
+.cd-day.today .cd-dot { outline: 2px dashed var(--c-primary); outline-offset: 1px; }
+.brand-hero { padding: 10px 0 16px; }
+.brand-hero-logo { width: 150px; height: auto; }
+.brand-story { margin: 12px auto 0; max-width: 34em; color: var(--c-text-2); line-height: 1.8; }
+.mg-head, .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.mg-head { margin: 8px 0 4px; }
+.mg-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: var(--fs-sm); color: var(--c-text-2); background: var(--c-surface-2); }
+.mg-cell.empty { background: none; }
+.mg-cell.on { background: var(--c-primary); color: var(--c-primary-ink); font-weight: 700; }
+.mg-cell.today { outline: 2px solid var(--c-accent); }
+.btn-line { background: #037f37; color: #fff; } /* deeper LINE green: white text 5.1:1 (#06c755 is only 2.3:1) */
+.btn-line svg { width: 20px; height: 20px; }
+
+/* ---------- me ---------- */
+.me-avatar { width: 52px; height: 52px; border-radius: 50%; background: var(--c-primary-soft); display: flex; align-items: center; justify-content: center; font-size: 26px; flex: none; }
+.li-photo { object-fit: cover; padding: 0; }
+.li-logo { object-fit: contain; padding: 6px; background: var(--c-primary-soft); }
+.li-right svg { width: 18px; height: 18px; color: var(--c-text-3); }
+.list-item .seg { width: 190px; flex: none; }
+.danger-text { color: var(--c-danger-ink); }
+.about-logo { display: block; width: 92px; margin: 4px auto 6px; }
+.avatar-preview { width: 84px; height: 84px; border-radius: 50%; background: var(--c-primary-soft); display: flex; align-items: center; justify-content: center; font-size: 46px; overflow: hidden; flex: none; }
+.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }
+.av-btn { font-size: var(--fs-xl); min-height: 44px; padding: 4px 0; border-radius: 10px; border: 1px solid var(--c-border); background: var(--c-surface); }
+.switch-row { min-height: 44px; cursor: pointer; }
+input.switch {
+  appearance: none; -webkit-appearance: none; width: 54px; height: 34px; border-radius: 17px; background: var(--c-border);
+  position: relative; transition: background .2s; flex: none; margin: 0;
+}
+input.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 28px; height: 28px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .2s; }
+input.switch:checked { background: var(--c-primary); }
+input.switch:checked::after { transform: translateX(20px); }
+
+/* ---------- onboarding ---------- */
+.onboard { padding: 10px 4px 30px; }
+.ob-hero { padding-top: 22px; }
+.ob-invited { text-align: center; font-weight: 700; color: var(--c-primary); margin: 0 0 14px; }
+.ob-gift { display: block; margin-top: 4px; font-size: var(--fs-sm); font-weight: 600; color: var(--c-text-2); }
+.ob-gift[hidden] { display: none; }
+.ob-brand { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.ob-icon { width: 60px; height: 60px; border-radius: 18px; background: var(--c-primary-soft); padding: 8px; flex: none; }
+.ob-title { font-size: 28px; color: var(--c-primary); line-height: 1.15; margin: 0; }
+.ob-by { font-size: var(--fs-sm); color: var(--c-text-3); margin-top: 2px; }
+/* the actions stay at the bottom of the screen, within thumb reach on any phone */
+.ob-actions { position: sticky; bottom: 0; margin: 22px -16px -30px; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgba(0, 0, 0, 0), var(--c-bg) 18px); text-align: center; }
+.ob-actions .live-pill { margin: 0 auto 10px; }
+.ob-q { font-size: var(--fs-xl); margin: 12px 0 16px; }
+.ob-hero .ob-q { text-align: center; margin: 28px 0 14px; }
+/* the three stages: plain rows with the words that matter, no emoji (the first question of the app) */
+.ob-choice {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  padding: 16px 16px 16px 18px; border-radius: 18px; border: 1px solid var(--c-border); background: var(--c-surface);
+}
+.ob-choice:active { border-color: var(--c-primary); }
+.ob-choice-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ob-choice .ob-pic { width: 56px; height: 56px; border-radius: 14px; margin: -4px 0; }
+.ob-choice:has(.ob-pic) { padding: 12px 16px 12px 12px; }
+.ob-choice-t b { font-size: var(--fs-lg); }
+.ob-choice .chev { color: var(--c-text-3); font-size: var(--fs-xl); line-height: 1; }
+.ob-note { text-align: center; margin: 16px 8px 0; text-wrap: balance; }
+body[data-screen="onboarding"] #view { padding-bottom: 40px; }
+
+/* ---------- undo toast / presets ---------- */
+.toast.has-action { display: flex; align-items: center; gap: 12px; pointer-events: auto; padding: 6px 6px 6px 18px; }
+.toast-action {
+  background: transparent; border: 0; color: #ffb59e; font-weight: 800; font-size: var(--fs-md);
+  min-height: 36px; padding: 0 12px; border-radius: 999px; flex: none; white-space: nowrap;
+}
+.toast-action:active { background: rgba(255, 255, 255, .12); }
+.preset-chips { margin-top: 10px; }
+.preset-chips .chip { min-width: 52px; justify-content: center; min-height: 44px; font-weight: 600; }
+
+/* ---------- 今日小任務 ---------- */
+.daily-card .card-title .tag { margin-left: 4px; }
+.daily-brand { display: inline-flex; align-items: center; gap: 4px; color: var(--c-text-2); font-weight: 500; min-height: 38px; }
+.daily-brand img { width: 18px; height: 18px; object-fit: contain; }
+.daily-list { display: grid; gap: 8px; margin-top: 10px; }
+.daily-item { display: flex; align-items: center; gap: 6px; }
+.daily-main {
+  flex: 1; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 10px;
+  border-radius: 14px; border: 1px solid var(--c-border); background: var(--c-surface); text-align: left;
+}
+.daily-main:active { transform: scale(.985); }
+.daily-ico {
+  width: 38px; height: 38px; border-radius: 50%; flex: none; font-size: var(--fs-xl);
+  display: flex; align-items: center; justify-content: center; background: var(--c-primary-soft);
+}
+.daily-text { display: flex; flex-direction: column; line-height: 1.3; }
+.daily-item.done .daily-main { background: var(--c-primary-soft); border-color: transparent; }
+.daily-item.done .daily-ico { background: var(--c-primary); color: var(--c-primary-ink); font-weight: 800; }
+.daily-logo { width: 22px; height: 22px; object-fit: contain; }
+.daily-svg { display: flex; color: var(--c-primary); }
+.daily-minus { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--c-border); background: var(--c-surface); font-size: var(--fs-xl); color: var(--c-text-2); flex: none; }
+
+/* ---------- 預防保健 ---------- */
+.prev-next .list { margin-top: 8px; }
+.pg-shortcuts .chip { min-height: 40px; }
+
+/* ---------- bigger touch targets for small controls ---------- */
+.section-title a, .section-title button { min-height: 44px; display: inline-flex; align-items: center; padding: 0 4px; }
+.seg-sm button { min-height: 36px; }
+
+/* ---------- 深夜 (夜間模式 from 22:00 until just before sunrise): larger targets for one-handed night feeds.
+   Dark from sunset is body.night; the bigger buttons wait for the deep night, so an evening still looks like itself. */
+body.late .qt-ico { width: 52px; height: 52px; }
+body.late .qt-ico svg { width: 34px; height: 34px; }
+body.late .qt-label { font-size: var(--fs-lg); }
+body.late .qt-plus { min-width: 52px; height: 52px; bottom: -24px; font-size: var(--fs-md); }
+body.late .quick-row { row-gap: 34px; }
+body.late .active-timer .btn { min-height: 44px; padding: 0 18px; font-size: var(--fs-md); }
+body.late .at-seg button { min-height: 40px; }
+body.late .fab { width: 66px; height: 66px; }
+/* 我的 → 白天黑夜跟著: a compact place picker at the end of the row */
+.list-item .sun-place { width: auto; max-width: 46%; flex: none; min-height: 44px; padding: 8px 10px; font-size: var(--fs-md); }
+
+/* ---------- 自訂快速鍵 ---------- */
+.quick-edit-row { display: flex; justify-content: flex-end; margin-top: 22px; }
+.quick-edit-row .link-btn { min-height: 36px; padding: 0 4px; color: var(--c-text-2); font-weight: 500; }
+.quick-row + .quick-edit-row + .card, div:has(> .quick-edit-row) + .card { margin-top: 6px; }
+body.late .quick-edit-row { margin-top: 28px; }
+/* 滿月・百日・收涎・度晬 banner under the baby on 首頁 */
+.moment-line { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin: -4px 0 12px; padding: 8px 12px;
+  border: 0; border-radius: var(--radius, 16px); background: linear-gradient(135deg, var(--c-accent-soft), var(--c-primary-soft));
+  color: var(--c-text); font: inherit; text-align: left; cursor: pointer; }
+.moment-line .moment-emoji { font-size: 26px; line-height: 1; flex: none; }
+.moment-line strong { color: var(--c-primary); font-size: var(--fs-md); margin-right: 6px; }
+.moment-line .moment-more { font-size: var(--fs-xs); color: var(--c-text-2); white-space: nowrap; }
+.moment-line .chev { color: var(--c-text-2); font-size: var(--fs-xl); flex: none; }
+
+/* ---------- 新手任務 (starter.js) ---------- */
+.st-home { display: flex; flex-direction: column; gap: 10px; }
+.st-home .card-title { margin: 0; display: flex; align-items: center; gap: 6px; }
+.st-x { flex: none; }
+.st-next { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--c-surface-2); }
+.st-next .grow { min-width: 0; }
+.st-go { flex: none; min-height: 40px; }
+.st-all { align-self: flex-start; }
+.st-list { display: flex; flex-direction: column; gap: 8px; }
+.st-row { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px; border-radius: 14px; background: var(--c-surface-2); }
+.st-row .grow { min-width: 0; }
+.st-mark { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--c-border); display: grid; place-items: center; font-size: var(--fs-sm); font-weight: 700; color: #fff; }
+.st-row.ok .st-mark { background: #1f7a52; border-color: transparent; } /* white ✓ readable in light and dark */
+.st-row.ok .bold { color: var(--c-text-2); }
+.st-row-go { flex: none; min-height: 40px; }
+
+/* ---------- 首頁 in 坐月子: suggestions folded into one row (home.js) ---------- */
+.home-more { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 10px 14px; border: 1px dashed var(--c-border); border-radius: 16px; background: transparent; color: var(--c-text); font: inherit; text-align: left; cursor: pointer; }
+.home-more .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.home-more .chev { color: var(--c-text-2); font-size: var(--fs-lg); flex: none; }
+/* .home-more-cards: no display rule, so its [hidden] keeps working; the slots inside bring their own margin */
+.home-more-off { margin-top: 8px; }
+
+/* ---------- 擠奶: 記奶量 (form), today's amount on the tile, the day line and the 7 days in 紀錄 ---------- */
+.pump-timer { min-height: 48px; }
+.pump-chips { margin-top: 8px; gap: 6px; }
+.pump-chips .chip { min-width: 46px; justify-content: center; font-variant-numeric: tabular-nums; }
+.pump-sides[hidden], .pump-totalbox[hidden] { display: none; }
+.pump-total { margin: 2px 0 14px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--t-pump) 14%, var(--c-surface)); line-height: 1.5; }
+.pump-total b { font-size: var(--fs-lg); }
+.qt-pump { color: var(--c-text); font-weight: 700; }
+.pump-day { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; margin: 0 0 10px; padding: 8px 12px; border: 1px solid var(--c-border); border-radius: 14px;
+  background: var(--c-surface); color: var(--c-text); font: inherit; text-align: left; cursor: pointer; flex-wrap: wrap; }
+.pump-day .chev { margin-left: auto; color: var(--c-text-2); font-size: var(--fs-lg); }
+.pump-week { margin-top: 12px; }
+.pw-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 10px 0 6px; }
+.pw-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pw-area { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; width: 100%; height: 110px; }
+.pw-ml { font-size: 11px; line-height: 1.2; color: var(--c-text-2); }
+.pw-bar { flex: none; width: 70%; min-height: 3px; border-radius: 6px 6px 2px 2px; background: color-mix(in srgb, var(--t-pump) 55%, var(--c-surface)); }
+.pw-col.on .pw-bar { background: var(--t-pump); }
+.pw-col.on .pw-day { font-weight: 800; color: var(--c-text); }
+.pw-day { color: var(--c-text-2); }
+
+/* 手機通知 (提醒設定) */
+.push-card .switch-row { padding: 8px 0; gap: 12px; }
+.push-topic > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.push-sub { display: block; }
+.push-why { margin-bottom: 0; }
+.gb-push { display: flex; justify-content: center; margin-top: 10px; }
+.push-offer { min-height: 44px; }
+
+/* 交接卡 */
+.ho-rows { display: flex; flex-direction: column; gap: 2px; margin: 6px 0 10px; }
+.ho-row { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--c-border); }
+.ho-row:last-child { border-bottom: 0; }
+.ho-ico { font-size: var(--fs-xl); line-height: 1.2; flex: none; width: 28px; text-align: center; }
+.ho-k { font-size: var(--fs-xs); color: var(--c-text-2); }
+.ho-v { font-size: var(--fs-md); font-weight: 700; line-height: 1.45; }
+.ho-x { font-size: var(--fs-sm); color: var(--c-primary); font-weight: 700; margin-top: 2px; }
+.ho-now { margin: 0; }
+.ho-lbl { margin: 6px 0 6px; }
+.ho-note { width: 100%; resize: vertical; }
+.ho-how { margin-top: 8px; }
+.ho-from { padding: 10px 12px; border-radius: 14px; background: var(--c-primary-soft); margin-bottom: 8px; }
+.ho-from p { margin: 4px 0 0; }
+.ho-foot { margin: 12px 0 24px; }
+.ho-foot .btn { min-height: 48px; }
+.ho-banner { display: flex; align-items: center; gap: 6px; margin: -4px 0 12px; }
+.ho-banner .moment-line { flex: 1; min-width: 0; margin: 0; }
+.ho-banner .moment-more { white-space: normal; }
+.ho-x { flex: none; }
+.next-card .card-title { display: flex; align-items: center; gap: 8px; }
+.next-handoff { margin-left: auto; min-height: 40px; }

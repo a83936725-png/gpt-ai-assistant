@@ -1,0 +1,96 @@
+/* Q 版小東西 (js/modules/qban.js): 小滴 the brand drop, the Q版 baby, the cheer that hops up at big moments.
+   Movement (bob, blink, wave, z z z, breathing) is only for people who have not asked for less motion. */
+
+/* ---------- 小滴 ---------- */
+.md { position: relative; display: inline-flex; align-items: flex-end; justify-content: center; line-height: 0; flex: none; }
+.md svg { display: block; overflow: visible; }
+/* in dark mode she is a lighter purple with a soft rim, so she still stands out */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .md { --md-a: #dcb9f3; --md-b: #a774cc; --md-c: #7e4aa4; --md-arm: #9a63c2; --md-line: #e3c9f5; --md-q: #d8b6f0; }
+}
+:root[data-theme="dark"] .md { --md-a: #dcb9f3; --md-b: #a774cc; --md-c: #7e4aa4; --md-arm: #9a63c2; --md-line: #e3c9f5; --md-q: #d8b6f0; }
+
+/* 歡迎: she waves next to the app name */
+.ob-brand .ob-md { margin-left: 2px; align-self: flex-end; }
+/* 首頁 late at night: a sleepy 小滴 instead of the heart */
+.greet-md { vertical-align: -9px; margin-left: 2px; }
+/* 新手任務 done */
+.st-done-body { align-items: center; }
+.st-done-body .md { margin-right: 2px; }
+/* the 新增寶寶 card on 首頁 */
+.qb-hello { width: 76px; height: 76px; border-radius: 50%; margin: 0 auto 8px; }
+
+/* the cheer at a big moment: above the toasts by the right edge; never in the way of a tap */
+.md-pop {
+  position: fixed; right: 14px; bottom: calc(var(--tabbar-h) + 92px + env(safe-area-inset-bottom)); z-index: 210;
+  display: flex; align-items: flex-end; gap: 4px; pointer-events: none; opacity: 0; transform: translateY(24px) scale(.85);
+}
+.md-pop.show { opacity: 1; transform: none; }
+.md-pop-say {
+  position: relative; margin-bottom: 44px; padding: 7px 12px; border-radius: 16px 16px 4px 16px; white-space: nowrap;
+  background: var(--c-surface); color: var(--c-primary); font-weight: 800; font-size: var(--fs-sm); line-height: 1.2;
+  box-shadow: 0 6px 18px rgba(60, 25, 80, .2); border: 1px solid var(--c-border);
+}
+@media (min-width: 900px) { .md-pop { bottom: 96px; right: 28px; } }
+
+/* ---------- Q版寶寶 ---------- */
+.qb { display: inline-flex; align-items: center; justify-content: center; overflow: hidden; background: var(--qb-bg, var(--c-surface-2)); line-height: 0; }
+.qb svg { width: 90%; height: 90%; display: block; }
+.hero-avatar.qb { background: radial-gradient(circle at 50% 36%, #fff 0 28%, var(--qb-bg) 78%); }
+.hero-avatar.qb svg { width: 94%; height: 94%; margin-top: 6%; }
+.li-icon.qb svg { width: 92%; height: 92%; margin-top: 8%; }
+.health-avatar.qb svg { width: 92%; height: 92%; margin-top: 6%; }
+/* dark mode: the same soft light circle, a little dimmer (a muddy grey circle looked sad) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero-avatar.qb { background: radial-gradient(circle at 50% 36%, #f4eef6 0 28%, var(--qb-bg) 80%); }
+}
+:root[data-theme="dark"] .hero-avatar.qb { background: radial-gradient(circle at 50% 36%, #f4eef6 0 28%, var(--qb-bg) 80%); }
+
+/* 編輯寶寶: the Q版 tile and its options */
+.av-btn .av-q { width: 30px; height: 30px; border-radius: 50%; }
+.av-btn.on { outline: 2.5px solid var(--c-primary); outline-offset: 1px; }
+.avatar-preview .qb { width: 100%; height: 100%; border-radius: inherit; }
+.qb-opts { display: flex; flex-direction: column; gap: 10px; margin: 2px 0 14px; padding: 12px; border-radius: 16px; background: var(--c-surface-2); }
+.qb-opts[hidden] { display: none; }
+.qb-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
+.qb-label { min-width: 2.6em; color: var(--c-text-2); }
+.qb-wears, .qb-accs { display: flex; flex-wrap: wrap; gap: 8px; }
+.qb-wear {
+  width: 32px; height: 32px; border-radius: 50%; padding: 0; cursor: pointer; background: var(--w);
+  border: 2px solid var(--c-surface); box-shadow: 0 0 0 1.5px var(--c-border);
+}
+.qb-wear[aria-checked="true"] { box-shadow: 0 0 0 2.5px var(--c-primary); }
+.qb-acc { min-height: 36px; }
+.qb-acc[aria-checked="true"] { background: var(--c-primary); color: #fff; border-color: var(--c-primary); }
+
+/* ---------- motion ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .md svg { animation: mdBob 3.4s ease-in-out infinite; transform-origin: 50% 100%; }
+  .md .md-eyes, .qb-awake .qb-eyes { animation: mdBlink 4.8s infinite; transform-box: fill-box; transform-origin: center; }
+  .qb-awake .qb-eyes { animation-duration: 5.6s; animation-delay: 1.2s; }
+  .md-wave .md-arm-r { animation: mdWave 1.5s ease-in-out infinite; transform-box: view-box; transform-origin: 84px 64px; }
+  .md-cheer svg { animation: mdHop .9s ease-in-out infinite; }
+  .md-cheer .md-spark { animation: mdTwinkle 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .md-sleepy svg { animation-duration: 4.6s; }
+  .md-sleepy .md-z path { animation: mdZ 2.8s ease-in-out infinite; }
+  .md-sleepy .md-z path:nth-child(2) { animation-delay: .7s; }
+  .md-love .md-hearts { animation: mdTwinkle 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .md-pop { transition: transform .5s cubic-bezier(.3, 1.6, .5, 1), opacity .25s ease; }
+  .qb-sleep svg { animation: qbBreathe 3.6s ease-in-out infinite; transform-origin: 50% 92%; }
+  .qb-sleep .qb-bubble { animation: qbBubble 3.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 20% 80%; }
+  .qb-feed svg { animation: qbNom 1.1s ease-in-out infinite; transform-origin: 50% 92%; }
+  .hero-avatar.qb-yay svg { animation: qbYay .75s cubic-bezier(.3, 1.5, .5, 1) 1; transform-origin: 50% 95%; }
+  .qb[data-party] .qb-confetti { animation: mdTwinkle 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .qb-wear, .qb-acc { transition: box-shadow .18s ease, transform .18s ease, background-color .18s ease; }
+  .qb-wear:active { transform: scale(.9); }
+}
+@keyframes mdBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3.5%); } }
+@keyframes mdBlink { 0%, 90%, 100% { transform: scaleY(1); } 93% { transform: scaleY(.12); } 96% { transform: scaleY(1); } }
+@keyframes mdWave { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-24deg); } }
+@keyframes mdHop { 0%, 100% { transform: translateY(0) scale(1, 1); } 35% { transform: translateY(-9%) scale(.97, 1.03); } 70% { transform: translateY(0) scale(1.04, .96); } }
+@keyframes mdTwinkle { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.6); opacity: .55; } }
+@keyframes mdZ { 0% { transform: translate(0, 0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(3px, -7px); opacity: 0; } }
+@keyframes qbBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035, 1.025); } }
+@keyframes qbBubble { 0%, 100% { transform: scale(.6); } 50% { transform: scale(1.25); } }
+@keyframes qbYay { 0% { transform: none; } 30% { transform: translateY(-14%) scale(.95, 1.07); } 62% { transform: translateY(0) scale(1.07, .93); } 100% { transform: none; } }
+@keyframes qbNom { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5%); } }

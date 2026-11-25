@@ -1,0 +1,131 @@
+/* 組件 — one look and one way of moving for the controls used everywhere (after a 「UI 組件懶人包」 of 18 common
+ * components: clear states, calm shapes, and every control shows its change):
+ *   分段／標籤頁   the chosen option's pill slides over (needs :has(); other browsers keep the plain highlight)
+ *   核取方塊       a rounded box whose ✓ pops in
+ *   輸入框         a soft focus ring, and its label takes the brand colour while you type
+ *   步驟條         ui.steps(labels, current): 設定、註冊的驗證碼、團購的團
+ *   上傳區         a wide dashed area while there are no photos yet (產檢日記)
+ *   錨點導航       jump chips at the top of 我的
+ *   開關切換       a springier knob that stretches under the finger
+ * Every movement sits inside prefers-reduced-motion: no-preference; with less motion it looks the same, still. */
+
+/* ---------- 分段／標籤頁 ---------- */
+.seg button { min-width: 0; } /* equal shares, so the pill lines up */
+@supports selector(:has(a)) {
+  .seg { position: relative; isolation: isolate; --i: 0; --n: 1; }
+  .seg::before {
+    content: ''; position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 3px;
+    width: calc((100% - 6px - (var(--n) - 1) * 2px) / var(--n));
+    border-radius: 999px; background: var(--c-surface); box-shadow: var(--shadow-1);
+    transform: translateX(calc(var(--i) * (100% + 2px))); opacity: 0;
+  }
+  .seg:has(> button.active)::before { opacity: 1; }
+  .seg button.active { background: transparent; box-shadow: none; }
+  .seg:has(> :nth-child(2):last-child) { --n: 2; }
+  .seg:has(> :nth-child(3):last-child) { --n: 3; }
+  .seg:has(> :nth-child(4):last-child) { --n: 4; }
+  .seg:has(> :nth-child(5):last-child) { --n: 5; }
+  .seg:has(> :nth-child(6):last-child) { --n: 6; }
+  .seg:has(> :nth-child(7):last-child) { --n: 7; }
+  .seg:has(> :nth-child(2).active) { --i: 1; }
+  .seg:has(> :nth-child(3).active) { --i: 2; }
+  .seg:has(> :nth-child(4).active) { --i: 3; }
+  .seg:has(> :nth-child(5).active) { --i: 4; }
+  .seg:has(> :nth-child(6).active) { --i: 5; }
+  .seg:has(> :nth-child(7).active) { --i: 6; }
+}
+
+/* ---------- 核取方塊 ---------- */
+input[type=checkbox]:not(.switch) {
+  appearance: none; -webkit-appearance: none; flex: none; margin: 0; width: 22px; height: 22px;
+  border: 2px solid var(--c-text-3); border-radius: 7px; background: var(--c-surface);
+  display: inline-grid; place-content: center; cursor: pointer; vertical-align: middle;
+}
+input[type=checkbox]:not(.switch)::before {
+  content: ''; width: 12px; height: 12px; background: #fff; transform: scale(0);
+  clip-path: polygon(13% 52%, 0 68%, 40% 100%, 100% 22%, 86% 8%, 39% 71%);
+}
+input[type=checkbox]:not(.switch):checked { background: var(--c-primary); border-color: var(--c-primary); }
+input[type=checkbox]:not(.switch):checked::before { transform: scale(1); }
+input[type=checkbox]:not(.switch):disabled { opacity: .5; cursor: default; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) input[type=checkbox]:not(.switch)::before { background: #1d1621; } }
+:root[data-theme="dark"] input[type=checkbox]:not(.switch)::before { background: #1d1621; }
+@media (forced-colors: active) { input[type=checkbox]:not(.switch) { appearance: auto; -webkit-appearance: checkbox; } input[type=checkbox]:not(.switch)::before { content: none; } }
+
+/* ---------- 輸入框 ---------- */
+:is(.field input:not([type=checkbox]):not([type=radio]), .field select, .field textarea, .input, .login-code):focus {
+  border-color: var(--c-primary); box-shadow: 0 0 0 3px var(--c-primary-soft); outline: 2px solid transparent;
+}
+.field:focus-within > .field-label { color: var(--c-primary); }
+
+/* ---------- 步驟條 (ui.steps) ---------- */
+.steps { display: flex; list-style: none; margin: 0 0 14px; padding: 0; counter-reset: none; }
+.steps li { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.steps li + li::before { /* the line from the step before */
+  content: ''; position: absolute; top: 13px; right: calc(50% + 16px); left: calc(-50% + 16px); height: 3px; border-radius: 2px;
+  background: linear-gradient(var(--c-primary), var(--c-primary)) left / var(--fill, 0%) 100% no-repeat, var(--c-border);
+}
+.steps li.done + li::before, .steps li.done + li.done::before { --fill: 100%; }
+.steps-dot {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-sm); font-weight: 700;
+  background: var(--c-surface); border: 2px solid var(--c-border); color: var(--c-text-2); position: relative; z-index: 1;
+}
+.steps li.done .steps-dot { background: var(--c-primary); border-color: var(--c-primary); color: var(--c-on-primary, #fff); }
+.steps li.now .steps-dot { border-color: var(--c-primary); color: var(--c-primary); box-shadow: 0 0 0 4px var(--c-primary-soft); }
+.steps-label { font-size: var(--fs-xs); color: var(--c-text-2); text-align: center; line-height: 1.3; }
+.steps li.now .steps-label { color: var(--c-text); font-weight: 700; }
+
+/* ---------- 上傳區 (產檢日記 photos, none yet) ---------- */
+.dy-photos.no-photos { display: block; }
+.dy-drop {
+  width: 100%; min-height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border: 2px dashed var(--c-text-3); border-radius: 16px; background: var(--c-surface-2); color: var(--c-text); font: inherit; cursor: pointer; padding: 12px;
+}
+.dy-drop .dy-drop-ico { font-size: 26px; line-height: 1; }
+.dy-drop .tiny { color: var(--c-text-2); }
+.dy-add-photo { border-color: var(--c-text-3); }
+
+/* ---------- 錨點導航 (我的) ---------- */
+.jump-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; margin: 0 -2px 4px; scrollbar-width: none; }
+.jump-chips::-webkit-scrollbar { display: none; }
+.jump-chip {
+  flex: none; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--c-border); background: var(--c-surface);
+  color: var(--c-text-2); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+}
+.jump-chip.on { border-color: var(--c-primary); color: var(--c-primary); background: var(--c-primary-soft); }
+.jump-target { scroll-margin-top: 72px; }
+.jump-flash { border-radius: 12px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .seg::before { transition: transform .32s cubic-bezier(.3, .7, .3, 1.15), opacity .2s; }
+  .seg button { transition: color .2s, transform .16s cubic-bezier(.3, .7, .4, 1.5); }
+  input[type=checkbox]:not(.switch) { transition: background-color .16s, border-color .16s, transform .16s cubic-bezier(.3, .7, .4, 1.5); }
+  input[type=checkbox]:not(.switch)::before { transition: transform .22s cubic-bezier(.3, .7, .4, 1.9); }
+  input[type=checkbox]:not(.switch):active { transform: scale(.88); }
+  :is(.field input:not([type=checkbox]):not([type=radio]), .field select, .field textarea, .input, .login-code) { transition: border-color .16s, box-shadow .2s; }
+  .field-label { transition: color .16s; }
+  .steps li + li::before { transition: background-size .5s cubic-bezier(.3, .7, .3, 1); }
+  .steps li.now .steps-dot { animation: stepsNow .5s cubic-bezier(.3, .7, .4, 1.6) both; }
+  .steps li.done .steps-dot { animation: stepsDone .4s cubic-bezier(.3, .7, .4, 1.8) both; }
+  @keyframes stepsNow { from { transform: scale(.7); box-shadow: 0 0 0 0 var(--c-primary-soft); } }
+  @keyframes stepsDone { from { transform: scale(.6); } }
+  .dy-drop { transition: background-color .16s, border-color .16s, transform .16s cubic-bezier(.3, .7, .4, 1.5); }
+  .dy-drop:active { transform: scale(.98); border-color: var(--c-primary); }
+  .jump-chip { transition: background-color .2s, color .2s, border-color .2s, transform .16s cubic-bezier(.3, .7, .4, 1.5); }
+  .jump-chip:active { transform: scale(.94); }
+  .jump-flash { animation: jumpFlash 1.1s ease-out; }
+  @keyframes jumpFlash { 0%, 30% { background: var(--c-primary-soft); } 100% { background: transparent; } }
+  input.switch { transition: background-color .25s; }
+  input.switch::after { transition: transform .32s cubic-bezier(.3, .7, .3, 1.35), width .16s; }
+  input.switch:active::after { width: 34px; }
+  input.switch:checked:active::after { transform: translateX(14px); }
+  /* 分享工作室: the preview shimmers while the next card is drawn, then fades in; the frame eases into its new shape */
+  .sh-preview.busy .sh-wait { animation: shWait 1.1s linear infinite; }
+  @keyframes shWait { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+  .sh-img { transition: opacity .25s; }
+  .sh-frame { transition: aspect-ratio .3s cubic-bezier(.3, .7, .3, 1.1); }
+  .sh-sw-dot { transition: box-shadow .2s, transform .16s cubic-bezier(.3, .7, .4, 1.6); }
+  .sh-sw:active .sh-sw-dot { transform: scale(.9); }
+  .sh-sw[aria-checked="true"] .sh-sw-dot::after { animation: stepsDone .35s cubic-bezier(.3, .7, .4, 1.8) both; }
+  .sh-toggle .chev { transition: transform .25s; }
+}

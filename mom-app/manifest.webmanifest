@@ -1,0 +1,88 @@
+{
+  "name": "易家做媽媽",
+  "short_name": "做媽媽",
+  "description": "易家滴雞精陪你從備孕、懷孕到育兒：紀錄、預測與衛教小島。",
+  "lang": "zh-Hant-TW",
+  "start_url": "./#/home",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf7f4",
+  "theme_color": "#5a2873",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "記瓶餵",
+      "short_name": "瓶餵",
+      "description": "打開瓶餵紀錄（可一鍵選奶量）",
+      "url": "./?action=bottle#/home",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "記尿布",
+      "short_name": "尿布",
+      "description": "打開尿布紀錄",
+      "url": "./?action=diaper#/home",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "開始餵奶（計時）",
+      "short_name": "餵奶計時",
+      "description": "親餵計時，自動接續另一側",
+      "url": "./?action=breast#/home",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "寶寶睡了（計時）",
+      "short_name": "睡眠計時",
+      "description": "開始記錄睡眠",
+      "url": "./?action=sleep#/home",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

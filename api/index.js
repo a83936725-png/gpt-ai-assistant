@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import { handleEvents, printPrompts } from '../app/index.js';
 import { exportKnowledge } from '../app/knowledge/index.js';
 import config from '../config/index.js';
@@ -6,6 +7,7 @@ import { validateLineSignature } from '../middleware/index.js';
 import storage from '../storage/index.js';
 import { fetchVersion, getVersion } from '../utils/index.js';
 import { getStoredImage, setPublicOrigin } from '../utils/upload-image.js';
+import { createMomRouter } from '../mom-api/index.js';
 import instagram from '../instagram/index.js';
 import ikigai, { sendPage, servesHome } from '../web/ikigai.js';
 
@@ -21,6 +23,17 @@ app.get('/images/:name', (req, res) => {
   res.set('Cache-Control', 'public, max-age=3600');
   res.send(image.buffer);
 });
+
+// 易家做媽媽：member API (mounted before the global JSON parser so its own 20 kb limit applies)
+// + the static web app (on Vercel the static files are served by the CDN first)
+app.use('/mom-app/api', createMomRouter());
+// only the app itself is public: tests, internal docs and notes stay private (.vercelignore keeps them out of the
+// Vercel deployment as well)
+app.use('/mom-app', (req, res, next) => {
+  if (/^\/(tests|docs)(\/|$)|\.(md|cjs|mjs)$|(^|\/)\./i.test(req.path)) { res.sendStatus(404); return; }
+  next();
+});
+app.use('/mom-app', express.static(path.join(process.cwd(), 'mom-app')));
 
 // The customer service knowledge base, for the staff Q&A page on the expo SOP site. It holds only
 // what the bot already tells customers, so any site may read it.
